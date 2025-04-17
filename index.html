@@ -4,14 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Peasy Kundereise Tidsakse</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: #0042251A;
+            font-weight: 400;
+            background: linear-gradient(180deg, #F8F9FA, #FFFFFF);
             margin: 0;
             padding: 40px;
             text-align: center;
         }
+        /* Hamburger Menu */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #004225;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .hamburger {
+            font-size: 24px;
+            color: #FFFFFF;
+            cursor: pointer;
+            display: block;
+        }
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 250px;
+            height: 100%;
+            background: #004225;
+            padding: 20px;
+            transition: right 0.3s ease;
+            z-index: 1001;
+        }
+        .nav-menu.active {
+            right: 0;
+        }
+        .nav-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 40px 0 0;
+        }
+        .nav-menu li {
+            margin: 20px 0;
+        }
+        .nav-menu a {
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 400;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .nav-menu a:hover,
+        .nav-menu a:focus {
+            color: #FFD54F;
+        }
+        .nav-menu .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: #FFFFFF;
+            cursor: pointer;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        .overlay.active {
+            display: block;
+        }
+        @media (min-width: 768px) {
+            .nav-container {
+                padding: 10px 40px;
+            }
+            .hamburger {
+                display: none;
+            }
+            .nav-menu {
+                position: static;
+                width: auto;
+                height: auto;
+                background: none;
+                padding: 0;
+                display: flex;
+                transition: none;
+            }
+            .nav-menu ul {
+                display: flex;
+                margin: 0;
+            }
+            .nav-menu li {
+                margin: 0 20px;
+            }
+            .nav-menu .close-btn {
+                display: none;
+            }
+        }
+        /* Fine Print Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1002;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #FFFFFF;
+            max-width: 600px;
+            width: 90%;
+            padding: 20px;
+            border-radius: 10px;
+            position: relative;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+        .modal-content h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #004225;
+            margin-bottom: 20px;
+        }
+        .modal-content ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        .modal-content li {
+            font-size: 16px;
+            font-weight: 300;
+            color: #333333;
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 25px;
+        }
+        .modal-content li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #FFD54F;
+            font-size: 18px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            color: #333333;
+            cursor: pointer;
+        }
+        .modal.active {
+            display: flex;
+        }
+        /* Hero Section */
+        .hero {
+            position: relative;
+            height: 400px;
+            background: linear-gradient(rgba(0, 66, 37, 0.6), rgba(0, 66, 37, 0.6)), url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            text-align: center;
+            margin-top: 60px;
+            margin-bottom: 40px;
+        }
+        .hero-content h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .hero-content p {
+            font-size: 18px;
+            font-weight: 300;
+        }
+        /* Design Toggle */
         .design-toggle {
             margin-bottom: 20px;
         }
@@ -20,39 +207,59 @@
             color: #FFFFFF;
             padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            font-weight: 400;
             margin: 0 5px;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, outline 0.3s ease, transform 0.2s ease;
             touch-action: manipulation;
         }
         .design-toggle button:hover {
             background: #005a32;
+            outline: 1px solid #00301A;
+        }
+        .design-toggle button:focus {
+            outline: 2px solid #004225;
+            outline-offset: 2px;
+        }
+        .design-toggle button:active {
+            transform: scale(0.95);
         }
         .design-toggle button.active {
-            background: #FFC107;
+            background: #FFD54F;
             color: #333333;
         }
+        /* Logo */
         .logo {
-            max-width: 200px;
+            max-width: 180px;
             margin: 0 auto 40px;
             display: block;
         }
+        /* Intro Text */
         .intro-text {
             max-width: 800px;
             margin: 0 auto 40px;
             font-size: 18px;
+            font-weight: 300;
             color: #333333;
-            line-height: 1.6;
+            line-height: 1.8;
         }
         .intro-text strong {
             color: #004225;
+            font-weight: 700;
         }
+        /* Timeline */
         .timeline-container {
             max-width: 1000px;
             margin: 0 auto;
             position: relative;
+            background: url('https://www.transparenttextures.com/patterns/asfalt-light.png') center/cover;
+            border-radius: 10px;
+            padding: 20px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.1s;
         }
         .timeline {
             display: flex;
@@ -60,74 +267,82 @@
             position: relative;
             padding: 40px 0;
         }
-        /* Design 1 (Default) */
+        /* Design 1 */
         .timeline.design-1::before {
             content: '';
             position: absolute;
-            top: 60px;
+            top: 55px;
             left: 0;
             width: 100%;
-            height: 2px;
-            background: #FFC107;
+            height: 1px;
+            background: linear-gradient(to right, #FFD54F, #004225);
             z-index: 0;
         }
         .timeline.design-1 .step-circle {
-            width: 60px;
-            height: 60px;
-            background: #FFFFFF;
-            border: 3px solid #FFC107;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #FFFFFF, #F0F0F0);
+            border: 2px solid #FFD54F;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 700;
             color: #004225;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
-        .timeline.design-1 .step-title {
+        .timeline.design-1 .step-circle i {
             font-size: 20px;
-            font-weight: bold;
+            color: #004225;
+        }
+        .timeline.design-1 .step-title {
+            font-size: 18px;
+            font-weight: 700;
             color: #333333;
             margin-bottom: 10px;
         }
         /* Design 2 */
         .timeline.design-2 {
-            background: #004225;
+            background: linear-gradient(145deg, #004225, #00301A);
             border-radius: 10px;
             padding: 40px 20px;
         }
         .timeline.design-2::before {
             content: '';
             position: absolute;
-            top: 60px;
+            top: 55px;
             left: 0;
             width: 100%;
-            height: 4px;
+            height: 1px;
             background: #FFFFFF;
             z-index: 0;
         }
         .timeline.design-2 .step-circle {
-            width: 60px;
-            height: 60px;
-            background: #FFFFFF;
-            border: 3px solid #FFFFFF;
+            width: 50px;
+            height: 50px;
+            background: #004225;
+            border: 2px solid #FFFFFF;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #004225;
+            font-size: 20px;
+            font-weight: 700;
+            color: #FFFFFF;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
-        .timeline.design-2 .step-title {
+        .timeline.design-2 .step-circle i {
             font-size: 20px;
-            font-weight: bold;
+            color: #FFFFFF;
+        }
+        .timeline.design-2 .step-title {
+            font-size: 18px;
+            font-weight: 700;
             color: #FFFFFF;
             margin-bottom: 10px;
         }
@@ -138,18 +353,10 @@
             z-index: 1;
             cursor: pointer;
         }
-        .timeline.design-1 .step-circle:hover {
-            transform: scale(1.1);
-            background: #FFFFFF;
-            border-color: #00301A;
-            color: #00301A;
+        .timeline-step:hover .step-circle {
+            transform: scale(1.15) translateY(-5px);
         }
-        .timeline.design-2 .step-circle:hover {
-            transform: scale(1.1);
-            background: #FFFFFF;
-            border-color: #00301A;
-            color: #00301A;
-        }
+        /* Why Peasy */
         .why-peasy {
             max-width: 800px;
             margin: 40px auto;
@@ -157,9 +364,13 @@
             background: #FFFFFF;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.3s;
         }
         .why-peasy h2 {
             font-size: 24px;
+            font-weight: 700;
             color: #004225;
             margin-bottom: 20px;
         }
@@ -170,6 +381,7 @@
         }
         .why-peasy li {
             font-size: 16px;
+            font-weight: 300;
             color: #333333;
             margin-bottom: 10px;
             position: relative;
@@ -179,9 +391,10 @@
             content: '✔';
             position: absolute;
             left: 0;
-            color: #FFC107;
+            color: #FFD54F;
             font-size: 18px;
         }
+        /* Trustpilot */
         .trustpilot-section {
             max-width: 800px;
             margin: 40px auto;
@@ -189,9 +402,13 @@
             background: #FFFFFF;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.4s;
         }
         .trustpilot-section h2 {
             font-size: 24px;
+            font-weight: 700;
             color: #004225;
             margin-bottom: 20px;
         }
@@ -206,19 +423,39 @@
             border-radius: 5px;
             text-align: left;
         }
+        .trustpilot-review img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
         .trustpilot-review p {
             font-size: 14px;
+            font-weight: 300;
             color: #333333;
             margin: 0 0 10px;
         }
         .trustpilot-review .stars {
-            color: #FFC107;
-            font-size: 16px;
+            font-size: 0;
+            margin-bottom: 5px;
+        }
+        .trustpilot-review .stars::before {
+            content: '\f005 \f005 \f005 \f005 \f005';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #FFD54F;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        .trustpilot-review .stars.four::before {
+            content: '\f005 \f005 \f005 \f005 \f006';
         }
         .trustpilot-review .author {
             font-size: 12px;
+            font-weight: 300;
             color: #666666;
         }
+        /* About Us */
         .about-us {
             max-width: 800px;
             margin: 40px auto;
@@ -227,38 +464,62 @@
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             text-align: center;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.5s;
         }
         .about-us h2 {
             font-size: 24px;
+            font-weight: 700;
             color: #004225;
             margin-bottom: 20px;
         }
         .about-us p {
             font-size: 16px;
+            font-weight: 300;
             color: #333333;
-            line-height: 1.6;
+            line-height: 1.8;
             margin-bottom: 15px;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
         }
+        /* Car Form */
         .car-form {
             max-width: 800px;
             margin: 40px auto;
             padding: 20px;
             background: #FFFFFF;
-            border-radius: 10px;
+            border-radius: icemail
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
+            position: relative;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.2s;
+        }
+        .car-form::after {
+            content: 'SOLGT!';
+            position: absolute;
+            top: -20px;
+            right: 20px;
+            background: #FFD54F;
+            color: #004225;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 700;
         }
         .car-form h3 {
             font-size: 20px;
+            font-weight: 700;
             color: #333333;
             margin-bottom: 20px;
         }
         .car-form label {
             display: block;
             font-size: 14px;
+            font-weight: 400;
             color: #333333;
             margin-bottom: 5px;
             text-align: left;
@@ -269,40 +530,70 @@
             padding: 10px;
             margin-bottom: 15px;
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 4px;
             font-size: 14px;
+            font-weight: 300;
             transition: border-color 0.3s ease;
             box-sizing: border-box;
         }
         .car-form input:focus {
             border-color: #004225;
-            outline: none;
+            outline: 2px solid #004225;
+            outline-offset: 2px;
         }
         .car-form button {
             background: #004225;
             color: #FFFFFF;
             padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            transition: background 0.3s ease;
+            font-weight: 400;
+            transition: background 0.3s ease, transform 0.2s ease;
             display: block;
             margin: 0 auto;
             touch-action: manipulation;
         }
         .car-form button:hover {
             background: #005a32;
+            outline: 1px solid #00301A;
+        }
+        .car-form button:focus {
+            outline: 2px solid #004225;
+            outline-offset: 2px;
+        }
+        .car-form button:active {
+            transform: scale(0.95);
         }
         .error {
             color: #d32f2f;
             font-size: 12px;
+            font-weight: 300;
             display: block;
             margin-bottom: 10px;
         }
+        /* Animations */
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        /* Responsive */
         @media (max-width: 600px) {
             body {
                 padding: 20px;
+            }
+            .nav-container {
+                padding: 10px 15px;
+            }
+            .hero {
+                height: 300px;
+                margin-top: 50px;
+            }
+            .hero-content h1 {
+                font-size: 24px;
+            }
+            .hero-content p {
+                font-size: 16px;
             }
             .design-toggle button {
                 padding: 8px 16px;
@@ -317,166 +608,182 @@
             .timeline {
                 flex-direction: column;
                 padding: 20px 10px;
-                position: relative;
-                align-items: flex-end;
-            }
-            .timeline.design-1 .step-circle {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-                margin: 0 1ch 0 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 3px solid #FFC107;
-                background: transparent;
-                color: #004225;
-                box-shadow: none;
-            }
-            .timeline.design-1 .step-title {
-                font-size: 20px;
-                font-weight: bold;
-                color: #333333;
-                margin: 0;
-            }
-            .timeline.design-2 {
-                background: #004225;
-                border-radius: 10px;
-                padding: 20px;
-                opacity: 0.2;
-            }
-            .timeline.design-2 .step-circle {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-                margin: 0 1ch 0 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 3px solid #FFFFFF;
-                background: #FFFFFF;
-                color: #004225;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            }
-            .timeline.design-2 .step-title {
-                font-size: 16px;
-                font-weight: bold;
-                color: #FFFFFF;
-                margin: 0;
+                align-items: flex-start;
             }
             .timeline-step {
                 display: flex;
                 align-items: center;
-                justify-content: flex-end;
-                margin-bottom: 20px;
-                text-align: left;
-                position: relative;
+                justify-content: flex-start;
+                margin-bottom: 15px;
                 width: 100%;
             }
-            .step-content {
-                flex: 1;
-                display: flex;
-                align-items: center;
+            .step-circle {
+                margin-right: 10px;
             }
-            .why-peasy {
-                max-width: 100%;
-                margin: 20px auto;
-                padding: 15px;
+            .timeline.design-1 .step-circle,
+            .timeline.design-2 .step-circle {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+                border: 2px solid;
             }
-            .why-peasy h2 {
-                font-size: 20px;
+            .timeline.design-1 .step-circle i,
+            .timeline.design-2 .step-circle i {
+                font-size: 18px;
             }
-            .why-peasy li {
-                font-size: 14px;
+            .timeline.design-1 .step-title,
+            .timeline.design-2 .step-title {
+                font-size: 16px;
             }
-            .trustpilot-section {
-                max-width: 100%;
-                margin: 20px auto;
-                padding: 15px;
-            }
-            .trustpilot-grid {
-                grid-template-columns: 1fr;
-                max-width: 100%;
-            }
-            .trustpilot-review:nth-child(n+4) {
-                display: none;
-            }
-            .trustpilot-review p {
-                font-size: 13px;
-            }
-            .about-us {
-                max-width: 100%;
-                margin: 20px auto;
-                padding: 15px;
-            }
-            .about-us h2 {
-                font-size: 20px;
-            }
-            .about-us p {
-                font-size: 14px;
-            }
+            .why-peasy,
+            .trustpilot-section,
+            .about-us,
             .car-form {
                 max-width: 100%;
                 margin: 20px auto;
                 padding: 15px;
             }
+            .why-peasy h2,
+            .trustpilot-section h2,
+            .about-us h2,
+            .car-form h3 {
+                font-size: 20px;
+            }
+            .why-peasy li,
+            .about-us p {
+                font-size: 14px;
+            }
+            .trustpilot-grid {
+                grid-template-columns: 1fr;
+            }
+            .trustpilot-review:nth-child(n+3) {
+                display: none;
+            }
+            .trustpilot-review p {
+                font-size: 13px;
+            }
+            .car-form label,
+            .car-form input {
+                font-size: 13px;
+            }
             .car-form input {
                 padding: 8px;
-                font-size: 14px;
             }
             .car-form button {
                 padding: 8px 16px;
                 font-size: 14px;
             }
+            .car-form::after {
+                font-size: 12px;
+                padding: 4px 8px;
+                top: -15px;
+                right: 15px;
+            }
+            .modal-content {
+                padding: 15px;
+            }
+            .modal-content h2 {
+                font-size: 20px;
+            }
+            .modal-content li {
+                font-size: 14px;
+                padding-left: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="design-toggle">
-        <button id="design1-btn" class="active">Design 1</button>
-        <button id="design2-btn">Design 2</button>
+    <!-- Hamburger Menu -->
+    <nav class="nav-container">
+        <div class="hamburger" aria-label="Åpne meny" role="button" tabindex="0">
+            <i class="fas fa-bars"></i>
+        </div>
+        <div class="nav-menu">
+            <span class="close-btn" aria-label="Lukk meny" role="button" tabindex="0">
+                <i class="fas fa-times"></i>
+            </span>
+            <ul>
+                <li><a href="#" aria-current="page">Hjem</a></li>
+                <li><a href="#" class="open-terms">Vilkår</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="overlay"></div>
+
+    <!-- Fine Print Modal -->
+    <div class="modal" id="terms-modal">
+        <div class="modal-content">
+            <span class="modal-close" aria-label="Lukk vilkår" role="button" tabindex="0">
+                <i class="fas fa-times"></i>
+            </span>
+            <h2>Vilkår for bruk av Peasy</h2>
+            <ul>
+                <li>Dersom høyeste bud ikke aksepteres, blir returtransport fakturert til selger.</li>
+                <li>Dersom høyeste bud er over estimert verdi, faktureres en avgift på kr. 9 900.</li>
+                <li>Kansellering av salgsprosessen kan kun gjøres innen 24 timer etter registrering, med skriftlig varsel til kundeservice.</li>
+                <li>Personopplysninger håndteres i samsvar med GDPR og brukes kun til å gjennomføre salgsprosessen og relatert kommunikasjon.</li>
+                <li>Tjenesten er tilgjengelig i utvalgte regioner og kan være underlagt lokale restriksjoner; kontakt oss for detaljer.</li>
+            </ul>
+        </div>
     </div>
 
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="hero-content">
+            <h1>Selg bilen din på 7 dager!</h1>
+            <p>Enkel, rask og trygg prosess med Peasy.</p>
+        </div>
+    </div>
+
+    <!-- Design Toggle -->
+    <div class="design-toggle">
+        <button id="design1-btn" class="active" aria-label="Bytt til Design 1">Design 1</button>
+        <button id="design2-btn" aria-label="Bytt til Design 2">Design 2</button>
+    </div>
+
+    <!-- Logo -->
     <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="logo" loading="lazy">
     
+    <!-- Intro Text -->
     <div class="intro-text">
         Selg bilen din med <strong>Peasy</strong> – det er <strong>kostnadsfritt ved salg</strong>, <strong>lettvint</strong>, og <strong>uten reklamasjonsansvar</strong>. Selg bilen din uten å forlate godstolen, med en heldigital prosess som tar maks 7 dager!
     </div>
 
+    <!-- Timeline -->
     <div class="timeline-container">
         <div class="timeline design-1">
             <div class="timeline-step">
-                <div class="step-circle">1</div>
+                <div class="step-circle"><i class="fas fa-car"></i></div>
                 <div class="step-content">
                     <div class="step-title">Start på Peasy.no</div>
                 </div>
             </div>
             <div class="timeline-step">
-                <div class="step-circle">2</div>
+                <div class="step-circle"><i class="fas fa-search"></i></div>
                 <div class="step-content">
                     <div class="step-title">Verdianalyse</div>
                 </div>
             </div>
             <div class="timeline-step">
-                <div class="step-circle">3</div>
+                <div class="step-circle"><i class="fas fa-check"></i></div>
                 <div class="step-content">
                     <div class="step-title">Akseptere verdi</div>
                 </div>
             </div>
             <div class="timeline-step">
-                <div class="step-circle">4</div>
+                <div class="step-circle"><i class="fas fa-truck"></i></div>
                 <div class="step-content">
                     <div class="step-title">Vi henter bilen din</div>
                 </div>
             </div>
             <div class="timeline-step">
-                <div class="step-circle">5</div>
+                <div class="step-circle"><i class="fas fa-gavel"></i></div>
                 <div class="step-content">
                     <div class="step-title">Auksjon og bud</div>
                 </div>
             </div>
             <div class="timeline-step">
-                <div class="step-circle">6</div>
+                <div class="step-circle"><i class="fas fa-handshake"></i></div>
                 <div class="step-content">
                     <div class="step-title">Akseptere bud og oppgjør</div>
                 </div>
@@ -484,6 +791,7 @@
         </div>
     </div>
 
+    <!-- Car Form -->
     <div class="car-form">
         <h3>Bud på din bil</h3>
         <form id="car-form" novalidate>
@@ -499,6 +807,7 @@
         </form>
     </div>
 
+    <!-- Why Peasy -->
     <div class="why-peasy">
         <h2>Hvorfor velge Peasy?</h2>
         <ul>
@@ -509,57 +818,68 @@
         </ul>
     </div>
 
+    <!-- Trustpilot -->
     <div class="trustpilot-section">
         <h2>Våre kunders erfaringer</h2>
         <div class="trustpilot-grid">
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Ola" class="reviewer-avatar">
                 <p>Enkel og rask prosess! Fikk et godt bud på bilen min på få dager.</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Ola N., Oslo</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Kari" class="reviewer-avatar">
                 <p>Ingen stress, alt ble håndtert digitalt. Anbefales!</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Kari S., Bergen</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Per" class="reviewer-avatar">
                 <p>Profesjonell service, og jeg slapp reklamasjonsansvar. Topp!</p>
-                <div class="stars">★★★★☆</div>
+                <div class="stars four"></div>
                 <div class="author">– Per H., Stavanger</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Anna" class="reviewer-avatar">
                 <p>Solgt bilen uten å møte noen – helt fantastisk!</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Anna L., Trondheim</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Erik" class="reviewer-avatar">
                 <p>God pris og rask håndtering. Veldig fornøyd!</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Erik M., Kristiansand</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Marte" class="reviewer-avatar">
                 <p>Alt gikk som lovet, fra henting til salg.</p>
-                <div class="stars">★★★★☆</div>
+                <div class="stars four"></div>
                 <div class="author">– Marte B., Drammen</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Lars" class="reviewer-avatar">
                 <p>Trygg og effektiv måte å selge bilen på.</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Lars K., Tromsø</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Ingrid" class="reviewer-avatar">
                 <p>Super service og god kommunikasjon hele veien.</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Ingrid T., Ålesund</div>
             </div>
             <div class="trustpilot-review">
+                <img src="https://via.placeholder.com/40" alt="Jonas" class="reviewer-avatar">
                 <p>Veldig fornøyd med både pris og prosess!</p>
-                <div class="stars">★★★★★</div>
+                <div class="stars"></div>
                 <div class="author">– Jonas P., Fredrikstad</div>
             </div>
         </div>
     </div>
 
+    <!-- About Us -->
     <div class="about-us">
         <h2>Om oss</h2>
         <p>Vi er Peasy – din enkle vei til å selge bilen.</p>
@@ -569,6 +889,68 @@
     </div>
 
     <script>
+        // Hamburger Menu Toggle
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('.nav-menu');
+        const closeBtn = document.querySelector('.close-btn');
+        const overlay = document.querySelector('.overlay');
+
+        function toggleMenu() {
+            navMenu.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        hamburger.addEventListener('click', toggleMenu);
+        closeBtn.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', toggleMenu);
+
+        // Keyboard Accessibility for Menu
+        hamburger.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleMenu();
+            }
+        });
+        closeBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleMenu();
+            }
+        });
+
+        // Modal for Fine Print
+        const termsLinks = document.querySelectorAll('.open-terms');
+        const modal = document.getElementById('terms-modal');
+        const modalClose = document.querySelector('.modal-close');
+
+        termsLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                modal.classList.add('active');
+                overlay.classList.add('active');
+            });
+        });
+
+        modalClose.addEventListener('click', () => {
+            modal.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+
+        overlay.addEventListener('click', () => {
+            modal.classList.remove('active');
+            navMenu.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+
+        modalClose.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                modal.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        });
+
+        // Design Toggle
         const design1Btn = document.getElementById('design1-btn');
         const design2Btn = document.getElementById('design2-btn');
         const timeline = document.querySelector('.timeline');
@@ -587,6 +969,7 @@
             design1Btn.classList.remove('active');
         });
 
+        // Form Validation
         const form = document.getElementById('car-form');
         const regNumberInput = document.getElementById('reg-number');
         const mileageInput = document.getElementById('mileage');
