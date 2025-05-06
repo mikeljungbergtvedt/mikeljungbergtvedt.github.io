@@ -6,6 +6,7 @@
   <title>Peasy Kjøpekontrakt for bil</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -95,6 +96,9 @@
       font-size: 9px;
       color: #333;
     }
+    #contract-preview .fine-print p {
+      margin: 2px 0;
+    }
     #contract-preview .fine-print a {
       color: #FFC107;
     }
@@ -103,6 +107,28 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      text-align: left;
+    }
+    #contract-preview .signature p {
+      margin: 2px 0;
+    }
+    @media print {
+      body {
+        background: none;
+      }
+      .header, .footer, #contract-form, #contract-preview button {
+        display: none;
+      }
+      #contract-preview {
+        margin: 0;
+        padding: 0;
+        font-size: 12px;
+        max-width: 100%;
+      }
+      #contract-preview .fine-print,
+      #contract-preview .signature {
+        text-align: center;
+      }
     }
   </style>
 </head>
@@ -346,7 +372,10 @@
         <p>Kjøper aksepterer kjøretøyets tilstand basert på NAF/Viking-test og fraskriver seg retten til å fremme krav mot selger etter oppgjør. Selger garanterer at kjøretøyet er fri for heftelser. Avtalen reguleres av kjøpsloven.</p>
       </div>
 
-      <button onclick="downloadPDF()" class="mt-6 px-4 py-2 rounded-md">Last ned som PDF</button>
+      <div class="mt-6 flex gap-4 justify-center">
+        <button onclick="downloadPDF()" class="px-4 py-2 rounded-md">Åpne som PDF</button>
+        <button onclick="printPDF()" class="px-4 py-2 rounded-md">Skriv ut som PDF</button>
+      </div>
     </div>
   </div>
 
@@ -360,8 +389,11 @@
 
   <script>
     function generateContract() {
-      // Hent verdier fra skjemaet
-      document.getElementById('preview-selger-navn').textContent = document.getElementById('selger-navn').value || '________________';
+      const form = document.getElementById('contract-form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+       document.getElementById('preview-selger-navn').textContent = document.getElementById('selger-navn').value || '________________';
       document.getElementById('preview-selger-adresse').textContent = document.getElementById('selger-adresse').value || '________________';
       document.getElementById('preview-selger-telefon').textContent = document.getElementById('selger-telefon').value || '________________';
       document.getElementById('preview-selger-epost').textContent = document.getElementById('selger-epost').value || '________________';
@@ -388,21 +420,47 @@
     }
 
     function downloadPDF() {
-      return new Promise((resolve) => {
-        const element = document.getElementById('contract-preview');
-        const opt = {
-          margin: 0.3,
-          filename: 'peasy_kjopekontrakt.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-        // Force re-render
-        element.style.display = 'block';
-        setTimeout(() => {
-          html2pdf().set(opt).from(element).save().then(resolve);
-        }, 1000);
+      const element = document.getElementById('contract-preview');
+      const buttons = element.querySelectorAll('button');
+      buttons.forEach(button => {
+        button.disabled = true;
+        button.textContent = 'Genererer...';
       });
+      const opt = {
+        margin: 0.3,
+        filename: 'peasy_kjopekontrakt.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      element.style.display = 'block';
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .toPdf()
+        .output('blob')
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        })
+        .catch((error) => {
+          console.error('PDF generation failed:', error);
+          alert('Kunne ikke generere PDF. Sjekk konsollen for detaljer.');
+        })
+        .finally(() => {
+          buttons.forEach(button => {
+            button.disabled = false;
+            button.textContent = button.onclick.toString().includes('downloadPDF') ? 'Åpne som PDF' : 'Skriv ut som PDF';
+          });
+        });
+    }
+
+    function printPDF() {
+      const element = document.getElementById('contract-preview');
+      element.style.display = 'block';
+      window.print();
     }
   </script>
 </body>
