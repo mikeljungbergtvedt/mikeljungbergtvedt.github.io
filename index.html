@@ -90,6 +90,84 @@
       align-items: center;
       justify-content: center;
     }
+    @media print {
+      body {
+        background: none;
+        margin: 0;
+        padding: 0;
+      }
+      .header, #contract-form {
+        display: none !important;
+      }
+      #contract-preview {
+        display: block !important;
+        margin: 0;
+        padding: 6mm;
+        font-size: 8.5px;
+        max-width: 210mm;
+        height: 297mm;
+        box-sizing: border-box;
+        font-family: 'Inter', sans-serif;
+        background-color: #fff;
+        line-height: 1.4;
+        color: #1A2C34;
+        flex-direction: column;
+      }
+      #contract-preview h2 {
+        font-size: 14px;
+        font-weight: bold;
+        text-align: left;
+        margin-bottom: 10px;
+        margin-top: 6mm;
+        color: #1A2C34;
+      }
+      #contract-preview h3 {
+        font-size: 10px;
+        font-weight: bold;
+        margin-top: 12px;
+        margin-bottom: 6px;
+      }
+      #contract-preview .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+      #contract-preview .grid div {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 6px;
+      }
+      #contract-preview .grid label {
+        font-weight: bold;
+        font-size: 8.5px;
+      }
+      #contract-preview .grid span {
+        color: #1A2C34;
+        font-size: 8.5px;
+        word-wrap: break-word;
+      }
+      #contract-preview .signature {
+        margin-top: 12px;
+        margin-bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        text-align: left;
+      }
+      #contract-preview .signature div {
+        flex: 1;
+        text-align: left;
+      }
+      #contract-preview .signature p {
+        margin: 2px 0;
+        font-size: 8.5px;
+        line-height: 1.4;
+      }
+      @page {
+        size: A4;
+        margin: 6mm;
+      }
+    }
   </style>
 </head>
 <body>
@@ -205,6 +283,10 @@
           </div>
         </div>
       </div>
+
+      <div class="button-group mt-6">
+        <button type="button" onclick="generateContract()" class="px-4 py-2 rounded-md">Signere digitalt</button>
+      </div>
     </form>
   </div>
 
@@ -218,6 +300,17 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(value).replace('NOK', 'kr').replace(/\s+/g, ' ');
+    }
+
+    // Format date to DD.MM.YYYY
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      if (isNaN(date)) return '';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}`;
     }
 
     // Handle currency input
@@ -246,6 +339,88 @@
 
     // Initialize currency input
     setupCurrencyInput('kjopesum');
+
+    function generateContract() {
+      const form = document.getElementById('contract-form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      // Create preview container
+      let preview = document.getElementById('contract-preview');
+      if (!preview) {
+        preview = document.createElement('div');
+        preview.id = 'contract-preview';
+        document.body.appendChild(preview);
+      }
+
+      // Check Medeier fields
+      const medeierFields = [
+        document.getElementById('medeier-navn').value,
+        document.getElementById('medeier-adresse').value,
+        document.getElementById('medeier-telefon').value,
+        document.getElementById('medeier-epost').value,
+        document.getElementById('medeier-personnummer').value
+      ];
+      const hasMedeier = medeierFields.some(field => field);
+
+      // Generate Medeier section conditionally
+      const medeierSection = hasMedeier ? `
+        <h3>Medeier</h3>
+        <div class="grid">
+          <div id="preview-medeier-navn-container" style="${document.getElementById('medeier-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('medeier-navn').value || ''}</span></div>
+          <div id="preview-medeier-adresse-container" style="${document.getElementById('medeier-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('medeier-adresse').value || ''}</span></div>
+          <div id="preview-medeier-telefon-container" style="${document.getElementById('medeier-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('medeier-telefon').value || ''}</span></div>
+          <div id="preview-medeier-epost-container" style="${document.getElementById('medeier-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('medeier-epost').value || ''}</span></div>
+          <div id="preview-medeier-personnummer-container" style="${document.getElementById('medeier-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('medeier-personnummer').value || ''}</span></div>
+        </div>
+      ` : '';
+
+      // Generate preview HTML
+      preview.innerHTML = `
+        <h2>BUDAKSEPT</h2>
+
+        <h3>Selger</h3>
+        <div class="grid">
+          <div id="preview-selger-navn-container" style="${document.getElementById('selger-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('selger-navn').value || ''}</span></div>
+          <div id="preview-selger-adresse-container" style="${document.getElementById('selger-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('selger-adresse').value || ''}</span></div>
+          <div id="preview-selger-telefon-container" style="${document.getElementById('selger-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('selger-telefon').value || ''}</span></div>
+          <div id="preview-selger-epost-container" style="${document.getElementById('selger-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('selger-epost').value || ''}</span></div>
+          <div id="preview-selger-personnummer-container" style="${document.getElementById('selger-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('selger-personnummer').value || ''}</span></div>
+        </div>
+
+        ${medeierSection}
+
+        <h3>Kjøretøyets opplysninger</h3>
+        <div class="grid">
+          <div id="preview-bil-merke-container" style="${document.getElementById('bil-merke').value ? '' : 'display: none;'}"><label>Merke</label><span>${document.getElementById('bil-merke').value || ''}</span></div>
+          <div id="preview-bil-modell-container" style="${document.getElementById('bil-modell').value ? '' : 'display: none;'}"><label>Modell</label><span>${document.getElementById('bil-modell').value || ''}</span></div>
+          <div id="preview-bil-arsmodell-container" style="${document.getElementById('bil-arsmodell').value ? '' : 'display: none;'}"><label>Årsmodell</label><span>${document.getElementById('bil-arsmodell').value || ''}</span></div>
+          <div id="preview-bil-regnr-container" style="${document.getElementById('bil-regnr').value ? '' : 'display: none;'}"><label>Registreringsnummer</label><span>${document.getElementById('bil-regnr').value || ''}</span></div>
+          <div id="preview-bil-vinnr-container" style="${document.getElementById('bil-vinnr').value ? '' : 'display: none;'}"><label>ENR-nummer</label><span>${document.getElementById('bil-vinnr').value || ''}</span></div>
+          <div id="preview-bil-kilometer-container" style="${document.getElementById('bil-kilometer').value ? '' : 'display: none;'}"><label>Kilometerstand</label><span>${document.getElementById('bil-kilometer').value || ''}</span></div>
+          <div id="preview-bil-farge-container" style="${document.getElementById('bil-farge').value ? '' : 'display: none;'}"><label>Farge</label><span>${document.getElementById('bil-farge').value || ''}</span></div>
+          <div id="preview-bil-eukontroll-container" style="${document.getElementById('bil-eukontroll').value ? '' : 'display: none;'}"><label>Sist godkjent EU-kontroll</label><span>${formatDate(document.getElementById('bil-eukontroll').value)}</span></div>
+        </div>
+
+        <h3>Bud</h3>
+        <div class="grid">
+          <div id="preview-kjopesum-container" style="${document.getElementById('kjopesum').value ? '' : 'display: none;'}"><label>Bud</label><span>${document.getElementById('kjopesum').value}</span></div>
+        </div>
+
+        <div class="signature">
+          <div id="signature-selger">
+            <p><strong>Selgers SMS PIN-signatur:</strong></p>
+          </div>
+          <div id="signature-medeier" style="${hasMedeier ? '' : 'display: none;'}">
+            <p><strong>Medeiers SMS PIN-signatur:</strong></p>
+          </div>
+        </div>
+      `;
+
+      window.print();
+    }
   </script>
 </body>
 </html>
