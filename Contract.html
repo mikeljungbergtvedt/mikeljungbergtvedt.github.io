@@ -80,6 +80,15 @@
     input[type="number"] {
       -moz-appearance: textfield;
     }
+    input[type="date"] {
+      position: relative;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.8;
+    }
     .button-group {
       display: flex;
       gap: 8px;
@@ -309,7 +318,7 @@
           </div>
           <div>
             <label for="bil-eukontroll" class="block text-xs font-medium">Sist godkjent EU-kontroll</label>
-            <input type="text" id="bil-eukontroll" class="mt-1 w-full border rounded-md">
+            <input type="date" id="bil-eukontroll" class="mt-1 w-full border rounded-md">
           </div>
         </div>
       </div>
@@ -326,12 +335,12 @@
             <input type="text" id="kontonummer" class="mt-1 w-full border rounded-md" maxlength="13" placeholder="0000.00.00000">
           </div>
           <div>
-            <label for="betalingsdato" class="block text-xs font-medium">Betalingsdato</label>
-            <input type="text" id="betalingsdato" class="mt-1 w-full border rounded-md">
+            <label for="betalingsdaten" class="block text-xs font-medium">Betalingsdato</label>
+            <input type="date" id="betalingsdaten" class="mt-1 w-full border rounded-md">
           </div>
           <div>
             <label for="test-dato" class="block text-xs font-medium">Dato for NAF/Viking-test</label>
-            <input type="text" id="test-dato" class="mt-1 w-full border rounded-md">
+            <input type="date" id="test-dato" class="mt-1 w-full border rounded-md">
           </div>
         </div>
       </div>
@@ -345,7 +354,7 @@
           </div>
           <div>
             <label for="oppgjor-dato" class="block text-xs font-medium">Oppgjørsdato</label>
-            <input type="text" id="oppgjor-dato" class="mt-1 w-full border rounded-md">
+            <input type="date" id="oppgjor-dato" class="mt-1 w-full border rounded-md">
           </div>
           <div>
             <label for="oppgjor-restsaldo" class="block text-xs font-medium">Restsaldo</label>
@@ -384,6 +393,17 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(value).replace('NOK', 'kr').replace(/\s+/g, ' ');
+    }
+
+    // Format date to DD.MM.YYYY
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      if (isNaN(date)) return '';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}`;
     }
 
     // Format kontonummer (0000.00.00000)
@@ -506,21 +526,21 @@
           <div id="preview-bil-vinnr-container" style="${document.getElementById('bil-vinnr').value ? '' : 'display: none;'}"><label>ENR-nummer</label><span>${document.getElementById('bil-vinnr').value || ''}</span></div>
           <div id="preview-bil-kilometer-container" style="${document.getElementById('bil-kilometer').value ? '' : 'display: none;'}"><label>Kilometerstand</label><span>${document.getElementById('bil-kilometer').value || ''}</span></div>
           <div id="preview-bil-farge-container" style="${document.getElementById('bil-farge').value ? '' : 'display: none;'}"><label>Farge</label><span>${document.getElementById('bil-farge').value || ''}</span></div>
-          <div id="preview-bil-eukontroll-container" style="${document.getElementById('bil-eukontroll').value ? '' : 'display: none;'}"><label>Sist godkjent EU-kontroll</label><span>${document.getElementById('bil-eukontroll').value || ''}</span></div>
+          <div id="preview-bil-eukontroll-container" style="${document.getElementById('bil-eukontroll').value ? '' : 'display: none;'}"><label>Sist godkjent EU-kontroll</label><span>${formatDate(document.getElementById('bil-eukontroll').value)}</span></div>
         </div>
 
         <h3>Kjøpesum og betalingsvilkår</h3>
         <div class="grid">
           <div id="preview-kjopesum-container" style="${document.getElementById('kjopesum').value ? '' : 'display: none;'}"><label>Kjøpesum</label><span>${document.getElementById('kjopesum').value}</span></div>
           <div id="preview-kontonummer-container" style="${document.getElementById('kontonummer').value ? '' : 'display: none;'}"><label>Kontonummer</label><span>${formatKontonummer(document.getElementById('kontonummer').value.replace(/\D/g, ''))}</span></div>
-          <div id="preview-betalingsdato-container" style="${document.getElementById('betalingsdato').value ? '' : 'display: none;'}"><label>Betalingsdato</label><span>${document.getElementById('betalingsdato').value}</span></div>
-          <div id="preview-test-dato-container" style="${document.getElementById('test-dato').value ? '' : 'display: none;'}"><label>Dato for NAF/Viking-test</label><span>${document.getElementById('test-dato').value}</span></div>
+          <div id="preview-betalingsdato-container" style="${document.getElementById('betalingsdato').value ? '' : 'display: none;'}"><label>Betalingsdato</label><span>${formatDate(document.getElementById('betalingsdato').value)}</span></div>
+          <div id="preview-test-dato-container" style="${document.getElementById('test-dato').value ? '' : 'display: none;'}"><label>Dato for NAF/Viking-test</label><span>${formatDate(document.getElementById('test-dato').value)}</span></div>
         </div>
 
         <h3>Oppgjørsoppstilling</h3>
         <div class="grid">
           <div id="preview-oppgjor-pantehaver-container" style="${document.getElementById('oppgjor-pantehaver').value ? '' : 'display: none;'}"><label>Pantehaver</label><span>${document.getElementById('oppgjor-pantehaver').value || ''}</span></div>
-          <div id="preview-oppgjor-dato-container" style="${document.getElementById('oppgjor-dato').value ? '' : 'display: none;'}"><label>Oppgjørsdato</label><span>${document.getElementById('oppgjor-dato').value || ''}</span></div>
+          <div id="preview-oppgjor-dato-container" style="${document.getElementById('oppgjor-dato').value ? '' : 'display: none;'}"><label>Oppgjørsdato</label><span>${formatDate(document.getElementById('oppgjor-dato').value)}</span></div>
           <div id="preview-oppgjor-restsaldo-container" style="${document.getElementById('oppgjor-restsaldo').value ? '' : 'display: none;'}"><label>Restsaldo</label><span>${document.getElementById('oppgjor-restsaldo').value}</span></div>
           <div id="preview-oppgjor-til-utbetaling-container" style="${document.getElementById('oppgjor-til-utbetaling').value ? '' : 'display: none;'}"><label>Til utbetaling</label><span>${document.getElementById('oppgjor-til-utbetaling').value}</span></div>
         </div>
@@ -561,6 +581,16 @@
       paymentDate.setDate(today.getDate() + 3);
       const paymentDateString = paymentDate.toISOString().split('T')[0];
       document.getElementById('betalingsdato').value = paymentDateString;
+
+      // Format date inputs on change to DD.MM.YYYY for display
+      ['bil-eukontroll', 'betalingsdato', 'test-dato', 'oppgjor-dato'].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener('change', () => {
+          if (input.value) {
+            input.dataset.displayValue = formatDate(input.value);
+          }
+        });
+      });
     });
   </script>
 </body>
