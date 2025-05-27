@@ -122,7 +122,45 @@
       flex-direction: column;
     }
     #contract-preview {
-      display: none; /* Hidden by default */
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    #contract-preview-content {
+      background: #FFFFFF;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 800px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    #contract-preview-content h2 {
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .close-preview {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #FFC107;
+      color: #004225;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .close-preview:hover {
+      background: #004225;
+      color: #FFC107;
     }
     @media print {
       body {
@@ -130,24 +168,23 @@
         margin: 0;
         padding: 0;
       }
-      .header, .form-container {
+      .header, .form-container, #contract-preview {
         display: none !important;
       }
-      #contract-preview {
+      #contract-preview-content {
         display: block !important;
         margin: 0 auto;
         padding: 10mm;
-        max-width: 210mm;
-        max-height: 297mm;
+        width: 190mm; /* Slightly less than A4 to account for margins */
         box-sizing: border-box;
         font-family: 'Inter', sans-serif;
         background: #FFFFFF;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        border-radius: 12px;
+        box-shadow: none;
+        border-radius: 0;
         overflow: hidden;
         position: relative;
       }
-      #contract-preview::before {
+      #contract-preview-content::before {
         content: '';
         position: absolute;
         top: 0;
@@ -158,66 +195,64 @@
         opacity: 0.05;
         z-index: -1;
       }
-      #contract-preview h2 {
+      #contract-preview-content h2 {
         font-size: 12px;
-        font-weight: 600;
-        text-align: center;
         margin-bottom: 6px;
       }
-      #contract-preview .form-section {
+      #contract-preview-content .form-section {
         margin-bottom: 12px;
         padding-bottom: 8px;
         border-bottom: 1px solid rgba(255, 193, 7, 0.2);
       }
-      #contract-preview .form-section h3 {
+      #contract-preview-content .form-section h3 {
         font-size: 12px;
         font-weight: 600;
         color: #004225;
         margin-bottom: 6px;
       }
-      #contract-preview .grid {
+      #contract-preview-content .grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 4px;
       }
-      #contract-preview .grid div {
+      #contract-preview-content .grid div {
         margin-bottom: 4px;
       }
-      #contract-preview label {
+      #contract-preview-content label {
         font-size: 10px;
         font-weight: 500;
         color: #004225;
       }
-      #contract-preview input {
+      #contract-preview-content input {
         font-size: 10px;
         padding: 6px !important;
         border: 1px solid #004225 !important;
         border-radius: 6px;
       }
-      #contract-preview input:focus {
+      #contract-preview-content input:focus {
         border-color: #FFC107 !important;
         box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
       }
-      #contract-preview input[readonly] {
+      #contract-preview-content input[readonly] {
         background: #F3F4F6;
         border-color: #D1D5DB !important;
         cursor: not-allowed;
       }
-      #contract-preview .fine-print-box {
+      #contract-preview-content .fine-print-box {
         font-size: 9px;
         padding: 10px;
         margin: 12px 0;
         line-height: 1.4;
       }
-      #contract-preview .button-group {
+      #contract-preview-content .button-group {
         margin-top: 12px;
         gap: 8px;
       }
-      #contract-preview button {
+      #contract-preview-content button {
         font-size: 10px;
         padding: 6px 12px !important;
         border-radius: 6px;
       }
-      #contract-preview button:hover {
+      #contract-preview-content button:hover {
         transform: scale(1.02);
       }
       #contract-preview-logo {
@@ -226,17 +261,11 @@
         margin-bottom: 6px;
       }
       #contract-preview-logo img {
-        max-width: 80px; /* Scaled down logo */
+        max-width: 80px;
       }
       @page {
         size: A4;
         margin: 10mm;
-      }
-      #contract-preview {
-        transform-origin: top left;
-        transform: scale(0.65);
-        width: 210mm;
-        height: 297mm;
       }
     }
   </style>
@@ -420,13 +449,13 @@
     </form>
   </div>
 
-  <!-- Hidden preview container -->
   <div id="contract-preview">
-    <div id="contract-preview-logo">
-      <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" onerror="this.style.display='none';">
-    </div>
-    <div class="form-container" id="preview-form-container">
-      <!-- Content will be cloned here -->
+    <div id="contract-preview-content">
+      <button class="close-preview" onclick="closePreview()">Lukk</button>
+      <div id="contract-preview-logo">
+        <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" onerror="this.style.display='none';">
+      </div>
+      <div id="preview-form-container"></div>
     </div>
   </div>
 
@@ -533,10 +562,24 @@
       // Append the cloned form to the preview container
       previewContainer.appendChild(formClone);
 
-      // Ensure the preview is updated before printing
-      setTimeout(() => {
+      // Show the preview
+      const preview = document.getElementById('contract-preview');
+      preview.style.display = 'flex';
+
+      // Optional: Add print button inside preview
+      const printButton = document.createElement('button');
+      printButton.textContent = 'Skriv ut';
+      printButton.className = 'px-6 py-3 mt-4 bg-[#FFC107] text-[#004225] rounded-lg';
+      printButton.onclick = () => {
         window.print();
-      }, 100); // Small delay to ensure DOM updates
+        closePreview();
+      };
+      previewContainer.appendChild(printButton);
+    }
+
+    function closePreview() {
+      const preview = document.getElementById('contract-preview');
+      preview.style.display = 'none';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
