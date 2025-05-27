@@ -121,6 +121,9 @@
       display: flex;
       flex-direction: column;
     }
+    #contract-preview {
+      display: none; /* Hidden by default */
+    }
     @media print {
       body {
         background: none;
@@ -217,12 +220,13 @@
       #contract-preview button:hover {
         transform: scale(1.02);
       }
-      #contract-preview::before {
-        content: url('Peasy_Logo_ORG.png');
+      #contract-preview-logo {
         display: block;
         text-align: center;
         margin-bottom: 6px;
-        transform: scale(0.6);
+      }
+      #contract-preview-logo img {
+        max-width: 80px; /* Scaled down logo */
       }
       @page {
         size: A4;
@@ -416,6 +420,16 @@
     </form>
   </div>
 
+  <!-- Hidden preview container -->
+  <div id="contract-preview">
+    <div id="contract-preview-logo">
+      <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" onerror="this.style.display='none';">
+    </div>
+    <div class="form-container" id="preview-form-container">
+      <!-- Content will be cloned here -->
+    </div>
+  </div>
+
   <script>
     const formatCurrency = (value) => {
       if (!value || isNaN(value)) return '';
@@ -490,106 +504,39 @@
         return;
       }
 
-      let preview = document.getElementById('contract-preview');
-      if (!preview) {
-        preview = document.createElement('div');
-        preview.id = 'contract-preview';
-        document.body.appendChild(preview);
+      // Clone the form container
+      const previewContainer = document.getElementById('preview-form-container');
+      previewContainer.innerHTML = ''; // Clear previous content
+      const formClone = form.cloneNode(true);
+      
+      // Update the title in the clone
+      const title = formClone.querySelector('h2');
+      if (title) {
+        title.textContent = 'PEASY KJØPEKONTRAKT';
       }
 
-      const medeierFields = [
-        document.getElementById('medeier-navn').value,
-        document.getElementById('medeier-adresse').value,
-        document.getElementById('medeier-telefon').value,
-        document.getElementById('medeier-epost').value,
-        document.getElementById('medeier-personnummer').value
-      ];
-      const hasMedeier = medeierFields.some(field => field);
+      // Make all inputs readonly in the preview
+      const inputs = formClone.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.setAttribute('readonly', 'readonly');
+        if (input.id === 'kontonummer' && input.value) {
+          input.value = formatKontonummer(input.value.replace(/\D/g, '')) || '';
+        }
+      });
 
-      preview.innerHTML = `
-        <div class="form-container">
-          <h2 class="text-xl font-bold text-center text-[#004225] mb-8">PEASY KJØPEKONTRAKT</h2>
+      // Remove the button's onclick event to prevent interaction in preview
+      const button = formClone.querySelector('button');
+      if (button) {
+        button.removeAttribute('onclick');
+      }
 
-          <div class="form-section">
-            <h3 class="mb-4">Selger</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label for="preview-selger-navn" class="block text-xs font-medium text-[#004225]">Navn</label><input type="text" id="preview-selger-navn" value="${document.getElementById('selger-navn').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-selger-adresse" class="block text-xs font-medium text-[#004225]">Adresse</label><input type="text" id="preview-selger-adresse" value="${document.getElementById('selger-adresse').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-selger-telefon" class="block text-xs font-medium text-[#004225]">Telefon</label><input type="text" id="preview-selger-telefon" value="${document.getElementById('selger-telefon').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-selger-epost" class="block text-xs font-medium text-[#004225]">E-post</label><input type="email" id="preview-selger-epost" value="${document.getElementById('selger-epost').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-selger-personnummer" class="block text-xs font-medium text-[#004225]">Personnummer / Organisasjonsnummer</label><input type="text" id="preview-selger-personnummer" value="${document.getElementById('selger-personnummer').value || ''}" class="mt-1 w-full" readonly></div>
-            </div>
-          </div>
+      // Append the cloned form to the preview container
+      previewContainer.appendChild(formClone);
 
-          ${hasMedeier ? `
-            <div class="form-section">
-              <h3 class="mb-4">Medeier</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label for="preview-medeier-navn" class="block text-xs font-medium text-[#004225]">Navn</label><input type="text" id="preview-medeier-navn" value="${document.getElementById('medeier-navn').value || ''}" class="mt-1 w-full" readonly></div>
-                <div><label for="preview-medeier-adresse" class="block text-xs font-medium text-[#004225]">Adresse</label><input type="text" id="preview-medeier-adresse" value="${document.getElementById('medeier-adresse').value || ''}" class="mt-1 w-full" readonly></div>
-                <div><label for="preview-medeier-telefon" class="block text-xs font-medium text-[#004225]">Telefon</label><input type="text" id="preview-medeier-telefon" value="${document.getElementById('medeier-telefon').value || ''}" class="mt-1 w-full" readonly></div>
-                <div><label for="preview-medeier-epost" class="block text-xs font-medium text-[#004225]">E-post</label><input type="email" id="preview-medeier-epost" value="${document.getElementById('medeier-epost').value || ''}" class="mt-1 w-full" readonly></div>
-                <div><label for="preview-medeier-personnummer" class="block text-xs font-medium text-[#004225]">Personnummer / Organisasjonsnummer</label><input type="text" id="preview-medeier-personnummer" value="${document.getElementById('medeier-personnummer').value || ''}" class="mt-1 w-full" readonly></div>
-              </div>
-            </div>
-          ` : ''}
-
-          <div class="form-section">
-            <h3 class="mb-4">Kjøper (forhandler)</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label for="preview-kjoper-firmanavn" class="block text-xs font-medium text-[#004225]">Firmanavn</label><input type="text" id="preview-kjoper-firmanavn" value="${document.getElementById('kjoper-firmanavn').value}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-kjoper-orgnr" class="block text-xs font-medium text-[#004225]">Organisasjonsnummer</label><input type="text" id="preview-kjoper-orgnr" value="${document.getElementById('kjoper-orgnr').value}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-kjoper-adresse" class="block text-xs font-medium text-[#004225]">Adresse</label><input type="text" id="preview-kjoper-adresse" value="${document.getElementById('kjoper-adresse').value}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-kjoper-telefon" class="block text-xs font-medium text-[#004225]">Telefon</label><input type="text" id="preview-kjoper-telefon" value="${document.getElementById('kjoper-telefon').value}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-kjoper-epost" class="block text-xs font-medium text-[#004225]">E-post</label><input type="email" id="preview-kjoper-epost" value="${document.getElementById('kjoper-epost').value}" class="mt-1 w-full" readonly></div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="mb-4">Kjøretøyets opplysninger</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label for="preview-bil-merke" class="block text-xs font-medium text-[#004225]">Merke</label><input type="text" id="preview-bil-merke" value="${document.getElementById('bil-merke').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-modell" class="block text-xs font-medium text-[#004225]">Modell</label><input type="text" id="preview-bil-modell" value="${document.getElementById('bil-modell').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-arsmodell" class="block text-xs font-medium text-[#004225]">Årsmodell</label><input type="text" id="preview-bil-arsmodell" value="${document.getElementById('bil-arsmodell').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-regnr" class="block text-xs font-medium text-[#004225]">Registreringsnummer</label><input type="text" id="preview-bil-regnr" value="${document.getElementById('bil-regnr').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-vinnr" class="block text-xs font-medium text-[#004225]">VIN</label><input type="text" id="preview-bil-vinnr" value="${document.getElementById('bil-vinnr').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-kilometer" class="block text-xs font-medium text-[#004225]">Kilometerstand</label><input type="number" id="preview-bil-kilometer" value="${document.getElementById('bil-kilometer').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-farge" class="block text-xs font-medium text-[#004225]">Farge</label><input type="text" id="preview-bil-farge" value="${document.getElementById('bil-farge').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-bil-eukontroll" class="block text-xs font-medium text-[#004225]">Sist godkjent EU-kontroll</label><input type="date" id="preview-bil-eukontroll" value="${document.getElementById('bil-eukontroll').value || ''}" class="mt-1 w-full" readonly></div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="mb-4">Kjøpesum og betalingsvilkår</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label for="preview-kjopesum" class="block text-xs font-medium text-[#004225]">Kjøpesum (NOK)</label><input type="text" id="preview-kjopesum" value="${document.getElementById('kjopesum').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-kontonummer" class="block text-xs font-medium text-[#004225]">Kontonummer</label><input type="text" id="preview-kontonummer" value="${formatKontonummer(document.getElementById('kontonummer').value.replace(/\D/g, '')) || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-betalingsdato" class="block text-xs font-medium text-[#004225]">Betalingsdato</label><input type="date" id="preview-betalingsdato" value="${document.getElementById('betalingsdato').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-test-dato" class="block text-xs font-medium text-[#004225]">Dato for NAF/Viking-test</label><input type="date" id="preview-test-dato" value="${document.getElementById('test-dato').value || ''}" class="mt-1 w-full" readonly></div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="mb-4">Oppgjørsoppstilling</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label for="preview-oppgjor-pantehaver" class="block text-xs font-medium text-[#004225]">Pantehaver</label><input type="text" id="preview-oppgjor-pantehaver" value="${document.getElementById('oppgjor-pantehaver').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-oppgjor-dato" class="block text-xs font-medium text-[#004225]">Oppgjørsdato</label><input type="date" id="preview-oppgjor-dato" value="${document.getElementById('oppgjor-dato').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-oppgjor-restsaldo" class="block text-xs font-medium text-[#004225]">Restsaldo</label><input type="text" id="preview-oppgjor-restsaldo" value="${document.getElementById('oppgjor-restsaldo').value || ''}" class="mt-1 w-full" readonly></div>
-              <div><label for="preview-oppgjor-til-utbetaling" class="block text-xs font-medium text-[#004225]">Til utbetaling</label><input type="text" id="preview-oppgjor-til-utbetaling" value="${document.getElementById('oppgjor-til-utbetaling').value || ''}" class="mt-1 w-full" readonly></div>
-            </div>
-          </div>
-
-          <div class="fine-print-box">
-            <p>Kjøper aksepterer kjøretøyets tilstand basert på NAF/Viking-test og fraskriver seg retten til å fremme krav mot selger etter oppgjør. Selger garanterer at kjøretøyet er fri for heftelser. Avtalen reguleres av kjøpsloven.</p>
-          </div>
-
-          <div class="button-group">
-            <button type="button" class="px-6 py-3">Signere digitalt</button>
-          </div>
-        </div>
-      `;
-
-      window.print();
+      // Ensure the preview is updated before printing
+      setTimeout(() => {
+        window.print();
+      }, 100); // Small delay to ensure DOM updates
     }
 
     document.addEventListener('DOMContentLoaded', () => {
