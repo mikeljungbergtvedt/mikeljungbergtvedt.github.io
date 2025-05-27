@@ -118,6 +118,100 @@
       display: flex;
       flex-direction: column;
     }
+    #contract-preview {
+      display: none;
+      margin: 0;
+      padding: 8mm;
+      font-size: 8px;
+      max-width: 210mm;
+      height: 297mm;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+      background: #FFFFFF;
+      line-height: 1.4;
+      color: #004225;
+      column-count: 2;
+      column-gap: 8mm;
+      column-fill: auto;
+    }
+    #contract-preview h2 {
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 8px;
+      color: #004225;
+      column-span: all;
+    }
+    #contract-preview h3 {
+      font-size: 10px;
+      font-weight: 600;
+      margin: 8px 0 4px;
+    }
+    #contract-preview .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    #contract-preview .grid div {
+      display: flex;
+      flex-direction: column;
+    }
+    #contract-preview .grid label {
+      font-weight: 600;
+      font-size: 8px;
+    }
+    #contract-preview .grid span {
+      color: #004225;
+      font-size: 8px;
+      word-wrap: break-word;
+    }
+    #contract-preview .fine-print-box {
+      background: transparent;
+      color: #004225;
+      padding: 8px 0;
+      margin: 8px 0;
+      font-size: 8px;
+      line-height: 1.4;
+      text-align: left;
+      border: none;
+      column-span: all;
+    }
+    #contract-preview .signature {
+      margin: 8px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      column-span: all;
+    }
+    #contract-preview .signature div {
+      text-align: left;
+    }
+    #contract-preview .signature p {
+      margin: 2px 0;
+      font-size: 8px;
+      line-height: 1.4;
+    }
+    #contract-preview::before {
+      content: url('Peasy_Logo_ORG.png');
+      display: block;
+      text-align: center;
+      margin-bottom: 8px;
+      column-span: all;
+      transform: scale(0.6);
+    }
+    @media print {
+      .form-container {
+        display: none;
+      }
+      #contract-preview {
+        display: block !important;
+      }
+      @page {
+        size: A4;
+        margin: 8mm;
+      }
+    }
   </style>
 </head>
 <body>
@@ -289,7 +383,7 @@
       </div>
 
       <div class="button-group">
-        <button type="button" class="px-6 py-3">Signere digitalt</button>
+        <button type="button" onclick="generateContract()" class="px-6 py-3">Signere digitalt</button>
       </div>
     </form>
   </div>
@@ -371,6 +465,106 @@
         });
       });
     });
+
+    function generateContract() {
+      const form = document.getElementById('contract-form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      let preview = document.getElementById('contract-preview');
+      if (!preview) {
+        preview = document.createElement('div');
+        preview.id = 'contract-preview';
+        document.body.appendChild(preview);
+      }
+
+      const medeierFields = [
+        document.getElementById('medeier-navn').value,
+        document.getElementById('medeier-adresse').value,
+        document.getElementById('medeier-telefon').value,
+        document.getElementById('medeier-epost').value,
+        document.getElementById('medeier-personnummer').value
+      ];
+      const hasMedeier = medeierFields.some(field => field);
+
+      preview.innerHTML = `
+        <h2>KONTRAKT / OPPGJØRSOPPSTILLING</h2>
+        <h3>Selger</h3>
+        <div class="grid">
+          <div style="${document.getElementById('selger-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('selger-navn').value || ''}</span></div>
+          <div style="${document.getElementById('selger-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('selger-adresse').value || ''}</span></div>
+          <div style="${document.getElementById('selger-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('selger-telefon').value || ''}</span></div>
+          <div style="${document.getElementById('selger-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('selger-epost').value || ''}</span></div>
+          <div style="${document.getElementById('selger-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('selger-personnummer').value || ''}</span></div>
+        </div>
+        ${hasMedeier ? `
+        <h3>Medeier</h3>
+        <div class="grid">
+          <div style="${document.getElementById('medeier-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('medeier-navn').value || ''}</span></div>
+          <div style="${document.getElementById('medeier-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('medeier-adresse').value || ''}</span></div>
+          <div style="${document.getElementById('medeier-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('medeier-telefon').value || ''}</span></div>
+          <div style="${document.getElementById('medeier-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('medeier-epost').value || ''}</span></div>
+          <div style="${document.getElementById('medeier-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('medeier-personnummer').value || ''}</span></div>
+        </div>
+        ` : ''}
+        <h3>Kjøper (forhandler)</h3>
+        <div class="grid">
+          <div><label>Firmanavn</label><span>${document.getElementById('kjoper-firmanavn').value}</span></div>
+          <div><label>Organisasjonsnummer</label><span>${document.getElementById('kjoper-orgnr').value}</span></div>
+          <div><label>Adresse</label><span>${document.getElementById('kjoper-adresse').value}</span></div>
+          <div><label>Telefon</label><span>${document.getElementById('kjoper-telefon').value}</span></div>
+          <div><label>E-post</label><span>${document.getElementById('kjoper-epost').value}</span></div>
+        </div>
+        <h3>Kjøretøyets opplysninger</h3>
+        <div class="grid">
+          <div style="${document.getElementById('bil-merke').value ? '' : 'display: none;'}"><label>Merke</label><span>${document.getElementById('bil-merke').value || ''}</span></div>
+          <div style="${document.getElementById('bil-modell').value ? '' : 'display: none;'}"><label>Modell</label><span>${document.getElementById('bil-modell').value || ''}</span></div>
+          <div style="${document.getElementById('bil-arsmodell').value ? '' : 'display: none;'}"><label>Årsmodell</label><span>${document.getElementById('bil-arsmodell').value || ''}</span></div>
+          <div style="${document.getElementById('bil-regnr').value ? '' : 'display: none;'}"><label>Registreringsnummer</label><span>${document.getElementById('bil-regnr').value || ''}</span></div>
+          <div style="${document.getElementById('bil-vinnr').value ? '' : 'display: none;'}"><label>VIN</label><span>${document.getElementById('bil-vinnr').value || ''}</span></div>
+          <div style="${document.getElementById('bil-kilometer').value ? '' : 'display: none;'}"><label>Kilometerstand</label><span>${document.getElementById('bil-kilometer').value || ''}</span></div>
+          <div style="${document.getElementById('bil-farge').value ? '' : 'display: none;'}"><label>Farge</label><span>${document.getElementById('bil-farge').value || ''}</span></div>
+          <div style="${document.getElementById('bil-eukontroll').value ? '' : 'display: none;'}"><label>Sist godkjent EU-kontroll</label><span>${formatDate(document.getElementById('bil-eukontroll').value)}</span></div>
+        </div>
+        <h3>Kjøpesum og betalingsvilkår</h3>
+        <div class="grid">
+          <div style="${document.getElementById('kjopesum').value ? '' : 'display: none;'}"><label>Kjøpesum (NOK)</label><span>${document.getElementById('kjopesum').value || ''}</span></div>
+          <div style="${document.getElementById('kontonummer').value ? '' : 'display: none;'}"><label>Kontonummer</label><span>${document.getElementById('kontonummer').value || ''}</span></div>
+          <div style="${document.getElementById('betalingsdato').value ? '' : 'display: none;'}"><label>Betalingsdato</label><span>${formatDate(document.getElementById('betalingsdato').value)}</span></div>
+          <div style="${document.getElementById('test-dato').value ? '' : 'display: none;'}"><label>Dato for NAF/Viking-test</label><span>${formatDate(document.getElementById('test-dato').value)}</span></div>
+        </div>
+        <h3>Oppgjørsoppstilling</h3>
+        <div class="grid">
+          <div style="${document.getElementById('oppgjor-pantehaver').value ? '' : 'display: none;'}"><label>Pantehaver</label><span>${document.getElementById('oppgjor-pantehaver').value || ''}</span></div>
+          <div style="${document.getElementById('oppgjor-dato').value ? '' : 'display: none;'}"><label>Oppgjørsdato</label><span>${formatDate(document.getElementById('oppgjor-dato').value)}</span></div>
+          <div style="${document.getElementById('oppgjor-restsaldo').value ? '' : 'display: none;'}"><label>Restsaldo</label><span>${document.getElementById('oppgjor-restsaldo').value || ''}</span></div>
+          <div style="${document.getElementById('oppgjor-til-utbetaling').value ? '' : 'display: none;'}"><label>Til utbetaling</label><span>${document.getElementById('oppgjor-til-utbetaling').value || ''}</span></div>
+        </div>
+        <div class="fine-print-box">
+          <p>Kjøper aksepterer kjøretøyets tilstand basert på NAF/Viking-test og fraskriver seg retten til å fremme krav mot selger etter oppgjør. Selger garanterer at kjøretøyet er fri for heftelser. Avtalen reguleres av kjøpsloven.</p>
+        </div>
+        <div class="signature">
+          <div>
+            <p><strong>Selgers signatur:</strong></p>
+            <p>___________________________</p>
+          </div>
+          ${hasMedeier ? `
+          <div>
+            <p><strong>Medeiers signatur:</strong></p>
+            <p>___________________________</p>
+          </div>
+          ` : ''}
+          <div>
+            <p><strong>Kjøpers signatur:</strong></p>
+            <p>___________________________</p>
+          </div>
+        </div>
+      `;
+
+      window.print();
+    }
   </script>
 </body>
 </html>
