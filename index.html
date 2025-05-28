@@ -50,6 +50,12 @@
       transform: translateY(-1px);
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
     }
+    button:disabled {
+      background: #9CA3AF !important;
+      color: #E5E7EB !important;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
     input, select {
       border: 1px solid #2D3748 !important;
       border-radius: 6px;
@@ -138,94 +144,8 @@
       font-weight: 500;
       font-size: 12px;
     }
-    #contract-preview {
-      display: none;
-      margin: 0;
-      padding: 8mm;
-      font-size: 8pt;
-      max-width: 210mm;
-      height: 297mm;
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-      background: #FFFFFF;
-      line-height: 1.5;
-      color: #2D3748;
-    }
-    #contract-preview h2 {
-      font-size: 14pt;
-      font-weight: 700;
-      text-align: center;
-      margin: 6mm 0 8px;
-      color: #2D3748;
-    }
-    #contract-preview h3 {
-      font-size: 10pt;
-      font-weight: 600;
-      margin: 12px 0 6px;
-    }
-    #contract-preview .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-    }
-    #contract-preview .grid div {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 6px;
-    }
-    #contract-preview .grid label {
-      font-weight: 600;
-      font-size: 8pt;
-    }
-    #contract-preview .grid span {
-      color: #2D3748;
-      font-size: 8pt;
-      word-wrap: break-word;
-    }
-    #contract-preview .signature {
-      margin: 12px 0 16px;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    #contract-preview .signature div {
-      flex: 1;
-      text-align: left;
-    }
-    #contract-preview .signature p {
-      margin: 3px 0;
-      font-size: 8pt;
-      line-height: 1.5;
-    }
-    #contract-preview .info-box {
-      background: transparent;
-      color: #2D3748;
-      padding: 0;
-      margin-bottom: 12px;
-      font-size: 8pt;
-      text-align: left;
-      border: 0.25pt solid #D1D5DB;
-    }
-    #contract-preview::before {
-      content: url('Peasy_Logo_ORG.png');
+    .print-hidden {
       display: block;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    @media print {
-      .form-container {
-        display: none;
-      }
-      #contract-preview {
-        display: block !important;
-      }
-      @page {
-        size: A4;
-        margin: 8mm;
-      }
-      .print-hidden {
-        display: none;
-      }
     }
   </style>
 </head>
@@ -281,6 +201,10 @@
             <input type="text" id="selger-adresse" class="mt-1 w-full">
           </div>
           <div>
+            <label for="selger-postnummer-sted" class="block text-xs font-medium">Postnummer / Sted</label>
+            <input type="text" id="selger-postnummer-sted" class="mt-1 w-full">
+          </div>
+          <div>
             <label for="selger-telefon" class="block text-xs font-medium">Telefon</label>
             <input type="text" id="selger-telefon" class="mt-1 w-full">
           </div>
@@ -305,6 +229,10 @@
           <div>
             <label for="medeier-adresse" class="block text-xs font-medium">Adresse</label>
             <input type="text" id="medeier-adresse" class="mt-1 w-full">
+          </div>
+          <div>
+            <label for="medeier-postnummer-sted" class="block text-xs font-medium">Postnummer / Sted</label>
+            <input type="text" id="medeier-postnummer-sted" class="mt-1 w-full">
           </div>
           <div>
             <label for="medeier-telefon" class="block text-xs font-medium">Telefon</label>
@@ -370,7 +298,7 @@
       </div>
 
       <div class="flex justify-center mt-6">
-        <button type="button" onclick="generateContract()">Aksepter bud</button>
+        <button type="button" onclick="generateContract()" disabled>Aksepter bud</button>
       </div>
     </form>
   </div>
@@ -447,110 +375,6 @@
         if (!isChecked) input.value = '';
       });
     });
-
-    function generateContract() {
-      const form = document.getElementById('contract-form');
-      if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-      }
-
-      let preview = document.getElementById('contract-preview');
-      if (!preview) {
-        preview = document.createElement('div');
-        preview.id = 'contract-preview';
-        document.body.appendChild(preview);
-      }
-
-      const isKontaktperson = document.getElementById('kontaktperson-checkbox').checked;
-      const kontaktpersonSection = isKontaktperson ? `
-        <h3>Kontaktperson</h3>
-        <div class="grid">
-          <div id="preview-kontaktperson-navn-container" style="${document.getElementById('kontaktperson-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('kontaktperson-navn').value || ''}</span></div>
-          <div id="preview-kontaktperson-telefon-container" style="${document.getElementById('kontaktperson-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('kontaktperson-telefon').value || ''}</span></div>
-          <div id="preview-kontaktperson-epost-container" style="${document.getElementById('kontaktperson-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('kontaktperson-epost').value || ''}</span></div>
-        </div>
-      ` : '';
-
-      const medeierFields = [
-        document.getElementById('medeier-navn').value,
-        document.getElementById('medeier-adresse').value,
-        document.getElementById('medeier-telefon').value,
-        document.getElementById('medeier-epost').value,
-        document.getElementById('medeier-personnummer').value
-      ];
-      const hasMedeier = medeierFields.some(field => field);
-
-      const medeierSection = hasMedeier ? `
-        <h3>Medeier</h3>
-        <div class="grid">
-          <div id="preview-medeier-navn-container" style="${document.getElementById('medeier-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('medeier-navn').value || ''}</span></div>
-          <div id="preview-medeier-adresse-container" style="${document.getElementById('medeier-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('medeier-adresse').value || ''}</span></div>
-          <div id="preview-medeier-telefon-container" style="${document.getElementById('medeier-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('medeier-telefon').value || ''}</span></div>
-          <div id="preview-medeier-epost-container" style="${document.getElementById('medeier-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('medeier-epost').value || ''}</span></div>
-          <div id="preview-medeier-personnummer-container" style="${document.getElementById('medeier-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('medeier-personnummer').value || ''}</span></div>
-        </div>
-      ` : '';
-
-      preview.innerHTML = `
-        <h2>BUDAKSEPT</h2>
-        <div class="info-box">
-          <p>Ved å akseptere budet bekrefter du at du enten:<br>
-          A) er den rettmessige eieren av kjøretøyet, eller<br>
-          B) har fullmakt til å akseptere budet på vegne av den juridiske eieren.<br>
-          <br>
-          Dersom det foreligger salgspant eller finansiering, vil Peasy innhente informasjon om utestående restsaldo.<br>
-          Eierskiftet (salgsmeldingen) skal gjennomføres digitalt.<br>
-          <br>
-          <strong>Peasy</strong><br>
-          Strandveien 15-17, 1366 Lysaker<br>
-          peasy.no
-          </p>
-        </div>
-        ${kontaktpersonSection}
-        <h3>Selger</h3>
-        <div class="grid">
-          <div id="preview-selger-navn-container" style="${document.getElementById('selger-navn').value ? '' : 'display: none;'}"><label>Navn</label><span>${document.getElementById('selger-navn').value || ''}</span></div>
-          <div id="preview-selger-adresse-container" style="${document.getElementById('selger-adresse').value ? '' : 'display: none;'}"><label>Adresse</label><span>${document.getElementById('selger-adresse').value || ''}</span></div>
-          <div id="preview-selger-telefon-container" style="${document.getElementById('selger-telefon').value ? '' : 'display: none;'}"><label>Telefon</label><span>${document.getElementById('selger-telefon').value || ''}</span></div>
-          <div id="preview-selger-epost-container" style="${document.getElementById('selger-epost').value ? '' : 'display: none;'}"><label>E-post</label><span>${document.getElementById('selger-epost').value || ''}</span></div>
-          <div id="preview-selger-personnummer-container" style="${document.getElementById('selger-personnummer').value ? '' : 'display: none;'}"><label>Personnummer / Organisasjonsnummer</label><span>${document.getElementById('selger-personnummer').value || ''}</span></div>
-        </div>
-        ${medeierSection}
-        <h3>Kjøretøyets opplysninger</h3>
-        <div class="grid">
-          <div id="preview-bil-merke-container" style="${document.getElementById('bil-merke').value ? '' : 'display: none;'}"><label>Merke</label><span>${document.getElementById('bil-merke').value || ''}</span></div>
-          <div id="preview-bil-modell-container" style="${document.getElementById('bil-modell').value ? '' : 'display: none;'}"><label>Modell</label><span>${document.getElementById('bil-modell').value || ''}</span></div>
-          <div id="preview-bil-arsmodell-container" style="${document.getElementById('bil-arsmodell').value ? '' : 'display: none;'}"><label>Årsmodell</label><span>${document.getElementById('bil-arsmodell').value || ''}</span></div>
-          <div id="preview-bil-regnr-container" style="${document.getElementById('bil-regnr').value ? '' : 'display: none;'}"><label>Registreringsnummer</label><span>${document.getElementById('bil-regnr').value || ''}</span></div>
-          <div id="preview-bil-vinnr-container" style="${document.getElementById('bil-vinnr').value ? '' : 'display: none;'}"><label>VIN-nummer</label><span>${document.getElementById('bil-vinnr').value || ''}</span></div>
-          <div id="preview-bil-kilometer-container" style="${document.getElementById('bil-kilometer').value ? '' : 'display: none;'}"><label>Kilometerstand</label><span>${document.getElementById('bil-kilometer').value || ''}</span></div>
-          <div id="preview-bil-farge-container" style="${document.getElementById('bil-farge').value ? '' : 'display: none;'}"><label>Farge</label><span>${document.getElementById('bil-farge').value || ''}</span></div>
-          <div id="preview-bil-eukontroll-container" style="${document.getElementById('bil-eukontroll').value ? '' : 'display: none;'}"><label>Sist godkjent EU-kontroll</label><span>${formatDate(document.getElementById('bil-eukontroll').value)}</span></div>
-        </div>
-        <h3>Bud</h3>
-        <div class="grid">
-          <div id="preview-kjopesum-container" style="${document.getElementById('kjopesum').value ? '' : 'display: none;'}"><label>Bud</label><span>${document.getElementById('kjopesum').value}</span></div>
-        </div>
-        <div class="signature">
-          <div id="signature-selger">
-            <p><strong>Selgers SMS PIN-signatur:</strong></p>
-            <p>___________________________</p>
-          </div>
-          <div id="signature-medeier" style="${hasMedeier ? '' : 'display: none;'}">
-            <p><strong>Medeiers SMS PIN-signatur:</strong></p>
-            <p>___________________________</p>
-          </div>
-        </div>
-        <div class="footer-signature">
-          <p><strong>Team Peasy</strong><br>
-          Strandveien 15-17, 1366 Lysaker<br>
-          peasy.no</p>
-        </div>
-      `;
-
-      window.print();
-    }
   </script>
 </body>
 </html>
