@@ -128,6 +128,46 @@
       display: flex;
       flex-direction: column;
     }
+
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .form-container {
+        max-width: 194mm;
+        max-height: 281mm;
+        padding: 5mm;
+        box-shadow: none;
+        margin: 0;
+      }
+      .form-container::before {
+        display: none;
+      }
+      button {
+        display: none;
+      }
+      input {
+        font-size: 10pt;
+        padding: 2mm;
+        border: 1pt solid #004225;
+      }
+      .form-section {
+        margin-bottom: 2mm;
+        padding-bottom: 1mm;
+        border-bottom: 0.5pt solid rgba(255, 193, 7, 0.15);
+      }
+      .form-section h3 {
+        font-size: 12pt;
+        margin-bottom: 1mm;
+      }
+      .fine-print-box {
+        padding: 2mm;
+        margin: 2mm 0;
+        font-size: 8pt;
+        line-height: 1.2;
+      }
+    }
   </style>
 </head>
 <body>
@@ -458,141 +498,8 @@
     }
 
     function generatePDF() {
-      const selgerNavn = document.getElementById('selger-navn').value || 'Not provided';
-      const selgerAdresse = document.getElementById('selger-adresse').value || 'Not provided';
-      const selgerPostnummerSted = document.getElementById('selger-postnummer-sted').value || 'Not provided';
-      const selgerTelefon = document.getElementById('selger-telefon').value || 'Not provided';
-      const selgerEpost = document.getElementById('selger-epost').value || 'Not provided';
-      const selgerPersonnummer = document.getElementById('selger-personnummer').value || 'Not provided';
-
-      const medeierNavn = document.getElementById('medeier-navn').value || '';
-      const medeierAdresse = document.getElementById('medeier-adresse').value || '';
-      const medeierPostnummerSted = document.getElementById('medeier-postnummer-sted').value || '';
-      const medeierTelefon = document.getElementById('medeier-telefon').value || '';
-      const medeierEpost = document.getElementById('medeier-epost').value || '';
-      const medeierPersonnummer = document.getElementById('medeier-personnummer').value || '';
-      const hasMedeier = medeierNavn || medeierAdresse || medeierPostnummerSted || medeierTelefon || medeierEpost || medeierPersonnummer;
-
-      const kjoperFirmanavn = document.getElementById('kjoper-firmanavn').value;
-      const kjoperOrgnr = document.getElementById('kjoper-orgnr').value;
-      const kjoperAdresse = document.getElementById('kjoper-adresse').value;
-      const kjoperTelefon = document.getElementById('kjoper-telefon').value;
-      const kjoperEpost = document.getElementById('kjoper-epost').value;
-
-      const bilMerke = document.getElementById('bil-merke').value || 'Not provided';
-      const bilModell = document.getElementById('bil-modell').value || 'Not provided';
-      const bilArsmodell = document.getElementById('bil-arsmodell').value || 'Not provided';
-      const bilRegnr = document.getElementById('bil-regnr').value || 'Not provided';
-      const bilVinnr = document.getElementById('bil-vinnr').value || 'Not provided';
-      const bilKilometer = document.getElementById('bil-kilometer').value || 'Not provided';
-      const bilFarge = document.getElementById('bil-farge').value || 'Not provided';
-      const bilEukontroll = formatDate(document.getElementById('bil-eukontroll').value) || 'Not provided';
-
-      const kjopesum = document.getElementById('kjopesum').value || 'Not provided';
-      const kontonummer = document.getElementById('kontonummer').value || 'Not provided';
-      const betalingsdato = formatDate(document.getElementById('betalingsdato').value) || 'Not provided';
-      const testDato = formatDate(document.getElementById('test-dato').value) || 'Not provided';
-
-      const oppgjorPantehaver = document.getElementById('oppgjor-pantehaver').value || 'Not provided';
-      const oppgjorDato = formatDate(document.getElementById('oppgjor-dato').value) || 'Not provided';
-      const oppgjorRestsaldo = document.getElementById('oppgjor-restsaldo').value || 'Not provided';
-      const oppgjorTilUtbetaling = document.getElementById('oppgjor-til-utbetaling').value || 'Not provided';
-
-      const latexContent = `
-\\documentclass[a4paper]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[a4paper, margin=8mm]{geometry}
-\\usepackage{array}
-\\usepackage{booktabs}
-
-\\begin{document}
-
-\\noindent \\textbf{KONTRAKT / OPPGJØRSOPPSTILLING}
-
-\\vspace{2mm}
-
-\\noindent \\textbf{Selger}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Navn & ${selgerNavn} \\\\
-  Adresse & ${selgerAdresse} \\\\
-  Postnummer / Sted & ${selgerPostnummerSted} \\\\
-  Telefon & ${selgerTelefon} \\\\
-  E-post & ${selgerEpost} \\\\
-  Personnummer / Organisasjonsnummer & ${selgerPersonnummer} \\\\
-\\end{tabular}
-
-${hasMedeier ? `
-\\vspace{2mm}
-\\noindent \\textbf{Medeier}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Navn & ${medeierNavn} \\\\
-  Adresse & ${medeierAdresse} \\\\
-  Postnummer / Sted & ${medeierPostnummerSted} \\\\
-  Telefon & ${medeierTelefon} \\\\
-  E-post & ${medeierEpost} \\\\
-  Personnummer / Organisasjonsnummer & ${medeierPersonnummer} \\\\
-\\end{tabular}
-` : ''}
-
-\\vspace{2mm}
-\\noindent \\textbf{Kjøper (forhandler)}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Firmanavn & ${kjoperFirmanavn} \\\\
-  Organisasjonsnummer & ${kjoperOrgnr} \\\\
-  Adresse & ${kjoperAdresse} \\\\
-  Telefon & ${kjoperTelefon} \\\\
-  E-post & ${kjoperEpost} \\\\
-\\end{tabular}
-
-\\vspace{2mm}
-\\noindent \\textbf{Kjøretøyets opplysninger}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Merke & ${bilMerke} \\\\
-  Modell & ${bilModell} \\\\
-  Årsmodell & ${bilArsmodell} \\\\
-  Registreringsnummer & ${bilRegnr} \\\\
-  VIN & ${bilVinnr} \\\\
-  Kilometerstand & ${bilKilometer} \\\\
-  Farge & ${bilFarge} \\\\
-  Sist godkjent EU-kontroll & ${bilEukontroll} \\\\
-\\end{tabular}
-
-\\vspace{2mm}
-\\noindent \\textbf{Kjøpesum og betalingsvilkår}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Kjøpesum (NOK) & ${kjopesum} \\\\
-  Kontonummer & ${kontonummer} \\\\
-  Betalingsdato & ${betalingsdato} \\\\
-  Dato for NAF/Viking-test & ${testDato} \\\\
-\\end{tabular}
-
-\\vspace{2mm}
-\\noindent \\textbf{Oppgjørsoppstilling}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Pantehaver & ${oppgjorPantehaver} \\\\
-  Oppgjørsdato & ${oppgjorDato} \\\\
-  Restsaldo & ${oppgjorRestsaldo} \\\\
-  Til utbetaling & ${oppgjorTilUtbetaling} \\\\
-\\end{tabular}
-
-\\vspace{2mm}
-\\noindent \\small{Kjøper aksepterer kjøretøyets tilstand basert på NAF/Viking-test og fraskriver seg retten til å fremme krav mot selger etter oppgjør. Selger garanterer at kjøretøyet er fri for heftelser. Avtalen reguleres av kjøpsloven.}
-
-\\vspace{2mm}
-\\noindent \\textbf{Signaturer}\\\\
-\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
-  Selgers signatur & ___________________________ \\\\
-  ${hasMedeier ? 'Medeiers signatur & ___________________________ \\\\' : ''} 
-  Kjøpers signatur & ___________________________ \\\\
-\\end{tabular}
-
-\\end{document}
-      `;
-
-function generatePDF() {
-  window.print();
-}
+      window.print();
+    }
   </script>
 </body>
 </html>
