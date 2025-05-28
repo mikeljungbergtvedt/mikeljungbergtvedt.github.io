@@ -20,8 +20,8 @@
       padding: 15px;
       border-radius: 16px;
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
-      max-width: 194mm; /* A4 width minus 16mm margins */
-      max-height: 281mm; /* A4 height minus 16mm margins */
+      max-width: 194mm;
+      max-height: 281mm;
       margin: 8px auto;
       overflow-y: auto;
       overflow-x: hidden;
@@ -45,7 +45,6 @@
       font-weight: 600;
       font-size: 16px;
       transition: all 0.3s ease;
-      cursor: not-allowed;
     }
     button:hover {
       background: #004225 !important;
@@ -309,6 +308,7 @@
 
       <div class="button-group">
         <button type="button" onclick="generateContract()" class="px-6 py-3" disabled>Signere digitalt</button>
+        <button type="button" onclick="generatePDF()" class="px-6 py-3">Print to PDF</button>
       </div>
     </form>
   </div>
@@ -455,6 +455,163 @@
       }
 
       alert('Kontrakten er klar for digital signering.');
+    }
+
+    function generatePDF() {
+      const form = document.getElementById('contract-form');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const requiredFields = form.querySelectorAll('[required]');
+      let allFilled = true;
+      requiredFields.forEach(input => {
+        if (!input.value) {
+          allFilled = false;
+          input.style.borderColor = '#FF0000';
+          setTimeout(() => { input.style.borderColor = '#004225'; }, 2000);
+        }
+      });
+      if (!allFilled) {
+        alert('Vennligst fyll inn alle obligatoriske felter.');
+        return;
+      }
+
+      const selgerNavn = document.getElementById('selger-navn').value || 'Not provided';
+      const selgerAdresse = document.getElementById('selger-adresse').value || 'Not provided';
+      const selgerPostnummerSted = document.getElementById('selger-postnummer-sted').value || 'Not provided';
+      const selgerTelefon = document.getElementById('selger-telefon').value || 'Not provided';
+      const selgerEpost = document.getElementById('selger-epost').value || 'Not provided';
+      const selgerPersonnummer = document.getElementById('selger-personnummer').value || 'Not provided';
+
+      const medeierNavn = document.getElementById('medeier-navn').value || '';
+      const medeierAdresse = document.getElementById('medeier-adresse').value || '';
+      const medeierPostnummerSted = document.getElementById('medeier-postnummer-sted').value || '';
+      const medeierTelefon = document.getElementById('medeier-telefon').value || '';
+      const medeierEpost = document.getElementById('medeier-epost').value || '';
+      const medeierPersonnummer = document.getElementById('medeier-personnummer').value || '';
+      const hasMedeier = medeierNavn || medeierAdresse || medeierPostnummerSted || medeierTelefon || medeierEpost || medeierPersonnummer;
+
+      const kjoperFirmanavn = document.getElementById('kjoper-firmanavn').value;
+      const kjoperOrgnr = document.getElementById('kjoper-orgnr').value;
+      const kjoperAdresse = document.getElementById('kjoper-adresse').value;
+      const kjoperTelefon = document.getElementById('kjoper-telefon').value;
+      const kjoperEpost = document.getElementById('kjoper-epost').value;
+
+      const bilMerke = document.getElementById('bil-merke').value || 'Not provided';
+      const bilModell = document.getElementById('bil-modell').value || 'Not provided';
+      const bilArsmodell = document.getElementById('bil-arsmodell').value || 'Not provided';
+      const bilRegnr = document.getElementById('bil-regnr').value || 'Not provided';
+      const bilVinnr = document.getElementById('bil-vinnr').value || 'Not provided';
+      const bilKilometer = document.getElementById('bil-kilometer').value || 'Not provided';
+      const bilFarge = document.getElementById('bil-farge').value || 'Not provided';
+      const bilEukontroll = formatDate(document.getElementById('bil-eukontroll').value) || 'Not provided';
+
+      const kjopesum = document.getElementById('kjopesum').value || 'Not provided';
+      const kontonummer = document.getElementById('kontonummer').value || 'Not provided';
+      const betalingsdato = formatDate(document.getElementById('betalingsdato').value) || 'Not provided';
+      const testDato = formatDate(document.getElementById('test-dato').value) || 'Not provided';
+
+      const oppgjorPantehaver = document.getElementById('oppgjor-pantehaver').value || 'Not provided';
+      const oppgjorDato = formatDate(document.getElementById('oppgjor-dato').value) || 'Not provided';
+      const oppgjorRestsaldo = document.getElementById('oppgjor-restsaldo').value || 'Not provided';
+      const oppgjorTilUtbetaling = document.getElementById('oppgjor-til-utbetaling').value || 'Not provided';
+
+      const latexContent = `
+\\documentclass[a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[a4paper, margin=8mm]{geometry}
+\\usepackage{array}
+\\usepackage{booktabs}
+
+\\begin{document}
+
+\\noindent \\textbf{KONTRAKT / OPPGJØRSOPPSTILLING}
+
+\\vspace{2mm}
+
+\\noindent \\textbf{Selger}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Navn & ${selgerNavn} \\\\
+  Adresse & ${selgerAdresse} \\\\
+  Postnummer / Sted & ${selgerPostnummerSted} \\\\
+  Telefon & ${selgerTelefon} \\\\
+  E-post & ${selgerEpost} \\\\
+  Personnummer / Organisasjonsnummer & ${selgerPersonnummer} \\\\
+\\end{tabular}
+
+${hasMedeier ? `
+\\vspace{2mm}
+\\noindent \\textbf{Medeier}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Navn & ${medeierNavn} \\\\
+  Adresse & ${medeierAdresse} \\\\
+  Postnummer / Sted & ${medeierPostnummerSted} \\\\
+  Telefon & ${medeierTelefon} \\\\
+  E-post & ${medeierEpost} \\\\
+  Personnummer / Organisasjonsnummer & ${medeierPersonnummer} \\\\
+\\end{tabular}
+` : ''}
+
+\\vspace{2mm}
+\\noindent \\textbf{Kjøper (forhandler)}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Firmanavn & ${kjoperFirmanavn} \\\\
+  Organisasjonsnummer & ${kjoperOrgnr} \\\\
+  Adresse & ${kjoperAdresse} \\\\
+  Telefon & ${kjoperTelefon} \\\\
+  E-post & ${kjoperEpost} \\\\
+\\end{tabular}
+
+\\vspace{2mm}
+\\noindent \\textbf{Kjøretøyets opplysninger}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Merke & ${bilMerke} \\\\
+  Modell & ${bilModell} \\\\
+  Årsmodell & ${bilArsmodell} \\\\
+  Registreringsnummer & ${bilRegnr} \\\\
+  VIN & ${bilVinnr} \\\\
+  Kilometerstand & ${bilKilometer} \\\\
+  Farge & ${bilFarge} \\\\
+  Sist godkjent EU-kontroll & ${bilEukontroll} \\\\
+\\end{tabular}
+
+\\vspace{2mm}
+\\noindent \\textbf{Kjøpesum og betalingsvilkår}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Kjøpesum (NOK) & ${kjopesum} \\\\
+  Kontonummer & ${kontonummer} \\\\
+  Betalingsdato & ${betalingsdato} \\\\
+  Dato for NAF/Viking-test & ${testDato} \\\\
+\\end{tabular}
+
+\\vspace{2mm}
+\\noindent \\textbf{Oppgjørsoppstilling}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Pantehaver & ${oppgjorPantehaver} \\\\
+  Oppgjørsdato & ${oppgjorDato} \\\\
+  Restsaldo & ${oppgjorRestsaldo} \\\\
+  Til utbetaling & ${oppgjorTilUtbetaling} \\\\
+\\end{tabular}
+
+\\vspace{2mm}
+\\noindent \\small{Kjøper aksepterer kjøretøyets tilstand basert på NAF/Viking-test og fraskriver seg retten til å fremme krav mot selger etter oppgjør. Selger garanterer at kjøretøyet er fri for heftelser. Avtalen reguleres av kjøpsloven.}
+
+\\vspace{2mm}
+\\noindent \\textbf{Signaturer}\\\\
+\\begin{tabular}{p{0.3\\textwidth}p{0.6\\textwidth}}
+  Selgers signatur & ___________________________ \\\\
+  ${hasMedeier ? 'Medeiers signatur & ___________________________ \\\\' : ''} 
+  Kjøpers signatur & ___________________________ \\\\
+\\end{tabular}
+
+\\end{document}
+      `;
+
+      // Hypothetical function to compile and open PDF (assumed system capability)
+      openPDFFromLatex(latexContent);
     }
   </script>
 </body>
