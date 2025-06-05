@@ -101,11 +101,20 @@
             display: flex;
             align-items: center;
         }
+        .nav-menu ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: var(--wp--preset--spacing--20);
+        }
         .header-form {
             display: flex;
             align-items: center;
             gap: var(--wp--preset--spacing--20);
-            margin-left: var(--wp--preset--spacing--40);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
         }
         .header-form input {
             padding: var(--wp--preset--spacing--20);
@@ -138,12 +147,42 @@
         .header-form button:hover {
             background-color: var(--wp--preset--color--light-green-cyan);
         }
+        .hamburger {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--wp--preset--color--black);
+        }
         @media (max-width: 768px) {
-            .header-form {
+            .nav-menu ul {
                 display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 80px;
+                right: 0;
+                background-color: var(--wp--preset--color--white);
+                width: 200px;
+                padding: var(--wp--preset--spacing--20);
+                box-shadow: var(--wp--preset--shadow--natural);
+            }
+            .nav-menu.active ul {
+                display: flex;
+            }
+            .hamburger {
+                display: block;
             }
             .intro-form:not(.hidden) ~ .header-form {
                 display: none;
+            }
+            .intro-form.hidden ~ .header-form {
+                display: flex;
+                position: static;
+                transform: none;
+                justify-content: center;
+                width: 100%;
+                padding: var(--wp--preset--spacing--20);
             }
         }
         @media (min-width: 769px) {
@@ -201,17 +240,18 @@
         <a href="#" class="nav-logo-link" aria-label="Tilbake til forsiden">
             <img src="https://peasy.no/wp-content/uploads/2025/04/logo.png" alt="Peasy Logo" class="nav-logo" loading="lazy">
         </a>
+        <form class="header-form" action="https://peasy.no/valuate" method="post" aria-label="Bilvurderingsformular">
+            <input type="text" name="reg_number" placeholder="Reg. nr." aria-label="Bilens registreringsnummer" required>
+            <input type="number" name="mileage" placeholder="Kilometerstand" aria-label="Bilens kilometerstand" required>
+            <button type="submit">Få verdivurdering</button>
+        </form>
         <div class="nav-menu">
+            <button class="hamburger" aria-label="Toggle menu">☰</button>
             <ul>
                 <li><a href="#" class="open-terms" role="button" aria-label="Åpne vilkår">Vilkår</a></li>
                 <li><a href="#faq">FAQ</a></li>
                 <li><a href="https://account.peasy.no/" title="Logg inn"><i class="fa fa-user" aria-hidden="true"></i></a></li>
             </ul>
-            <form class="header-form" action="https://peasy.no/valuate" method="post" aria-label="Bilvurderingsformular">
-                <input type="text" name="reg_number" placeholder="Reg. nr." aria-label="Bilens registreringsnummer" required>
-                <input type="number" name="mileage" placeholder="Kilometerstand" aria-label="Bilens kilometerstand" required>
-                <button type="submit">Få verdivurdering</button>
-            </form>
         </div>
     </nav>
     <div class="modal" id="terms-modal" aria-hidden="true">
@@ -331,7 +371,7 @@
             <div class="faq-item">
                 <h3>Hvorfor får jeg bedre betalt for bilen gjennom Peasy?</h3>
                 <div class="faq-answer">
-                    <p>Peasy presenterer bilen din på best mulig måte ved å vaske, fotografere og inkludere ekstrautstyr i prospektet, som du får se før auksjon. Dette tiltrekker flere bud fra Autoringens 4000+ profesjonelle kjøpere, slik at du får bedre betalt.</p>
+                    <p>Peasy presenterer bilen din på best mulig måte ved å vaske, fotograferer og inkludere ekstrautstyr i prospektet, som du får se før auksjon. Dette tiltrekker flere bud fra Autoringens 4000+ profesjonelle kjøpere, slik at du får bedre betalt.</p>
                 </div>
             </div>
             <div class="faq-item">
@@ -562,6 +602,12 @@
         });
     });
 
+    // Toggle hamburger menu
+    document.querySelector('.hamburger').addEventListener('click', () => {
+        const navMenu = document.querySelector('.nav-menu');
+        navMenu.classList.toggle('active');
+    });
+
     // Show/hide header form based on intro form visibility
     function toggleHeaderForm() {
         const introForm = document.querySelector('.intro-form');
@@ -571,7 +617,7 @@
             if (introFormVisible) {
                 headerForm.style.display = 'none';
             } else {
-                headerForm.style.display = window.innerWidth > 768 ? 'flex' : 'none';
+                headerForm.style.display = window.innerWidth > 768 ? 'flex' : 'flex';
             }
         }
     }
