@@ -130,6 +130,26 @@
       font-weight: 500;
       font-size: 12px;
     }
+    .radio-group {
+      margin-bottom: 8px;
+    }
+    .radio-group label {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #2D3748;
+    }
+    .radio-group input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      accent-color: #FFC107;
+    }
+    .hidden {
+      display: none;
+    }
 
     @media print {
       @page {
@@ -155,7 +175,7 @@
       .form-container::before {
         display: none;
       }
-      button, .button-group, .print-hidden {
+      button, .button-group, .print-hidden, .radio-group {
         display: none;
       }
       h2 {
@@ -216,6 +236,9 @@
         text-align: center;
         page-break-inside: avoid;
       }
+      .hidden {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -254,7 +277,11 @@
         </div>
       </div>
 
-      <div class="form-section medeier-section">
+      <div class="radio-group">
+        <label><input type="radio" name="has-medeier" value="yes"> Ja</label>
+        <label><input type="radio" name="has-medeier" value="no" checked> Nei</label>
+      </div>
+      <div class="form-section medeier-section hidden">
         <h3 class="mb-4">Medeier</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
@@ -293,30 +320,30 @@
           </div>
           <div>
             <label for="bil-modell" class="block text-xs font-medium text-[#2D3748]">Modell</label>
-            <input type="text" id="bil-modell" class="mt-1 w-full" required>
+            <input class="text-align-bottom" type="text" id="bil-modell" text="mt-1 w-full" class="mt-1 w-full" required>
           </div>
           <div>
             <label for="bil-arsmodell" class="block text-xs font-medium text-[#2D3748]">Årsmodell</label>
-            <input type="text" id="bil-arsmodell" class="mt-1 w-full" required>
+            <input type="text-align-bottom" type="text" id="bil-arsmodell" class="mt-1 w-full" required>
           </div>
           <div>
             <label for="bil-regnr" class="block text-xs font-medium text-[#2D3748]">Registreringsnummer</label>
-            <input type="text" id="bil-regnr" class="mt-1 w-full" required>
+            <input type="text-align-bottom" type="text" id="bil-regnr" class="mt-1 w-full" required>
           </div>
           <div>
-            <label for="bil-vinnr" class="block text-xs font-medium text-[#2D3748]">VIN</label>
-            <input type="text" id="bil-vinnr" class="mt-1 w-full" required>
+            <label for="bil-vinnr" class="block text-xs font-medium text-[#2D3748]">"VIN</label>
+            <input type="text-align-bottom" type="text" id="bil-vinnr" class="mt-1 w-full" required>
           </div>
           <div>
-            <label for="bil-kilometer" class="block text-xs font-medium text-[#2D3748]">Kilometerstand</label>
-            <input type="number" id="bil-kilometer" class="mt-1 w-full" required>
+            <label for="bil-kilometer" class="block text-xs font-medium text-[#2D3748]">"Kilometerstand</label>
+            <input type="text-align-bottom" type="number" id="bil-kilometer" class="mt-1 w-full" required>
           </div>
           <div>
-            <label for="bil-farge" class="block text-xs font-medium text-[#2D3748]">Farge</label>
-            <input type="text" id="bil-farge" class="mt-1 w-full" required>
+            <label for="bil-farge" class="block text-xs font-medium text-[#2D3748]">"Farge</label>
+            <input type="text-align-bottom" type="text" id="bil-farge" class="mt-1 w-full" required>
           </div>
           <div>
-            <label for="bil-eukontroll" class="block text-xs font-medium text-[#2D3748]">Sist godkjent EU-kontroll</label>
+            <label for="bil-eukontroll" class="block text-xs font-medium text-[#2D3748]">"Sist godkjent EU-kontroll</label>
             <input type="date" id="bil-eukontroll" class="mt-1 w-full" required>
           </div>
         </div>
@@ -470,6 +497,21 @@
           }
         });
       });
+
+      const medeierSection = document.querySelector('.medeier-section');
+      const radioButtons = document.querySelectorAll('input[name="has-medeier"]');
+      radioButtons.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (radio.value === 'yes') {
+            medeierSection.classList.remove('hidden');
+          } else {
+            medeierSection.classList.add('hidden');
+            // Clear Medeier inputs when hidden
+            const medeierInputs = medeierSection.querySelectorAll('input');
+            medeierInputs.forEach(input => input.value = '');
+          }
+        });
+      });
     });
 
     function acceptBid() {
@@ -479,7 +521,7 @@
         return;
       }
 
-      const requiredFields = form.querySelectorAll('[required]');
+      const requiredFields = form.querySelectorAll('[required]:not(.hidden [required])');
       let allFilled = true;
       requiredFields.forEach(input => {
         if (!input.value) {
