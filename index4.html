@@ -16,9 +16,10 @@
     <div class="notes">
         <p><strong>Merknader:</strong></p>
         <ul>
-            <li>146 leads mottatt (100%)</li>
-            <li>61 biler mottatt SD skjema (41.8%)</li>
+            <li>146 leads mottatt</li>
+            <li>61 biler mottatt SD skjema (100%)</li>
             <li>29 biler timet ut (40 dager etter mottak fra Drive)</li>
+            <li>19 biler venter på verdivurderingssvar (31.1% av Innenfor Gire)</li>
         </ul>
     </div>
     <script>
@@ -29,58 +30,88 @@
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Drive Leads (D1)', 'Innenfor Gire (N3)', 'SD Innsendt (N10)', 'Avvist eller Tidsavbrutt (N18)', 'Nådd Lager (N35)', 'Solgt (N56)', 'Returnert (N45)'],
-                datasets: [{
-                    label: 'Prosentandel',
-                    data: [100, 41.8, 37.0, 24.0, 4.1, 2.7, 1.4],
-                    backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
-                    borderColor: ['#FBB35A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
-                    borderWidth: 1
-                }]
+                labels: ['Drive Leads (D1)', 'Innenfor Gire (N3)', 'SD Innsendt (N10)', 'Avvist eller Tidsavbrutt + Venter Verdivurdering', 'Nådd Lager (N29)', 'Solgt (N56)', 'Returnert (N45)'],
+                datasets: [
+                    {
+                        label: 'Hovedverdi',
+                        data: [146, 100, 88.5, 57.4, 9.8, 6.6, 3.3],
+                        backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
+                        borderColor: ['#FBB29A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Venter Verdivurdering',
+                        data: [0, 0, 0, 31.1, 0, 0, 0], // Only for the stacked bar
+                        backgroundColor: '#D3D3D3', // Gray for distinction
+                        borderColor: '#808080',
+                        borderWidth: 1
+                    }
+                ]
             },
             options: {
                 indexAxis: 'y',
                 scales: {
                     x: {
+                        stacked: true, // Enable stacking for x-axis
                         beginAtZero: true,
-                        title: { display: true, text: 'Prosentandel (%)' },
-                        max: 100
+                        title: { display: true, text: 'Verdi' },
+                        max: 146
                     },
                     y: {
+                        stacked: true, // Enable stacking for y-axis
                         title: { display: true, text: 'Prosessstadie' }
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: { display: false }, // Hide legend to avoid confusion
                     title: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const label = context.dataset.label;
-                                const value = context.raw.toFixed(1);
-                                if (context.dataIndex === 2) {
-                                    const percentOfGire = ((37.0 / 41.8) * 100).toFixed(1);
-                                    return `${label}: ${value}% (ca. ${percentOfGire}% av Innenfor Gire)`;
+                                const index = context.dataIndex;
+                                const datasetIndex = context.datasetIndex;
+                                const value = context.raw;
+                                const rawNumbers = [146, 61, 54, 29, 6, 4, 2];
+                                const pendingRaw = 19;
+                                if (index === 0) {
+                                    return `Leads: ${value} biler`;
+                                } else if (index === 1) {
+                                    return `Prosentandel: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
+                                } else if (index === 3 && datasetIndex === 0) {
+                                    return `Avvist eller Tidsavbrutt: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
+                                } else if (index === 3 && datasetIndex === 1) {
+                                    return `Venter Verdivurdering: ${value.toFixed(1)}% (${pendingRaw} biler)`;
+                                } else {
+                                    return `Prosentandel: ${value.toFixed(1)}% av Innenfor Gire (${rawNumbers[index]} biler)`;
                                 }
-                                return `${label}: ${value}%`;
                             }
                         }
                     },
                     datalabels: {
                         anchor: 'center',
                         align: 'center',
-                        color: '#000000', // Black for print readability
+                        color: '#000000',
                         font: {
                             size: 12,
                             weight: 'bold'
                         },
                         formatter: function(value, context) {
-                            const formattedValue = value.toFixed(1) + '%';
-                            if (context.dataIndex === 2) {
-                                const percentOfGire = ((37.0 / 41.8) * 100).toFixed(1);
-                                return `${formattedValue}\n(${percentOfGire}% av N3)`;
+                            const index = context.dataIndex;
+                            const datasetIndex = context.datasetIndex;
+                            const rawNumbers = [146, 61, 54, 29, 6, 4, 2];
+                            const pendingRaw = 19;
+                            if (index === 0) {
+                                return `${value} biler`;
+                            } else if (index === 1) {
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
+                            } else if (index === 3 && datasetIndex === 0) {
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
+                            } else if (index === 3 && datasetIndex === 1) {
+                                return `${value.toFixed(1)}% (${pendingRaw})`;
+                            } else if (value > 0) {
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
                             }
-                            return formattedValue;
+                            return ''; // No label for zero values in second dataset
                         }
                     }
                 }
