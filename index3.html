@@ -1,91 +1,170 @@
-Chart.register(ChartDataLabels);
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drive.no Bilsalgsfunnel</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { max-width: 800px; margin: 20px auto; }
+        .notes { max-width: 800px; margin: 0 auto; text-align: left; font-size: 14px; }
+    </style>
+</head>
+<body>
+    < h2>Drive.no Leadsflyt</h2>
+    <canvas id="funnelChart" width="800" height="600"></canvas>
+    <div class="notes">
+        <p><strong>Merknader:</strong></p>
+        <ul>
+            <li>146 leads mottatt</li>
+            <li>61 biler mottatt SD skjema (100%)</li>
+            <li>29 biler avvist eller timet ut (40 dager etter mottak fra Drive), fordelt på:</li>
+            <li>- 10 biler avvist av kunde (placeholder, vennligst oppdater med faktiske data)</li>
+            <li>- 10 biler avvist av admin (placeholder, vennligst oppdater med faktiske data)</li>
+            <li>- 9 biler timet ut (placeholder, vennligst oppdater med faktiske data)</li>
+            <li>19 biler venter på verdivurderingssvar (31.1% av Innenfor Gire)</li>
+            <li>Dropp off skjer etter verdivurdering</li>
+        </ul>
+    </div>
+    <script>
+        // Register the datalabels plugin for Chart.js
+        Chart.register(ChartDataLabels);
 
-const rawNumbers = [146, 61, 54, 29, 6, 4, 2];
-const pendingRaw = 19;
-const percentages = rawNumbers.map((num, i) => (i === 0 ? num : (num / rawNumbers[1] * 100).toFixed(1)));
-const pendingPercentage = (pendingRaw / rawNumbers[1] * 100).toFixed(1);
+        // Get the canvas context
+        const ctx = document.getElementById('funnelChart').getContext('2d');
 
-const ctx = document.getElementById('funnelChart').getContext('2d');
-new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: ['Drive Leads (D1)', 'Innenfor Gire (N3)', 'SD Innsendt (N10)', 'Avvist/Tidsavbrutt', 'Nådd Lager (N29)', 'Solgt (N56)', 'Returnert (N45)'],
-        datasets: [
-            {
-                label: 'Hovedverdi',
-                data: percentages,
-                backgroundColor: ['#FF9F40', '#4E79A7', '#A0CBE8', '#F28E2B', '#59A14F', '#8CD17D', '#B6992D'],
-                borderColor: ['#D9812C', '#3B5C7A', '#7AA8C6', '#C6711F', '#3E7A34', '#5B9E4D', '#8A6D1F'],
-                borderWidth: 1
+        // Create the funnel chart
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    'Drive Leads (D1)', 
+                    'Innenfor Gire (N3)', 
+                    'SD Innsendt (N10)', 
+                    'Avvist eller Tidsavbrutt + Venter Verdivurdering', 
+                    'Nådd Lager (N29)', 
+                    'Solgt (N56)', 
+                    'Returnert (N45)'
+                ],
+                datasets: [
+                    {
+                        label: 'Hovedverdi',
+                        data: [146, 100, 88.5, 0, 9.8, 6.6, 3.3], // Main values, zero for rejection bar
+                        backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
+                        borderColor: ['#FBB29A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Venter Verdivurdering',
+                        data: [0, 0, 0, 31.1, 0, 0, 0], // Pending valuation (19 cars, 31.1% of 61)
+                        backgroundColor: '#D3D3D3',
+                        borderColor: '#808080',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Kunde Avvist',
+                        data: [0, 0, 0, 16.4, 0, 0, 0], // Placeholder: 10 cars (10/61 ≈ 16.4%)
+                        backgroundColor: '#FFB6C1',
+                        borderColor: '#FF4040',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Admin Avvist',
+                        data: [0, 0, 0, 16.4, 0, 0, 0], // Placeholder: 10 cars (10/61 ≈ 16.4%)
+                        backgroundColor: '#ADD8E6',
+                        borderColor: '#4682B4',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Timet Ut',
+                        data: [0, 0, 0, 14.8, 0, 0, 0], // Placeholder: 9 cars (9/61 ≈ 14.8%)
+                        backgroundColor: '#FFD700',
+                        borderColor: '#DAA520',
+                        borderWidth: 1
+                    }
+                ]
             },
-            {
-                label: 'Venter Verdivurdering',
-                data: [0, 0, 0, pendingPercentage, 0, 0, 0],
-                backgroundColor: '#D3D3D3',
-                borderColor: '#808080',
-                borderWidth: 1
-            }
-        ]
-    },
-    options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                stacked: true,
-                beginAtZero: true,
-                title: { display: true, text: 'Verdi' }
-            },
-            y: {
-                stacked: true,
-                title: { display: true, text: 'Prosessstadie' }
-            }
-        },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        const index = context.dataIndex;
-                        const datasetIndex = context.datasetIndex;
-                        const value = context.raw;
-                        if (index === 0) {
-                            return `Leads: ${value} biler`;
-                        } else if (index === 1) {
-                            return `Prosentandel: ${value}% (${rawNumbers[index]} biler)`;
-                        } else if (index === 3 && datasetIndex === 0) {
-                            return `Avvist/Tidsavbrutt: ${value}% (${rawNumbers[index]} biler)`;
-                        } else if (index === 3 && datasetIndex === 1) {
-                            return `Venter Verdivurdering: ${value}% (${pendingRaw} biler)`;
-                        } else {
-                            return `Prosentandel: ${value}% (${rawNumbers[index]} biler)`;
+            options: {
+                indexAxis: 'y', // Horizontal bars
+                scales: {
+                    x: {
+                        stacked: true, // Enable stacking for x-axis
+                        beginAtZero: true,
+                        title: { display: true, text: 'Verdi' },
+                        max: 146 // Max value based on total leads
+                    },
+                    y: {
+                        stacked: true, // Enable stacking for y-axis
+                        title: { display: true, text: 'Prosessstadie' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }, // Hide legend to avoid confusion
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const datasetIndex = context.datasetIndex;
+                                const value = context.raw;
+                                const rawNumbers = [146, 61, 54, 0, 6, 4, 2]; // Raw car counts for main stages
+                                const rejectionNumbers = [10, 10, 9]; // Placeholder: customer, admin, timeout
+                                const pendingRaw = 19; // Cars pending valuation
+                                if (index === 0) {
+                                    return `Leads: ${value} biler`;
+                                } else if (index === 1) {
+                                    return `Prosentandel: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
+                                } else if (index === 3 && datasetIndex === 0) {
+                                    return `Hovedverdi: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
+                                } else if (index === 3 && datasetIndex === 1) {
+                                    return `Venter Verdivurdering: ${value.toFixed(1)}% (${pendingRaw} biler)`;
+                                } else if (index === 3 && datasetIndex === 2) {
+                                    return `Kunde Avvist: ${value.toFixed(1)}% (${rejectionNumbers[0]} biler)`;
+                                } else if (index === 3 && datasetIndex === 3) {
+                                    return `Admin Avvist: ${value.toFixed(1)}% (${rejectionNumbers[1]} biler)`;
+                                } else if (index === 3 && datasetIndex === 4) {
+                                    return `Timet Ut: ${value.toFixed(1)}% (${rejectionNumbers[2]} biler)`;
+                                } else {
+                                    return `Prosentandel: ${value.toFixed(1)}% av Innenfor Gire (${rawNumbers[index]} biler)`;
+                                }
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'center',
+                        align: 'center',
+                        color: '#000000',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        },
+                        formatter: function(value, context) {
+                            const index = context.dataIndex;
+                            const datasetIndex = context.datasetIndex;
+                            const rawNumbers = [146, 61, 54, 0, 6, 4, 2]; // Raw car counts for main stages
+                            const rejectionNumbers = [10, 10, 9]; // Placeholder: customer, admin, timeout
+                            const pendingRaw = 19; // Cars pending valuation
+                            if (index === 0 && datasetIndex === 0) {
+                                return `${rawNumbers[index]} biler`; // Show "146 biler" for Drive Leads
+                            } else if (index === 1 && datasetIndex === 0) {
+                                return `100% (${rawNumbers[index]})`; // Show "100% (61)" for Innenfor Gire
+                            } else if (index === 3 && datasetIndex === 1) {
+                                return `${value.toFixed(1)}% (${pendingRaw})`; // Venter Verdivurdering
+                            } else if (index === 3 && datasetIndex === 2) {
+                                return `${value.toFixed(1)}% (${rejectionNumbers[0]})`; // Kunde Avvist
+                            } else if (index === 3 && datasetIndex === 3) {
+                                return `${value.toFixed(1)}% (${rejectionNumbers[1]})`; // Admin Avvist
+                            } else if (index === 3 && datasetIndex === 4) {
+                                return `${value.toFixed(1)}% (${rejectionNumbers[2]})`; // Timet Ut
+                            } else if (value > 0 && datasetIndex === 0) {
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`; // Other bars with non-zero values in Hovedverdi
+                            }
+                            return ''; // No label for zero values or other datasets
                         }
                     }
                 }
-            },
-            datalabels: {
-                anchor: 'center',
-                align: 'center',
-                color: '#000000',
-                font: { size: 12, weight: 'bold' },
-                formatter: function(value, context) {
-                    const index = context.dataIndex;
-                    const datasetIndex = context.datasetIndex;
-                    if (index === 0) {
-                        return `${value} biler`;
-                    } else if (index === 1) {
-                        return `${value}% (${rawNumbers[index]})`;
-                    } else if (index === 3 && datasetIndex === 0) {
-                        return `${value}% (${rawNumbers[index]})`;
-                    } else if (index === 3 && datasetIndex === 1) {
-                        return `${value}% (${pendingRaw})`;
-                    } else if (value > 0) {
-                        return `${value}% (${rawNumbers[index]})`;
-                    }
-                    return '';
-                }
             }
-        }
-    }
-});
+        });
+    </script>
+</body>
+</html>
