@@ -24,25 +24,36 @@
         </ul>
     </div>
     <script>
-        // Register the datalabels plugin
+        // Register the datalabels plugin for Chart.js
         Chart.register(ChartDataLabels);
 
+        // Get the canvas context
         const ctx = document.getElementById('funnelChart').getContext('2d');
+
+        // Create the funnel chart
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Drive Leads (D1)', 'Innenfor Gire (N3)', 'SD Innsendt (N10)', 'Avvist eller Tidsavbrutt + Venter Verdivurdering', 'Nådd Lager (N29)', 'Solgt (N56)', 'Returnert (N45)'],
+                labels: [
+                    'Drive Leads (D1)', 
+                    'Innenfor Gire (N3)', 
+                    'SD Innsendt (N10)', 
+                    'Avvist eller Tidsavbrutt + Venter Verdivurdering', 
+                    'Nådd Lager (N29)', 
+                    'Solgt (N56)', 
+                    'Returnert (N45)'
+                ],
                 datasets: [
                     {
                         label: 'Hovedverdi',
-                        data: [146, 100, 88.5, 57.4, 9.8, 6.6, 3.3],
+                        data: [146, 100, 88.5, 57.4, 9.8, 6.6, 3.3], // Main values (146 leads, 100% for 61 cars, etc.)
                         backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
                         borderColor: ['#FBB29A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
                         borderWidth: 1
                     },
                     {
                         label: 'Venter Verdivurdering',
-                        data: [0, 0, 0, 31.1, 0, 0, 0], // Only for the stacked bar
+                        data: [0, 0, 0, 31.1, 0, 0, 0], // Stacked bar for pending valuation (19 cars, 31.1% of 61)
                         backgroundColor: '#D3D3D3', // Gray for distinction
                         borderColor: '#808080',
                         borderWidth: 1
@@ -50,13 +61,13 @@
                 ]
             },
             options: {
-                indexAxis: 'y',
+                indexAxis: 'y', // Horizontal bars
                 scales: {
                     x: {
                         stacked: true, // Enable stacking for x-axis
                         beginAtZero: true,
                         title: { display: true, text: 'Verdi' },
-                        max: 146
+                        max: 146 // Max value based on total leads
                     },
                     y: {
                         stacked: true, // Enable stacking for y-axis
@@ -72,8 +83,8 @@
                                 const index = context.dataIndex;
                                 const datasetIndex = context.datasetIndex;
                                 const value = context.raw;
-                                const rawNumbers = [146, 61, 54, 29, 6, 4, 2];
-                                const pendingRaw = 19;
+                                const rawNumbers = [146, 61, 54, 29, 6, 4, 2]; // Raw car counts
+                                const pendingRaw = 19; // Cars pending valuation
                                 if (index === 0) {
                                     return `Leads: ${value} biler`;
                                 } else if (index === 1) {
@@ -99,20 +110,21 @@
                         formatter: function(value, context) {
                             const index = context.dataIndex;
                             const datasetIndex = context.datasetIndex;
-                            const rawNumbers = [146, 61, 54, 29, 6, 4, 2];
-                            const pendingRaw = 19;
-                            if (index === 0) {
-                                return `${value} biler`;
-                            } else if (index === 1) {
-                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
+                            const rawNumbers = [146, 61, 54, 29, 6, 4, 2]; // Raw car counts
+                            const pendingRaw = 19; // Cars pending valuation
+                            // Only show labels for Hovedverdi dataset for top two bars
+                            if (index === 0 && datasetIndex === 0) {
+                                return `${rawNumbers[index]} biler`; // Show "146 biler" for Drive Leads
+                            } else if (index === 1 && datasetIndex === 0) {
+                                return `100% (${rawNumbers[index]})`; // Show "100% (61)" for Innenfor Gire
                             } else if (index === 3 && datasetIndex === 0) {
-                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`; // Avvist eller Tidsavbrutt
                             } else if (index === 3 && datasetIndex === 1) {
-                                return `${value.toFixed(1)}% (${pendingRaw})`;
-                            } else if (value > 0) {
-                                return `${value.toFixed(1)}% (${rawNumbers[index]})`;
+                                return `${value.toFixed(1)}% (${pendingRaw})`; // Venter Verdivurdering
+                            } else if (value > 0 && datasetIndex === 0) {
+                                return `${value.toFixed(1)}% (${rawNumbers[index]})`; // Other bars with non-zero values in Hovedverdi
                             }
-                            return ''; // No label for zero values in second dataset
+                            return ''; // No label for zero values or second dataset for top bars
                         }
                     }
                 }
