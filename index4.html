@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Drive.no bilflyt</title>
+    <title>Drive.no Bilsalgsfunnel</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
         canvas { max-width: 800px; margin: 20px auto; }
@@ -11,24 +11,28 @@
     </style>
 </head>
 <body>
-    <h2>Drive.no Leadsflyt (Siden 1. mai 2025)</h2>
+    <h2>Drive.no Leadsflyt</h2>
     <canvas id="funnelChart" width="800" height="600"></canvas>
     <div class="notes">
         <p><strong>Merknader:</strong></p>
-        <ul>146 leads mottaatt
-            <ul>61 biler mottatt SD skjema
-                <ul>29 biler timet ut (40 dager etter mottak fra Drive)
-                    <ul>
+        <ul>
+            <li>146 leads mottatt (100%)</li>
+            <li>61 biler mottatt SD skjema (41.8%)</li>
+            <li>29 biler timet ut (40 dager etter mottak fra Drive)</li>
+        </ul>
     </div>
     <script>
+        // Register the datalabels plugin
+        Chart.register(ChartDataLabels);
+
         const ctx = document.getElementById('funnelChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Drive Leads (D1)', 'Innenfor Gire (N3)', 'SD Innsendt (N10)', 'Avvist eller Tidsavbrutt (N18)', 'Nådd Lager (N35)', 'Solgt (N56)', 'Returnert (N45)'],
                 datasets: [{
-                    label: 'Antall Biler',
-                    data: [146, 61, 54, 35, 6, 4, 2],
+                    label: 'Prosentandel',
+                    data: [100, 41.8, 37.0, 24.0, 4.1, 2.7, 1.4],
                     backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
                     borderColor: ['#FBB35A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
                     borderWidth: 1
@@ -37,23 +41,46 @@
             options: {
                 indexAxis: 'y',
                 scales: {
-                    x: { 
-                        beginAtZero: true, 
-                        title: { display: true, text: 'Antall Biler' },
-                        max: 146
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Prosentandel (%)' },
+                        max: 100
                     },
-                    y: { 
+                    y: {
                         title: { display: true, text: 'Prosessstadie' }
                     }
                 },
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Driv.no Bilsalgsfunnel (Siden 1. mai 2025)' },
+                    title: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return `${context.dataset.label}: ${context.raw} biler (${(context.raw / 146 * 100).toFixed(1)}% av opprinnelig)`;
+                                const label = context.dataset.label;
+                                const value = context.raw.toFixed(1);
+                                if (context.dataIndex === 2) {
+                                    const percentOfGire = ((37.0 / 41.8) * 100).toFixed(1);
+                                    return `${label}: ${value}% (ca. ${percentOfGire}% av Innenfor Gire)`;
+                                }
+                                return `${label}: ${value}%`;
                             }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'center',
+                        align: 'center',
+                        color: '#000000', // Black for print readability
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        },
+                        formatter: function(value, context) {
+                            const formattedValue = value.toFixed(1) + '%';
+                            if (context.dataIndex === 2) {
+                                const percentOfGire = ((37.0 / 41.8) * 100).toFixed(1);
+                                return `${formattedValue}\n(${percentOfGire}% av N3)`;
+                            }
+                            return formattedValue;
                         }
                     }
                 }
@@ -62,4 +89,3 @@
     </script>
 </body>
 </html>
-```
