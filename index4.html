@@ -1,135 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Drive.no Bilsalgsfunnel</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Norway Postcodes Map</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        canvas { max-width: 800px; margin: 20px auto; }
-        .notes { max-width: 800px; margin: 0 auto; text-align: left; font-size: 14px; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        .map-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        iframe {
+            border: none;
+            width: 100%;
+            height: 500px;
+        }
+        .attribution {
+            font-size: 10px;
+            margin-top: 5px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <h2>Drive.no Leadsflyt</h2>
-    <canvas id="funnelChart" width="800" height="600"></canvas>
-    <div class="notes">
-        <p><strong>Merknader:</strong></p>
-        <ul>
-            <li>146 leads mottatt</li>
-            <li>61 biler mottatt SD skjema (100%)</li>
-            <li>29 biler timet ut (40 dager etter mottak fra Drive)</li>
-            <li>19 biler venter på verdivurderingssvar (31.1% av Innenfor Gire)</li>
-            <li>Dropp off skjer etter verdivurdering</li>
-        </ul>
+    <h1>Norway Postcodes Map</h1>
+    <div class="map-container">
+        <iframe src="https://app.mapline.com/map/map_a1bf525/WWRVMkZGN2RVZWNIT1B4N2ZuaG5IY2xDVG9SV1ZRaG9JQkVJVE" style="width:100%;height:500px;" allow="geolocation *"></iframe>
+        <div class="attribution">
+            <a href="https://mapline.com" target="_blank">Mapping by Mapline</a>
+        </div>
     </div>
-    <script>
-        // Register the datalabels plugin for Chart.js
-        Chart.register(ChartDataLabels);
-
-        // Get the canvas context
-        const ctx = document.getElementById('funnelChart').getContext('2d');
-
-        // Create the funnel chart
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [
-                    'Drive Leads (D1)', 
-                    'Innenfor Gire (N3)', 
-                    'SD Innsendt (N10)', 
-                    'Avvist eller Tidsavbrutt + Venter Verdivurdering', 
-                    'Nådd Lager (N29)', 
-                    'Solgt (N56)', 
-                    'Returnert (N45)'
-                ],
-                datasets: [
-                    {
-                        label: 'Hovedverdi',
-                        data: [146, 100, 88.5, 57.4, 9.8, 6.6, 3.3], // Main values (146 leads, 100% for 61 cars, etc.)
-                        backgroundColor: ['#FFEFDB', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E2EBFF', '#E0FFE0', '#FFE0E0'],
-                        borderColor: ['#FBB29A', '#374D7C', '#374D7C', '#374D7C', '#374D7C', '#00FF00', '#FF0000'],
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Venter Verdivurdering',
-                        data: [0, 0, 0, 31.1, 0, 0, 0], // Stacked bar for pending valuation (19 cars, 31.1% of 61)
-                        backgroundColor: '#D3D3D3', // Gray for distinction
-                        borderColor: '#808080',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y', // Horizontal bars
-                scales: {
-                    x: {
-                        stacked: true, // Enable stacking for x-axis
-                        beginAtZero: true,
-                        title: { display: true, text: 'Verdi' },
-                        max: 146 // Max value based on total leads
-                    },
-                    y: {
-                        stacked: true, // Enable stacking for y-axis
-                        title: { display: true, text: 'Prosessstadie' }
-                    }
-                },
-                plugins: {
-                    legend: { display: false }, // Hide legend to avoid confusion
-                    title: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const index = context.dataIndex;
-                                const datasetIndex = context.datasetIndex;
-                                const value = context.raw;
-                                const rawNumbers = [146, 61, 54, 29, 6, 4, 2]; // Raw car counts
-                                const pendingRaw = 19; // Cars pending valuation
-                                if (index === 0) {
-                                    return `Leads: ${value} biler`;
-                                } else if (index === 1) {
-                                    return `Prosentandel: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
-                                } else if (index === 3 && datasetIndex === 0) {
-                                    return `Avvist eller Tidsavbrutt: ${value.toFixed(1)}% (${rawNumbers[index]} biler)`;
-                                } else if (index === 3 && datasetIndex === 1) {
-                                    return `Venter Verdivurdering: ${value.toFixed(1)}% (${pendingRaw} biler)`;
-                                } else {
-                                    return `Prosentandel: ${value.toFixed(1)}% av Innenfor Gire (${rawNumbers[index]} biler)`;
-                                }
-                            }
-                        }
-                    },
-                    datalabels: {
-                        anchor: 'center',
-                        align: 'center',
-                        color: '#000000',
-                        font: {
-                            size: 12,
-                            weight: 'bold'
-                        },
-                        formatter: function(value, context) {
-                            const index = context.dataIndex;
-                            const datasetIndex = context.datasetIndex;
-                            const rawNumbers = [146, 61, 54, 29, 6, 4, 2]; // Raw car counts
-                            const pendingRaw = 19; // Cars pending valuation
-                            // Only show labels for Hovedverdi dataset for top two bars
-                            if (index === 0 && datasetIndex === 0) {
-                                return `${rawNumbers[index]} biler`; // Show "146 biler" for Drive Leads
-                            } else if (index === 1 && datasetIndex === 0) {
-                                return `100% (${rawNumbers[index]})`; // Show "100% (61)" for Innenfor Gire
-                            } else if (index === 3 && datasetIndex === 0) {
-                                return `${value.toFixed(1)}% (${rawNumbers[index]})`; // Avvist eller Tidsavbrutt
-                            } else if (index === 3 && datasetIndex === 1) {
-                                return `${value.toFixed(1)}% (${pendingRaw})`; // Venter Verdivurdering
-                            } else if (value > 0 && datasetIndex === 0) {
-                                return `${value.toFixed(1)}% (${rawNumbers[index]})`; // Other bars with non-zero values in Hovedverdi
-                            }
-                            return ''; // No label for zero values or second dataset for top bars
-                        }
-                    }
-                }
-            }
-        });
-    </script>
 </body>
 </html>
