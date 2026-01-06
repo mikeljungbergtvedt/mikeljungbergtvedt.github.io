@@ -9,8 +9,8 @@
             font-family: Arial, sans-serif; 
             margin: 0; 
             padding: 40px 20px; 
-            background: #e0e9e5; /* Light green-grey background */
-            color: #004225; /* Dark green text */
+            background: #e0e9e5; 
+            color: #004225; 
         }
         h1 { 
             text-align: center; 
@@ -34,6 +34,45 @@
             color: #004225; 
             font-size: 1.05em; 
         }
+        .label-with-info { 
+            display: flex; 
+            align-items: center; 
+        }
+        .info-icon { 
+            margin-left: 8px; 
+            width: 20px; 
+            height: 20px; 
+            background: #f5f9f6; 
+            color: #004225; 
+            font-weight: bold; 
+            font-size: 1em; 
+            text-align: center; 
+            line-height: 20px; 
+            border-radius: 50%; 
+            cursor: help; 
+            position: relative; 
+        }
+        .tooltip { 
+            visibility: hidden; 
+            width: 300px; 
+            background: #004225; 
+            color: white; 
+            text-align: left; 
+            border-radius: 6px; 
+            padding: 12px; 
+            position: absolute; 
+            z-index: 1; 
+            top: 100%; 
+            left: 50%; 
+            margin-left: -150px; 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            font-size: 0.95em; 
+        }
+        .info-icon:hover .tooltip { 
+            visibility: visible; 
+            opacity: 1; 
+        }
         input[type="number"] { 
             width: 100%; 
             padding: 12px; 
@@ -42,28 +81,50 @@
             border-radius: 6px; 
             box-sizing: border-box; 
         }
+        .dual-input { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .dual-input .pct-field { 
+            position: relative; 
+        }
+        .dual-input .pct-field::after { 
+            content: '%'; 
+            position: absolute; 
+            right: 12px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            color: #666; 
+            font-size: 1.1em; 
+            pointer-events: none; 
+        }
+        .dual-input input { 
+            flex: 1; 
+            padding-right: 30px; 
+        }
         .slider { 
             width: 100%; 
             margin: 12px 0 20px; 
             height: 8px; 
-            accent-color: #ffcc33; /* Yellow accent */
+            accent-color: #ffcc33; 
         }
         .result { 
             margin-top: 40px; 
             padding: 30px; 
-            background: #f5f9f6; /* Slightly lighter green tint */
+            background: #f5f9f6; 
             border-radius: 12px; 
         }
         .range { 
             text-align: center; 
-            font-size: 1.6em; 
+            font-size: 1.4em; 
             margin: 20px 0; 
             color: #004225; 
             font-weight: bold; 
         }
         .mid { 
             text-align: center; 
-            font-size: 1.8em; 
+            font-size: 1.4em; 
             margin: 25px 0; 
             color: #004225; 
             font-weight: bold; 
@@ -75,13 +136,13 @@
         button { 
             display: block; 
             width: 100%; 
-            padding: 14px; 
+            padding: 12px; 
             background: #004225; 
             color: white; 
             border: none; 
             border-radius: 6px; 
             cursor: pointer; 
-            font-size: 1.1em; 
+            font-size: 1em; 
             margin-top: 20px; 
         }
         button:hover { 
@@ -115,24 +176,35 @@
     <h1>Peasy Pricing Calculator – Estimated Price</h1>
 
     <div class="calculator">
-        <label for="finnPrice">Finn.no Price (NOK)</label>
+        <div class="label-with-info">
+            <label for="finnPrice">Finn.no Price (NOK)</label>
+            <div class="info-icon">i
+                <span class="tooltip">Enter the median price of 5 similar cars listed on Finn.no. This is the baseline market price for comparable vehicles (same model, year, mileage, condition).</span>
+            </div>
+        </div>
         <input type="number" id="finnPrice" placeholder="e.g. 365000" value="" step="1000">
 
-        <label for="margin">Margin (%)</label>
-        <div style="display: flex; align-items: center;">
-            <input type="number" id="margin" value="12" step="0.1" style="flex: 1;">
-            <span id="marginDeduction" class="deduction" style="margin-left: 10px;"></span>
+        <label for="marginPct">Margin</label>
+        <div class="dual-input">
+            <div class="pct-field">
+                <input type="number" id="marginPct" value="12" step="0.1">
+            </div>
+            <input type="number" id="marginCash" value="" step="1000" placeholder="Cash (NOK)">
         </div>
+        <span id="marginDeduction" class="deduction"></span>
 
-        <label for="pakost">Additional Cost (%)</label>
-        <div style="display: flex; align-items: center;">
-            <input type="number" id="pakost" value="5" step="0.1" style="flex: 1;">
-            <span id="pakostDeduction" class="deduction" style="margin-left: 10px;"></span>
+        <label for="pakostPct">Additional Cost</label>
+        <div class="dual-input">
+            <div class="pct-field">
+                <input type="number" id="pakostPct" value="5" step="0.1">
+            </div>
+            <input type="number" id="pakostCash" value="" step="1000" placeholder="Cash (NOK)">
         </div>
+        <span id="pakostDeduction" class="deduction"></span>
 
-        <label for="bias">Bias Slider – Extra % on Range & Mid (-5% to +5%)</label>
-        <input type="range" id="bias" class="slider" min="-5" max="5" value="0" step="0.5">
-        <span id="biasValue">0%</span>
+        <label for="motivation">Motivation Slider – Extra % on Range & Mid (-5% to +5%)</label>
+        <input type="range" id="motivation" class="slider" min="-5" max="5" value="0" step="0.5">
+        <span id="motivationValue">0%</span>
 
         <div class="result">
             <div class="range">
@@ -151,16 +223,13 @@
     </div>
 
     <script>
-        const inputs = ['finnPrice', 'margin', 'pakost', 'bias'];
+        const inputs = ['finnPrice', 'marginPct', 'marginCash', 'pakostPct', 'pakostCash', 'motivation'];
         inputs.forEach(id => document.getElementById(id).addEventListener('input', calculate));
 
         document.getElementById('copyButton').addEventListener('click', copyToClipboard);
 
         function calculate() {
             const finn = parseFloat(document.getElementById('finnPrice').value) || 0;
-            const marginPct = parseFloat(document.getElementById('margin').value) || 0;
-            const pakostPct = parseFloat(document.getElementById('pakost').value) || 0;
-            const bias = parseFloat(document.getElementById('bias').value) / 100 || 0;
 
             if (finn === 0) {
                 document.getElementById('range').textContent = '–';
@@ -170,43 +239,70 @@
                 return;
             }
 
-            const marginDeduct = finn * (marginPct / 100);
-            const pakostDeduct = (finn * (1 - marginPct / 100)) * (pakostPct / 100);
+            // Margin – sync % and cash
+            let marginDeduct;
+            const marginCashInput = parseFloat(document.getElementById('marginCash').value);
+            if (!isNaN(marginCashInput) && marginCashInput > 0) {
+                marginDeduct = marginCashInput;
+                const calculatedPct = (marginDeduct / finn) * 100;
+                document.getElementById('marginPct').value = calculatedPct.toFixed(2);
+            } else {
+                const marginPct = parseFloat(document.getElementById('marginPct').value) || 0;
+                marginDeduct = finn * (marginPct / 100);
+            }
+
+            // Additional Cost – sync % and cash
+            let pakostDeduct;
+            const pakostCashInput = parseFloat(document.getElementById('pakostCash').value);
+            if (!isNaN(pakostCashInput) && pakostCashInput > 0) {
+                pakostDeduct = pakostCashInput;
+                const highAfterMargin = finn - marginDeduct;
+                const calculatedPct = (pakostDeduct / highAfterMargin) * 100;
+                document.getElementById('pakostPct').value = calculatedPct.toFixed(2);
+            } else {
+                const pakostPct = parseFloat(document.getElementById('pakostPct').value) || 0;
+                pakostDeduct = (finn - marginDeduct) * (pakostPct / 100);
+            }
 
             document.getElementById('marginDeduction').textContent =
                 '- ' + Math.round(marginDeduct).toLocaleString('en-GB') + ' NOK';
             document.getElementById('pakostDeduction').textContent =
                 '- ' + Math.round(pakostDeduct).toLocaleString('en-GB') + ' NOK';
 
-            const high = finn * (1 - marginPct / 100);
-            const low = high * (1 - pakostPct / 100);
-            const mid = (low + high) / 2;
+            // Base mid price after deductions
+            const baseMid = finn - marginDeduct - pakostDeduct;
 
-            const biasedLow = low * (1 + bias);
-            const biasedHigh = high * (1 + bias);
-            const biasedMid = mid * (1 + bias);
+            // Motivation slider adjusts the range around the base mid
+            const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
+            const adjustedMid = baseMid * (1 + motivation);
+
+            // Range is ±5% around the adjusted mid
+            const low = adjustedMid * 0.95;
+            const high = adjustedMid * 1.05;
 
             document.getElementById('range').textContent =
-                Math.round(biasedLow).toLocaleString('en-GB') + ' NOK – ' +
-                Math.round(biasedHigh).toLocaleString('en-GB') + ' NOK';
+                Math.round(low).toLocaleString('en-GB') + ' NOK – ' +
+                Math.round(high).toLocaleString('en-GB') + ' NOK';
 
-            document.getElementById('midPrice').textContent = Math.round(biasedMid).toLocaleString('en-GB') + ' NOK';
+            document.getElementById('midPrice').textContent = Math.round(adjustedMid).toLocaleString('en-GB') + ' NOK';
 
-            const biasPercent = (bias * 100).toFixed(1);
-            document.getElementById('biasValue').textContent =
-                (bias > 0 ? '+' : '') + biasPercent + '%';
+            const motivationPercent = (motivation * 100).toFixed(1);
+            document.getElementById('motivationValue').textContent =
+                (motivation > 0 ? '+' : '') + motivationPercent + '%';
         }
 
         function copyToClipboard() {
             const finn = document.getElementById('finnPrice').value || '0';
-            const margin = document.getElementById('margin').value;
-            const pakost = document.getElementById('pakost').value;
-            const bias = document.getElementById('biasValue').textContent;
+            const marginPct = document.getElementById('marginPct').value;
+            const marginCash = document.getElementById('marginCash').value || '0';
+            const pakostPct = document.getElementById('pakostPct').value;
+            const pakostCash = document.getElementById('pakostCash').value || '0';
+            const motivation = document.getElementById('motivationValue').textContent;
 
             const range = document.getElementById('range').textContent;
             const mid = document.getElementById('midPrice').textContent;
 
-            const text = `Finn.no: ${parseInt(finn).toLocaleString('en-GB')} NOK | Margin ${margin}% | Additional Cost ${pakost}% | Bias ${bias} | Range: ${range} | Mid: ${mid}`;
+            const text = `Finn.no: ${parseInt(finn).toLocaleString('en-GB')} NOK | Margin ${marginPct}% (${marginCash} NOK) | Additional Cost ${pakostPct}% (${pakostCash} NOK) | Motivation ${motivation} | Range: ${range} | Mid: ${mid}`;
 
             navigator.clipboard.writeText(text).then(() => {
                 const notice = document.getElementById('copyNotice');
