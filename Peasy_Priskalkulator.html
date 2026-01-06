@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peasy Pricing Calculator – Estimated Price</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; color: #333; line-height: 1.6; }
+        h1 { text-align: center; color: #0056b3; }
+        .calculator { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        label { display: block; margin: 15px 0 5px; font-weight: bold; }
+        input[type="number"] { width: 100%; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 5px; }
+        .slider { width: 100%; margin: 10px 0; }
+        .result { margin-top: 30px; padding: 20px; background: #f0f8ff; border-radius: 8px; font-size: 1.2em; }
+        .result strong { color: #0056b3; }
+        .range { text-align: center; font-size: 1.6em; margin: 15px 0; color: #0056b3; font-weight: bold; }
+        .mid { text-align: center; font-size: 1.8em; margin: 20px 0; color: #0056b3; font-weight: bold; }
+        .deduction { font-size: 1em; color: #666; margin-top: 5px; }
+        button { padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-top: 15px; }
+        button:hover { background: #003d80; }
+        .copy-notice { margin-top: 10px; font-size: 0.9em; color: green; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Peasy Pricing Calculator – Estimated Price</h1>
+    <div class="calculator">
+        <label for="finnPrice">Finn.no Price (NOK)</label>
+        <input type="number" id="finnPrice" placeholder="e.g. 365000" value="" step="1000">
+
+        <label for="margin">Margin (%)</label>
+        <div style="display: flex; align-items: center;">
+            <input type="number" id="margin" value="12" step="0.1" style="flex: 1;">
+            <span id="marginDeduction" class="deduction" style="margin-left: 10px;"></span>
+        </div>
+
+        <label for="pakost">Additional Cost (%)</label>
+        <div style="display: flex; align-items: center;">
+            <input type="number" id="pakost" value="5" step="0.1" style="flex: 1;">
+            <span id="pakostDeduction" class="deduction" style="margin-left: 10px;"></span>
+        </div>
+
+        <label for="bias">Bias Slider – Extra % on Range & Mid (-5% to +5%)</label>
+        <input type="range" id="bias" class="slider" min="-5" max="5" value="0" step="0.5">
+        <span id="biasValue">0%</span>
+
+        <div class="result">
+            <div class="range">
+                Price Range: <strong id="range">–</strong>
+            </div>
+            <div class="mid">
+                Mid Price: <strong id="midPrice">–</strong>
+            </div>
+            <button id="copyButton">Copy Calculation for Comment Field</button>
+            <div id="copyNotice" class="copy-notice">Copied to clipboard!</div>
+        </div>
+    </div>
+
+    <script>
+        const inputs = ['finnPrice', 'margin', 'pakost', 'bias'];
+        inputs.forEach(id => document.getElementById(id).addEventListener('input', calculate));
+
+        document.getElementById('copyButton').addEventListener('click', copyToClipboard);
+
+        function calculate() {
+            const finn = parseFloat(document.getElementById('finnPrice').value) || 0;
+            const marginPct = parseFloat(document.getElementById('margin').value) || 0;
+            const pakostPct = parseFloat(document.getElementById('pakost').value) || 0;
+            const bias = parseFloat(document.getElementById('bias').value) / 100 || 0;
+
+            if (finn === 0) {
+                document.getElementById('range').textContent = '–';
+                document.getElementById('midPrice').textContent = '–';
+                document.getElementById('marginDeduction').textContent = '';
+                document.getElementById('pakostDeduction').textContent = '';
+                return;
+            }
+
+            const marginDeduct = finn * (marginPct / 100);
+            const pakostDeduct = (finn * (1 - marginPct / 100)) * (pakostPct / 100);
+
+            document.getElementById('marginDeduction').textContent =
+                '- ' + Math.round(marginDeduct).toLocaleString('en-GB') + ' NOK';
+            document.getElementById('pakostDeduction').textContent =
+                '- ' + Math.round(pakostDeduct).toLocaleString('en-GB') + ' NOK';
+
+            const high = finn * (1 - marginPct / 100); // Netto 1 (higher)
+            const low = high * (1 - pakostPct / 100); // Netto 2 (lower)
+            const mid = (low + high) / 2;
+
+            const biasedLow = low * (1 + bias);
+            const biasedHigh = high * (1 + bias);
+            const biasedMid = mid * (1 + bias);
+
+            document.getElementById('range').textContent =
+                Math.round(biasedLow).toLocaleString('en-GB') + ' NOK – ' +
+                Math.round(biasedHigh).toLocaleString('en-GB') + ' NOK';
+
+            document.getElementById('midPrice').textContent = Math.round(biasedMid).toLocaleString('en-GB') + ' NOK';
+
+            const biasPercent = (bias * 100).toFixed(1);
+            document.getElementById('biasValue').textContent =
+                (bias > 0 ? '+' : '') + biasPercent + '%';
+        }
+
+        function copyToClipboard() {
+            const finn = document.getElementById('finnPrice').value || '0';
+            const margin = document.getElementById('margin').value;
+            const pakost = document.getElementById('pakost').value;
+            const bias = document.getElementById('biasValue').textContent;
+
+            const range = document.getElementById('range').textContent;
+            const mid = document.getElementById('midPrice').textContent;
+
+            const text = `Finn.no: ${parseInt(finn).toLocaleString('en-GB')} NOK | Margin ${margin}% | Additional Cost ${pakost}% | Bias ${bias} | Range: ${range} | Mid: ${mid}`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const notice = document.getElementById('copyNotice');
+                notice.style.display = 'block';
+                setTimeout(() => notice.style.display = 'none', 2000);
+            }).catch(err => {
+                alert('Copy failed – please select and copy manually');
+            });
+        }
+
+        // Initial calculation
+        calculate();
+    </script>
+</body>
+</html>
