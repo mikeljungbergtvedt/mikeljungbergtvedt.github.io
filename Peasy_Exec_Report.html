@@ -142,16 +142,27 @@
             margin-top: 20px; 
         }
         .outcome { 
-            text-align: center; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 40px; 
             margin: 40px 0; 
-            font-size: 1.2em; 
+            font-size: 1.4em; 
         }
-        .bar { 
-            display: inline-block; 
+        .outcome-item { 
+            text-align: center; 
+        }
+        .outcome-label { 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+        }
+        .outcome-bar { 
+            height: 30px; 
             background: #004225; 
             color: white; 
-            padding: 10px 15px; 
+            line-height: 30px; 
             border-radius: 6px; 
+            padding: 0 15px; 
             font-weight: bold; 
         }
         table { 
@@ -195,6 +206,45 @@
         .print-button:hover { 
             background: #e6b800; 
         }
+        .label-with-info { 
+            display: flex; 
+            align-items: center; 
+        }
+        .info-icon { 
+            margin-left: 8px; 
+            width: 20px; 
+            height: 20px; 
+            background: #f5f9f6; 
+            color: #004225; 
+            font-weight: bold; 
+            font-size: 1em; 
+            text-align: center; 
+            line-height: 20px; 
+            border-radius: 50%; 
+            cursor: help; 
+            position: relative; 
+        }
+        .tooltip { 
+            visibility: hidden; 
+            width: 300px; 
+            background: #004225; 
+            color: white; 
+            text-align: left; 
+            border-radius: 6px; 
+            padding: 12px; 
+            position: absolute; 
+            z-index: 1; 
+            top: 100%; 
+            left: 50%; 
+            margin-left: -150px; 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            font-size: 0.95em; 
+        }
+        .info-icon:hover .tooltip { 
+            visibility: visible; 
+            opacity: 1; 
+        }
         @media print {
             .input-section, .print-button { display: none !important; }
             body { background: white; padding: 10px; margin: 0; }
@@ -216,7 +266,7 @@
 </head>
 <body>
 
-    <h1>Peasy Exec Report – Manual Input</h1>
+    <h1>Peasy Exec Report</h1>
 
     <div class="input-section">
         <div class="input-grid">
@@ -260,10 +310,13 @@
                 <label for="marketingSpend">Marketing Spend (NOK)</label>
                 <input type="number" id="marketingSpend" placeholder="0" step="1000">
             </div>
-            <div>
-                <label for="totalIncome">Total Income (Avgift fees, NOK)</label>
-                <input type="number" id="totalIncome" placeholder="0" step="100">
+            <div class="label-with-info">
+                <label for="totalIncome">Total Income (NOK)</label>
+                <div class="info-icon">i
+                    <span class="tooltip">Peasy Fee income from received cars (Avgift fees).</span>
+                </div>
             </div>
+            <input type="number" id="totalIncome" placeholder="0" step="100">
         </div>
         <div class="warning" id="warning">Warning: Sold + Returned does not equal Received! Please check inputs.</div>
         <button class="print-button" onclick="exportPDF()">Export Report as PDF</button>
@@ -359,8 +412,14 @@
 
         <h2>Received Cars Outcome</h2>
         <div class="outcome">
-            Sold    <span id="outcomeSold">0</span>  <span class="bar" id="barSold">██████████████ 0.0%</span><br><br>
-            Returned <span id="outcomeReturned">0</span>  <span class="bar" id="barReturned">████████ 0.0%</span>
+            <div class="outcome-item">
+                <div class="outcome-label">Sold</div>
+                <div class="outcome-bar" id="barSold">0 cars – 0.0%</div>
+            </div>
+            <div class="outcome-item">
+                <div class="outcome-label">Returned</div>
+                <div class="outcome-bar" id="barReturned">0 cars – 0.0%</div>
+            </div>
         </div>
 
         <h2>Financial Summary</h2>
@@ -370,7 +429,7 @@
             <tr><td>Production Cost (tiered)</td><td id="financialProduction">0 NOK</td></tr>
             <tr><td>Gire Cost (750 NOK per received)</td><td id="financialGire">0 NOK</td></tr>
             <tr><td><strong>Total Costs</strong></td><td id="financialTotalCosts"><strong>0 NOK</strong></td></tr>
-            <tr><td>Total Income (Avgift fees)</td><td id="financialIncome">0 NOK</td></tr>
+            <tr><td>Total Income (NOK)</td><td id="financialIncome">0 NOK</td></tr>
             <tr><td><strong>Gross Profit/Loss (Peasy)</strong></td><td id="financialProfit"><strong>0 NOK</strong></td></tr>
             <tr><td><strong>Autoringen Commission (2.7% on total Bud)</strong></td><td id="financialCommission" class="positive"><strong>+0 NOK</strong></td></tr>
         </table>
@@ -473,10 +532,10 @@
             document.getElementById('funnelReturned').textContent = returned;
             document.getElementById('returnedPct').textContent = '(' + returnRate + '% of received)';
 
-            document.getElementById('outcomeSold').textContent = sold;
-            document.getElementById('barSold').textContent = '██████████████ ' + receivedSoldRate + '%';
-            document.getElementById('outcomeReturned').textContent = returned;
-            document.getElementById('barReturned').textContent = '████████ ' + returnRate + '%';
+            document.getElementById('outcomeSold').textContent = sold + ' cars – ' + receivedSoldRate + '%';
+            document.getElementById('barSold').textContent = sold + ' cars – ' + receivedSoldRate + '%';
+            document.getElementById('outcomeReturned').textContent = returned + ' cars – ' + returnRate + '%';
+            document.getElementById('barReturned').textContent = returned + ' cars – ' + returnRate + '%';
 
             document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialProduction').textContent = productionCost.toLocaleString('en-GB') + ' NOK';
