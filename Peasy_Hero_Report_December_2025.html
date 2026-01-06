@@ -211,9 +211,15 @@
             background: #e6b800; 
         }
         @media print {
-            .input-section, .print-button { display: none; }
-            body { background: white; padding: 20px; }
-            .report { box-shadow: none; padding: 0; }
+            .input-section, .print-button { display: none !important; }
+            body { background: white; padding: 20px; margin: 0; }
+            .report { box-shadow: none; padding: 20px; max-width: none; page-break-after: avoid; }
+            @page { size: A4 portrait; margin: 15mm; }
+            h1 { font-size: 24pt; }
+            h2 { font-size: 18pt; }
+            .hero-value { font-size: 28pt; }
+            .tile-value { font-size: 24pt; }
+            .funnel-number { font-size: 24pt; }
         }
     </style>
 </head>
@@ -225,39 +231,39 @@
         <div class="input-grid">
             <div>
                 <label for="priced">Cars Priced</label>
-                <input type="number" id="priced" value="0" step="1">
+                <input type="number" id="priced" placeholder="0" step="1">
             </div>
             <div>
                 <label for="received">Cars Received</label>
-                <input type="number" id="received" value="0" step="1">
+                <input type="number" id="received" placeholder="0" step="1">
             </div>
             <div>
                 <label for="soldLow">Cars Sold < 25k</label>
-                <input type="number" id="soldLow" value="0" step="1">
+                <input type="number" id="soldLow" placeholder="0" step="1">
             </div>
             <div>
                 <label for="soldHigh">Cars Sold > 25k</label>
-                <input type="number" id="soldHigh" value="0" step="1">
+                <input type="number" id="soldHigh" placeholder="0" step="1">
             </div>
             <div>
                 <label for="returnedLow">Cars Returned < 25k</label>
-                <input type="number" id="returnedLow" value="0" step="1">
+                <input type="number" id="returnedLow" placeholder="0" step="1">
             </div>
             <div>
                 <label for="returnedHigh">Cars Returned > 25k</label>
-                <input type="number" id="returnedHigh" value="0" step="1">
+                <input type="number" id="returnedHigh" placeholder="0" step="1">
             </div>
             <div>
                 <label for="soldRevenue">Sold Revenue (NOK)</label>
-                <input type="number" id="soldRevenue" value="0" step="1000">
+                <input type="number" id="soldRevenue" placeholder="0" step="1000">
             </div>
             <div>
                 <label for="marketingSpend">Marketing Spend (NOK)</label>
-                <input type="number" id="marketingSpend" value="0" step="1000">
+                <input type="number" id="marketingSpend" placeholder="0" step="1000">
             </div>
             <div>
                 <label for="totalIncome">Total Income (Avgift fees, NOK)</label>
-                <input type="number" id="totalIncome" value="0" step="100">
+                <input type="number" id="totalIncome" placeholder="0" step="100">
             </div>
         </div>
         <div class="warning" id="warning">Warning: Sold + Returned does not equal Received! Please check inputs.</div>
@@ -377,7 +383,16 @@
 
     <script>
         const inputFields = ['priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
-        inputFields.forEach(id => document.getElementById(id).addEventListener('input', updateReport));
+        inputFields.forEach(id => {
+            const input = document.getElementById(id);
+            input.addEventListener('focus', function() {
+                if (this.value === '0') this.value = '';
+            });
+            input.addEventListener('blur', function() {
+                if (this.value === '') this.value = '0';
+            });
+            input.addEventListener('input', updateReport);
+        });
 
         function updateReport() {
             const priced = parseFloat(document.getElementById('priced').value) || 0;
