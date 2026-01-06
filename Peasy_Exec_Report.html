@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Hero Report – Manual Input</title>
+    <title>Peasy Exec Report – Manual Input</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -67,24 +67,24 @@
             border-bottom: 2px solid #004225; 
             padding-bottom: 8px; 
         }
-        .hero { 
+        .exec { 
             display: grid; 
             grid-template-columns: repeat(3, 1fr); 
             gap: 20px; 
             margin: 30px 0; 
         }
-        .hero-card { 
+        .exec-card { 
             background: #f5f9f6; 
             padding: 25px; 
             text-align: center; 
             border-radius: 10px; 
         }
-        .hero-value { 
+        .exec-value { 
             font-size: 2.4em; 
             font-weight: bold; 
             color: #004225; 
         }
-        .hero-label { 
+        .exec-label { 
             font-size: 0.95em; 
             color: #666; 
         }
@@ -202,12 +202,12 @@
             @page { size: A4 portrait; margin: 10mm; }
             h1 { font-size: 20pt; margin: 10pt 0; }
             h2 { font-size: 14pt; margin: 20pt 0 10pt; }
-            .hero-value { font-size: 22pt; }
+            .exec-value { font-size: 22pt; }
             .tile-value { font-size: 20pt; }
             .funnel-number { font-size: 20pt; }
             .footer-note { font-size: 8pt; margin-top: 20pt; }
-            .hero, .tiles { gap: 10px; }
-            .hero-card, .tile-card { padding: 15pt; }
+            .exec, .tiles { gap: 10px; }
+            .exec-card, .tile-card { padding: 15pt; }
             table th, table td { padding: 10pt; font-size: 10pt; }
             .funnel { font-size: 10pt; }
             .outcome { font-size: 10pt; }
@@ -216,13 +216,17 @@
 </head>
 <body>
 
-    <h1>Peasy Hero Report</h1>
+    <h1>Peasy Exec Report – Manual Input</h1>
 
     <div class="input-section">
         <div class="input-grid">
             <div>
-                <label for="period">Period (e.g. 01.12.2025 - 31.12.2025)</label>
-                <input type="text" id="period" placeholder="e.g. 01.12.2025 - 31.12.2025">
+                <label for="periodStart">Period Start Date</label>
+                <input type="date" id="periodStart">
+            </div>
+            <div>
+                <label for="periodEnd">Period End Date</label>
+                <input type="date" id="periodEnd">
             </div>
             <div>
                 <label for="priced">Cars Priced</label>
@@ -267,33 +271,33 @@
 
     <div class="report">
 
-        <h1>Peasy Hero Report – <span id="reportPeriod">Period</span></h1>
+        <h1>Peasy Exec Report – <span id="reportPeriod">Period</span></h1>
 
-        <h2>Hero Metrics</h2>
-        <div class="hero">
-            <div class="hero-card">
+        <h2>Exec Metrics</h2>
+        <div class="exec">
+            <div class="exec-card">
                 <div>Cars Priced</div>
-                <div class="hero-value" id="heroPriced">0</div>
+                <div class="exec-value" id="execPriced">0</div>
             </div>
-            <div class="hero-card">
+            <div class="exec-card">
                 <div>Cars Received</div>
-                <div class="hero-value" id="heroReceived">0</div>
+                <div class="exec-value" id="execReceived">0</div>
             </div>
-            <div class="hero-card">
+            <div class="exec-card">
                 <div>Cars Sold</div>
-                <div class="hero-value" id="heroSold">0</div>
+                <div class="exec-value" id="execSold">0</div>
             </div>
-            <div class="hero-card">
+            <div class="exec-card">
                 <div>Cars Returned</div>
-                <div class="hero-value" id="heroReturned">0</div>
+                <div class="exec-value" id="execReturned">0</div>
             </div>
-            <div class="hero-card">
+            <div class="exec-card">
                 <div>Sold Revenue</div>
-                <div class="hero-value" id="heroSoldRevenue">0<br><span class="hero-label">NOK</span></div>
+                <div class="exec-value" id="execSoldRevenue">0<br><span class="exec-label">NOK</span></div>
             </div>
-            <div class="hero-card">
+            <div class="exec-card">
                 <div>Avg Price per Sold Car</div>
-                <div class="hero-value" id="heroAvgPrice">0<br><span class="hero-label">NOK</span></div>
+                <div class="exec-value" id="execAvgPrice">0<br><span class="exec-label">NOK</span></div>
             </div>
         </div>
 
@@ -379,12 +383,34 @@
     </div>
 
     <script>
-        const inputFields = ['period', 'priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
+        const inputFields = ['periodStart', 'periodEnd', 'priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
         inputFields.forEach(id => document.getElementById(id).addEventListener('input', updateReport));
 
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+
         function updateReport() {
-            const period = document.getElementById('period').value.trim() || 'Period';
-            document.querySelector('h1').textContent = 'Peasy Hero Report – ' + period;
+            const start = document.getElementById('periodStart').value;
+            const end = document.getElementById('periodEnd').value;
+
+            let periodText = '';
+            if (start && end) {
+                periodText = `${formatDate(start)} - ${formatDate(end)}`;
+            } else if (start) {
+                periodText = formatDate(start) + ' - ';
+            } else if (end) {
+                periodText = ' - ' + formatDate(end);
+            } else {
+                periodText = 'Period';
+            }
+
+            document.querySelector('h1').textContent = 'Peasy Exec Report – ' + periodText;
 
             const priced = parseFloat(document.getElementById('priced').value) || 0;
             const received = parseFloat(document.getElementById('received').value) || 0;
@@ -413,12 +439,12 @@
             const profitLoss = totalIncome - totalCosts;
             const commission = Math.round(soldRevenue * 0.027);
 
-            document.getElementById('heroPriced').textContent = priced;
-            document.getElementById('heroReceived').textContent = received;
-            document.getElementById('heroSold').textContent = sold;
-            document.getElementById('heroReturned').textContent = returned;
-            document.getElementById('heroSoldRevenue').textContent = soldRevenue.toLocaleString('en-GB');
-            document.getElementById('heroAvgPrice').textContent = avgPrice.toLocaleString('en-GB');
+            document.getElementById('execPriced').textContent = priced;
+            document.getElementById('execReceived').textContent = received;
+            document.getElementById('execSold').textContent = sold;
+            document.getElementById('execReturned').textContent = returned;
+            document.getElementById('execSoldRevenue').textContent = soldRevenue.toLocaleString('en-GB');
+            document.getElementById('execAvgPrice').textContent = avgPrice.toLocaleString('en-GB');
 
             const pricedReceivedRate = priced > 0 ? ((received / priced) * 100).toFixed(1) : 0;
             const pricedReturnedRate = priced > 0 ? ((returned / priced) * 100).toFixed(1) : 0;
@@ -462,11 +488,31 @@
         }
 
         function exportPDF() {
-            const period = document.getElementById('period').value.trim() || 'Report';
-            const safePeriod = period.replace(/[^a-zA-Z0-9]/g, '_');
-            const filename = `Peasy_Hero_Report_${safePeriod}.pdf`;
+            const start = document.getElementById('periodStart').value;
+            const end = document.getElementById('periodEnd').value;
+            let periodText = '';
+            if (start && end) {
+                periodText = `${formatDate(start)} - ${formatDate(end)}`;
+            } else if (start) {
+                periodText = formatDate(start);
+            } else if (end) {
+                periodText = formatDate(end);
+            } else {
+                periodText = 'Report';
+            }
+            const safePeriod = periodText.replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = `Peasy_Exec_Report_${safePeriod}.pdf`;
             window.print();
             alert('When saving the PDF, name it: ' + filename);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}.${month}.${year}`;
         }
 
         updateReport();
