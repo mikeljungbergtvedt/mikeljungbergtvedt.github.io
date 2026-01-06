@@ -179,21 +179,6 @@
             color: #666; 
             text-align: center; 
         }
-        button { 
-            display: block; 
-            width: 100%; 
-            padding: 12px; 
-            background: #004225; 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-size: 1em; 
-            margin-top: 20px; 
-        }
-        button:hover { 
-            background: #003319; 
-        }
         .print-button { 
             display: block; 
             width: 100%; 
@@ -231,10 +216,14 @@
 </head>
 <body>
 
-    <h1>Peasy Hero Report – Manual Input</h1>
+    <h1>Peasy Hero Report</h1>
 
     <div class="input-section">
         <div class="input-grid">
+            <div>
+                <label for="period">Period (e.g. 01.12.2025 - 31.12.2025)</label>
+                <input type="text" id="period" placeholder="e.g. 01.12.2025 - 31.12.2025">
+            </div>
             <div>
                 <label for="priced">Cars Priced</label>
                 <input type="number" id="priced" placeholder="0" step="1">
@@ -273,10 +262,12 @@
             </div>
         </div>
         <div class="warning" id="warning">Warning: Sold + Returned does not equal Received! Please check inputs.</div>
-        <button class="print-button" onclick="window.print()">Export Report as PDF</button>
+        <button class="print-button" onclick="exportPDF()">Export Report as PDF</button>
     </div>
 
     <div class="report">
+
+        <h1>Peasy Hero Report – <span id="reportPeriod">Period</span></h1>
 
         <h2>Hero Metrics</h2>
         <div class="hero">
@@ -388,10 +379,13 @@
     </div>
 
     <script>
-        const inputFields = ['priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
+        const inputFields = ['period', 'priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
         inputFields.forEach(id => document.getElementById(id).addEventListener('input', updateReport));
 
         function updateReport() {
+            const period = document.getElementById('period').value.trim() || 'Period';
+            document.querySelector('h1').textContent = 'Peasy Hero Report – ' + period;
+
             const priced = parseFloat(document.getElementById('priced').value) || 0;
             const received = parseFloat(document.getElementById('received').value) || 0;
             const soldLow = parseFloat(document.getElementById('soldLow').value) || 0;
@@ -405,7 +399,6 @@
             const sold = soldLow + soldHigh;
             const returned = returnedLow + returnedHigh;
 
-            // Red flag warning
             if (sold + returned !== received && received > 0) {
                 document.getElementById('warning').style.display = 'block';
             } else {
@@ -420,7 +413,6 @@
             const profitLoss = totalIncome - totalCosts;
             const commission = Math.round(soldRevenue * 0.027);
 
-            // Hero Metrics
             document.getElementById('heroPriced').textContent = priced;
             document.getElementById('heroReceived').textContent = received;
             document.getElementById('heroSold').textContent = sold;
@@ -428,7 +420,6 @@
             document.getElementById('heroSoldRevenue').textContent = soldRevenue.toLocaleString('en-GB');
             document.getElementById('heroAvgPrice').textContent = avgPrice.toLocaleString('en-GB');
 
-            // Conversion Rates
             const pricedReceivedRate = priced > 0 ? ((received / priced) * 100).toFixed(1) : 0;
             const pricedReturnedRate = priced > 0 ? ((returned / priced) * 100).toFixed(1) : 0;
             const receivedSoldRate = received > 0 ? ((sold / received) * 100).toFixed(1) : 0;
@@ -439,7 +430,6 @@
             document.getElementById('rateReceivedSold').textContent = receivedSoldRate + '%';
             document.getElementById('rateReturn').textContent = returnRate + '%';
 
-            // Targets and offsets
             const acceptOffset = (pricedReceivedRate - 30).toFixed(1);
             const sellOffset = (receivedSoldRate - 70).toFixed(1);
 
@@ -449,7 +439,6 @@
             document.getElementById('offsetReceivedSold').textContent = 'Offset: ' + (sellOffset > 0 ? '+' : '') + sellOffset + '%';
             document.getElementById('offsetReceivedSold').className = 'tile-offset ' + (sellOffset >= 0 ? 'offset-positive' : 'offset-negative');
 
-            // Funnel
             document.getElementById('funnelPriced').textContent = priced;
             document.getElementById('arrowPricedReceived').textContent = '↓ ' + pricedReceivedRate + '%';
             document.getElementById('funnelReceived').textContent = received;
@@ -458,13 +447,11 @@
             document.getElementById('funnelReturned').textContent = returned;
             document.getElementById('returnedPct').textContent = '(' + returnRate + '% of received)';
 
-            // Outcome
             document.getElementById('outcomeSold').textContent = sold;
             document.getElementById('barSold').textContent = '██████████████ ' + receivedSoldRate + '%';
             document.getElementById('outcomeReturned').textContent = returned;
             document.getElementById('barReturned').textContent = '████████ ' + returnRate + '%';
 
-            // Financial
             document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialProduction').textContent = productionCost.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialGire').textContent = gireCost.toLocaleString('en-GB') + ' NOK';
@@ -472,6 +459,14 @@
             document.getElementById('financialIncome').textContent = totalIncome.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialProfit').innerHTML = '<strong>' + profitLoss.toLocaleString('en-GB') + ' NOK</strong>';
             document.getElementById('financialCommission').innerHTML = '<strong class="positive">+' + commission.toLocaleString('en-GB') + ' NOK</strong>';
+        }
+
+        function exportPDF() {
+            const period = document.getElementById('period').value.trim() || 'Report';
+            const safePeriod = period.replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = `Peasy_Hero_Report_${safePeriod}.pdf`;
+            window.print();
+            alert('When saving the PDF, name it: ' + filename);
         }
 
         updateReport();
