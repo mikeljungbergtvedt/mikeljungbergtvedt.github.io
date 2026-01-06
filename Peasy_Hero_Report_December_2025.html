@@ -208,6 +208,10 @@
                 <input type="number" id="soldRevenue" value="0" step="1000">
             </div>
             <div>
+                <label for="marketingSpend">Marketing Spend (NOK)</label>
+                <input type="number" id="marketingSpend" value="0" step="1000">
+            </div>
+            <div>
                 <label for="totalIncome">Total Income (Avgift fees, NOK)</label>
                 <input type="number" id="totalIncome" value="0" step="100">
             </div>
@@ -306,7 +310,7 @@
         <h2>Financial Summary</h2>
         <table>
             <tr><th>Metric</th><th>Value</th></tr>
-            <tr><td>Marketing Spend</td><td>0 NOK</td></tr>
+            <tr><td>Marketing Spend</td><td id="financialMarketing">0 NOK</td></tr>
             <tr><td>Production Cost (tiered)</td><td id="financialProduction">0 NOK</td></tr>
             <tr><td>Gire Cost (750 NOK per received)</td><td id="financialGire">0 NOK</td></tr>
             <tr><td><strong>Total Costs</strong></td><td id="financialTotalCosts"><strong>0 NOK</strong></td></tr>
@@ -323,7 +327,7 @@
     </div>
 
     <script>
-        const inputFields = ['priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'totalIncome'];
+        const inputFields = ['priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
         inputFields.forEach(id => document.getElementById(id).addEventListener('input', updateReport));
 
         function updateReport() {
@@ -334,6 +338,7 @@
             const returnedLow = parseFloat(document.getElementById('returnedLow').value) || 0;
             const returnedHigh = parseFloat(document.getElementById('returnedHigh').value) || 0;
             const soldRevenue = parseFloat(document.getElementById('soldRevenue').value) || 0;
+            const marketingSpend = parseFloat(document.getElementById('marketingSpend').value) || 0;
             const totalIncome = parseFloat(document.getElementById('totalIncome').value) || 0;
 
             const sold = soldLow + soldHigh;
@@ -350,7 +355,7 @@
 
             const productionCost = (soldLow * 2000) + (soldHigh * 2500) + (returnedLow * 1300) + (returnedHigh * 1700);
             const gireCost = received * 750;
-            const totalCosts = productionCost + gireCost; // Marketing = 0
+            const totalCosts = marketingSpend + productionCost + gireCost;
             const profitLoss = totalIncome - totalCosts;
             const commission = Math.round(soldRevenue * 0.027);
 
@@ -389,6 +394,7 @@
             document.getElementById('barReturned').textContent = '████████ ' + returnRate + '%';
 
             // Financial
+            document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialProduction').textContent = productionCost.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialGire').textContent = gireCost.toLocaleString('en-GB') + ' NOK';
             document.getElementById('financialTotalCosts').innerHTML = '<strong>' + totalCosts.toLocaleString('en-GB') + ' NOK</strong>';
@@ -397,7 +403,7 @@
             document.getElementById('financialCommission').innerHTML = '<strong class="positive">+' + commission.toLocaleString('en-GB') + ' NOK</strong>';
         }
 
-        updateReport(); // Initial load
+        updateReport();
     </script>
 </body>
 </html>
