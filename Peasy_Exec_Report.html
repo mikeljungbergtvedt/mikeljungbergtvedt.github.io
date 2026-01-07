@@ -34,15 +34,10 @@
     }
     .summary-text {
       text-align: center;
-      font-size: 1.0em;
+      font-size: 1.0em; /* ~10pt */
       line-height: 1.8;
       margin: 0 auto 40px;
       max-width: 900px;
-    }
-    .summary-link {
-      cursor: pointer;
-      text-decoration: underline;
-      font-weight: bold;
     }
     .input-section {
       max-width: 1000px;
@@ -148,6 +143,54 @@
     .offset-negative { color: red; }
     .profit-positive { color: #27ae60; font-weight: bold; }
     .profit-negative { color: #c0392b; font-weight: bold; }
+    .funnel {
+      text-align: center;
+      margin: 40px 0;
+      font-size: 1.2em;
+    }
+    .funnel-stage {
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    .funnel-number {
+      font-size: 2em;
+      color: #004225;
+    }
+    .funnel-arrow {
+      font-size: 2em;
+      color: #004225;
+      margin: 10px 0;
+    }
+    .funnel-split {
+      display: flex;
+      justify-content: center;
+      gap: 150px;
+      margin-top: 20px;
+    }
+    .outcome {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 60px;
+      margin: 40px 0;
+      font-size: 1.4em;
+    }
+    .outcome-item {
+      text-align: center;
+    }
+    .outcome-label {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .outcome-bar {
+      height: 35px;
+      background: #004225;
+      color: white;
+      line-height: 35px;
+      border-radius: 6px;
+      padding: 0 20px;
+      font-weight: bold;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -236,14 +279,16 @@
     @media print {
       .input-section, .print-button { display: none !important; }
       body > h1, body > .period-subtitle { display: none !important; }
+      body { background: white; padding: 10px; margin: 0; }
+      .report { box-shadow: none; padding: 10px; max-width: none; page-break-after: avoid; }
       .summary-text { margin-bottom: 30px; font-size: 10pt; }
+      @page { size: A4 portrait; margin: 10mm; }
     }
   </style>
 </head>
 <body>
   <h1>Peasy Exec Report</h1>
   <div class="period-subtitle" id="periodSubtitle">Period</div>
-
   <div class="input-section">
     <div class="input-grid">
       <div><label for="periodStart">Period Start Date</label><input type="date" id="periodStart"></div>
@@ -265,18 +310,15 @@
     <div class="warning" id="warning">Warning: Sold + Returned does not equal Received! Please check inputs.</div>
     <button class="print-button" onclick="exportPDF()">Print / Save as PDF</button>
   </div>
-
   <div class="report">
     <h1>Peasy Exec Report</h1>
     <div class="period-subtitle" id="reportPeriod">Period</div>
-
     <div class="summary-title">Period Summary</div>
     <div class="summary-text" id="summaryText">
       –% Priced cars received / –% Received cars sold<br>
       – gross loss<br>
       +– Autoringen Commission (2.7% of sold revenue)
     </div>
-
     <h2>Exec Metrics</h2>
     <div class="exec">
       <div class="exec-card"><div>Cars Priced</div><div class="exec-value" id="execPriced">0</div></div>
@@ -286,7 +328,6 @@
       <div class="exec-card"><div>Sold Revenue</div><div class="exec-value" id="execSoldRevenue">0<br><span class="exec-label">NOK</span></div></div>
       <div class="exec-card"><div>Avg Price per Sold Car</div><div class="exec-value" id="execAvgPrice">–<br><span class="exec-label">NOK</span></div></div>
     </div>
-
     <h2>Key Conversion Rates</h2>
     <div class="tiles">
       <div class="tile-card">
@@ -310,7 +351,6 @@
         <div class="tile-value" id="rateReturn">0.0%</div>
       </div>
     </div>
-
     <h2>Conversion Funnel</h2>
     <div class="funnel">
       <div class="funnel-stage"><div>Priced</div><div class="funnel-number" id="funnelPriced">0</div><div>(100%)</div></div>
@@ -321,13 +361,11 @@
         <div><div class="funnel-arrow">↓</div><div class="funnel-stage"><div>Returned</div><div class="funnel-number" id="funnelReturned">0</div><div id="returnedPct">(0.0% of received)</div></div></div>
       </div>
     </div>
-
     <h2>Received Cars Outcome</h2>
     <div class="outcome">
       <div class="outcome-item"><div class="outcome-label">Sold</div><div class="outcome-bar" id="barSold">0 cars – 0.0%</div></div>
       <div class="outcome-item"><div class="outcome-label">Returned</div><div class="outcome-bar" id="barReturned">0 cars – 0.0%</div></div>
     </div>
-
     <h2>Financial Summary</h2>
     <table>
       <tr><th>Metric</th><th>Value</th></tr>
@@ -341,17 +379,14 @@
       <tr><td><strong>Gross Profit/Loss (Peasy)</strong></td><td id="financialProfit"><strong>0 NOK</strong></td></tr>
       <tr><td><strong>Autoringen Commission (2.7% of sold revenue)</strong></td><td id="financialCommission" class="positive"><strong>+0 NOK</strong></td></tr>
     </table>
-
     <p class="footer-note">
       <strong>Production Cost Ledger:</strong> Estimated Price &lt; 25,000 NOK → 2,000 / 1,300 NOK (sold / returned) | &gt; 25,000 NOK → 2,500 / 1,700 NOK (sold / returned)<br>
       <strong>Gire Cost:</strong> 750 NOK per received car<br><br>
     </p>
   </div>
-
   <script>
     const inputFields = ['periodStart', 'periodEnd', 'priced', 'received', 'soldLow', 'soldHigh', 'returnedLow', 'returnedHigh', 'soldRevenue', 'marketingSpend', 'totalIncome'];
     inputFields.forEach(id => document.getElementById(id).addEventListener('input', updateReport));
-
     function formatDate(dateStr) {
       if (!dateStr) return '';
       const d = new Date(dateStr);
@@ -360,7 +395,6 @@
       const year = d.getFullYear();
       return `${day}.${month}.${year}`;
     }
-
     function updateReport() {
       const start = document.getElementById('periodStart').value;
       const end = document.getElementById('periodEnd').value;
@@ -371,7 +405,6 @@
       else periodText = 'Period';
       document.getElementById('periodSubtitle').textContent = periodText;
       document.getElementById('reportPeriod').textContent = periodText;
-
       const priced = parseFloat(document.getElementById('priced').value) || 0;
       const received = parseFloat(document.getElementById('received').value) || 0;
       const soldLow = parseFloat(document.getElementById('soldLow').value) || 0;
@@ -381,34 +414,24 @@
       const soldRevenue = parseFloat(document.getElementById('soldRevenue').value) || 0;
       const marketingSpend = parseFloat(document.getElementById('marketingSpend').value) || 0;
       const totalIncome = parseFloat(document.getElementById('totalIncome').value) || 0;
-
       const sold = soldLow + soldHigh;
       const returned = returnedLow + returnedHigh;
-
       document.getElementById('warning').style.display = (sold + returned !== received && received > 0) ? 'block' : 'none';
-
       const avgPrice = sold > 0 ? Math.round(soldRevenue / sold) : 0;
       const productionCost = (soldLow * 2000) + (soldHigh * 2500) + (returnedLow * 1300) + (returnedHigh * 1700);
       const gireCost = received * 750;
       const totalCosts = marketingSpend + productionCost + gireCost;
       const profitLoss = totalIncome - totalCosts;
       const commission = Math.round(soldRevenue * 0.027);
-
       const pricedReceivedRate = priced > 0 ? ((received / priced) * 100).toFixed(1) : 0;
       const receivedSoldRate = received > 0 ? ((sold / received) * 100).toFixed(1) : 0;
-
-      // Summary with clickable links to scroll to corresponding sections
       const profitText = profitLoss >= 0 ? `+${profitLoss.toLocaleString('en-GB')} NOK` : `${profitLoss.toLocaleString('en-GB')} NOK`;
       const profitWord = profitLoss >= 0 ? 'profit' : 'loss';
       const commissionText = `+${commission.toLocaleString('en-GB')} NOK`;
-
-      document.getElementById('summaryText').innerHTML = 
-        `<span class="summary-link" onclick="document.querySelector('#ratePricedReceived').scrollIntoView({behavior: 'smooth'});">${pricedReceivedRate}% Priced cars received</span> / ` +
-        `<span class="summary-link" onclick="document.querySelector('#rateReceivedSold').scrollIntoView({behavior: 'smooth'});">${receivedSoldRate}% Received cars sold</span><br>` +
-        `<span class="summary-link" onclick="document.querySelector('#financialProfit').scrollIntoView({behavior: 'smooth'});" style="color:${profitLoss >= 0 ? '#27ae60' : '#c0392b'};">${profitText}</span> gross ${profitWord}<br>` +
-        `<span class="summary-link" onclick="document.querySelector('#financialCommission').scrollIntoView({behavior: 'smooth'});" style="color:#82bf42;">${commissionText}</span> Autoringen Commission (2.7% of sold revenue)`;
-
-      // Rest of updates unchanged...
+      document.getElementById('summaryText').innerHTML =
+        `${pricedReceivedRate}% Priced cars received / ${receivedSoldRate}% Received cars sold<br>` +
+        `<span style="color:${profitLoss >= 0 ? '#27ae60' : '#c0392b'};">${profitText}</span> gross ${profitWord}<br>` +
+        `<span style="color:#82bf42;">${commissionText}</span> Autoringen Commission (2.7% of sold revenue)`;
       document.getElementById('execPriced').textContent = priced;
       document.getElementById('execReceived').textContent = received;
       document.getElementById('execSold').textContent = sold;
@@ -416,19 +439,16 @@
       document.getElementById('execSoldRevenue').innerHTML = soldRevenue.toLocaleString('en-GB') + '<br><span class="exec-label">NOK</span>';
       const avgDisplay = sold > 0 ? avgPrice.toLocaleString('en-GB') : '–';
       document.getElementById('execAvgPrice').innerHTML = avgDisplay + '<br><span class="exec-label">NOK</span>';
-
       document.getElementById('ratePricedReceived').textContent = pricedReceivedRate + '%';
       document.getElementById('ratePricedReturned').textContent = priced > 0 ? ((returned / priced) * 100).toFixed(1) + '%' : '0.0%';
       document.getElementById('rateReceivedSold').textContent = receivedSoldRate + '%';
       document.getElementById('rateReturn').textContent = received > 0 ? ((returned / received) * 100).toFixed(1) + '%' : '0.0%';
-
       const acceptOffset = (pricedReceivedRate - 30).toFixed(1);
       const sellOffset = (receivedSoldRate - 70).toFixed(1);
       document.getElementById('offsetPricedReceived').textContent = 'Offset: ' + (acceptOffset > 0 ? '+' : '') + acceptOffset + '%';
       document.getElementById('offsetPricedReceived').className = 'tile-offset ' + (acceptOffset >= 0 ? 'offset-positive' : 'offset-negative');
       document.getElementById('offsetReceivedSold').textContent = 'Offset: ' + (sellOffset > 0 ? '+' : '') + sellOffset + '%';
       document.getElementById('offsetReceivedSold').className = 'tile-offset ' + (sellOffset >= 0 ? 'offset-positive' : 'offset-negative');
-
       document.getElementById('funnelPriced').textContent = priced;
       document.getElementById('arrowPricedReceived').textContent = '↓ ' + pricedReceivedRate + '%';
       document.getElementById('funnelReceived').textContent = received;
@@ -438,25 +458,20 @@
       document.getElementById('returnedPct').textContent = '(' + (received > 0 ? ((returned / received) * 100).toFixed(1) : '0.0') + '% of received)';
       document.getElementById('barSold').textContent = sold + ' cars – ' + receivedSoldRate + '%';
       document.getElementById('barReturned').textContent = returned + ' cars – ' + (received > 0 ? ((returned / received) * 100).toFixed(1) : '0.0') + '%';
-
       document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialProduction').textContent = productionCost.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialGire').textContent = gireCost.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialTotalCosts').innerHTML = '<strong>' + totalCosts.toLocaleString('en-GB') + ' NOK</strong>';
       document.getElementById('financialIncome').textContent = totalIncome.toLocaleString('en-GB') + ' NOK';
-
       const profitClass = profitLoss >= 0 ? 'profit-positive' : 'profit-negative';
       document.getElementById('financialProfit').innerHTML = `<strong class="${profitClass}">${profitLoss.toLocaleString('en-GB')} NOK</strong>`;
       document.getElementById('financialProfit').className = profitClass;
-
       document.getElementById('financialCommission').innerHTML = '<strong class="positive">+' + commission.toLocaleString('en-GB') + ' NOK</strong>';
-
       const marketingPerSold = sold > 0 ? Math.round(marketingSpend / sold) : 0;
       const totalCostPerSold = sold > 0 ? Math.round(totalCosts / sold) : 0;
       document.getElementById('financialMarketingPerCar').textContent = marketingPerSold.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialCostPerCar').textContent = totalCostPerSold.toLocaleString('en-GB') + ' NOK';
     }
-
     function exportPDF() {
       const start = document.getElementById('periodStart').value;
       const end = document.getElementById('periodEnd').value;
@@ -470,7 +485,6 @@
       window.print();
       setTimeout(() => alert('When saving the PDF, please name it: ' + filename), 500);
     }
-
     updateReport();
   </script>
 </body>
