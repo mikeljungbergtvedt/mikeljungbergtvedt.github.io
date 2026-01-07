@@ -25,16 +25,19 @@
       color: #004225;
       margin-bottom: 20px;
     }
-    .summary-headline {
+    .summary-title {
       text-align: center;
-      font-size: 1.05em;          /* Smaller font to fit on one line */
+      font-size: 1.3em;
       font-weight: bold;
-      margin: 20px 0 40px;
+      margin: 20px 0 10px;
       color: #004225;
-      white-space: nowrap;        /* Prevent wrapping */
-      overflow: hidden;
-      text-overflow: ellipsis;    /* Add ellipsis if still too long */
-      line-height: 1.4;
+    }
+    .summary-text {
+      text-align: center;
+      font-size: 1.0em; /* ~10pt */
+      line-height: 1.8;
+      margin: 0 auto 40px;
+      max-width: 900px;
     }
     .input-section {
       max-width: 1000px;
@@ -278,7 +281,7 @@
       body > h1, body > .period-subtitle { display: none !important; }
       body { background: white; padding: 10px; margin: 0; }
       .report { box-shadow: none; padding: 10px; max-width: none; page-break-after: avoid; }
-      .summary-headline { margin: 10px 0 30px; font-size: 11pt; }
+      .summary-text { margin-bottom: 30px; font-size: 10pt; }
       @page { size: A4 portrait; margin: 10mm; }
     }
   </style>
@@ -313,9 +316,11 @@
     <h1>Peasy Exec Report</h1>
     <div class="period-subtitle" id="reportPeriod">Period</div>
 
-    <!-- Summary headline – fits on one line with smaller font -->
-    <div class="summary-headline" id="summaryHeadline">
-      Period Summary: –% Priced cars received | –% Received cars sold | – gross loss | +– Autoringen Commission (2.7% of sold revenue)
+    <div class="summary-title">Period Summary</div>
+    <div class="summary-text" id="summaryText">
+      –% Priced cars received / –% Received cars sold<br>
+      – gross loss<br>
+      +– Autoringen Commission (2.7% of sold revenue)
     </div>
 
     <h2>Exec Metrics</h2>
@@ -328,6 +333,7 @@
       <div class="exec-card"><div>Avg Price per Sold Car</div><div class="exec-value" id="execAvgPrice">–<br><span class="exec-label">NOK</span></div></div>
     </div>
 
+    <!-- Rest of the report (tiles, funnel, outcome, financial table, footer) remains the same -->
     <h2>Key Conversion Rates</h2>
     <div class="tiles">
       <div class="tile-card">
@@ -438,17 +444,17 @@
       const pricedReceivedRate = priced > 0 ? ((received / priced) * 100).toFixed(1) : 0;
       const receivedSoldRate = received > 0 ? ((sold / received) * 100).toFixed(1) : 0;
 
-      // Summary headline with colors
+      // Updated text with / separator on first line
       const profitText = profitLoss >= 0 ? `+${profitLoss.toLocaleString('en-GB')} NOK` : `${profitLoss.toLocaleString('en-GB')} NOK`;
       const profitWord = profitLoss >= 0 ? 'profit' : 'loss';
       const commissionText = `+${commission.toLocaleString('en-GB')} NOK`;
 
-      document.getElementById('summaryHeadline').innerHTML = 
-        `Period Summary: ${pricedReceivedRate}% Priced cars received | ${receivedSoldRate}% Received cars sold | ` +
-        `<span style="color:${profitLoss >= 0 ? '#27ae60' : '#c0392b'};">${profitText}</span> gross ${profitWord} | ` +
+      document.getElementById('summaryText').innerHTML = 
+        `${pricedReceivedRate}% Priced cars received / ${receivedSoldRate}% Received cars sold<br>` +
+        `<span style="color:${profitLoss >= 0 ? '#27ae60' : '#c0392b'};">${profitText}</span> gross ${profitWord}<br>` +
         `<span style="color:#82bf42;">${commissionText}</span> Autoringen Commission (2.7% of sold revenue)`;
 
-      // Exec metrics
+      // Rest of updates unchanged...
       document.getElementById('execPriced').textContent = priced;
       document.getElementById('execReceived').textContent = received;
       document.getElementById('execSold').textContent = sold;
@@ -457,7 +463,6 @@
       const avgDisplay = sold > 0 ? avgPrice.toLocaleString('en-GB') : '–';
       document.getElementById('execAvgPrice').innerHTML = avgDisplay + '<br><span class="exec-label">NOK</span>';
 
-      // Conversion rates
       document.getElementById('ratePricedReceived').textContent = pricedReceivedRate + '%';
       document.getElementById('ratePricedReturned').textContent = priced > 0 ? ((returned / priced) * 100).toFixed(1) + '%' : '0.0%';
       document.getElementById('rateReceivedSold').textContent = receivedSoldRate + '%';
@@ -470,7 +475,6 @@
       document.getElementById('offsetReceivedSold').textContent = 'Offset: ' + (sellOffset > 0 ? '+' : '') + sellOffset + '%';
       document.getElementById('offsetReceivedSold').className = 'tile-offset ' + (sellOffset >= 0 ? 'offset-positive' : 'offset-negative');
 
-      // Funnel & outcome
       document.getElementById('funnelPriced').textContent = priced;
       document.getElementById('arrowPricedReceived').textContent = '↓ ' + pricedReceivedRate + '%';
       document.getElementById('funnelReceived').textContent = received;
@@ -481,7 +485,6 @@
       document.getElementById('barSold').textContent = sold + ' cars – ' + receivedSoldRate + '%';
       document.getElementById('barReturned').textContent = returned + ' cars – ' + (received > 0 ? ((returned / received) * 100).toFixed(1) : '0.0') + '%';
 
-      // Financials
       document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialProduction').textContent = productionCost.toLocaleString('en-GB') + ' NOK';
       document.getElementById('financialGire').textContent = gireCost.toLocaleString('en-GB') + ' NOK';
@@ -494,7 +497,6 @@
 
       document.getElementById('financialCommission').innerHTML = '<strong class="positive">+' + commission.toLocaleString('en-GB') + ' NOK</strong>';
 
-      // Per sold car metrics
       const marketingPerSold = sold > 0 ? Math.round(marketingSpend / sold) : 0;
       const totalCostPerSold = sold > 0 ? Math.round(totalCosts / sold) : 0;
       document.getElementById('financialMarketingPerCar').textContent = marketingPerSold.toLocaleString('en-GB') + ' NOK';
