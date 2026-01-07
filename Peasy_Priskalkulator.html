@@ -253,21 +253,25 @@
       return;
     }
 
-    // Dealer Margin
+    // Dealer Margin – bidirectional sync (cash takes priority only if filled)
     let marginDeduct = 0;
     const marginCashInput = parseFloat(document.getElementById('marginCash').value);
+    const marginPctInput = parseFloat(document.getElementById('marginPct').value);
+
     if (!isNaN(marginCashInput) && marginCashInput > 0) {
       marginDeduct = marginCashInput;
       document.getElementById('marginPct').value = ((marginDeduct / finn) * 100).toFixed(2);
-    } else {
-      const marginPct = parseFloat(document.getElementById('marginPct').value) || 0;
-      marginDeduct = finn * (marginPct / 100);
+    } else if (!isNaN(marginPctInput) && marginPctInput >= 0) {
+      marginDeduct = finn * (marginPctInput / 100);
+      document.getElementById('marginCash').value = ''; // clear cash if % is used
     }
 
-    // Additional Margin
+    // Additional Margin – bidirectional sync
     let pakostDeduct = 0;
     const pakostCashInput = parseFloat(document.getElementById('pakostCash').value);
+    const pakostPctInput = parseFloat(document.getElementById('pakostPct').value);
     const priceAfterDealer = finn - marginDeduct;
+
     if (!isNaN(pakostCashInput) && pakostCashInput > 0) {
       pakostDeduct = pakostCashInput;
       if (priceAfterDealer > 0) {
@@ -275,25 +279,21 @@
       } else {
         document.getElementById('pakostPct').value = '0';
       }
-    } else {
-      const pakostPct = parseFloat(document.getElementById('pakostPct').value) || 0;
-      pakostDeduct = priceAfterDealer * (pakostPct / 100);
+    } else if (!isNaN(pakostPctInput) && pakostPctInput >= 0) {
+      pakostDeduct = priceAfterDealer * (pakostPctInput / 100);
+      document.getElementById('pakostCash').value = '';
     }
 
     document.getElementById('marginDeduction').textContent = '- ' + Math.round(marginDeduct).toLocaleString('en-GB') + ' NOK';
     document.getElementById('pakostDeduction').textContent = '- ' + Math.round(pakostDeduct).toLocaleString('en-GB') + ' NOK';
 
-    // Midpoint after both margins
     const midpoint = finn - marginDeduct - pakostDeduct;
 
-    // Total spread = 10% of midpoint
     const spreadAmount = midpoint * 0.10;
 
-    // Slider position: -5 to +5 → -1 to +1
     const sliderValue = parseFloat(document.getElementById('motivation').value) || 0;
-    const position = sliderValue / 5; // -1 (left) to +1 (right)
+    const position = sliderValue / 5;
 
-    // Fixed: inverted so right = higher prices
     const low = Math.round(midpoint - (spreadAmount / 2) * (1 - position));
     const high = low + Math.round(spreadAmount);
 
@@ -307,7 +307,6 @@
     document.getElementById('motivationValue').textContent =
       (sliderValue > 0 ? '+' : '') + motivationPercent + '%';
 
-    // Dealer price based on low end
     const lowDealer = Math.max(Math.round(low * 1.027), low + 2500);
     document.getElementById('dealerLow').textContent = lowDealer.toLocaleString('en-GB') + ' NOK';
   }
