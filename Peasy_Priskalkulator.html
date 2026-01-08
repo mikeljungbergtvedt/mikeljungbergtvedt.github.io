@@ -27,44 +27,26 @@
     border-radius: 12px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.08);
   }
-  .label-with-info {
-    display: flex;
-    align-items: center;
-  }
-  .info-icon {
-    margin-left: 8px;
-    width: 20px;
-    height: 20px;
+  .guidelines-box {
     background: #f5f9f6;
-    color: #004225;
-    font-weight: bold;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
     font-size: 1em;
-    text-align: center;
-    line-height: 20px;
-    border-radius: 50%;
-    cursor: help;
-    position: relative;
+    line-height: 1.5;
+    border: 1px solid #ddd;
   }
-  .tooltip {
-    visibility: hidden;
-    width: 300px;
-    background: #004225;
-    color: white;
-    text-align: left;
-    border-radius: 6px;
-    padding: 12px;
-    position: absolute;
-    z-index: 1;
-    top: 100%;
-    left: 50%;
-    margin-left: -150px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 0.95em;
+  .guidelines-box strong {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 8px;
   }
-  .info-icon:hover .tooltip {
-    visibility: visible;
-    opacity: 1;
+  .guidelines-box ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .guidelines-box li {
+    margin: 6px 0;
   }
   input[type="number"] {
     width: 100%;
@@ -130,6 +112,13 @@
     color: #004225;
     font-weight: bold;
   }
+  .mid-note {
+    text-align: center;
+    font-size: 0.95em;
+    color: #666;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
   .dealer-price {
     text-align: center;
     font-size: 0.95em;
@@ -178,12 +167,17 @@
   <h1>Peasy Pricing Calculator – Estimated Price</h1>
 
   <div class="calculator">
-    <div class="label-with-info">
-      <label for="finnPrice"><a href="https://www.finn.no" target="_blank">Finn.no</a> Price (NOK)</label>
-      <div class="info-icon">i
-        <span class="tooltip">Enter the median price of 5 similar cars listed on Finn.no. This is the baseline market price for comparable vehicles (same model, year, mileage, condition).</span>
-      </div>
+    <div class="guidelines-box">
+      Identify the exact year, make, model, battery / engine size etc. Compare with similar cars on Finn.no sorting price low - high. If white compare with white, if black compare with black, otherwise any other color. If multiple similar cars use the average of the 3-5 lowest priced comparable. KM can vary +/- 5%.
+
+      <strong>Shortcuts</strong>
+      <ul>
+        <li><a href="https://www.finn.no" target="_blank">Finn.no</a></li>
+        <li><a href="https://biladministrasjon.no/pricetool/summary?reg_number=EK36637&mileage=190000" target="_blank">Prisestimat</a></li>
+      </ul>
     </div>
+
+    <label for="finnPrice">Finn.no Price (NOK)</label>
     <input type="number" id="finnPrice" placeholder="e.g. 365000" step="1000">
 
     <br><br>
@@ -220,6 +214,7 @@
       </div>
       <div class="mid">
         Mid Price: <strong id="midPrice">–</strong>
+        <div class="mid-note">Note: Mid Price is the target after margins and is not affected by the Motivation Slider.</div>
       </div>
 
       <div class="dealer-price">
@@ -253,7 +248,7 @@
       return;
     }
 
-    // Dealer Margin – bidirectional sync (cash takes priority only if filled)
+    // Dealer Margin – bidirectional sync
     let marginDeduct = 0;
     const marginCashInput = parseFloat(document.getElementById('marginCash').value);
     const marginPctInput = parseFloat(document.getElementById('marginPct').value);
@@ -263,7 +258,7 @@
       document.getElementById('marginPct').value = ((marginDeduct / finn) * 100).toFixed(2);
     } else if (!isNaN(marginPctInput) && marginPctInput >= 0) {
       marginDeduct = finn * (marginPctInput / 100);
-      document.getElementById('marginCash').value = ''; // clear cash if % is used
+      document.getElementById('marginCash').value = '';
     }
 
     // Additional Margin – bidirectional sync
