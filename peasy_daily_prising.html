@@ -3,57 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Daily Registrations</title>
-
+  <title>Peasy Registreringer</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 40px 20px;
-      background: #e0e9e5;
-      color: #004225;
-    }
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: white;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 40px 20px; background: #e0e9e5; color: #004225; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 40px; color: #004225; }
-    .input-area {
-      text-align: center;
-      margin: 30px 0;
-      padding: 20px;
-      background: #f5f9f6;
-      border-radius: 10px;
-    }
+    .input-area { text-align: center; margin: 30px 0; padding: 20px; background: #f5f9f6; border-radius: 10px; }
     .input-area label { font-size: 1.2rem; font-weight: bold; display: block; margin-bottom: 10px; }
-    .input-area input[type="date"], .input-area input[type="number"] {
-      padding: 12px; font-size: 1.2rem; border: 1px solid #ddd; border-radius: 6px; margin: 0 10px;
-    }
-    .input-area button {
-      padding: 12px 24px; background: #ffcc33; color: #004225; border: none; border-radius: 6px;
-      font-weight: bold; cursor: pointer;
-    }
+    .input-area input[type="date"], .input-area input[type="number"] { padding: 12px; font-size: 1.2rem; border: 1px solid #ddd; border-radius: 6px; margin: 0 10px; }
+    .input-area button { padding: 12px 24px; background: #ffcc33; color: #004225; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .input-area button:hover { background: #e6b800; }
     canvas { margin-top: 40px; background: white; border-radius: 8px; width: 100% !important; height: 550px !important; }
-    #notification {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      background: #27ae60; color: white; padding: 12px 24px; border-radius: 6px; z-index: 1000;
-      opacity: 0; transition: opacity 0.3s; font-weight: bold;
-    }
+    #notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 12px 24px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.3s; font-weight: bold; }
+    .stats-table { margin: 40px auto 20px; max-width: 500px; border-collapse: collapse; }
+    .stats-table th, .stats-table td { padding: 12px; text-align: center; border: 1px solid #ddd; }
+    .stats-table th { background: #f5f9f6; font-weight: bold; }
+    .stats-table td { background: white; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Peasy Daily Registrations</h1>
+    <h1>Peasy Registreringer</h1>
     <div class="subtitle">Antall biler registrert per dag (SD mottatt på) – frå 01.07.2025</div>
 
     <div class="input-area">
@@ -64,12 +39,25 @@
     </div>
 
     <canvas id="dailyChart"></canvas>
+
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Periode</th>
+          <th>Gjennomsnittlig antall biler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Siste dag med data</td><td id="lastDay">—</td></tr>
+        <tr><td>Siste 7 dager</td><td id="avg7">—</td></tr>
+        <tr><td>Siste 30 dager</td><td id="avg30">—</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <div id="notification"></div>
 
   <script>
-    // Full historical data (use your complete object here)
     const historicalData = {
       "2025-07-02": 1, "2025-07-03": 2, "2025-07-05": 1, "2025-07-08": 1, "2025-07-10": 1,
       "2025-07-12": 2, "2025-07-15": 2, "2025-07-17": 1, "2025-07-19": 1, "2025-07-21": 1,
@@ -120,6 +108,7 @@
       localStorage.setItem('peasyDailyUserData', JSON.stringify(userData));
       showNotification(`Antall ${count} lagret for ${dateInput.split('-').reverse().join('.')}`);
       renderChart();
+      updateStatsTable();
     }
 
     function showNotification(text) {
@@ -129,11 +118,9 @@
       setTimeout(() => notif.style.opacity = 0, 3000);
     }
 
-    // Manual linear regression for trendline (only from 01.11.2025 to last date)
     function calculateTrendLine(dates, data, startDateStr) {
       const startIndex = dates.findIndex(d => d >= startDateStr);
       if (startIndex === -1) return new Array(dates.length).fill(null);
-
       const x = [];
       const y = [];
       for (let i = startIndex; i < dates.length; i++) {
@@ -143,9 +130,7 @@
           y.push(val);
         }
       }
-
       if (x.length < 2) return new Array(dates.length).fill(null);
-
       const n = x.length;
       let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
       for (let i = 0; i < n; i++) {
@@ -154,16 +139,48 @@
         sumXY += x[i] * y[i];
         sumX2 += x[i] * x[i];
       }
-
       const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
       const b = (sumY - m * sumX) / n;
-
       const trend = new Array(dates.length).fill(null);
       for (let i = startIndex; i < dates.length; i++) {
         trend[i] = m * i + b;
       }
-
       return trend;
+    }
+
+    function updateStatsTable() {
+      const sortedDates = Object.keys(allData).sort().reverse();
+
+      let lastDayValue = '—';
+      for (const date of sortedDates) {
+        if (allData[date] !== undefined) {
+          lastDayValue = allData[date];
+          break;
+        }
+      }
+      document.getElementById('lastDay').textContent = lastDayValue;
+
+      function getAverage(days) {
+        let sum = 0;
+        let count = 0;
+        const today = new Date();
+        const cutoff = new Date(today);
+        cutoff.setDate(today.getDate() - days + 1);
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+
+        for (const date of sortedDates) {
+          if (date >= cutoffStr) {
+            sum += allData[date] || 0;
+            count++;
+          } else {
+            break;
+          }
+        }
+        return count > 0 ? (sum / count).toFixed(1) : '—';
+      }
+
+      document.getElementById('avg7').textContent = getAverage(7);
+      document.getElementById('avg30').textContent = getAverage(30);
     }
 
     function renderChart() {
@@ -201,7 +218,7 @@
               borderWidth: 1
             },
             {
-              label: 'Trend frå 01.11.2025',
+              label: 'Trend Fra 01.11.2025',  // <-- Changed "frå" to "Fra"
               type: 'line',
               data: trendData,
               borderColor: '#e6b800',
@@ -216,12 +233,9 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: true, position: 'top' },
+            legend: { display: false },
             title: {
-              display: true,
-              text: 'Daglig antall registrerte biler (SD mottatt på)',
-              color: '#004225',
-              font: { size: 18 }
+              display: false  // <-- This removes the chart title completely
             }
           },
           scales: {
@@ -231,12 +245,15 @@
             },
             y: {
               beginAtZero: true,
+              max: 18,
               ticks: { stepSize: 2, color: '#004225' },
               grid: { color: '#ddd' }
             }
           }
         }
       });
+
+      updateStatsTable();
     }
 
     renderChart();
