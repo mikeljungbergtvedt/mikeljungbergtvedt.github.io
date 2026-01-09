@@ -202,11 +202,6 @@
         current.setDate(current.getDate() + 1);
       }
 
-      const labels = dates.map(d => {
-        const [y, m, dd] = d.split('-');
-        return `${dd}.${m}.${y.slice(2)}`;
-      });
-
       const data = dates.map(d => allData[d] || 0);
 
       const trendData = calculateTrendLine(dates, data, '2025-11-01');
@@ -217,7 +212,7 @@
       chart = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: labels,
+          labels: dates,
           datasets: [
             {
               label: 'Antall biler',
@@ -227,11 +222,11 @@
               borderWidth: 1
             },
             {
-              label: 'Trend Fra 01.11.2025',
+              label: 'Trend fra 01.11.2025',
               type: 'line',
               data: trendData,
               borderColor: '#e6b800',
-              borderWidth: 2,
+              borderWidth: 4,  // <-- Thicker trendline (was 2)
               pointRadius: 0,
               fill: false,
               tension: 0
@@ -247,13 +242,31 @@
           },
           scales: {
             x: {
-              ticks: { color: '#004225', maxRotation: 90, minRotation: 45, autoSkip: true, maxTicksLimit: 15 },
+              type: 'time',
+              time: {
+                unit: 'month',
+                displayFormats: {
+                  month: 'MM'  // Only month number: 07, 08, 09, ..., 01
+                }
+              },
+              ticks: {
+                color: '#004225',
+                font: { size: 14 },  // Bigger font on X-axis
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: true,
+                maxTicksLimit: 12
+              },
               grid: { color: '#ddd' }
             },
             y: {
               beginAtZero: true,
               max: 18,
-              ticks: { stepSize: 2, color: '#004225' },
+              ticks: {
+                stepSize: 2,
+                color: '#004225',
+                font: { size: 14 }  // Bigger font on Y-axis - same as X
+              },
               grid: { color: '#ddd' }
             }
           }
