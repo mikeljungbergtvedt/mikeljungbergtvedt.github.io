@@ -324,7 +324,7 @@
       text-align: center;
     }
 
-    .print-button {
+    .print-button, .share-button {
       display: block;
       width: 100%;
       max-width: 400px;
@@ -337,6 +337,15 @@
       cursor: pointer;
       font-size: 1.1rem;
       font-weight: bold;
+    }
+
+    .share-button {
+      background: #82bf42;
+      margin-top: 10px;
+    }
+
+    .share-button:hover {
+      background: #6fa33a;
     }
 
     .print-button:hover {
@@ -379,6 +388,21 @@
     .info-icon:hover .tooltip {
       visibility: visible;
       opacity: 1;
+    }
+
+    #notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #27ae60;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-weight: bold;
     }
 
     @media (max-width: 768px) {
@@ -460,7 +484,7 @@
     }
 
     @media print {
-      .input-section, .print-button, .language-toggle {
+      .input-section, .print-button, .share-button, .language-toggle, #notification {
         display: none !important;
       }
       body > h1, body > .period-subtitle {
@@ -495,7 +519,7 @@
   <h1 data-en="Peasy Exec Report" data-no="Peasy Exec Rapport">Peasy Exec Rapport</h1>
   <div class="period-subtitle" id="periodSubtitle">Periode</div>
 
-  <div class="input-section">
+  <div class="input-section" id="inputSection">
     <div class="language-toggle">
       <a data-lang="en">English</a> | <a data-lang="no" class="active">Norsk</a>
     </div>
@@ -521,6 +545,7 @@
     <div class="warning" id="warning" data-en="Warning: Sold + Returned does not equal Received! Please check inputs." data-no="Advarsel: Solgt + Returnert stemmer ikke med Mottatt! Sjekk innputtene.">Advarsel: Solgt + Returnert stemmer ikke med Mottatt! Sjekk innputtene.</div>
 
     <button class="print-button" onclick="exportPDF()" data-en="Print / Save as PDF" data-no="Skriv ut / Lagre som PDF">Skriv ut / Lagre som PDF</button>
+    <button class="share-button" onclick="generateShareLink()" data-en="Copy Shareable Link" data-no="Kopier delbar lenke">Kopier delbar lenke</button>
   </div>
 
   <div class="report">
@@ -638,8 +663,81 @@
     </p>
   </div>
 
+  <div id="notification"></div>
+
   <script>
+    const PASSWORD = 'peasy2026'; // Endre dette til ditt ønskede passord
+    let isAuthenticated = false;
     let currentLang = 'no';
+
+    function encodeData(obj) {
+      return btoa(JSON.stringify(obj));
+    }
+
+    function decodeData(str) {
+      try {
+        return JSON.parse(atob(str));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function loadFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get('data');
+      if (data) {
+        const values = decodeData(data);
+        if (values) {
+          Object.keys(values).forEach(key => {
+            const el = document.getElementById(key);
+            if (el) el.value = values[key];
+          });
+          updateReport();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function generateShareLink() {
+      const inputs = ['periodStart','periodEnd','priced','received','soldLow','soldHigh','returnedLow','returnedHigh','soldRevenue','marketingSpend','totalIncome'];
+      const data = {};
+      inputs.forEach(id => {
+        data[id] = document.getElementById(id).value;
+      });
+      const encoded = encodeData(data);
+      const url = new URL(window.location);
+      url.searchParams.set('data', encoded);
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        showNotification(currentLang === 'en' ? 'Link copied!' : 'Lenke kopiert!');
+      });
+    }
+
+    function showNotification(text) {
+      const notif = document.getElementById('notification');
+      notif.textContent = text;
+      notif.style.opacity = 1;
+      setTimeout(() => {
+        notif.style.opacity = 0;
+      }, 3000);
+    }
+
+    function authenticate() {
+      const pass = prompt(currentLang === 'en' ? 'Enter password to edit metrics:' : 'Skriv inn passord for å redigere tallene:');
+      if (pass === PASSWORD) {
+        isAuthenticated = true;
+        document.getElementById('inputSection').style.display = 'block';
+        document.querySelector('.share-button').style.display = 'block';
+      } else {
+        isAuthenticated = false;
+        document.getElementById('inputSection').style.display = 'none';
+        document.querySelector('.share-button').style.display = 'none';
+        if (pass !== null) { // Only show alert if not cancelled
+          alert(currentLang === 'en' ? 'Wrong password. You can only view the report.' : 'Feil passord. Du kan bare se rapporten.');
+        }
+      }
+      updateReport();
+    }
 
     const langLinks = document.querySelectorAll('.language-toggle a');
     langLinks.forEach(link => {
@@ -793,7 +891,14 @@
 
     function exportPDF() { window.print(); }
 
-    updateReport();
+    window.onload = function() {
+      if (!loadFromUrl()) {
+        authenticate();
+      } else {
+        document.getElementById('inputSection').style.display = 'none';
+        updateReport();
+      }
+    };
   </script>
 </body>
 </html>
