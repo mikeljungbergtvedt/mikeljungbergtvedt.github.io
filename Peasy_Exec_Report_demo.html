@@ -114,7 +114,6 @@
       font-size: 1rem;
     }
 
-    /* Section headings – font size scales down on small screens instead of breaking */
     h2 {
       color: #004225;
       font-size: 1.6rem;
@@ -123,7 +122,7 @@
       border-bottom: 2px solid #004225;
       padding-bottom: 8px;
       line-height: 1.3;
-      white-space: normal; /* allow wrap only as last resort */
+      white-space: normal;
     }
 
     .exec-count-row {
@@ -258,7 +257,6 @@
       white-space: nowrap;
     }
 
-    /* Financial Summary - Desktop Table */
     .financial-desktop {
       width: 100%;
       border-collapse: collapse;
@@ -284,7 +282,6 @@
       font-weight: bold;
     }
 
-    /* Financial Summary - Mobile Cards */
     .financial-mobile {
       display: none;
       margin: 30px 0;
@@ -327,7 +324,7 @@
       text-align: center;
     }
 
-    .print-button {
+    .print-button, .share-button {
       display: block;
       width: 100%;
       max-width: 400px;
@@ -340,6 +337,15 @@
       cursor: pointer;
       font-size: 1.1rem;
       font-weight: bold;
+    }
+
+    .share-button {
+      background: #82bf42;
+      margin-top: 10px;
+    }
+
+    .share-button:hover {
+      background: #6fa33a;
     }
 
     .print-button:hover {
@@ -384,7 +390,22 @@
       opacity: 1;
     }
 
-    /* Responsive scaling – reduce font sizes gradually instead of breaking words */
+    /* Notification */
+    #notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #27ae60;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-weight: bold;
+    }
+
     @media (max-width: 768px) {
       body {
         padding: 20px 10px;
@@ -401,7 +422,7 @@
       }
 
       h2 {
-        font-size: 1.4rem; /* reduced from 1.6rem */
+        font-size: 1.4rem;
       }
 
       .period-subtitle,
@@ -411,7 +432,6 @@
 
       .input-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
       }
 
       .exec-value {
@@ -452,7 +472,7 @@
 
     @media (max-width: 480px) {
       h2 {
-        font-size: 1.25rem; /* further reduced on very small screens */
+        font-size: 1.25rem;
       }
 
       .exec-value {
@@ -465,7 +485,7 @@
     }
 
     @media print {
-      .input-section, .print-button, .language-toggle {
+      .input-section, .print-button, .share-button, .language-toggle, #notification {
         display: none !important;
       }
       body > h1, body > .period-subtitle {
@@ -500,7 +520,7 @@
   <h1 data-en="Peasy Exec Report" data-no="Peasy Exec Rapport">Peasy Exec Rapport</h1>
   <div class="period-subtitle" id="periodSubtitle">Periode</div>
 
-  <div class="input-section">
+  <div class="input-section" id="inputSection">
     <div class="language-toggle">
       <a data-lang="en">English</a> | <a data-lang="no" class="active">Norsk</a>
     </div>
@@ -526,6 +546,7 @@
     <div class="warning" id="warning" data-en="Warning: Sold + Returned does not equal Received! Please check inputs." data-no="Advarsel: Solgt + Returnert stemmer ikke med Mottatt! Sjekk innputtene.">Advarsel: Solgt + Returnert stemmer ikke med Mottatt! Sjekk innputtene.</div>
 
     <button class="print-button" onclick="exportPDF()" data-en="Print / Save as PDF" data-no="Skriv ut / Lagre som PDF">Skriv ut / Lagre som PDF</button>
+    <button class="share-button" onclick="generateShareLink()" data-en="Copy Shareable Link" data-no="Kopier delbar lenke">Kopier delbar lenke</button>
   </div>
 
   <div class="report">
@@ -617,7 +638,6 @@
 
     <h2 data-en="Financial Summary" data-no="Finansiell Oppsummering">Finansiell Oppsummering</h2>
 
-    <!-- Desktop Table -->
     <table class="financial-desktop">
       <thead>
         <tr><th data-en="Metric" data-no="Post">Post</th><th data-en="Value" data-no="Verdi">Verdi</th></tr>
@@ -636,7 +656,6 @@
       </tbody>
     </table>
 
-    <!-- Mobile Cards -->
     <div class="financial-mobile" id="financialMobile"></div>
 
     <p class="footer-note">
@@ -645,10 +664,86 @@
     </p>
   </div>
 
+  <div id="notification"></div>
+
   <script>
-    const langLinks = document.querySelectorAll('.language-toggle a');
+    const PASSWORD = 'peasy2026'; // CHANGE THIS TO YOUR DESIRED PASSWORD
+    let isAuthenticated = false;
     let currentLang = 'no';
 
+    // Simple base64 encoding/decoding for shareable link (light obfuscation)
+    function encodeData(obj) {
+      return btoa(JSON.stringify(obj));
+    }
+
+    function decodeData(str) {
+      try {
+        return JSON.parse(atob(str));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Load data from URL if present
+    function loadFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get('data');
+      if (data) {
+        const values = decodeData(data);
+        if (values) {
+          Object.keys(values).forEach(key => {
+            const el = document.getElementById(key);
+            if (el) el.value = values[key];
+          });
+          updateReport();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Generate and copy shareable link
+    function generateShareLink() {
+      const inputs = ['periodStart','periodEnd','priced','received','soldLow','soldHigh','returnedLow','returnedHigh','soldRevenue','marketingSpend','totalIncome'];
+      const data = {};
+      inputs.forEach(id => {
+        data[id] = document.getElementById(id).value;
+      });
+      const encoded = encodeData(data);
+      const url = new URL(window.location);
+      url.searchParams.set('data', encoded);
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        showNotification(currentLang === 'en' ? 'Link copied!' : 'Lenke kopiert!');
+      });
+    }
+
+    function showNotification(text) {
+      const notif = document.getElementById('notification');
+      notif.textContent = text;
+      notif.style.opacity = 1;
+      setTimeout(() => {
+        notif.style.opacity = 0;
+      }, 3000);
+    }
+
+    // Password check
+    function authenticate() {
+      const pass = prompt(currentLang === 'en' ? 'Enter password to edit metrics:' : 'Skriv inn passord for å redigere tallene:');
+      if (pass === PASSWORD) {
+        isAuthenticated = true;
+        document.getElementById('inputSection').style.display = 'block';
+        document.querySelector('.share-button').style.display = 'block';
+      } else {
+        isAuthenticated = false;
+        document.getElementById('inputSection').style.display = 'none';
+        document.querySelector('.share-button').style.display = 'none';
+        alert(currentLang === 'en' ? 'Wrong password. You can only view the report.' : 'Feil passord. Du kan bare se rapporten.');
+      }
+      updateReport();
+    }
+
+    // Language handling
+    const langLinks = document.querySelectorAll('.language-toggle a');
     langLinks.forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -676,6 +771,7 @@
     }
 
     function updateReport() {
+      // Same calculation logic as before (unchanged)
       const start = document.getElementById('periodStart').value;
       const end = document.getElementById('periodEnd').value;
       const periodText = start && end ? `${formatDate(start)} - ${formatDate(end)}` : (start ? `${formatDate(start)} - ` : (end ? `- ${formatDate(end)}` : 'Periode'));
@@ -734,6 +830,7 @@
         `<span class="${profitClass}">${profitText}</span> brutto ${profitWord}<br>` +
         `<span class="summary-positive">${commissionText}</span> Autoringen Kommisjon`;
 
+      // Update all metrics (same as before)
       document.getElementById('execPriced').textContent = priced;
       document.getElementById('execReceived').textContent = received;
       document.getElementById('execSold').textContent = sold;
@@ -768,6 +865,7 @@
       document.getElementById('barSold').innerHTML = `${sold} biler – <span class="${receivedSoldRateNum > 70 ? 'outcome-positive' : 'outcome-negative'}">${receivedSoldRate}%</span>`;
       document.getElementById('barReturned').innerHTML = `${returned} biler – <span class="${returnRateNum < 30 ? 'outcome-positive' : 'outcome-negative'}">${returnRate}%</span>`;
 
+      // Financial updates
       document.getElementById('financialMarketing').textContent = marketingSpend.toLocaleString('nb-NO') + ' NOK';
       document.getElementById('financialProduction').textContent = productionCost.toLocaleString('nb-NO') + ' NOK';
       document.getElementById('financialGire').textContent = gireCost.toLocaleString('nb-NO') + ' NOK';
@@ -779,6 +877,7 @@
       document.getElementById('financialProfit').innerHTML = `<strong class="${profitLoss >= 0 ? 'profit-positive' : 'profit-negative'}">${profitLoss.toLocaleString('nb-NO')} NOK</strong>`;
       document.getElementById('financialCommission').innerHTML = '<strong class="positive">+' + commission.toLocaleString('nb-NO') + ' NOK</strong>';
 
+      // Mobile cards
       const mobileContainer = document.getElementById('financialMobile');
       mobileContainer.innerHTML = `
         <div class="financial-card"><div class="financial-label" data-en="Marketing Spend" data-no="Markedsføringskostnad">Markedsføringskostnad</div><div class="financial-value">${marketingSpend.toLocaleString('nb-NO')} NOK</div></div>
@@ -800,7 +899,16 @@
 
     function exportPDF() { window.print(); }
 
-    updateReport();
+    // On load
+    window.onload = function() {
+      if (!loadFromUrl()) {
+        authenticate(); // Only ask password if no shared data in URL
+      } else {
+        // If loaded from shared link, hide inputs (view-only mode)
+        document.getElementById('inputSection').style.display = 'none';
+        updateReport();
+      }
+    };
   </script>
 </body>
 </html>
