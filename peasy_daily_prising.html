@@ -14,7 +14,7 @@
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
     .input-area { text-align: center; margin: 20px 0; padding: 15px; background: #f5f9f6; border-radius: 10px; }
-    .input-area label { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 10px; }
+    .input-area label { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 6px; }
     .input-area input, .input-area button { padding: 10px; font-size: 1.1rem; border: 1px solid #ddd; border-radius: 6px; margin: 5px 0; width: calc(100% - 20px); box-sizing: border-box; }
     .input-area button { background: #ffcc33; color: #004225; border: none; font-weight: bold; cursor: pointer; }
     .input-area button:hover { background: #e6b800; }
@@ -41,9 +41,11 @@
     <div class="subtitle">Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025</div>
 
     <div class="input-area">
-      <label>Velg dato og legg inn antall biler:</label>
+      <label for="dailyCount">Registrert (SD mottatt på)</label>
       <input type="date" id="selectedDate">
-      <input type="number" id="dailyCount" min="0" value="0">
+      <input type="number" id="dailyCount" min="0" value="0" placeholder="f.eks. 11">
+      <label for="receivedCount">Mottatt på lager</label>
+      <input type="number" id="receivedCount" min="0" value="0" placeholder="f.eks. 13">
       <button onclick="addCountForDate()">Legg til / oppdater</button>
     </div>
 
@@ -53,13 +55,15 @@
       <thead>
         <tr>
           <th>Periode</th>
-          <th>Gjennomsnittlig antall biler</th>
+          <th>Registrert</th>
+          <th>Mottatt</th>
+          <th>Ratio mottatt vs registrert</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td>Siste dag med data</td><td id="lastDay">—</td></tr>
-        <tr><td>Siste 7 dager</td><td id="avg7">—</td></tr>
-        <tr><td>Siste 30 dager</td><td id="avg30">—</td></tr>
+        <tr><td>Siste dag med data</td><td id="lastRegistered">—</td><td id="lastReceived">—</td><td id="lastRatio">—</td></tr>
+        <tr><td>Siste 7 dager</td><td id="avgRegistered7">—</td><td id="avgReceived7">—</td><td id="ratio7">—</td></tr>
+        <tr><td>Siste 30 dager</td><td id="avgRegistered30">—</td><td id="avgReceived30">—</td><td id="ratio30">—</td></tr>
       </tbody>
     </table>
   </div>
@@ -102,22 +106,31 @@
     };
 
     const START_DATE = '2025-07-01';
-    let userData = JSON.parse(localStorage.getItem('peasyDailyUserData') || '{}');
-    let allData = { ...historicalData, ...userData };
+    let registeredData = JSON.parse(localStorage.getItem('peasyRegisteredData') || '{}');
+    let receivedData = JSON.parse(localStorage.getItem('peasyReceivedData') || '{}');
+    let allRegistered = { ...historicalData, ...registeredData };
+    let allReceived = { ...receivedData };
     let chart;
 
     document.getElementById('selectedDate').valueAsDate = new Date();
 
     function addCountForDate() {
       const dateInput = document.getElementById('selectedDate').value;
-      const count = parseInt(document.getElementById('dailyCount').value) || 0;
+      const registered = parseInt(document.getElementById('dailyCount').value) || 0;
+      const received = parseInt(document.getElementById('receivedCount').value) || 0;
       if (!dateInput) return alert('Velg en dato først!');
-      allData[dateInput] = count;
-      userData[dateInput] = count;
-      localStorage.setItem('peasyDailyUserData', JSON.stringify(userData));
-      showNotification(`Antall ${count} lagret for ${dateInput.split('-').reverse().join('.')}`);
+      allRegistered[dateInput] = registered;
+      registeredData[dateInput] = registered;
+      allReceived[dateInput] = received;
+      receivedData[dateInput] = received;
+      localStorage.setItem('peasyRegisteredData', JSON.stringify(registeredData));
+      localStorage.setItem('peasyReceivedData', JSON.stringify(receivedData));
+      showNotification(`Lagret for ${dateInput.split('-').reverse().join('.')}: Registrert ${registered}, Mottatt ${received}`);
       renderChart();
       updateStatsTable();
+      // Clear inputs after save
+      document.getElementById('dailyCount').value = '';
+      document.getElementById('receivedCount').value = '';
     }
 
     function showNotification(text) {
@@ -158,20 +171,25 @@
     }
 
     function updateStatsTable() {
-      const sortedDates = Object.keys(allData).sort().reverse();
+      const sortedDates = Object.keys(allRegistered).sort().reverse();
 
-      let lastDayValue = '—';
+      // Last day with data
+      let lastReg = '—', lastRec = '—', lastRat = '—';
       for (const date of sortedDates) {
-        if (allData[date] !== undefined) {
-          lastDayValue = allData[date];
+        if (allRegistered[date] !== undefined || allReceived[date] !== undefined) {
+          lastReg = allRegistered[date] || 0;
+          lastRec = allReceived[date] || 0;
+          lastRat = lastReg > 0 ? ((lastRec / lastReg) * 100).toFixed(1) + '%' : '—';
           break;
         }
       }
-      document.getElementById('lastDay').textContent = lastDayValue;
+      document.getElementById('lastRegistered').textContent = lastReg;
+      document.getElementById('lastReceived').textContent = lastRec;
+      document.getElementById('lastRatio').textContent = lastRat;
 
-      function getAverage(days) {
-        let sum = 0;
-        let count = 0;
+      // Averages for last N days
+      function getAverages(days) {
+        let sumReg = 0, sumRec = 0, count = 0;
         const today = new Date();
         const cutoff = new Date(today);
         cutoff.setDate(today.getDate() - days + 1);
@@ -179,17 +197,29 @@
 
         for (const date of sortedDates) {
           if (date >= cutoffStr) {
-            sum += allData[date] || 0;
+            sumReg += allRegistered[date] || 0;
+            sumRec += allReceived[date] || 0;
             count++;
           } else {
             break;
           }
         }
-        return count > 0 ? (sum / count).toFixed(1) : '—';
+        if (count === 0) return { reg: '—', rec: '—', ratio: '—' };
+        const avgReg = (sumReg / count).toFixed(1);
+        const avgRec = (sumRec / count).toFixed(1);
+        const ratio = sumReg > 0 ? ((sumRec / sumReg) * 100).toFixed(1) + '%' : '—';
+        return { reg: avgReg, rec: avgRec, ratio };
       }
 
-      document.getElementById('avg7').textContent = getAverage(7);
-      document.getElementById('avg30').textContent = getAverage(30);
+      const avg7 = getAverages(7);
+      document.getElementById('avgRegistered7').textContent = avg7.reg;
+      document.getElementById('avgReceived7').textContent = avg7.rec;
+      document.getElementById('ratio7').textContent = avg7.ratio;
+
+      const avg30 = getAverages(30);
+      document.getElementById('avgRegistered30').textContent = avg30.reg;
+      document.getElementById('avgReceived30').textContent = avg30.rec;
+      document.getElementById('ratio30').textContent = avg30.ratio;
     }
 
     function renderChart() {
@@ -202,9 +232,8 @@
         current.setDate(current.getDate() + 1);
       }
 
-      const data = dates.map(d => allData[d] || 0);
-
-      const trendData = calculateTrendLine(dates, data, '2025-11-01');
+      const registeredData = dates.map(d => allRegistered[d] || 0);
+      const trendData = calculateTrendLine(dates, registeredData, '2025-11-01');
 
       const ctx = document.getElementById('dailyChart').getContext('2d');
       if (chart) chart.destroy();
@@ -216,7 +245,7 @@
           datasets: [
             {
               label: 'Antall biler',
-              data: data,
+              data: registeredData,
               backgroundColor: '#004225',
               borderColor: '#004225',
               borderWidth: 1
@@ -226,7 +255,7 @@
               type: 'line',
               data: trendData,
               borderColor: '#e6b800',
-              borderWidth: 4,  // <-- Thicker trendline (was 2)
+              borderWidth: 4,
               pointRadius: 0,
               fill: false,
               tension: 0
@@ -246,12 +275,12 @@
               time: {
                 unit: 'month',
                 displayFormats: {
-                  month: 'MM'  // Only month number: 07, 08, 09, ..., 01
+                  month: 'MM'
                 }
               },
               ticks: {
                 color: '#004225',
-                font: { size: 14 },  // Bigger font on X-axis
+                font: { size: 14 },
                 maxRotation: 45,
                 minRotation: 45,
                 autoSkip: true,
@@ -265,7 +294,7 @@
               ticks: {
                 stepSize: 2,
                 color: '#004225',
-                font: { size: 14 }  // Bigger font on Y-axis - same as X
+                font: { size: 14 }
               },
               grid: { color: '#ddd' }
             }
