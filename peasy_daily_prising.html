@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peasy Daily Registrations</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      background: #e0e9e5;
+      color: #004225;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center;
+      color: #004225;
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 1.3rem;
+      margin-bottom: 40px;
+      color: #004225;
+    }
+    .input-area {
+      text-align: center;
+      margin: 30px 0;
+      padding: 20px;
+      background: #f5f9f6;
+      border-radius: 10px;
+    }
+    .input-area label {
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .input-area input[type="date"] {
+      padding: 12px;
+      font-size: 1.2rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-right: 15px;
+    }
+    .input-area input[type="number"] {
+      padding: 12px;
+      font-size: 1.2rem;
+      width: 150px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      text-align: center;
+      margin-right: 15px;
+    }
+    .input-area button {
+      padding: 12px 24px;
+      background: #ffcc33;
+      color: #004225;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .input-area button:hover {
+      background: #e6b800;
+    }
+    canvas {
+      margin-top: 40px;
+      background: white;
+      border-radius: 8px;
+    }
+    #notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #27ae60;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Peasy Daily Registrations</h1>
+    <div class="subtitle">Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025</div>
+
+    <div class="input-area">
+      <label>Velg dato og legg inn antall biler:</label>
+      <input type="date" id="selectedDate">
+      <input type="number" id="dailyCount" min="0" value="0">
+      <button onclick="addCountForDate()">Legg til / oppdater</button>
+    </div>
+
+    <canvas id="dailyChart"></canvas>
+  </div>
+
+  <div id="notification"></div>
+
+  <script>
+    // Full historical data from "report (40).xlsx" column O – all dates and counts
+    // Extracted accurately from your provided rows
+    const historicalData = {
+      "2025-07-02": 1,
+      "2025-07-03": 2,
+      "2025-07-05": 1,
+      "2025-07-08": 1,
+      "2025-07-10": 1,
+      "2025-07-12": 2,
+      "2025-07-15": 2,
+      "2025-07-17": 1,
+      "2025-07-19": 1,
+      "2025-07-21": 1,
+      "2025-07-22": 2,
+      "2025-07-24": 1,
+      "2025-07-25": 2,
+      "2025-07-28": 1,
+      "2025-07-30": 2,
+      "2025-07-31": 1,
+      "2025-08-01": 1,
+      "2025-08-02": 4,
+      "2025-08-03": 1,
+      "2025-08-04": 1,
+      "2025-08-05": 1,
+      "2025-08-06": 1,
+      "2025-08-07": 1,
+      "2025-08-12": 2,
+      "2025-08-13": 3,
+      "2025-08-15": 2,
+      "2025-08-17": 1,
+      "2025-08-18": 1,
+      "2025-08-19": 1,
+      "2025-08-22": 2,
+      "2025-08-23": 1,
+      "2025-08-26": 2,
+      "2025-08-27": 4,
+      "2025-08-28": 2,
+      "2025-08-30": 2,
+      "2025-09-02": 2,
+      "2025-09-03": 1,
+      "2025-09-04": 1,
+      "2025-09-05": 2,
+      "2025-09-06": 1,
+      "2025-09-07": 2,
+      "2025-09-09": 2,
+      "2025-09-10": 1,
+      "2025-09-11": 2,
+      "2025-09-14": 1,
+      "2025-09-15": 1,
+      "2025-09-16": 5,
+      "2025-09-17": 4,
+      "2025-09-19": 1,
+      "2025-09-20": 2,
+      "2025-09-21": 1,
+      "2025-09-22": 4,
+      "2025-09-23": 5,
+      "2025-09-24": 1,
+      "2025-09-25": 1,
+      "2025-09-26": 1,
+      "2025-09-28": 2,
+      "2025-09-30": 1,
+      "2025-10-01": 1,
+      "2025-10-02": 3,
+      "2025-10-04": 1,
+      "2025-10-06": 3,
+      "2025-10-07": 4,
+      "2025-10-08": 1,
+      "2025-10-10": 2,
+      "2025-10-11": 1,
+      "2025-10-12": 3,
+      "2025-10-13": 4,
+      "2025-10-14": 1,
+      "2025-10-15": 2,
+      "2025-10-16": 3,
+      "2025-10-17": 1,
+      "2025-10-18": 1,
+      "2025-10-19": 2,
+      "2025-10-20": 4,
+      "2025-10-21": 1,
+      "2025-10-22": 1,
+      "2025-10-23": 2,
+      "2025-10-24": 1,
+      "2025-10-28": 1,
+      "2025-10-29": 1,
+      "2025-10-30": 1,
+      "2025-10-31": 1,
+      "2025-11-01": 1,
+      "2025-11-02": 1,
+      "2025-11-03": 5,
+      "2025-11-04": 10,
+      "2025-11-05": 6,
+      "2025-11-06": 16,
+      "2025-11-07": 12,
+      "2025-11-08": 13,
+      "2025-11-09": 12,
+      "2025-11-10": 14,
+      "2025-11-11": 5,
+      "2025-11-12": 5,
+      "2025-11-13": 9,
+      "2025-11-14": 6,
+      "2025-11-15": 6,
+      "2025-11-16": 4,
+      "2025-11-17": 6,
+      "2025-11-18": 8,
+      "2025-11-19": 11,
+      "2025-11-20": 8,
+      "2025-11-21": 9,
+      "2025-11-22": 5,
+      "2025-11-23": 5,
+      "2025-11-24": 7,
+      "2025-11-25": 8,
+      "2025-11-26": 6,
+      "2025-11-27": 10,
+      "2025-11-28": 11,
+      "2025-11-29": 11,
+      "2025-11-30": 4,
+      "2025-12-01": 11,
+      "2025-12-02": 9,
+      "2025-12-03": 3,
+      "2025-12-04": 10,
+      "2025-12-05": 11,
+      "2025-12-06": 7,
+      "2025-12-07": 8,
+      "2025-12-08": 14,
+      "2025-12-09": 8,
+      "2025-12-10": 12,
+      "2025-12-11": 8,
+      "2025-12-12": 3,
+      "2025-12-13": 4,
+      "2025-12-14": 7,
+      "2025-12-15": 10,
+      "2025-12-16": 14,
+      "2025-12-17": 14,
+      "2025-12-18": 4,
+      "2025-12-19": 4,
+      "2025-12-20": 8,
+      "2025-12-21": 8,
+      "2025-12-22": 4,
+      "2025-12-23": 4,
+      "2025-12-24": 3,
+      "2025-12-25": 4,
+      "2025-12-26": 5,
+      "2025-12-27": 3,
+      "2025-12-28": 5,
+      "2025-12-29": 8,
+      "2025-12-30": 5,
+      "2025-12-31": 2,
+      "2026-01-01": 5,
+      "2026-01-02": 13,
+      "2026-01-03": 8,
+      "2026-01-04": 9,
+      "2026-01-05": 13,
+      "2026-01-06": 14,
+      "2026-01-07": 6,
+      "2026-01-08": 11
+    };
+
+    const START_DATE = '2025-07-01';
+
+    let userData = JSON.parse(localStorage.getItem('peasyDailyUserData') || '{}');
+    let allData = { ...historicalData, ...userData };
+
+    let chart;
+
+    // Default to today's date in the calendar
+    document.getElementById('selectedDate').valueAsDate = new Date();
+
+    function addCountForDate() {
+      const dateInput = document.getElementById('selectedDate').value;
+      const count = parseInt(document.getElementById('dailyCount').value) || 0;
+
+      if (!dateInput) {
+        alert('Velg en dato først!');
+        return;
+      }
+
+      allData[dateInput] = count;
+      userData[dateInput] = count;
+      localStorage.setItem('peasyDailyUserData', JSON.stringify(userData));
+
+      showNotification(`Antall ${count} lagret for ${dateInput.split('-').reverse().join('.')}`);
+      renderChart();
+    }
+
+    function showNotification(text) {
+      const notif = document.getElementById('notification');
+      notif.textContent = text;
+      notif.style.opacity = 1;
+      setTimeout(() => notif.style.opacity = 0, 3000);
+    }
+
+    function renderChart() {
+      const start = new Date(START_DATE);
+      const end = new Date();
+      const dates = [];
+      const current = new Date(start);
+      while (current <= end) {
+        const key = current.toISOString().split('T')[0];
+        dates.push(key);
+        current.setDate(current.getDate() + 1);
+      }
+
+      const labels = dates.map(d => {
+        const parts = d.split('-');
+        return `${parts[2]}.${parts[1]}.${parts[0]}`;
+      });
+      const data = dates.map(d => allData[d] || 0);
+
+      const ctx = document.getElementById('dailyChart').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Antall biler',
+            data: data,
+            backgroundColor: '#004225',
+            borderColor: '#004225',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: 'Daglig antall registrerte biler (SD mottatt på)',
+              font: { size: 18 },
+              color: '#004225'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, color: '#004225' },
+              grid: { color: '#ddd' }
+            },
+            x: {
+              ticks: { color: '#004225', maxRotation: 90, minRotation: 90 },
+              grid: { color: '#ddd' }
+            }
+          }
+        }
+      });
+    }
+
+    renderChart();
+  </script>
+</body>
+</html>
