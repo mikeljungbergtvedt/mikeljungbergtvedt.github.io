@@ -12,14 +12,15 @@
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
-    .controls { text-align: center; margin: 15px 0; }
+    .controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
+    .controls label, .controls select, .controls button { flex: 0 1 auto; }
     .last-update { text-align: center; font-size: 1.1rem; color: #004225; margin: 15px 0; font-weight: bold; }
     .input-area { text-align: center; margin: 20px 0; padding: 15px; background: #f5f9f6; border-radius: 10px; display: none; }
     .input-area label { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 6px; }
     .input-area input, .input-area button { padding: 10px; font-size: 1.1rem; border: 1px solid #ddd; border-radius: 6px; margin: 5px 0; width: calc(100% - 20px); box-sizing: border-box; }
-    .input-area button { background: #ffcc33; color: #004225; border: none; font-weight: bold; cursor: pointer; }
+    .input-area button { background: #ffcc33; color: #004225; border: none; font-weight: bold; cursor: pointer; touch-action: manipulation; }
     .input-area button:hover { background: #e6b800; }
-    .toggle-button { margin: 10px auto; display: block; padding: 8px 15px; background: #ffcc33; color: #004225; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+    .toggle-button { margin: 10px auto; display: block; padding: 8px 15px; background: #ffcc33; color: #004225; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; touch-action: manipulation; }
     .toggle-button:hover { background: #e6b800; }
     canvas { margin-top: 20px; background: white; border-radius: 8px; width: 100% !important; height: 500px !important; }
     #notification { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.3s; font-weight: bold; font-size: 0.9rem; }
@@ -28,6 +29,7 @@
     .stats-table th { background: #f5f9f6; }
     .stats-table td { background: white; }
     .total-row td { background: #e8f5e9; font-weight: bold; }
+    button { touch-action: manipulation; }
     @media (max-width: 768px) {
       body { padding: 15px 10px; }
       .container { padding: 15px; }
@@ -44,7 +46,7 @@
     <div class="subtitle">Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025</div>
 
     <div class="controls">
-      <label for="monthFilter" style="font-weight:bold; margin-right:10px;">Vis kun måned:</label>
+      <label for="monthFilter" style="font-weight:bold;">Vis kun måned:</label>
       <select id="monthFilter">
         <option value="all">Alle måneder</option>
       </select>
@@ -54,6 +56,7 @@
     <div class="input-area" id="inputArea">
       <label for="selectedDate">Dato</label>
       <input type="date" id="selectedDate">
+      <button type="button" onclick="document.getElementById('selectedDate').valueAsDate = new Date(); loadDataForDate();">I dag</button>
       <label for="dailyCount">Priset (SD mottatt på)</label>
       <input type="number" id="dailyCount" min="0" placeholder="f.eks. 11">
       <label for="receivedCount">Mottatt på lager</label>
@@ -321,7 +324,7 @@
         return date.startsWith(selectedMonth);
       });
 
-      // Last update date (most recent date with any data in filtered range)
+      // Last update date
       let lastUpdateDate = '—';
       if (sortedDates.length > 0) {
         const latestDate = sortedDates[sortedDates.length - 1];
@@ -433,25 +436,13 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: true, position: 'top' },
+            legend: {
+              position: window.innerWidth < 768 ? 'bottom' : 'top',
+              labels: { font: { size: window.innerWidth < 768 ? 12 : 14 } }
+            },
             tooltip: {
-              callbacks: {
-                title: tooltipItems => tooltipItems[0].label,
-                label: context => {
-                  const date = context.label;
-                  const datasetLabel = context.dataset.label;
-                  const value = context.raw;
-                  let text = `${datasetLabel}: ${value}`;
-                  if (datasetLabel === 'Priset' || datasetLabel === 'Solgt') {
-                    const sold = allSold[date] || 0;
-                    const marketing = allMarketing[date] || 0;
-                    if (sold > 0 || marketing > 0) {
-                      text += ` | Solgte: ${sold} | Markedsføring: ${marketing} NOK`;
-                    }
-                  }
-                  return text;
-                }
-              }
+              bodyFont: { size: 14 },
+              titleFont: { size: 14 }
             }
           },
           scales: {
