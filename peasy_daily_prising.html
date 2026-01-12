@@ -12,6 +12,9 @@
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
+    .lang-toggle { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
+    .lang-toggle a { margin: 0 8px; text-decoration: none; color: #004225; }
+    .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
     .controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
     .controls label, .controls select, .controls button { flex: 0 1 auto; }
     .last-update { text-align: center; font-size: 1.1rem; color: #004225; margin: 15px 0; font-weight: bold; }
@@ -42,30 +45,35 @@
 </head>
 <body>
   <div class="container">
-    <h1>Peasy Priset → Mottatt</h1>
-    <div class="subtitle">Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025</div>
+    <div class="lang-toggle">
+      <a href="#" id="lang-en" class="lang-link active" data-lang="en">English</a> |
+      <a href="#" id="lang-no" class="lang-link" data-lang="no">Norsk</a>
+    </div>
+
+    <h1 id="title">Peasy Priset → Mottatt</h1>
+    <div class="subtitle" id="subtitle">Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025</div>
 
     <div class="controls">
-      <label for="monthFilter" style="font-weight:bold;">Vis kun måned:</label>
+      <label for="monthFilter" id="monthLabel" style="font-weight:bold;">Vis kun måned:</label>
       <select id="monthFilter">
         <option value="all">Alle måneder</option>
       </select>
-      <button class="toggle-button" onclick="toggleInputArea()">Skjul / Vis input</button>
+      <button class="toggle-button" id="toggleInputBtn" onclick="toggleInputArea()">Skjul / Vis input</button>
     </div>
 
     <div class="input-area" id="inputArea">
-      <label for="selectedDate">Dato</label>
+      <label for="selectedDate" id="dateLabel">Dato</label>
       <input type="date" id="selectedDate">
-      <button type="button" onclick="document.getElementById('selectedDate').valueAsDate = new Date(); loadDataForDate();">I dag</button>
-      <label for="dailyCount">Priset (SD mottatt på)</label>
+      <button type="button" id="todayBtn" onclick="document.getElementById('selectedDate').valueAsDate = new Date(); loadDataForDate();">I dag</button>
+      <label for="dailyCount" id="prisetLabel">Priset (SD mottatt på)</label>
       <input type="number" id="dailyCount" min="0" placeholder="f.eks. 11">
-      <label for="receivedCount">Mottatt på lager</label>
+      <label for="receivedCount" id="receivedLabel">Mottatt på lager</label>
       <input type="number" id="receivedCount" min="0" placeholder="f.eks. 13">
-      <label for="soldCount">Solgte biler</label>
+      <label for="soldCount" id="soldLabel">Solgte biler</label>
       <input type="number" id="soldCount" min="0" placeholder="f.eks. 5">
-      <label for="marketingCost">Markedsføringskostnad (per dag)</label>
+      <label for="marketingCost" id="marketingLabel">Markedsføringskostnad (per dag)</label>
       <input type="number" id="marketingCost" min="0" placeholder="f.eks. 5000">
-      <button onclick="addCountForDate()">Legg til / oppdater</button>
+      <button id="saveBtn" onclick="addCountForDate()">Legg til / oppdater</button>
     </div>
 
     <canvas id="dailyChart"></canvas>
@@ -75,17 +83,17 @@
     <table class="stats-table">
       <thead>
         <tr>
-          <th>Periode</th>
-          <th>Priset</th>
-          <th>Mottatt</th>
-          <th>Priset → Mottatt</th>
-          <th>Solgt</th>
-          <th>Markedsføringskostnad per solgt bil</th>
+          <th id="periodHeader">Periode</th>
+          <th id="prisetHeader">Priset</th>
+          <th id="receivedHeader">Mottatt</th>
+          <th id="ratioHeader">Priset → Mottatt</th>
+          <th id="soldHeader">Solgt</th>
+          <th id="marketingHeader">Markedsføringskostnad per solgt bil</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Siste dag med data</td>
+        <tr id="rowLastDay">
+          <td id="lastDayLabel">Siste dag med data</td>
           <td id="lastRegistered">—</td>
           <td id="lastReceived">—</td>
           <td id="lastRatio">—</td>
@@ -93,7 +101,7 @@
           <td id="lastMarketingCost">—</td>
         </tr>
         <tr id="row7days">
-          <td>Siste 7 dager</td>
+          <td id="last7Label">Siste 7 dager</td>
           <td id="avgRegistered7">—</td>
           <td id="avgReceived7">—</td>
           <td id="ratio7">—</td>
@@ -101,15 +109,15 @@
           <td id="marketing7">—</td>
         </tr>
         <tr id="row30days">
-          <td>Siste 30 dager</td>
+          <td id="last30Label">Siste 30 dager</td>
           <td id="avgRegistered30">—</td>
           <td id="avgReceived30">—</td>
           <td id="ratio30">—</td>
           <td id="sold30">—</td>
           <td id="marketing30">—</td>
         </tr>
-        <tr class="total-row">
-          <td>Totalt (hele perioden)</td>
+        <tr class="total-row" id="rowTotal">
+          <td id="totalLabel">Totalt (hele perioden)</td>
           <td id="totalPriset">—</td>
           <td id="totalMottatt">—</td>
           <td id="totalRatio">—</td>
@@ -123,6 +131,96 @@
   <div id="notification"></div>
 
   <script>
+    // Translations
+    const translations = {
+      no: {
+        title: "Peasy Priset → Mottatt",
+        subtitle: "Antall biler registrert per dag (SD mottatt på) – fra 01.07.2025",
+        monthLabel: "Vis kun måned:",
+        toggleInputBtn: "Skjul / Vis input",
+        dateLabel: "Dato",
+        todayBtn: "I dag",
+        prisetLabel: "Priset (SD mottatt på)",
+        receivedLabel: "Mottatt på lager",
+        soldLabel: "Solgte biler",
+        marketingLabel: "Markedsføringskostnad (per dag)",
+        saveBtn: "Legg til / oppdater",
+        periodHeader: "Periode",
+        prisetHeader: "Priset",
+        receivedHeader: "Mottatt",
+        ratioHeader: "Priset → Mottatt",
+        soldHeader: "Solgt",
+        marketingHeader: "Markedsføringskostnad per solgt bil",
+        lastDayLabel: "Siste dag med data",
+        last7Label: "Siste 7 dager",
+        last30Label: "Siste 30 dager",
+        totalLabel: "Totalt (valgt periode)",
+        lastUpdate: "Sist oppdatert: "
+      },
+      en: {
+        title: "Peasy Priced → Received",
+        subtitle: "Number of cars registered per day (SD received on) – from 01.07.2025",
+        monthLabel: "Show month only:",
+        toggleInputBtn: "Hide / Show input",
+        dateLabel: "Date",
+        todayBtn: "Today",
+        prisetLabel: "Priced (SD received on)",
+        receivedLabel: "Received at warehouse",
+        soldLabel: "Sold cars",
+        marketingLabel: "Marketing cost (per day)",
+        saveBtn: "Add / Update",
+        periodHeader: "Period",
+        prisetHeader: "Priced",
+        receivedHeader: "Received",
+        ratioHeader: "Priced → Received",
+        soldHeader: "Sold",
+        marketingHeader: "Marketing cost per sold car",
+        lastDayLabel: "Last day with data",
+        last7Label: "Last 7 days",
+        last30Label: "Last 30 days",
+        totalLabel: "Total (selected period)",
+        lastUpdate: "Last updated: "
+      }
+    };
+
+    let currentLang = 'no';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.getElementById(`lang-${lang}`).classList.add('active');
+
+      const t = translations[lang];
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('subtitle').textContent = t.subtitle;
+      document.getElementById('monthLabel').textContent = t.monthLabel;
+      document.getElementById('toggleInputBtn').textContent = t.toggleInputBtn;
+      document.getElementById('dateLabel').textContent = t.dateLabel;
+      document.getElementById('todayBtn').textContent = t.todayBtn;
+      document.getElementById('prisetLabel').textContent = t.prisetLabel;
+      document.getElementById('receivedLabel').textContent = t.receivedLabel;
+      document.getElementById('soldLabel').textContent = t.soldLabel;
+      document.getElementById('marketingLabel').textContent = t.marketingLabel;
+      document.getElementById('saveBtn').textContent = t.saveBtn;
+      document.querySelector('#periodHeader').textContent = t.periodHeader;
+      document.querySelector('#prisetHeader').textContent = t.prisetHeader;
+      document.querySelector('#receivedHeader').textContent = t.receivedHeader;
+      document.querySelector('#ratioHeader').textContent = t.ratioHeader;
+      document.querySelector('#soldHeader').textContent = t.soldHeader;
+      document.querySelector('#marketingHeader').textContent = t.marketingHeader;
+      document.querySelector('#lastDayLabel').textContent = t.lastDayLabel;
+      document.querySelector('#last7Label').textContent = t.last7Label;
+      document.querySelector('#last30Label').textContent = t.last30Label;
+      document.querySelector('#totalLabel').textContent = t.totalLabel;
+
+      updateStatsTable();
+      renderChart();
+    }
+
+    document.getElementById('lang-en').addEventListener('click', e => { e.preventDefault(); setLanguage('en'); });
+    document.getElementById('lang-no').addEventListener('click', e => { e.preventDefault(); setLanguage('no'); });
+
+    // Your full data
     const historicalData = {
       "2025-07-02": 1, "2025-07-03": 2, "2025-07-05": 1, "2025-07-08": 1, "2025-07-10": 1,
       "2025-07-12": 2, "2025-07-15": 2, "2025-07-17": 1, "2025-07-19": 1, "2025-07-21": 1,
@@ -204,16 +302,15 @@
     const START_DATE = '2025-07-01';
 
     let registeredData = JSON.parse(localStorage.getItem('peasyRegisteredData') || '{}');
-    let receivedData = {}; // forced empty - no mottatt data
+    let receivedData = {};
     let soldData = JSON.parse(localStorage.getItem('peasySoldData') || '{}');
     let marketingData = JSON.parse(localStorage.getItem('peasyMarketingData') || '{}');
 
     let allRegistered = { ...historicalData, ...registeredData };
-    let allReceived = {}; // forced to 0 everywhere
+    let allReceived = {};
     let allSold = { ...historicalSoldData, ...soldData };
     let allMarketing = { ...marketingData };
 
-    // Auto-apply 1000 kr/day marketing from 2025-11-01 and every day forward
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY = 1000;
     const today = new Date();
@@ -231,26 +328,22 @@
 
     document.getElementById('selectedDate').valueAsDate = new Date();
 
-    // Populate month dropdown
     function populateMonthFilter() {
       const select = document.getElementById('monthFilter');
       const months = new Set();
       Object.keys(allRegistered).forEach(date => {
-        if (date >= START_DATE) {
-          months.add(date.slice(0, 7)); // YYYY-MM
-        }
+        if (date >= START_DATE) months.add(date.slice(0,7));
       });
       [...months].sort().forEach(m => {
         const option = document.createElement('option');
         option.value = m;
         const [y, mo] = m.split('-');
-        option.textContent = new Date(y, mo - 1).toLocaleString('nb-NO', { month: 'long', year: 'numeric' });
+        option.textContent = new Date(y, mo-1).toLocaleString('nb-NO', { month: 'long', year: 'numeric' });
         select.appendChild(option);
       });
     }
     populateMonthFilter();
 
-    // Month filter change handler
     document.getElementById('monthFilter').addEventListener('change', e => {
       selectedMonth = e.target.value;
       renderChart();
@@ -258,32 +351,33 @@
     });
 
     function toggleInputArea() {
-      const inputArea = document.getElementById('inputArea');
-      inputArea.style.display = inputArea.style.display === 'none' ? 'block' : 'none';
+      const el = document.getElementById('inputArea');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
     }
 
     function addCountForDate() {
-      const dateInput = document.getElementById('selectedDate').value;
-      const registered = parseInt(document.getElementById('dailyCount').value) || 0;
-      const received = 0;
+      const date = document.getElementById('selectedDate').value;
+      if (!date) return alert(currentLang === 'en' ? 'Select a date first!' : 'Velg en dato først!');
+      const reg = parseInt(document.getElementById('dailyCount').value) || 0;
+      const rec = 0;
       const sold = parseInt(document.getElementById('soldCount').value) || 0;
-      const marketing = parseFloat(document.getElementById('marketingCost').value) || 0;
-      if (!dateInput) return alert('Velg en dato først!');
-      allRegistered[dateInput] = registered;
-      registeredData[dateInput] = registered;
-      allReceived[dateInput] = received;
-      receivedData[dateInput] = received;
-      allSold[dateInput] = (allSold[dateInput] || 0) + sold;
-      soldData[dateInput] = allSold[dateInput];
-      allMarketing[dateInput] = marketing;
-      marketingData[dateInput] = marketing;
+      const mkt = parseFloat(document.getElementById('marketingCost').value) || 0;
+
+      allRegistered[date] = reg; registeredData[date] = reg;
+      allReceived[date] = rec; receivedData[date] = rec;
+      allSold[date] = (allSold[date] || 0) + sold; soldData[date] = allSold[date];
+      allMarketing[date] = mkt; marketingData[date] = mkt;
+
       localStorage.setItem('peasyRegisteredData', JSON.stringify(registeredData));
       localStorage.setItem('peasyReceivedData', JSON.stringify(receivedData));
       localStorage.setItem('peasySoldData', JSON.stringify(soldData));
       localStorage.setItem('peasyMarketingData', JSON.stringify(marketingData));
-      showNotification(`Lagret for ${dateInput.split('-').reverse().join('.')}: Priset ${registered}, Mottatt 0, Solgte ${sold}, Markedsføring ${marketing} NOK`);
+
+      const t = translations[currentLang];
+      showNotification(`${date.split('-').reverse().join('.')}: ${t.prisetLabel} ${reg}, ${t.receivedLabel} ${rec}, ${t.soldLabel} ${sold}, ${t.marketingLabel} ${mkt} NOK`);
       renderChart();
       updateStatsTable();
+
       document.getElementById('dailyCount').value = '';
       document.getElementById('receivedCount').value = '';
       document.getElementById('soldCount').value = '';
@@ -324,35 +418,38 @@
         return date.startsWith(selectedMonth);
       });
 
-      // Last update date
       let lastUpdateDate = '—';
       if (sortedDates.length > 0) {
-        const latestDate = sortedDates[sortedDates.length - 1];
-        lastUpdateDate = new Date(latestDate).toLocaleDateString('nb-NO', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        });
+        const latest = sortedDates[sortedDates.length - 1];
+        lastUpdateDate = new Date(latest).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
       }
-      document.getElementById('lastUpdate').textContent = `Sist oppdatert: ${lastUpdateDate}`;
+      document.getElementById('lastUpdate').textContent = translations[currentLang].lastUpdate + lastUpdateDate;
 
-      // Last day with data
-      let lastReg = '—', lastRec = 0, lastRat = '—', lastSoldVal = '—', lastMarketing = '—';
-      for (const date of sortedDates.slice().reverse()) {
-        if (allRegistered[date] !== undefined || allSold[date] !== undefined || allMarketing[date] !== undefined) {
-          lastReg = allRegistered[date] || 0;
-          lastRec = 0;
-          lastRat = '—';
-          lastSoldVal = allSold[date] || 0;
-          lastMarketing = lastSoldVal > 0 ? (allMarketing[date] / lastSoldVal).toFixed(0) + ' NOK' : '—';
-          break;
+      // Hide rows when single month is selected
+      const isSingleMonth = selectedMonth !== 'all';
+      document.getElementById('rowLastDay').style.display = isSingleMonth ? 'none' : '';
+      document.getElementById('row7days').style.display = isSingleMonth ? 'none' : '';
+      document.getElementById('row30days').style.display = isSingleMonth ? 'none' : '';
+
+      // Last day (only shown when not filtered to single month)
+      if (!isSingleMonth) {
+        let lastReg = '—', lastRec = 0, lastRat = '—', lastSoldVal = '—', lastMarketing = '—';
+        for (const date of sortedDates.slice().reverse()) {
+          if (allRegistered[date] !== undefined || allSold[date] !== undefined || allMarketing[date] !== undefined) {
+            lastReg = allRegistered[date] || 0;
+            lastRec = 0;
+            lastRat = '—';
+            lastSoldVal = allSold[date] || 0;
+            lastMarketing = lastSoldVal > 0 ? (allMarketing[date] / lastSoldVal).toFixed(0) + ' NOK' : '—';
+            break;
+          }
         }
+        document.getElementById('lastRegistered').textContent = lastReg;
+        document.getElementById('lastReceived').textContent = lastRec;
+        document.getElementById('lastRatio').textContent = lastRat;
+        document.getElementById('lastSold').textContent = lastSoldVal;
+        document.getElementById('lastMarketingCost').textContent = lastMarketing;
       }
-      document.getElementById('lastRegistered').textContent = lastReg;
-      document.getElementById('lastReceived').textContent = lastRec;
-      document.getElementById('lastRatio').textContent = lastRat;
-      document.getElementById('lastSold').textContent = lastSoldVal;
-      document.getElementById('lastMarketingCost').textContent = lastMarketing;
 
       function getAverages(days) {
         let sumReg = 0, sumSold = 0, sumMarketing = 0, count = 0;
@@ -374,19 +471,21 @@
         return { reg: avgReg, rec: '0', ratio, sold: sumSold, marketing };
       }
 
-      const avg7 = getAverages(7);
-      document.getElementById('avgRegistered7').textContent = avg7.reg;
-      document.getElementById('avgReceived7').textContent = '0';
-      document.getElementById('ratio7').textContent = avg7.ratio;
-      document.getElementById('sold7').textContent = avg7.sold;
-      document.getElementById('marketing7').textContent = avg7.marketing;
+      if (!isSingleMonth) {
+        const avg7 = getAverages(7);
+        document.getElementById('avgRegistered7').textContent = avg7.reg;
+        document.getElementById('avgReceived7').textContent = '0';
+        document.getElementById('ratio7').textContent = avg7.ratio;
+        document.getElementById('sold7').textContent = avg7.sold;
+        document.getElementById('marketing7').textContent = avg7.marketing;
 
-      const avg30 = getAverages(30);
-      document.getElementById('avgRegistered30').textContent = avg30.reg;
-      document.getElementById('avgReceived30').textContent = '0';
-      document.getElementById('ratio30').textContent = avg30.ratio;
-      document.getElementById('sold30').textContent = avg30.sold;
-      document.getElementById('marketing30').textContent = avg30.marketing;
+        const avg30 = getAverages(30);
+        document.getElementById('avgRegistered30').textContent = avg30.reg;
+        document.getElementById('avgReceived30').textContent = '0';
+        document.getElementById('ratio30').textContent = avg30.ratio;
+        document.getElementById('sold30').textContent = avg30.sold;
+        document.getElementById('marketing30').textContent = avg30.marketing;
+      }
 
       let totalReg = 0, totalSold = 0, totalMarketing = 0;
       for (const date of sortedDates) {
@@ -427,9 +526,9 @@
         data: {
           labels: dates,
           datasets: [
-            { label: 'Priset', data: prisetData, backgroundColor: '#004225', borderColor: '#004225', borderWidth: 1 },
-            { label: 'Solgt', data: soldDataChart, backgroundColor: '#ff4444', borderColor: '#ff4444', borderWidth: 1 },
-            { label: 'Trend (Priset)', type: 'line', data: trendData, borderColor: '#e6b800', borderWidth: 4, pointRadius: 0, fill: false, tension: 0 }
+            { label: translations[currentLang].prisetHeader, data: prisetData, backgroundColor: '#004225', borderColor: '#004225', borderWidth: 1 },
+            { label: translations[currentLang].soldHeader, data: soldDataChart, backgroundColor: '#ff4444', borderColor: '#ff4444', borderWidth: 1 },
+            { label: translations[currentLang].prisetHeader + ' Trend', type: 'line', data: trendData, borderColor: '#e6b800', borderWidth: 4, pointRadius: 0, fill: false, tension: 0 }
           ]
         },
         options: {
@@ -472,12 +571,14 @@
       document.getElementById('soldCount').value = allSold[date] || '';
       document.getElementById('marketingCost').value = allMarketing[date] || '';
       if (allRegistered[date] || allSold[date] || allMarketing[date]) {
-        showNotification(`Lastet data for ${date.split('-').reverse().join('.')}`);
+        showNotification(`${translations[currentLang].lastUpdate}${date.split('-').reverse().join('.')}`);
       } else {
-        showNotification(`Ingen data for ${date.split('-').reverse().join('.')}`);
+        showNotification(`${translations[currentLang].lastUpdate}ingen data`);
       }
     }
 
+    // Initial setup
+    setLanguage('no');
     renderChart();
   </script>
 </body>
