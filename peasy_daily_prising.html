@@ -42,7 +42,7 @@
     <button class="toggle-button" onclick="toggleInputArea()">Skjul / Vis input</button>
     <div class="input-area" id="inputArea">
       <label for="selectedDate">Dato</label>
-      <input type="date" id="selectedDate" onchange="loadDataForDate()">
+      <input type="date" id="selectedDate">
       <label for="dailyCount">Priset (SD mottatt på)</label>
       <input type="number" id="dailyCount" min="0" placeholder="f.eks. 11">
       <label for="receivedCount">Mottatt på lager</label>
@@ -359,8 +359,14 @@
     }
 
     // Load saved values when date is selected
-    document.getElementById('selectedDate').addEventListener('change', function() {
-      const date = this.value;
+    const dateInput = document.getElementById('selectedDate');
+
+    dateInput.addEventListener('change', loadDataForDate);
+    dateInput.addEventListener('click', loadDataForDate);   // Trigger when clicking field
+    dateInput.addEventListener('focus', loadDataForDate);   // Trigger when focusing
+
+    function loadDataForDate() {
+      const date = dateInput.value;
       if (!date) return;
 
       document.getElementById('dailyCount').value = allRegistered[date] || '';
@@ -368,13 +374,12 @@
       document.getElementById('soldCount').value = allSold[date] || '';
       document.getElementById('marketingCost').value = allMarketing[date] || '';
 
-      // Optional: show notification to confirm loading
       if (allRegistered[date] || allReceived[date] || allSold[date] || allMarketing[date]) {
         showNotification(`Lastet data for ${date.split('-').reverse().join('.')}`);
       } else {
         showNotification(`Ingen data for ${date.split('-').reverse().join('.')}`);
       }
-    });
+    }
 
     renderChart();
   </script>
