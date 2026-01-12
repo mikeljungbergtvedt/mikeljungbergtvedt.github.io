@@ -191,6 +191,20 @@
     let allReceived = {}; // forced to 0 everywhere
     let allSold = { ...historicalSoldData, ...soldData };
     let allMarketing = { ...marketingData };
+
+    // Auto-apply 1000 kr/day marketing from 2025-11-01 and every day forward
+    const MARKETING_START = '2025-11-01';
+    const MARKETING_DAILY = 1000;
+    const today = new Date();
+    let current = new Date(MARKETING_START);
+    while (current <= today) {
+      const dateStr = current.toISOString().split('T')[0];
+      if (!(dateStr in allMarketing)) {
+        allMarketing[dateStr] = MARKETING_DAILY;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
     let chart;
     document.getElementById('selectedDate').valueAsDate = new Date();
     function toggleInputArea() {
