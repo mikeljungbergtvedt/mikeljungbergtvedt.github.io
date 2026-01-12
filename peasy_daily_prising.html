@@ -61,8 +61,8 @@
           <th>Priset</th>
           <th>Mottatt</th>
           <th>Priset → Mottatt</th>
+          <th>Solgt</th>
           <th>Markedsføringskostnad per solgt bil</th>
-          <th>Siste dato med solgt/markedsføring</th>
         </tr>
       </thead>
       <tbody>
@@ -71,11 +71,25 @@
           <td id="lastRegistered">—</td>
           <td id="lastReceived">—</td>
           <td id="lastRatio">—</td>
+          <td id="lastSold">—</td>
           <td id="lastMarketingCost">—</td>
-          <td id="lastSoldMarketingDate">—</td>
         </tr>
-        <tr><td>Siste 7 dager</td><td id="avgRegistered7">—</td><td id="avgReceived7">—</td><td id="ratio7">—</td><td id="marketing7">—</td><td>—</td></tr>
-        <tr><td>Siste 30 dager</td><td id="avgRegistered30">—</td><td id="avgReceived30">—</td><td id="ratio30">—</td><td id="marketing30">—</td><td>—</td></tr>
+        <tr>
+          <td>Siste 7 dager</td>
+          <td id="avgRegistered7">—</td>
+          <td id="avgReceived7">—</td>
+          <td id="ratio7">—</td>
+          <td id="sold7">—</td>
+          <td id="marketing7">—</td>
+        </tr>
+        <tr>
+          <td>Siste 30 dager</td>
+          <td id="avgRegistered30">—</td>
+          <td id="avgReceived30">—</td>
+          <td id="ratio30">—</td>
+          <td id="sold30">—</td>
+          <td id="marketing30">—</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -115,6 +129,53 @@
       "2025-12-31": 2, "2026-01-01": 5, "2026-01-02": 13, "2026-01-03": 8, "2026-01-04": 9,
       "2026-01-05": 13, "2026-01-06": 14, "2026-01-07": 6, "2026-01-08": 11
     };
+
+    const historicalSoldData = {
+      "2025-05-05": 1,
+      "2025-05-23": 1,
+      "2025-06-10": 1,
+      "2025-06-12": 1,
+      "2025-06-30": 1,
+      "2025-07-03": 1,
+      "2025-07-28": 1,
+      "2025-08-07": 1,
+      "2025-08-14": 1,
+      "2025-09-02": 1,
+      "2025-09-15": 1,
+      "2025-09-18": 1,
+      "2025-09-24": 1,
+      "2025-09-25": 1,
+      "2025-09-29": 1,
+      "2025-10-02": 1,
+      "2025-10-06": 1,
+      "2025-10-20": 1,
+      "2025-10-24": 1,
+      "2025-10-27": 1,
+      "2025-10-28": 1,
+      "2025-10-31": 1,
+      "2025-11-07": 1,
+      "2025-11-11": 1,
+      "2025-11-13": 1,
+      "2025-11-14": 1,
+      "2025-11-17": 1,
+      "2025-11-20": 1,
+      "2025-11-24": 1,
+      "2025-11-26": 2,
+      "2025-11-27": 1,
+      "2025-12-01": 4,
+      "2025-12-03": 1,
+      "2025-12-05": 1,
+      "2025-12-08": 2,
+      "2025-12-10": 1,
+      "2025-12-11": 1,
+      "2025-12-12": 1,
+      "2025-12-17": 2,
+      "2025-12-19": 3,
+      "2025-12-22": 1,
+      "2026-01-05": 1,
+      "2026-01-07": 2
+    };
+
     const START_DATE = '2025-07-01';
     let registeredData = JSON.parse(localStorage.getItem('peasyRegisteredData') || '{}');
     let receivedData = JSON.parse(localStorage.getItem('peasyReceivedData') || '{}');
@@ -122,7 +183,7 @@
     let marketingData = JSON.parse(localStorage.getItem('peasyMarketingData') || '{}');
     let allRegistered = { ...historicalData, ...registeredData };
     let allReceived = { ...receivedData };
-    let allSold = { ...soldData };
+    let allSold = { ...historicalSoldData, ...soldData };
     let allMarketing = { ...marketingData };
     let chart;
     document.getElementById('selectedDate').valueAsDate = new Date();
@@ -143,8 +204,8 @@
       registeredData[dateInput] = registered;
       allReceived[dateInput] = received;
       receivedData[dateInput] = received;
-      allSold[dateInput] = sold;
-      soldData[dateInput] = sold;
+      allSold[dateInput] = (allSold[dateInput] || 0) + sold;
+      soldData[dateInput] = allSold[dateInput];
       allMarketing[dateInput] = marketing;
       marketingData[dateInput] = marketing;
       localStorage.setItem('peasyRegisteredData', JSON.stringify(registeredData));
@@ -199,24 +260,22 @@
 
     function updateStatsTable() {
       const sortedDates = Object.keys(allRegistered).sort().reverse();
-      let lastReg = '—', lastRec = '—', lastRat = '—', lastMarketing = '—', lastSoldMarketingDate = '—';
+      let lastReg = '—', lastRec = '—', lastRat = '—', lastSold = '—', lastMarketing = '—';
       for (const date of sortedDates) {
         if (allRegistered[date] !== undefined || allReceived[date] !== undefined || allSold[date] !== undefined || allMarketing[date] !== undefined) {
           lastReg = allRegistered[date] || 0;
           lastRec = allReceived[date] || 0;
           lastRat = lastReg > 0 ? ((lastRec / lastReg) * 100).toFixed(1) + '%' : '—';
-          lastMarketing = allSold[date] > 0 ? (allMarketing[date] / allSold[date]).toFixed(0) + ' NOK' : '—';
-          if (allSold[date] > 0 || allMarketing[date] > 0) {
-            lastSoldMarketingDate = date.split('-').reverse().join('.');
-          }
+          lastSold = allSold[date] || 0;
+          lastMarketing = lastSold > 0 ? (allMarketing[date] / lastSold).toFixed(0) + ' NOK' : '—';
           break;
         }
       }
       document.getElementById('lastRegistered').textContent = lastReg;
       document.getElementById('lastReceived').textContent = lastRec;
       document.getElementById('lastRatio').textContent = lastRat;
+      document.getElementById('lastSold').textContent = lastSold;
       document.getElementById('lastMarketingCost').textContent = lastMarketing;
-      document.getElementById('lastSoldMarketingDate').textContent = lastSoldMarketingDate;
 
       function getAverages(days) {
         let sumReg = 0, sumRec = 0, sumSold = 0, sumMarketing = 0, count = 0;
@@ -235,24 +294,26 @@
             break;
           }
         }
-        if (count === 0) return { reg: '—', rec: '—', ratio: '—', marketing: '—' };
+        if (count === 0) return { reg: '—', rec: '0', ratio: '—', sold: '0', marketing: '—' };
         const avgReg = (sumReg / count).toFixed(1);
         const avgRec = (sumRec / count).toFixed(1);
         const ratio = sumReg > 0 ? ((sumRec / sumReg) * 100).toFixed(1) + '%' : '—';
         const marketing = sumSold > 0 ? (sumMarketing / sumSold).toFixed(0) + ' NOK' : '—';
-        return { reg: avgReg, rec: avgRec, ratio, marketing };
+        return { reg: avgReg, rec: avgRec, ratio, sold: sumSold, marketing };
       }
 
       const avg7 = getAverages(7);
       document.getElementById('avgRegistered7').textContent = avg7.reg;
-      document.getElementById('avgReceived7').textContent = avg7.rec;
+      document.getElementById('avgReceived7').textContent = '0';
       document.getElementById('ratio7').textContent = avg7.ratio;
+      document.getElementById('sold7').textContent = avg7.sold;
       document.getElementById('marketing7').textContent = avg7.marketing;
 
       const avg30 = getAverages(30);
       document.getElementById('avgRegistered30').textContent = avg30.reg;
-      document.getElementById('avgReceived30').textContent = avg30.rec;
+      document.getElementById('avgReceived30').textContent = '0';
       document.getElementById('ratio30').textContent = avg30.ratio;
+      document.getElementById('sold30').textContent = avg30.sold;
       document.getElementById('marketing30').textContent = avg30.marketing;
     }
 
@@ -353,17 +414,12 @@
       updateStatsTable();
     }
 
-    function toggleInputArea() {
-      const inputArea = document.getElementById('inputArea');
-      inputArea.style.display = inputArea.style.display === 'none' ? 'block' : 'none';
-    }
-
     // Load saved values when date is selected
     const dateInput = document.getElementById('selectedDate');
 
     dateInput.addEventListener('change', loadDataForDate);
-    dateInput.addEventListener('click', loadDataForDate);   // Trigger when clicking field
-    dateInput.addEventListener('focus', loadDataForDate);   // Trigger when focusing
+    dateInput.addEventListener('click', loadDataForDate);
+    dateInput.addEventListener('focus', loadDataForDate);
 
     function loadDataForDate() {
       const date = dateInput.value;
