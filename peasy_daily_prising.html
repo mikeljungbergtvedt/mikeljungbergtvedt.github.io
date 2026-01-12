@@ -22,9 +22,10 @@
     canvas { margin-top: 20px; background: white; border-radius: 8px; width: 100% !important; height: 500px !important; }
     #notification { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.3s; font-weight: bold; font-size: 0.9rem; }
     .stats-table { margin: 30px auto; max-width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-    .stats-table th, .stats-table td { padding: 10px; text-align: center; border: 1px solid #ddd; }
-    .stats-table th { background: #f5f9f6; font-weight: bold; }
+    .stats-table th, .stats-table td { padding: 10px; text-align: center; border: 1px solid #ddd; font-weight: bold; }
+    .stats-table th { background: #f5f9f6; }
     .stats-table td { background: white; }
+    .total-row td { background: #e8f5e9; font-weight: bold; }
     @media (max-width: 768px) {
       body { padding: 15px 10px; }
       .container { padding: 15px; }
@@ -89,6 +90,14 @@
           <td id="ratio30">—</td>
           <td id="sold30">—</td>
           <td id="marketing30">—</td>
+        </tr>
+        <tr class="total-row">
+          <td>Totalt (hele perioden)</td>
+          <td id="totalPriset">—</td>
+          <td id="totalMottatt">—</td>
+          <td id="totalRatio">—</td>
+          <td id="totalSold">—</td>
+          <td id="totalMarketingCost">—</td>
         </tr>
       </tbody>
     </table>
@@ -259,9 +268,11 @@
     }
 
     function updateStatsTable() {
-      const sortedDates = Object.keys(allRegistered).sort().reverse();
+      const sortedDates = Object.keys(allRegistered).sort();
+
+      // Period calculations (as before)
       let lastReg = '—', lastRec = '—', lastRat = '—', lastSold = '—', lastMarketing = '—';
-      for (const date of sortedDates) {
+      for (const date of sortedDates.slice().reverse()) {
         if (allRegistered[date] !== undefined || allReceived[date] !== undefined || allSold[date] !== undefined || allMarketing[date] !== undefined) {
           lastReg = allRegistered[date] || 0;
           lastRec = allReceived[date] || 0;
@@ -290,8 +301,6 @@
             sumSold += allSold[date] || 0;
             sumMarketing += allMarketing[date] || 0;
             count++;
-          } else {
-            break;
           }
         }
         if (count === 0) return { reg: '—', rec: '0', ratio: '—', sold: '0', marketing: '—' };
@@ -304,17 +313,35 @@
 
       const avg7 = getAverages(7);
       document.getElementById('avgRegistered7').textContent = avg7.reg;
-      document.getElementById('avgReceived7').textContent = '0';
+      document.getElementById('avgReceived7').textContent = avg7.rec;
       document.getElementById('ratio7').textContent = avg7.ratio;
       document.getElementById('sold7').textContent = avg7.sold;
       document.getElementById('marketing7').textContent = avg7.marketing;
 
       const avg30 = getAverages(30);
       document.getElementById('avgRegistered30').textContent = avg30.reg;
-      document.getElementById('avgReceived30').textContent = '0';
+      document.getElementById('avgReceived30').textContent = avg30.rec;
       document.getElementById('ratio30').textContent = avg30.ratio;
       document.getElementById('sold30').textContent = avg30.sold;
       document.getElementById('marketing30').textContent = avg30.marketing;
+
+      // NEW: Totalt row (overall from all dates)
+      let totalReg = 0, totalRec = 0, totalSold = 0, totalMarketing = 0, totalCount = 0;
+      for (const date in allRegistered) {
+        totalReg += allRegistered[date] || 0;
+        totalRec += allReceived[date] || 0;
+        totalSold += allSold[date] || 0;
+        totalMarketing += allMarketing[date] || 0;
+        totalCount++;
+      }
+      const totalRatio = totalReg > 0 ? ((totalRec / totalReg) * 100).toFixed(1) + '%' : '—';
+      const totalMarketingAvg = totalSold > 0 ? (totalMarketing / totalSold).toFixed(0) + ' NOK' : '—';
+
+      document.getElementById('totalPriset').textContent = totalReg;
+      document.getElementById('totalMottatt').textContent = totalRec;
+      document.getElementById('totalRatio').textContent = totalRatio;
+      document.getElementById('totalSold').textContent = totalSold;
+      document.getElementById('totalMarketingCost').textContent = totalMarketingAvg;
     }
 
     function renderChart() {
@@ -326,8 +353,9 @@
         dates.push(current.toISOString().split('T')[0]);
         current.setDate(current.getDate() + 1);
       }
-      const registeredData = dates.map(d => allRegistered[d] || 0);
-      const trendData = calculateTrendLine(dates, registeredData, '2025-11-01');
+      const prisetData = dates.map(d => allRegistered[d] || 0);
+      const soldDataChart = dates.map(d => allSold[d] || 0);
+      const trendData = calculateTrendLine(dates, prisetData, '2025-11-01');
       const ctx = document.getElementById('dailyChart').getContext('2d');
       if (chart) chart.destroy();
       chart = new Chart(ctx, {
@@ -336,14 +364,21 @@
           labels: dates,
           datasets: [
             {
-              label: 'Antall biler',
-              data: registeredData,
+              label: 'Priset',
+              data: prisetData,
               backgroundColor: '#004225',
               borderColor: '#004225',
               borderWidth: 1
             },
             {
-              label: 'Trend fra 01.11.2025',
+              label: 'Solgt',
+              data: soldDataChart,
+              backgroundColor: '#ff4444',
+              borderColor: '#ff4444',
+              borderWidth: 1
+            },
+            {
+              label: 'Trend (Priset)',
               type: 'line',
               data: trendData,
               borderColor: '#e6b800',
@@ -358,21 +393,24 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: true, position: 'top' },
             title: { display: false },
             tooltip: {
               callbacks: {
                 title: function(tooltipItems) {
-                  return tooltipItems[0].label; // Date only
+                  return tooltipItems[0].label;
                 },
                 label: function(context) {
                   const date = context.label;
+                  const datasetLabel = context.dataset.label;
                   const value = context.raw;
-                  let tooltipText = `${value} biler`;
-                  const sold = allSold[date] || 0;
-                  const marketing = allMarketing[date] || 0;
-                  if (sold > 0 || marketing > 0) {
-                    tooltipText += ` | Solgte: ${sold} | Markedsføring: ${marketing} NOK`;
+                  let tooltipText = `${datasetLabel}: ${value}`;
+                  if (datasetLabel === 'Priset' || datasetLabel === 'Solgt') {
+                    const sold = allSold[date] || 0;
+                    const marketing = allMarketing[date] || 0;
+                    if (sold > 0 || marketing > 0) {
+                      tooltipText += ` | Solgte: ${sold} | Markedsføring: ${marketing} NOK`;
+                    }
                   }
                   return tooltipText;
                 }
@@ -400,7 +438,7 @@
             },
             y: {
               beginAtZero: true,
-              max: 18,
+              suggestedMax: 20,
               ticks: {
                 stepSize: 2,
                 color: '#004225',
