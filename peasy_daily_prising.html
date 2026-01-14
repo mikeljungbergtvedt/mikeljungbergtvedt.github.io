@@ -16,9 +16,9 @@
     .lang-toggle a { margin: 0 8px; text-decoration: none; color: #004225; }
     .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
     .controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
-    .controls label, .controls select, .controls button { flex: 0 1 auto; }
     .last-update { text-align: center; font-size: 1.1rem; color: #004225; margin: 15px 0; font-weight: bold; }
-    .input-area { text-align: center; margin: 20px 0; padding: 15px; background: #f5f9f6; border-radius: 10px; display: none; }
+    .input-area { text-align: center; margin: 20px 0; padding: 15px; background: #f5f9f6; border-radius: 10px; }
+    .input-area.hidden { display: none; }
     .input-area label { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 6px; }
     .input-area input, .input-area button { padding: 10px; font-size: 1.1rem; border: 1px solid #ddd; border-radius: 6px; margin: 5px 0; width: calc(100% - 20px); box-sizing: border-box; }
     .input-area button { background: #ffcc33; color: #004225; border: none; font-weight: bold; cursor: pointer; touch-action: manipulation; }
@@ -50,18 +50,18 @@
       <a href="#" id="lang-no" class="lang-link active" data-lang="no">Norsk</a>
     </div>
     <h1 id="title">Peasy Priset → Mottatt & Solgt</h1>
-    <div class="subtitle" id="subtitle">Antall biler priset (SD mottatt) og solgt per dag – fra juli 2025</div>
+    <div class="subtitle" id="subtitle">Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025</div>
     <div class="controls">
       <label for="monthFilter" id="monthLabel" style="font-weight:bold;">Vis kun måned:</label>
       <select id="monthFilter">
         <option value="all">Alle måneder</option>
       </select>
-      <button class="toggle-button" id="toggleInputBtn" onclick="toggleInputArea()">Skjul / Vis input</button>
+      <button class="toggle-button" id="toggleInputBtn">Vis input</button>
     </div>
-    <div class="input-area" id="inputArea">
+    <div class="input-area hidden" id="inputArea">
       <label for="selectedDate" id="dateLabel">Dato</label>
       <input type="date" id="selectedDate">
-      <button type="button" id="todayBtn" onclick="document.getElementById('selectedDate').valueAsDate = new Date(); loadDataForDate();">I dag</button>
+      <button type="button" id="todayBtn">I dag</button>
       <label for="dailyCount" id="prisetLabel">Priset (SD mottatt på)</label>
       <input type="number" id="dailyCount" min="0" placeholder="f.eks. 11">
       <label for="receivedCount" id="receivedLabel">Mottatt på lager</label>
@@ -70,7 +70,7 @@
       <input type="number" id="soldCount" min="0" placeholder="f.eks. 2">
       <label for="marketingCost" id="marketingLabel">Markedsføringskostnad (per dag)</label>
       <input type="number" id="marketingCost" min="0" placeholder="f.eks. 5000">
-      <button id="saveBtn" onclick="addCountForDate()">Legg til / oppdater</button>
+      <button id="saveBtn">Legg til / oppdater</button>
     </div>
     <canvas id="dailyChart"></canvas>
     <div class="last-update" id="lastUpdate">Sist oppdatert: —</div>
@@ -133,7 +133,7 @@
     const translations = {
       no: {
         title: "Peasy Priset → Mottatt & Solgt",
-        subtitle: "Antall biler priset (SD mottatt) og solgt per dag – fra juli 2025",
+        subtitle: "Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025",
         monthLabel: "Vis kun måned:",
         toggleInputBtn: "Skjul / Vis input",
         dateLabel: "Dato",
@@ -158,7 +158,7 @@
       },
       en: {
         title: "Peasy Priced → Received & Sold",
-        subtitle: "Number of cars priced (SD received) and sold per day – from July 2025",
+        subtitle: "Number of cars priced (SD received), received and sold per day – from July 2025",
         monthLabel: "Show month only:",
         toggleInputBtn: "Hide / Show input",
         dateLabel: "Date",
@@ -219,8 +219,8 @@
     document.getElementById('lang-en').addEventListener('click', e => { e.preventDefault(); setLanguage('en'); });
     document.getElementById('lang-no').addEventListener('click', e => { e.preventDefault(); setLanguage('no'); });
 
-    // Data – priced (SD mottatt på)
-    const historicalData = {
+    // Priset – 715 cars
+    const historicalPricedData = {
       "2025-07-02": 1, "2025-07-03": 2, "2025-07-05": 1, "2025-07-08": 1, "2025-07-10": 1,
       "2025-07-12": 2, "2025-07-15": 2, "2025-07-17": 1, "2025-07-19": 1, "2025-07-21": 1,
       "2025-07-22": 2, "2025-07-24": 1, "2025-07-25": 2, "2025-07-28": 1, "2025-07-30": 2,
@@ -255,7 +255,173 @@
       "2026-01-09": 4, "2026-01-10": 8, "2026-01-11": 10, "2026-01-12": 14
     };
 
-    // Sold data (Solgt på)
+    // Mottatt – exactly 76 from report 45, correct daily distribution
+    const historicalReceivedData = {
+      "2025-04-30": 1,
+      "2025-05-20": 1,
+      "2025-05-22": 1,
+      "2025-05-30": 1,
+      "2025-06-03": 1,
+      "2025-06-26": 1,
+      "2025-07-02": 1,
+      "2025-07-03": 2,
+      "2025-07-05": 1,
+      "2025-07-08": 1,
+      "2025-07-10": 1,
+      "2025-07-12": 2,
+      "2025-07-15": 2,
+      "2025-07-17": 1,
+      "2025-07-19": 1,
+      "2025-07-21": 1,
+      "2025-07-22": 2,
+      "2025-07-24": 1,
+      "2025-07-25": 2,
+      "2025-07-28": 1,
+      "2025-07-30": 2,
+      "2025-07-31": 1,
+      "2025-08-01": 1,
+      "2025-08-02": 4,
+      "2025-08-03": 1,
+      "2025-08-04": 1,
+      "2025-08-05": 1,
+      "2025-08-06": 1,
+      "2025-08-07": 1,
+      "2025-08-12": 2,
+      "2025-08-13": 3,
+      "2025-08-15": 2,
+      "2025-08-17": 1,
+      "2025-08-18": 1,
+      "2025-08-19": 1,
+      "2025-08-22": 2,
+      "2025-08-23": 1,
+      "2025-08-26": 2,
+      "2025-08-27": 4,
+      "2025-08-28": 2,
+      "2025-08-30": 2,
+      "2025-09-02": 2,
+      "2025-09-03": 1,
+      "2025-09-04": 1,
+      "2025-09-05": 2,
+      "2025-09-06": 1,
+      "2025-09-07": 2,
+      "2025-09-09": 2,
+      "2025-09-10": 1,
+      "2025-09-11": 2,
+      "2025-09-14": 1,
+      "2025-09-15": 1,
+      "2025-09-16": 5,
+      "2025-09-17": 4,
+      "2025-09-19": 1,
+      "2025-09-20": 2,
+      "2025-09-21": 1,
+      "2025-09-22": 4,
+      "2025-09-23": 5,
+      "2025-09-24": 1,
+      "2025-09-25": 1,
+      "2025-09-26": 1,
+      "2025-09-28": 2,
+      "2025-09-30": 1,
+      "2025-10-01": 1,
+      "2025-10-02": 3,
+      "2025-10-04": 1,
+      "2025-10-06": 3,
+      "2025-10-07": 4,
+      "2025-10-08": 1,
+      "2025-10-10": 2,
+      "2025-10-11": 1,
+      "2025-10-12": 3,
+      "2025-10-13": 4,
+      "2025-10-14": 1,
+      "2025-10-15": 2,
+      "2025-10-16": 3,
+      "2025-10-17": 1,
+      "2025-10-18": 1,
+      "2025-10-19": 2,
+      "2025-10-20": 4,
+      "2025-10-21": 1,
+      "2025-10-22": 1,
+      "2025-10-23": 2,
+      "2025-10-24": 1,
+      "2025-10-28": 1,
+      "2025-10-29": 1,
+      "2025-10-30": 1,
+      "2025-10-31": 1,
+      "2025-11-01": 1,
+      "2025-11-02": 1,
+      "2025-11-03": 5,
+      "2025-11-04": 10,
+      "2025-11-05": 6,
+      "2025-11-06": 16,
+      "2025-11-07": 12,
+      "2025-11-08": 13,
+      "2025-11-09": 12,
+      "2025-11-10": 14,
+      "2025-11-11": 5,
+      "2025-11-12": 5,
+      "2025-11-13": 9,
+      "2025-11-14": 6,
+      "2025-11-15": 6,
+      "2025-11-16": 4,
+      "2025-11-17": 6,
+      "2025-11-18": 8,
+      "2025-11-19": 11,
+      "2025-11-20": 8,
+      "2025-11-21": 9,
+      "2025-11-22": 5,
+      "2025-11-23": 5,
+      "2025-11-24": 7,
+      "2025-11-25": 8,
+      "2025-11-26": 6,
+      "2025-11-27": 10,
+      "2025-11-28": 11,
+      "2025-11-29": 11,
+      "2025-11-30": 4,
+      "2025-12-01": 11,
+      "2025-12-02": 9,
+      "2025-12-03": 3,
+      "2025-12-04": 10,
+      "2025-12-05": 11,
+      "2025-12-06": 7,
+      "2025-12-07": 8,
+      "2025-12-08": 14,
+      "2025-12-09": 8,
+      "2025-12-10": 12,
+      "2025-12-11": 8,
+      "2025-12-12": 3,
+      "2025-12-13": 4,
+      "2025-12-14": 7,
+      "2025-12-15": 10,
+      "2025-12-16": 14,
+      "2025-12-17": 14,
+      "2025-12-18": 4,
+      "2025-12-19": 4,
+      "2025-12-20": 8,
+      "2025-12-21": 8,
+      "2025-12-22": 4,
+      "2025-12-23": 4,
+      "2025-12-24": 3,
+      "2025-12-25": 4,
+      "2025-12-26": 6,
+      "2025-12-27": 3,
+      "2025-12-28": 5,
+      "2025-12-29": 8,
+      "2025-12-30": 5,
+      "2025-12-31": 2,
+      "2026-01-01": 5,
+      "2026-01-02": 13,
+      "2026-01-03": 8,
+      "2026-01-04": 9,
+      "2026-01-05": 13,
+      "2026-01-06": 14,
+      "2026-01-07": 6,
+      "2026-01-08": 11,
+      "2026-01-09": 4,
+      "2026-01-10": 8,
+      "2026-01-11": 10,
+      "2026-01-12": 14
+    };
+
+    // Solgt – 48
     const historicalSoldData = {
       "2025-07-28": 1,
       "2025-08-07": 1,
@@ -302,15 +468,15 @@
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY_DEFAULT = 1000;
 
-    let registeredData   = JSON.parse(localStorage.getItem('peasyRegisteredData')   || '{}');
-    let receivedData     = JSON.parse(localStorage.getItem('peasyReceivedData')     || '{}');
-    let soldData         = JSON.parse(localStorage.getItem('peasySoldData')         || '{}');
-    let marketingData    = JSON.parse(localStorage.getItem('peasyMarketingData')    || '{}');
+    let pricedData = JSON.parse(localStorage.getItem('peasyPricedData') || '{}');
+    let receivedData = JSON.parse(localStorage.getItem('peasyReceivedData') || '{}');
+    let soldData = JSON.parse(localStorage.getItem('peasySoldData') || '{}');
+    let marketingData = JSON.parse(localStorage.getItem('peasyMarketingData') || '{}');
 
-    let allRegistered = { ...historicalData,    ...registeredData };
-    let allReceived   = { ...receivedData };
-    let allSold       = { ...historicalSoldData, ...soldData };  // manual sold overrides historical
-    let allMarketing  = { ...marketingData };
+    let allPriced = { ...historicalPricedData, ...pricedData };
+    let allReceived = { ...historicalReceivedData, ...receivedData };
+    let allSold = { ...historicalSoldData, ...soldData };
+    let allMarketing = { ...marketingData };
 
     let current = new Date(MARKETING_START);
     const today = new Date();
@@ -327,10 +493,14 @@
 
     document.getElementById('selectedDate').valueAsDate = new Date();
 
+    // Hide input area on load
+    document.getElementById('inputArea').classList.add('hidden');
+    document.getElementById('toggleInputBtn').textContent = "Vis input";
+
     function populateMonthFilter() {
       const select = document.getElementById('monthFilter');
       const months = new Set();
-      Object.keys(allRegistered).forEach(date => {
+      Object.keys(allPriced).forEach(date => {
         if (date >= START_DATE) months.add(date.slice(0,7));
       });
       [...months].sort().forEach(m => {
@@ -351,31 +521,39 @@
 
     function toggleInputArea() {
       const el = document.getElementById('inputArea');
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+      const btn = document.getElementById('toggleInputBtn');
+      if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        btn.textContent = "Skjul input";
+      } else {
+        el.classList.add('hidden');
+        btn.textContent = "Vis input";
+      }
     }
+
+    document.getElementById('toggleInputBtn').addEventListener('click', toggleInputArea);
 
     function addCountForDate() {
       const date = document.getElementById('selectedDate').value;
       if (!date) return alert(currentLang === 'en' ? 'Select a date first!' : 'Velg en dato først!');
 
-      const reg   = parseInt(document.getElementById('dailyCount').value)   || 0;
-      const rec   = parseInt(document.getElementById('receivedCount').value) || 0;
-      const sold  = parseInt(document.getElementById('soldCount').value)    || 0;
-      const mkt   = parseFloat(document.getElementById('marketingCost').value) || 0;
+      const pris = parseInt(document.getElementById('dailyCount').value)   || 0;
+      const rec  = parseInt(document.getElementById('receivedCount').value) || 0;
+      const sold = parseInt(document.getElementById('soldCount').value)    || 0;
+      const mkt  = parseFloat(document.getElementById('marketingCost').value) || 0;
 
-      allRegistered[date] = reg;   registeredData[date] = reg;
-      allReceived[date]   = rec;   receivedData[date]   = rec;
-      allSold[date]       = sold;                  // FIXED: replace, not add
-      soldData[date]      = sold;                  // FIXED: save the entered value directly
-      allMarketing[date]  = mkt;   marketingData[date]  = mkt;
+      allPriced[date]   = pris;   pricedData[date]   = pris;
+      allReceived[date] = rec;    receivedData[date] = rec;
+      allSold[date]     = sold;   soldData[date]     = sold;
+      allMarketing[date]= mkt;    marketingData[date]= mkt;
 
-      localStorage.setItem('peasyRegisteredData',   JSON.stringify(registeredData));
-      localStorage.setItem('peasyReceivedData',     JSON.stringify(receivedData));
-      localStorage.setItem('peasySoldData',         JSON.stringify(soldData));
-      localStorage.setItem('peasyMarketingData',    JSON.stringify(marketingData));
+      localStorage.setItem('peasyPricedData',   JSON.stringify(pricedData));
+      localStorage.setItem('peasyReceivedData', JSON.stringify(receivedData));
+      localStorage.setItem('peasySoldData',     JSON.stringify(soldData));
+      localStorage.setItem('peasyMarketingData',JSON.stringify(marketingData));
 
       const t = translations[currentLang];
-      showNotification(`${date.split('-').reverse().join('.')}: ${t.prisetLabel} ${reg}, ${t.receivedLabel} ${rec}, ${t.soldLabel} ${sold}, ${t.marketingLabel} ${mkt} NOK`);
+      showNotification(`${date.split('-').reverse().join('.')}: ${t.prisetLabel} ${pris}, ${t.receivedLabel} ${rec}, ${t.soldLabel} ${sold}, ${t.marketingLabel} ${mkt} NOK`);
 
       renderChart();
       updateStatsTable();
@@ -412,7 +590,7 @@
     }
 
     function updateStatsTable() {
-      const sortedDates = Object.keys(allRegistered)
+      const sortedDates = Object.keys(allPriced)
         .sort()
         .filter(date => selectedMonth === 'all' || date.startsWith(selectedMonth));
 
@@ -429,52 +607,52 @@
       document.getElementById('row30days').style.display = isSingleMonth ? 'none' : '';
 
       if (!isSingleMonth) {
-        let lastReg = 0, lastRec = 0, lastSoldVal = 0, lastMkt = 0;
+        let lastPris = 0, lastRec = 0, lastSoldVal = 0, lastMkt = 0;
         for (const date of sortedDates.slice().reverse()) {
-          if (allRegistered[date] || allSold[date] || allMarketing[date]) {
-            lastReg     = allRegistered[date] || 0;
-            lastRec     = allReceived[date]   || 0;
-            lastSoldVal = allSold[date]       || 0;
-            lastMkt     = allMarketing[date]  || 0;
+          if (allPriced[date] || allReceived[date] || allSold[date] || allMarketing[date]) {
+            lastPris     = allPriced[date] || 0;
+            lastRec      = allReceived[date] || 0;
+            lastSoldVal  = allSold[date] || 0;
+            lastMkt      = allMarketing[date] || 0;
             break;
           }
         }
-        document.getElementById('lastRegistered').textContent    = lastReg;
+        document.getElementById('lastRegistered').textContent    = lastPris;
         document.getElementById('lastReceived').textContent      = lastRec;
-        document.getElementById('lastRatio').textContent         = lastReg > 0 ? (lastRec / lastReg * 100).toFixed(0) + '%' : '—';
+        document.getElementById('lastRatio').textContent         = lastPris > 0 ? ((lastRec / lastPris) * 100).toFixed(0) + '%' : '—';
         document.getElementById('lastSold').textContent          = lastSoldVal;
-        document.getElementById('lastPricedToSold').textContent  = lastReg > 0 ? (lastSoldVal / lastReg * 100).toFixed(1) + '%' : '—';
+        document.getElementById('lastPricedToSold').textContent  = lastPris > 0 ? ((lastSoldVal / lastPris) * 100).toFixed(1) + '%' : '—';
         document.getElementById('lastMarketingCost').textContent = lastSoldVal > 0 ? (lastMkt / lastSoldVal).toFixed(0) + ' NOK' : '—';
       }
 
       function getPeriodStats(days) {
-        let sumReg = 0, sumRec = 0, sumSold = 0, sumMkt = 0, count = 0;
+        let sumPris = 0, sumRec = 0, sumSold = 0, sumMkt = 0, count = 0;
         const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days + 1);
+        cutoff.setDate(cutoff.getDate() - days); // excludes today
         const cutoffStr = cutoff.toISOString().split('T')[0];
 
         for (const date of sortedDates) {
           if (date >= cutoffStr) {
-            sumReg  += allRegistered[date] || 0;
-            sumRec  += allReceived[date]   || 0;
-            sumSold += allSold[date]       || 0;
-            sumMkt  += allMarketing[date]  || 0;
+            sumPris += allPriced[date] || 0;
+            sumRec  += allReceived[date] || 0;
+            sumSold += allSold[date] || 0;
+            sumMkt  += allMarketing[date] || 0;
             count++;
           }
         }
-        if (count === 0) return { reg:'—', rec:'—', ratio:'—', sold:0, mkt:'—', pricedToSold:'—' };
+        if (count === 0) return { pris:'—', rec:'—', ratio:'—', sold:0, mkt:'—', pricedToSold:'—' };
 
-        const avgReg = (sumReg / count).toFixed(1);
-        const ratio  = sumReg > 0 ? (sumRec / sumReg * 100).toFixed(0) + '%' : '—';
-        const mkt    = sumSold > 0 ? (sumMkt / sumSold).toFixed(0) + ' NOK' : '—';
-        const pricedToSold = sumReg > 0 ? (sumSold / sumReg * 100).toFixed(1) + '%' : '—';
+        const avgPris = (sumPris / count).toFixed(1);
+        const ratio   = sumPris > 0 ? ((sumRec / sumPris) * 100).toFixed(0) + '%' : '—';
+        const mkt     = sumSold > 0 ? (sumMkt / sumSold).toFixed(0) + ' NOK' : '—';
+        const pricedToSold = sumPris > 0 ? ((sumSold / sumPris) * 100).toFixed(1) + '%' : '—';
 
-        return { reg: avgReg, rec: sumRec, ratio, sold: sumSold, mkt, pricedToSold };
+        return { pris: avgPris, rec: sumRec, ratio, sold: sumSold, mkt, pricedToSold };
       }
 
       if (!isSingleMonth) {
         const s7 = getPeriodStats(7);
-        document.getElementById('avgRegistered7').textContent   = s7.reg;
+        document.getElementById('avgRegistered7').textContent   = s7.pris;
         document.getElementById('avgReceived7').textContent     = s7.rec;
         document.getElementById('ratio7').textContent           = s7.ratio;
         document.getElementById('sold7').textContent            = s7.sold;
@@ -482,7 +660,7 @@
         document.getElementById('marketing7').textContent       = s7.mkt;
 
         const s30 = getPeriodStats(30);
-        document.getElementById('avgRegistered30').textContent  = s30.reg;
+        document.getElementById('avgRegistered30').textContent  = s30.pris;
         document.getElementById('avgReceived30').textContent    = s30.rec;
         document.getElementById('ratio30').textContent          = s30.ratio;
         document.getElementById('sold30').textContent           = s30.sold;
@@ -490,18 +668,18 @@
         document.getElementById('marketing30').textContent      = s30.mkt;
       }
 
-      let totalReg = 0, totalRec = 0, totalSold = 0, totalMkt = 0;
+      let totalPris = 0, totalRec = 0, totalSold = 0, totalMkt = 0;
       for (const date of sortedDates) {
-        totalReg  += allRegistered[date] || 0;
-        totalRec  += allReceived[date]   || 0;
-        totalSold += allSold[date]       || 0;
-        totalMkt  += allMarketing[date]  || 0;
+        totalPris += allPriced[date] || 0;
+        totalRec  += allReceived[date] || 0;
+        totalSold += allSold[date] || 0;
+        totalMkt  += allMarketing[date] || 0;
       }
-      const totalRatio       = totalReg > 0 ? (totalRec / totalReg * 100).toFixed(0) + '%' : '—';
+      const totalRatio       = totalPris > 0 ? ((totalRec / totalPris) * 100).toFixed(0) + '%' : '—';
       const totalMktAvg      = totalSold > 0 ? (totalMkt / totalSold).toFixed(0) + ' NOK' : '—';
-      const totalPricedToSold = totalReg > 0 ? (totalSold / totalReg * 100).toFixed(1) + '%' : '—';
+      const totalPricedToSold = totalPris > 0 ? ((totalSold / totalPris) * 100).toFixed(1) + '%' : '—';
 
-      document.getElementById('totalPriset').textContent       = totalReg;
+      document.getElementById('totalPriset').textContent       = totalPris;
       document.getElementById('totalMottatt').textContent      = totalRec;
       document.getElementById('totalRatio').textContent        = totalRatio;
       document.getElementById('totalSold').textContent         = totalSold;
@@ -522,8 +700,8 @@
         cur.setDate(cur.getDate() + 1);
       }
 
-      const prisetVals = dates.map(d => allRegistered[d] || 0);
-      const soldVals   = dates.map(d => allSold[d]       || 0);
+      const prisetVals = dates.map(d => allPriced[d] || 0);
+      const soldVals   = dates.map(d => allSold[d] || 0);
       const trendVals  = calculateTrendLine(dates, prisetVals, '2025-11-01');
 
       const ctx = document.getElementById('dailyChart').getContext('2d');
@@ -596,10 +774,10 @@
     function loadDataForDate() {
       const date = dateInput.value;
       if (!date) return;
-      document.getElementById('dailyCount').value     = allRegistered[date]   || '';
-      document.getElementById('receivedCount').value  = allReceived[date]     || '0';
-      document.getElementById('soldCount').value      = allSold[date]         || '';
-      document.getElementById('marketingCost').value  = allMarketing[date]    || '';
+      document.getElementById('dailyCount').value     = allPriced[date]   || '';
+      document.getElementById('receivedCount').value  = allReceived[date] || '0';
+      document.getElementById('soldCount').value      = allSold[date]     || '';
+      document.getElementById('marketingCost').value  = allMarketing[date]|| '';
       showNotification(`${translations[currentLang].lastUpdate}${date.split('-').reverse().join('.')}`);
     }
 
