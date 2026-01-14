@@ -7,6 +7,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <!-- Added ONLY for datalabels (numbers + %) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px 10px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -25,7 +27,7 @@
     .input-area button:hover { background: #e6b800; }
     .toggle-button { margin: 10px auto; display: block; padding: 8px 15px; background: #ffcc33; color: #004225; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; touch-action: manipulation; }
     .toggle-button:hover { background: #e6b800; }
-    canvas { margin-top: 20px; background: white; border-radius: 8px; width: 100% !important; height: 500px !important; }
+    canvas { margin: 40px auto; background: white; border-radius: 8px; width: 100% !important; height: 500px !important; max-width: 900px; }
     #notification { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.3s; font-weight: bold; font-size: 0.9rem; }
     .stats-table { margin: 30px auto; max-width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     .stats-table th, .stats-table td { padding: 10px; text-align: center; border: 1px solid #ddd; font-weight: bold; }
@@ -125,10 +127,16 @@
         </tr>
       </tbody>
     </table>
+
+    <!-- NEW: Bar chart below the table, using profile colors -->
+    <h2 style="text-align:center; color:#004225; margin:40px 0 20px; font-size:1.6rem;">Total konvertering – Priset → Mottatt → Solgt</h2>
+    <canvas id="funnelChart"></canvas>
+
   </div>
   <div id="notification"></div>
+
   <script>
-    // Translations
+    // Translations (unchanged)
     const translations = {
       no: {
         title: "Peasy Priset → Mottatt & Solgt",
@@ -211,33 +219,37 @@
       document.getElementById('totalLabel').textContent = t.totalLabel;
       updateStatsTable();
       renderChart();
+      renderFunnelChart(); // NEW: call on lang change
     }
     document.getElementById('lang-en').addEventListener('click', e => { e.preventDefault(); setLanguage('en'); });
     document.getElementById('lang-no').addEventListener('click', e => { e.preventDefault(); setLanguage('no'); });
-    // Priset – 715 from report 45
+
+    // Historical data – kept EXACTLY as in your message (full objects included)
     const historicalPricedData = {
       "2025-04-29": 1, "2025-04-30": 1, "2025-05-01": 1, "2025-05-07": 1, "2025-05-12": 1, "2025-05-19": 1, "2025-05-21": 3, "2025-05-22": 2, "2025-05-24": 1, "2025-05-25": 1, "2025-05-26": 1, "2025-05-27": 3, "2025-05-28": 1, "2025-05-29": 1, "2025-05-30": 1, "2025-05-31": 2, "2025-06-01": 1, "2025-06-03": 2, "2025-06-04": 1, "2025-06-05": 1, "2025-06-06": 1, "2025-06-09": 1, "2025-06-10": 1, "2025-06-11": 1, "2025-06-13": 2, "2025-06-15": 2, "2025-06-16": 1, "2025-06-17": 1, "2025-06-21": 1, "2025-06-24": 1, "2025-06-25": 1, "2025-06-26": 1, "2025-07-02": 1, "2025-07-03": 2, "2025-07-05": 1, "2025-07-08": 1, "2025-07-10": 1, "2025-07-12": 2, "2025-07-15": 2, "2025-07-17": 1, "2025-07-19": 1, "2025-07-21": 1, "2025-07-22": 2, "2025-07-24": 1, "2025-07-25": 2, "2025-07-28": 1, "2025-07-30": 2, "2025-07-31": 1, "2025-08-01": 1, "2025-08-02": 4, "2025-08-03": 1, "2025-08-04": 1, "2025-08-05": 1, "2025-08-06": 1, "2025-08-07": 1, "2025-08-12": 2, "2025-08-13": 3, "2025-08-15": 2, "2025-08-17": 1, "2025-08-18": 1, "2025-08-19": 1, "2025-08-22": 2, "2025-08-23": 1, "2025-08-26": 2, "2025-08-27": 4, "2025-08-28": 2, "2025-08-30": 2, "2025-09-02": 2, "2025-09-03": 1, "2025-09-04": 1, "2025-09-05": 2, "2025-09-06": 1, "2025-09-07": 2, "2025-09-09": 2, "2025-09-10": 1, "2025-09-11": 2, "2025-09-14": 1, "2025-09-15": 1, "2025-09-16": 5, "2025-09-17": 4, "2025-09-19": 1, "2025-09-20": 2, "2025-09-21": 1, "2025-09-22": 4, "2025-09-23": 5, "2025-09-24": 1, "2025-09-25": 1, "2025-09-26": 1, "2025-09-28": 2, "2025-09-30": 1, "2025-10-01": 1, "2025-10-02": 3, "2025-10-04": 1, "2025-10-06": 3, "2025-10-07": 4, "2025-10-08": 1, "2025-10-10": 2, "2025-10-11": 1, "2025-10-12": 3, "2025-10-13": 4, "2025-10-14": 1, "2025-10-15": 2, "2025-10-16": 3, "2025-10-17": 1, "2025-10-18": 1, "2025-10-19": 2, "2025-10-20": 4, "2025-10-21": 1, "2025-10-22": 1, "2025-10-23": 2, "2025-10-24": 1, "2025-10-28": 1, "2025-10-29": 1, "2025-10-30": 1, "2025-10-31": 1, "2025-11-01": 1, "2025-11-02": 1, "2025-11-03": 5, "2025-11-04": 10, "2025-11-05": 6, "2025-11-06": 16, "2025-11-07": 12, "2025-11-08": 13, "2025-11-09": 12, "2025-11-10": 14, "2025-11-11": 5, "2025-11-12": 5, "2025-11-13": 9, "2025-11-14": 6, "2025-11-15": 6, "2025-11-16": 4, "2025-11-17": 6, "2025-11-18": 8, "2025-11-19": 11, "2025-11-20": 8, "2025-11-21": 9, "2025-11-22": 5, "2025-11-23": 5, "2025-11-24": 7, "2025-11-25": 8, "2025-11-26": 6, "2025-11-27": 10, "2025-11-28": 11, "2025-11-29": 11, "2025-11-30": 4, "2025-12-01": 11, "2025-12-02": 9, "2025-12-03": 3, "2025-12-04": 10, "2025-12-05": 11, "2025-12-06": 7, "2025-12-07": 8, "2025-12-08": 14, "2025-12-09": 8, "2025-12-10": 12, "2025-12-11": 8, "2025-12-12": 3, "2025-12-13": 4, "2025-12-14": 7, "2025-12-15": 10, "2025-12-16": 14, "2025-12-17": 14, "2025-12-18": 4, "2025-12-19": 4, "2025-12-20": 8, "2025-12-21": 8, "2025-12-22": 4, "2025-12-23": 4, "2025-12-24": 3, "2025-12-25": 4, "2025-12-26": 6, "2025-12-27": 3, "2025-12-28": 5, "2025-12-29": 8, "2025-12-30": 5, "2025-12-31": 2,
       "2026-01-01": 5, "2026-01-02": 13, "2026-01-03": 8, "2026-01-04": 9, "2026-01-05": 13, "2026-01-06": 14, "2026-01-07": 6, "2026-01-08": 11, "2026-01-09": 4, "2026-01-10": 8, "2026-01-11": 10, "2026-01-12": 14, "2026-01-13": 11, "2026-01-14": 1
     };
-    // Mottatt – EXACT 76 cars from column Q
     const historicalReceivedData = {
       "2025-04-30": 1, "2025-05-20": 1, "2025-05-22": 1, "2025-05-30": 1, "2025-06-03": 2, "2025-06-06": 1, "2025-06-19": 1, "2025-06-25": 1, "2025-07-22": 1, "2025-08-04": 1, "2025-08-05": 1, "2025-08-18": 1, "2025-08-29": 1, "2025-09-12": 1, "2025-09-15": 1, "2025-09-17": 1, "2025-09-18": 1, "2025-09-24": 1, "2025-09-25": 1, "2025-09-29": 1, "2025-10-13": 1, "2025-10-17": 1, "2025-10-21": 2, "2025-10-23": 1, "2025-10-27": 1, "2025-10-28": 1, "2025-11-03": 1, "2025-11-07": 1, "2025-11-10": 1, "2025-11-12": 1, "2025-11-13": 1, "2025-11-14": 2, "2025-11-16": 1, "2025-11-18": 1, "2025-11-20": 1, "2025-11-21": 5, "2025-11-24": 1, "2025-11-25": 2, "2025-11-27": 2, "2025-11-28": 1, "2025-11-30": 1, "2025-12-02": 2, "2025-12-03": 1, "2025-12-04": 1, "2025-12-05": 1, "2025-12-11": 1, "2025-12-12": 5, "2025-12-15": 2, "2025-12-16": 1, "2025-12-21": 1, "2025-12-22": 2, "2025-12-23": 1, "2025-12-30": 3, "2026-01-01": 1, "2026-01-02": 2, "2026-01-06": 1, "2026-01-08": 1, "2026-01-13": 1
     };
-    // Solgt – 48 from report 45
     const historicalSoldData = {
       "2025-05-05": 1, "2025-05-23": 1, "2025-06-10": 1, "2025-06-12": 1, "2025-06-30": 1, "2025-07-03": 1, "2025-07-28": 1, "2025-08-07": 1, "2025-08-14": 1, "2025-09-02": 1, "2025-09-15": 1, "2025-09-18": 1, "2025-09-24": 1, "2025-09-25": 1, "2025-09-29": 1, "2025-10-02": 1, "2025-10-06": 1, "2025-10-20": 1, "2025-10-24": 1, "2025-10-27": 1, "2025-10-28": 1, "2025-10-31": 1, "2025-11-07": 1, "2025-11-11": 1, "2025-11-13": 1, "2025-11-14": 1, "2025-11-17": 1, "2025-11-20": 1, "2025-11-24": 1, "2025-11-26": 2, "2025-11-27": 1, "2025-12-01": 4, "2025-12-03": 1, "2025-12-05": 1, "2025-12-08": 2, "2025-12-10": 1, "2025-12-11": 1, "2025-12-12": 1, "2025-12-17": 2, "2025-12-19": 3, "2025-12-22": 1, "2026-01-05": 1, "2026-01-07": 2, "2026-01-12": 1, "2026-01-13": 1
     };
+
     const START_DATE = '2025-07-01';
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY_DEFAULT = 1000;
+
     let pricedData = JSON.parse(localStorage.getItem('peasyPricedData') || '{}');
     let receivedData = JSON.parse(localStorage.getItem('peasyReceivedData') || '{}');
     let soldData = JSON.parse(localStorage.getItem('peasySoldData') || '{}');
     let marketingData = JSON.parse(localStorage.getItem('peasyMarketingData') || '{}');
+
     let allPriced = { ...historicalPricedData, ...pricedData };
     let allReceived = { ...historicalReceivedData, ...receivedData };
     let allSold = { ...historicalSoldData, ...soldData };
     let allMarketing = { ...marketingData };
+
     let current = new Date(MARKETING_START);
     const today = new Date();
     while (current <= today) {
@@ -247,39 +259,36 @@
       }
       current.setDate(current.getDate() + 1);
     }
+
     let chart;
     let selectedMonth = 'all';
+
     document.getElementById('selectedDate').valueAsDate = new Date();
     document.getElementById('inputArea').classList.add('hidden');
     document.getElementById('toggleInputBtn').textContent = "Vis input";
 
-    // ─── NEW: Password protection for input area ───
     let inputUnlocked = false;
     const INPUT_PASSWORD = "peasy2026";
 
     function toggleInputArea() {
       const el = document.getElementById('inputArea');
       const btn = document.getElementById('toggleInputBtn');
-
       if (el.classList.contains('hidden')) {
-        // Trying to show → ask for password the first time
         if (!inputUnlocked) {
           const entered = prompt("Skriv inn passord for å vise input:");
           if (entered !== INPUT_PASSWORD) {
             alert("Feil passord!");
             return;
           }
-          inputUnlocked = true; // unlocked for this session
+          inputUnlocked = true;
         }
         el.classList.remove('hidden');
         btn.textContent = "Skjul input";
       } else {
-        // Just hide, no password needed
         el.classList.add('hidden');
         btn.textContent = "Vis input";
       }
     }
-
     document.getElementById('toggleInputBtn').addEventListener('click', toggleInputArea);
 
     function populateMonthFilter() {
@@ -297,12 +306,15 @@
       });
     }
     populateMonthFilter();
+
     document.getElementById('monthFilter').addEventListener('change', e => {
       selectedMonth = e.target.value;
       renderChart();
       updateStatsTable();
     });
+
     document.getElementById('saveBtn').addEventListener('click', addCountForDate);
+
     function addCountForDate() {
       const date = document.getElementById('selectedDate').value;
       if (!date) return alert(currentLang === 'en' ? 'Select a date first!' : 'Velg en dato først!');
@@ -324,12 +336,14 @@
       updateStatsTable();
       ['dailyCount','receivedCount','soldCount','marketingCost'].forEach(id => document.getElementById(id).value = '');
     }
+
     function showNotification(text) {
       const notif = document.getElementById('notification');
       notif.textContent = text;
       notif.style.opacity = 1;
       setTimeout(() => notif.style.opacity = 0, 3000);
     }
+
     function calculateTrendLine(dates, data, startDateStr) {
       const startIndex = dates.findIndex(d => d >= startDateStr);
       if (startIndex === -1) return new Array(dates.length).fill(null);
@@ -350,6 +364,7 @@
       for (let i = startIndex; i < dates.length; i++) trend[i] = m * i + b;
       return trend;
     }
+
     function updateStatsTable() {
       const sortedDates = Object.keys(allPriced)
         .sort()
@@ -435,6 +450,7 @@
       document.getElementById('totalPricedToSold').textContent = totalPricedToSold;
       document.getElementById('totalMarketingCost').textContent = totalMktAvg;
     }
+
     function renderChart() {
       const start = new Date(START_DATE);
       const end = new Date();
@@ -509,10 +525,12 @@
       });
       updateStatsTable();
     }
+
     const dateInput = document.getElementById('selectedDate');
     dateInput.addEventListener('change', loadDataForDate);
     dateInput.addEventListener('click', loadDataForDate);
     dateInput.addEventListener('focus', loadDataForDate);
+
     function loadDataForDate() {
       const date = dateInput.value;
       if (!date) return;
@@ -522,9 +540,69 @@
       document.getElementById('marketingCost').value = allMarketing[date] || '';
       showNotification(`${translations[currentLang].lastUpdate}${date.split('-').reverse().join('.')}`);
     }
-    // Initial setup
+
+    // ─── NEW: Bar chart below table, profile colors, dramatic scaling ───
+    function renderFunnelChart() {
+      const ctx = document.getElementById('funnelChart').getContext('2d');
+      const existing = Chart.getChart(ctx);
+      if (existing) existing.destroy();
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Priset', 'Mottatt', 'Solgt'],
+          datasets: [{
+            label: 'Antall biler',
+            data: [767, 70, 46],
+            backgroundColor: [
+              '#004225',     // dark green from profile
+              '#8fcbbc',     // light green
+              '#ffcc33'      // brand yellow
+            ],
+            borderColor: '#004225',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed.y} biler`
+              }
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#004225',
+              font: { weight: 'bold', size: 16 },
+              formatter: (value, ctx) => {
+                const pct = ctx.dataIndex === 0 ? '100%' :
+                            ctx.dataIndex === 1 ? '9%' : '6%';
+                return `${value}\n(${pct})`;
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: 800, // ensures Priset bar is ~10× taller than Mottatt
+              ticks: { stepSize: 100, color: '#004225' },
+              title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } }
+            },
+            x: { ticks: { color: '#004225', font: { size: 14 } } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    // Initial setup (added funnel chart call)
     setLanguage('no');
     renderChart();
+    renderFunnelChart(); // NEW - renders below table on load
   </script>
 </body>
 </html>
