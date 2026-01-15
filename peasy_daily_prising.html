@@ -47,11 +47,12 @@
       z-index: 1001;
       box-shadow: 0 6px 16px rgba(0,0,0,0.5);
       border: 3px solid #ffcc33;
-      min-width: 100px;
+      min-width: 120px;
+      max-width: 400px;
       text-align: center;
-      transform: translate(-50%, -140%);
       white-space: nowrap;
       line-height: 1.2;
+      transition: opacity 0.15s ease;
     }
 
     @media (max-width: 768px) {
@@ -61,7 +62,7 @@
       .subtitle { font-size: 1.1rem; }
       canvas { height: 400px !important; }
       .stats-table { font-size: 0.9rem; overflow-x: auto; display: block; }
-      .custom-tooltip { font-size: 22px; padding: 10px 16px; }
+      .custom-tooltip { font-size: 22px; padding: 10px 16px; max-width: 300px; }
     }
   </style>
 </head>
@@ -475,6 +476,7 @@
       document.getElementById('totalMarketingCost').textContent = totalMktAvg;
     }
 
+    // ── Fully adaptive tooltip: prefers above, flips to below only when needed, stays in viewport ──
     function externalTooltipHandler(context) {
       const { chart, tooltip } = context;
       const canvas = chart.canvas;
@@ -492,6 +494,7 @@
         return;
       }
 
+      // Build content
       let innerHtml = '';
       if (tooltip.title?.length) {
         innerHtml += `<div style="font-size:18px; margin-bottom:6px;">${tooltip.title[0]}</div>`;
@@ -505,12 +508,58 @@
       }
       tooltipEl.innerHTML = innerHtml || 'Ingen data';
 
-      const rect = canvas.getBoundingClientRect();
-      const x = rect.left + tooltip.caretX;
-      const y = rect.top + tooltip.caretY - 40; // lift it higher
+      // Force reflow to get accurate size
+      tooltipEl.style.visibility = 'hidden';
+      tooltipEl.style.opacity = 1;
+      const tooltipWidth = tooltipEl.offsetWidth + 20; // extra margin
+      const tooltipHeight = tooltipEl.offsetHeight + 30;
+      tooltipEl.style.visibility = 'visible';
 
-      tooltipEl.style.left = x + 'px';
-      tooltipEl.style.top = y + 'px';
+      // Chart and caret position
+      const rect = canvas.getBoundingClientRect();
+      const caretX = tooltip.caretX;
+      const caretY = tooltip.caretY;
+
+      // Page coordinates of caret
+      const caretPageX = rect.left + caretX;
+      const caretPageY = rect.top + caretY;
+
+      // Viewport and scroll info
+      const viewportTop = window.scrollY;
+      const viewportBottom = viewportTop + window.innerHeight;
+      const viewportLeft = window.scrollX;
+      const viewportRight = viewportLeft + window.innerWidth;
+
+      // Prefer above: calculate proposed position above caret
+      let top = caretPageY - tooltipHeight - 15; // 15px margin above caret
+      let left = caretPageX - tooltipWidth / 2;
+
+      // Check if above fits in viewport
+      const spaceAbove = caretPageY - viewportTop;
+      if (spaceAbove < tooltipHeight + 40) {
+        // Not enough space above → flip below
+        top = caretPageY + 15; // margin below caret
+      }
+
+      // Horizontal clamping
+      if (left < viewportLeft + 10) {
+        left = viewportLeft + 10;
+      }
+      if (left + tooltipWidth > viewportRight - 10) {
+        left = viewportRight - tooltipWidth - 10;
+      }
+
+      // Vertical clamping (final safety)
+      if (top < viewportTop + 10) {
+        top = viewportTop + 10;
+      }
+      if (top + tooltipHeight > viewportBottom - 10) {
+        top = viewportBottom - tooltipHeight - 10;
+      }
+
+      // Apply
+      tooltipEl.style.left = left + 'px';
+      tooltipEl.style.top = top + 'px';
       tooltipEl.style.opacity = 1;
     }
 
@@ -552,10 +601,7 @@
               intersect: false,
               padding: 16,
               bodyFont: { size: 28, weight: 'bold' },
-              titleFont: { size: 20 },
-              callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}`
-              }
+              titleFont: { size: 20 }
             }
           },
           scales: {
@@ -604,10 +650,7 @@
               intersect: false,
               padding: 20,
               bodyFont: { size: 32, weight: 'bold' },
-              titleFont: { size: 22 },
-              callbacks: {
-                label: (ctx) => `${ctx.label}: ${ctx.parsed.y} biler`
-              }
+              titleFont: { size: 22 }
             },
             datalabels: {
               anchor: 'end',
