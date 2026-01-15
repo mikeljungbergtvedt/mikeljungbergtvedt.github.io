@@ -257,7 +257,6 @@
     };
 
     const START_DATE = '2025-07-01';
-    const PERIOD_END = '2026-01-14';
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY_DEFAULT = 1000;
 
@@ -334,17 +333,30 @@
     document.getElementById('saveBtn').addEventListener('click', addCountForDate);
 
     function addCountForDate() {
-      const date = document.getElementById('selectedDate').value;
+      const dateInput = document.getElementById('selectedDate');
+      const date = dateInput.value;
       if (!date) return alert(currentLang === 'en' ? 'Select a date first!' : 'Velg en dato først!');
+
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        alert("Dato må være i format yyyy-mm-dd");
+        return;
+      }
+
       const pris = parseInt(document.getElementById('dailyCount').value) || 0;
       const rec = parseInt(document.getElementById('receivedCount').value) || 0;
       const sold = parseInt(document.getElementById('soldCount').value) || 0;
       const mkt = parseFloat(document.getElementById('marketingCost').value) || 0;
 
-      allPriced[date] = pris; pricedData[date] = pris;
-      allReceived[date] = rec; receivedData[date] = rec;
-      allSold[date] = sold; soldData[date] = sold;
-      allMarketing[date] = mkt; marketingData[date] = mkt;
+      // Save to both live objects and persistent storage
+      allPriced[date] = pris;
+      pricedData[date] = pris;
+      allReceived[date] = rec;
+      receivedData[date] = rec;
+      allSold[date] = sold;
+      soldData[date] = sold;
+      allMarketing[date] = mkt;
+      marketingData[date] = mkt;
 
       localStorage.setItem('peasyPricedData', JSON.stringify(pricedData));
       localStorage.setItem('peasyReceivedData', JSON.stringify(receivedData));
@@ -354,11 +366,14 @@
       const t = translations[currentLang];
       showNotification(`${date.split('-').reverse().join('.')}: ${t.prisetLabel} ${pris}, ${t.receivedLabel} ${rec}, ${t.soldLabel} ${sold}, ${t.marketingLabel} ${mkt} NOK`);
 
-      renderChart();
+      // Force immediate re-render of everything
       updateStatsTable();
+      renderChart();
       renderFunnelChart();
 
+      // Clear inputs
       ['dailyCount','receivedCount','soldCount','marketingCost'].forEach(id => document.getElementById(id).value = '');
+      dateInput.value = ''; // optional: clear date too
     }
 
     function showNotification(text) {
@@ -476,7 +491,6 @@
       document.getElementById('totalMarketingCost').textContent = totalMktAvg;
     }
 
-    // ── Fully adaptive tooltip: prefers above, flips to below only when needed, stays in viewport ──
     function externalTooltipHandler(context) {
       const { chart, tooltip } = context;
       const canvas = chart.canvas;
@@ -508,56 +522,44 @@
       }
       tooltipEl.innerHTML = innerHtml || 'Ingen data';
 
-      // Force reflow to get accurate size
+      // Force reflow to measure real size
       tooltipEl.style.visibility = 'hidden';
       tooltipEl.style.opacity = 1;
-      const tooltipWidth = tooltipEl.offsetWidth + 20; // extra margin
+      const tooltipWidth = tooltipEl.offsetWidth + 20;
       const tooltipHeight = tooltipEl.offsetHeight + 30;
       tooltipEl.style.visibility = 'visible';
 
-      // Chart and caret position
+      // Positions
       const rect = canvas.getBoundingClientRect();
       const caretX = tooltip.caretX;
       const caretY = tooltip.caretY;
 
-      // Page coordinates of caret
       const caretPageX = rect.left + caretX;
       const caretPageY = rect.top + caretY;
 
-      // Viewport and scroll info
       const viewportTop = window.scrollY;
       const viewportBottom = viewportTop + window.innerHeight;
       const viewportLeft = window.scrollX;
       const viewportRight = viewportLeft + window.innerWidth;
 
-      // Prefer above: calculate proposed position above caret
-      let top = caretPageY - tooltipHeight - 15; // 15px margin above caret
+      // Prefer above
+      let top = caretPageY - tooltipHeight - 15;
       let left = caretPageX - tooltipWidth / 2;
 
-      // Check if above fits in viewport
+      // Flip to below only if really necessary
       const spaceAbove = caretPageY - viewportTop;
-      if (spaceAbove < tooltipHeight + 40) {
-        // Not enough space above → flip below
-        top = caretPageY + 15; // margin below caret
+      if (spaceAbove < tooltipHeight + 60) {  // increased margin threshold
+        top = caretPageY + 15;
       }
 
-      // Horizontal clamping
-      if (left < viewportLeft + 10) {
-        left = viewportLeft + 10;
-      }
-      if (left + tooltipWidth > viewportRight - 10) {
-        left = viewportRight - tooltipWidth - 10;
-      }
+      // Horizontal safety
+      if (left < viewportLeft + 10) left = viewportLeft + 10;
+      if (left + tooltipWidth > viewportRight - 10) left = viewportRight - tooltipWidth - 10;
 
-      // Vertical clamping (final safety)
-      if (top < viewportTop + 10) {
-        top = viewportTop + 10;
-      }
-      if (top + tooltipHeight > viewportBottom - 10) {
-        top = viewportBottom - tooltipHeight - 10;
-      }
+      // Final vertical safety
+      if (top < viewportTop + 10) top = viewportTop + 10;
+      if (top + tooltipHeight > viewportBottom - 10) top = viewportBottom - tooltipHeight - 10;
 
-      // Apply
       tooltipEl.style.left = left + 'px';
       tooltipEl.style.top = top + 'px';
       tooltipEl.style.opacity = 1;
@@ -615,7 +617,7 @@
     function renderFunnelChart() {
       let totalP = 0, totalR = 0, totalS = 0;
       Object.keys(allPriced).forEach(d => {
-        if (d >= START_DATE && d <= PERIOD_END) {
+        if (d >= START_DATE) {  // ← dynamic: all data from July 2025 onward
           totalP += allPriced[d] || 0;
           totalR += allReceived[d] || 0;
           totalS += allSold[d] || 0;
