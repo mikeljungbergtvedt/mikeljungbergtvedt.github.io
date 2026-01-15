@@ -323,6 +323,24 @@
     }
     populateMonthFilter();
 
+    // ── Load existing data when date is selected (original feature restored) ──
+    function loadDataForDate() {
+      const date = document.getElementById('selectedDate').value;
+      if (!date) return;
+
+      document.getElementById('dailyCount').value = allPriced[date] !== undefined ? allPriced[date] : '';
+      document.getElementById('receivedCount').value = allReceived[date] !== undefined ? allReceived[date] : '0';
+      document.getElementById('soldCount').value = allSold[date] !== undefined ? allSold[date] : '0';
+      document.getElementById('marketingCost').value = allMarketing[date] !== undefined ? allMarketing[date] : '';
+
+      showNotification(`Data for ${date.split('-').reverse().join('.')} lastet`);
+    }
+
+    const dateInput = document.getElementById('selectedDate');
+    dateInput.addEventListener('change', loadDataForDate);
+    dateInput.addEventListener('click', loadDataForDate);
+    dateInput.addEventListener('focus', loadDataForDate);
+
     document.getElementById('monthFilter').addEventListener('change', e => {
       selectedMonth = e.target.value;
       renderChart();
@@ -333,11 +351,8 @@
     document.getElementById('saveBtn').addEventListener('click', addCountForDate);
 
     function addCountForDate() {
-      const dateInput = document.getElementById('selectedDate');
-      const date = dateInput.value;
+      const date = document.getElementById('selectedDate').value;
       if (!date) return alert(currentLang === 'en' ? 'Select a date first!' : 'Velg en dato først!');
-
-      // Validate date format
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         alert("Dato må være i format yyyy-mm-dd");
         return;
@@ -348,15 +363,10 @@
       const sold = parseInt(document.getElementById('soldCount').value) || 0;
       const mkt = parseFloat(document.getElementById('marketingCost').value) || 0;
 
-      // Save to both live objects and persistent storage
-      allPriced[date] = pris;
-      pricedData[date] = pris;
-      allReceived[date] = rec;
-      receivedData[date] = rec;
-      allSold[date] = sold;
-      soldData[date] = sold;
-      allMarketing[date] = mkt;
-      marketingData[date] = mkt;
+      allPriced[date] = pris; pricedData[date] = pris;
+      allReceived[date] = rec; receivedData[date] = rec;
+      allSold[date] = sold; soldData[date] = sold;
+      allMarketing[date] = mkt; marketingData[date] = mkt;
 
       localStorage.setItem('peasyPricedData', JSON.stringify(pricedData));
       localStorage.setItem('peasyReceivedData', JSON.stringify(receivedData));
@@ -366,14 +376,11 @@
       const t = translations[currentLang];
       showNotification(`${date.split('-').reverse().join('.')}: ${t.prisetLabel} ${pris}, ${t.receivedLabel} ${rec}, ${t.soldLabel} ${sold}, ${t.marketingLabel} ${mkt} NOK`);
 
-      // Force immediate re-render of everything
       updateStatsTable();
       renderChart();
       renderFunnelChart();
 
-      // Clear inputs
       ['dailyCount','receivedCount','soldCount','marketingCost'].forEach(id => document.getElementById(id).value = '');
-      dateInput.value = ''; // optional: clear date too
     }
 
     function showNotification(text) {
@@ -508,7 +515,6 @@
         return;
       }
 
-      // Build content
       let innerHtml = '';
       if (tooltip.title?.length) {
         innerHtml += `<div style="font-size:18px; margin-bottom:6px;">${tooltip.title[0]}</div>`;
@@ -522,14 +528,12 @@
       }
       tooltipEl.innerHTML = innerHtml || 'Ingen data';
 
-      // Force reflow to measure real size
       tooltipEl.style.visibility = 'hidden';
       tooltipEl.style.opacity = 1;
       const tooltipWidth = tooltipEl.offsetWidth + 20;
       const tooltipHeight = tooltipEl.offsetHeight + 30;
       tooltipEl.style.visibility = 'visible';
 
-      // Positions
       const rect = canvas.getBoundingClientRect();
       const caretX = tooltip.caretX;
       const caretY = tooltip.caretY;
@@ -542,21 +546,17 @@
       const viewportLeft = window.scrollX;
       const viewportRight = viewportLeft + window.innerWidth;
 
-      // Prefer above
       let top = caretPageY - tooltipHeight - 15;
       let left = caretPageX - tooltipWidth / 2;
 
-      // Flip to below only if really necessary
       const spaceAbove = caretPageY - viewportTop;
-      if (spaceAbove < tooltipHeight + 60) {  // increased margin threshold
+      if (spaceAbove < tooltipHeight + 60) {
         top = caretPageY + 15;
       }
 
-      // Horizontal safety
       if (left < viewportLeft + 10) left = viewportLeft + 10;
       if (left + tooltipWidth > viewportRight - 10) left = viewportRight - tooltipWidth - 10;
 
-      // Final vertical safety
       if (top < viewportTop + 10) top = viewportTop + 10;
       if (top + tooltipHeight > viewportBottom - 10) top = viewportBottom - tooltipHeight - 10;
 
@@ -617,7 +617,7 @@
     function renderFunnelChart() {
       let totalP = 0, totalR = 0, totalS = 0;
       Object.keys(allPriced).forEach(d => {
-        if (d >= START_DATE) {  // ← dynamic: all data from July 2025 onward
+        if (d >= START_DATE) {  // dynamic – all data from July 2025 onward
           totalP += allPriced[d] || 0;
           totalR += allReceived[d] || 0;
           totalS += allSold[d] || 0;
