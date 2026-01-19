@@ -2,15 +2,15 @@ name: Update Peasy Report
 
 on:
   schedule:
-    - cron: '0 6 * * *'           # daily at ~07:00 CET
-  workflow_dispatch:              # allows manual run from Actions tab
+    - cron: '0 6 * * *'           # Runs daily at 06:00 UTC (~07:00 CET)
+  workflow_dispatch:              # Allows manual trigger from Actions tab
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python 3.11
@@ -24,12 +24,15 @@ jobs:
           pip install pandas openpyxl matplotlib jinja2
 
       - name: Generate report
-        run: python generate_report.py          # ← change this if your script has a different name!
-
-      - name: Commit updated report
         run: |
-          git config user.name "GitHub Action Bot"
-          git config user.email "actions@github.com"
-          git add test.html                     # ← change to index.html if that's your file
-          git commit -m "Auto-update report - $(date +'%Y-%m-%d')" || echo "No changes"
-          git push
+          echo "Starting report generation..."
+          python report_generator.py
+          echo "Report generation finished."
+
+      - name: Commit and push updated test.html
+        run: |
+          git config --global user.name 'GitHub Action Bot'
+          git config --global user.email 'actions@github.com'
+          git add test.html
+          git commit -m "Auto-update test.html - $(date +'%Y-%m-%d %H:%M CET')" || echo "No changes to commit"
+          git push || echo "Push completed or no changes"
