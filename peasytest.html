@@ -2,26 +2,25 @@
 <html lang="nb">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Sheet Test - Raw Data Display</title>
+  <title>Peasy Sheet Test – 2026</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; color: #333; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
     h1 { text-align: center; color: #2c3e50; }
-    #status { text-align: center; font-size: 1.2rem; margin: 20px 0; color: #27ae60; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.95rem; }
-    th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
-    th { background: #ecf0f1; font-weight: bold; }
+    #status { text-align: center; font-size: 1.3rem; margin: 20px 0; font-weight: bold; color: #27ae60; }
+    table { width: 100%; max-width: 1100px; margin: 20px auto; border-collapse: collapse; }
+    th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+    th { background: #ecf0f1; }
     .total { background: #d4edda; font-weight: bold; }
-    canvas { max-width: 100%; margin: 30px auto; display: block; }
+    canvas { max-width: 100%; margin: 40px auto; display: block; height: 400px !important; }
     .error { color: #c0392b; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Peasy Test - Data fra Google Sheet</h1>
-  <div id="status">Laster data fra sheet...</div>
+  <h1>Peasy Test – Data fra ditt Google Sheet</h1>
+  <div id="status">Laster data...</div>
 
   <table id="dataTable">
     <thead>
@@ -30,26 +29,29 @@
         <th>Priset</th>
         <th>Mottatt</th>
         <th>Solgt</th>
-        <th>Marketing (NOK)</th>
-        <th>Solgt totalpris (NOK)</th>
-        <th>Peasy fee (NOK)</th>
+        <th>Marketing NOK</th>
+        <th>Solgt totalpris NOK</th>
+        <th>Peasy fee NOK</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
-  <canvas id="dailyChart" height="300"></canvas>
-  <canvas id="funnelChart" height="300"></canvas>
+  <canvas id="dailyChart"></canvas>
+  <canvas id="funnelChart"></canvas>
 
   <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWB8ejCX0vpPlUSmgnFlzhMskHA7UGmxIxj0uA_JiukkH1U1B6diVa3N1o5MFL1kiLhPzHSwSsy8DD/pub?output=csv";
+    // Use free CORS proxy to bypass Google's cross-origin block
+    const PROXY = "https://corsproxy.io/?";
+    const YOUR_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWB8ejCX0vpPlUSmgnFlzhMskHA7UGmxIxj0uA_JiukkH1U1B6diVa3N1o5MFL1kiLhPzHSwSsy8DD/pub?output=csv";
+    const CSV_URL = PROXY + encodeURIComponent(YOUR_CSV);
 
-    async function loadAndDisplay() {
+    async function load() {
       try {
-        const response = await fetch(CSV_URL + '?' + Date.now());
-        if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+        const res = await fetch(CSV_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status} – ${res.statusText}`);
 
-        const csv = await response.text();
+        const csv = await res.text();
         const parsed = Papa.parse(csv, {
           header: true,
           skipEmptyLines: true,
@@ -58,9 +60,9 @@
 
         const rows = parsed.data.filter(r => r.date && r.date.trim() && r.date.match(/^\d{4}-\d{2}-\d{2}$/));
 
-        document.getElementById('status').textContent = `Lastet ${rows.length} rader fra Google Sheet`;
+        document.getElementById('status').textContent = `Lastet ${rows.length} rader ✓`;
 
-        // Fill table
+        // Table
         const tbody = document.querySelector('#dataTable tbody');
         tbody.innerHTML = '';
         rows.forEach(r => {
@@ -88,9 +90,9 @@
           tf += Number(r.peasy_fee) || 0;
         });
 
-        const totalTr = document.createElement('tr');
-        totalTr.className = 'total';
-        totalTr.innerHTML = `
+        const total = document.createElement('tr');
+        total.className = 'total';
+        total.innerHTML = `
           <td><b>Total</b></td>
           <td>${tp}</td>
           <td>${tr}</td>
@@ -99,7 +101,7 @@
           <td>${tv.toLocaleString('nb-NO')} NOK</td>
           <td>${tf.toLocaleString('nb-NO')} NOK</td>
         `;
-        tbody.appendChild(totalTr);
+        tbody.appendChild(total);
 
         // Daily chart
         const dates = rows.map(r => r.date);
@@ -135,10 +137,10 @@
                 anchor: 'end',
                 align: 'top',
                 color: '#2c3e50',
-                font: { weight: 'bold', size: 14 },
+                font: { weight: 'bold' },
                 formatter: (v, ctx) => {
                   if (ctx.dataIndex === 0) return `${v}\n(100%)`;
-                  if (ctx.dataIndex === 1) return `${v}\n(${tp ? Math.round(tr/tp*100) : 0}%)`;
+                  if (ctx.dataIndex === 1) return `${v}\n(${tp ? Math.round((tr/tp)*100) : 0}%)`;
                   return `${v}\n(${tp ? (ts/tp*100).toFixed(1) : 0}%)`;
                 }
               }
@@ -150,12 +152,11 @@
 
       } catch (err) {
         console.error('Error:', err);
-        document.getElementById('status').textContent = 'Feil ved lasting: ' + err.message;
-        document.getElementById('status').className = 'error';
+        document.getElementById('status').innerHTML = `<span class="error">Feil: ${err.message}</span>`;
       }
     }
 
-    loadData();
+    load();
   </script>
 </body>
 </html>
