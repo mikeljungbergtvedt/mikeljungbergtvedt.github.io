@@ -1,207 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Peasy Daily Stats - Mike</title>
+  <title>Peasy Priset → Mottatt & Solgt</title>
   
-  <!-- PapaParse CDN - for reading CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
-  <!-- Optional: Chart.js if you want graphs later -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
-  
   <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 40px;
-      background-color: #f8f9fa;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-    }
-    table {
-      width: 100%;
-      max-width: 1100px;
-      margin: 20px auto;
-      border-collapse: collapse;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      background: white;
-    }
-    th, td {
-      padding: 12px 15px;
-      text-align: right;
-      border-bottom: 1px solid #ddd;
-    }
-    th {
-      background-color: #34495e;
-      color: white;
-      text-align: center;
-    }
-    td:first-child {
-      text-align: left;
-      font-weight: bold;
-    }
-    tr:hover {
-      background-color: #f1f1f1;
-    }
-    .totals {
-      font-weight: bold;
-      background-color: #ecf0f1;
-    }
-    .error {
-      color: red;
-      text-align: center;
-      font-weight: bold;
-      margin: 20px;
-    }
-    #loading {
-      text-align: center;
-      font-style: italic;
-      color: #777;
-      margin: 30px;
-    }
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f9fbfc; color: #2c3e50; line-height: 1.6; }
+    h1, h2 { text-align: center; color: #34495e; }
+    h1 { margin-bottom: 10px; }
+    .subtitle { text-align: center; font-size: 1.1em; color: #7f8c8d; }
+    .update { text-align: center; font-style: italic; color: #95a5a6; margin-bottom: 30px; }
+    table { width: 100%; max-width: 1200px; margin: 20px auto; border-collapse: collapse; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    th, td { padding: 14px 16px; text-align: right; border-bottom: 1px solid #e0e0e0; }
+    th { background: #34495e; color: white; }
+    td:first-child { text-align: left; font-weight: 600; }
+    tr:hover { background: #f5f9fc; }
+    .summary-table th { background: #2c3e50; }
+    .summary-table td { font-weight: bold; }
+    .conv { color: #27ae60; font-weight: bold; }
+    .loading, .error { text-align: center; padding: 30px; font-size: 1.1em; }
+    .error { color: #c0392b; }
+    .section { margin: 60px 0; }
   </style>
 </head>
 <body>
 
-  <h1>Peasy Daily Stats → Mottatt & Solgt</h1>
-  
-  <div id="loading">Loading data from CSV...</div>
-  <div id="error" class="error" style="display:none;"></div>
+  <h1>Peasy Priset → Mottatt & Solgt</h1>
+  <p class="subtitle">Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025</p>
+  <p class="subtitle"><a href="https://biladministrasjon.no/reports/peasy" target="_blank">Peasy Data</a></p>
+  <p class="update" id="last-update">Sist oppdatert: Laster data...</p>
 
-  <table id="stats-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Priced</th>
-        <th>Received</th>
-        <th>Sold</th>
-        <th>Marketing (NOK)</th>
-        <th>Sold Price (NOK)</th>
-        <th>Peasy Fee (NOK)</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody id="table-body">
-      <!-- Data rows inserted here by JavaScript -->
-    </tbody>
-    <tfoot>
-      <tr id="totals-row" class="totals" style="display:none;">
-        <td>Total</td>
-        <td></td>
-        <td></td>
-        <td id="total-sold">0</td>
-        <td></td>
-        <td id="total-revenue">0 NOK</td>
-        <td id="total-fee">0 NOK</td>
-        <td></td>
-      </tr>
-    </tfoot>
-  </table>
+  <div class="loading" id="loading">Laster daglig data fra CSV...</div>
+  <div class="error" id="error" style="display:none;"></div>
 
-  <!-- Optional canvas for charts - uncomment and add logic below if needed -->
-  <!-- <canvas id="salesChart" width="900" height="400" style="margin: 40px auto; display:block;"></canvas> -->
+  <div class="section">
+    <h2>Oversikt – Aggregert</h2>
+    <table class="summary-table" id="summary-table">
+      <thead>
+        <tr>
+          <th>Periode</th>
+          <th>Priset</th>
+          <th>Mottatt</th>
+          <th>Priset → Mottatt</th>
+          <th>Solgt</th>
+          <th>Priset → Solgt</th>
+          <th>Markedsføringskostnad per solgt bil (NOK)</th>
+        </tr>
+      </thead>
+      <tbody id="summary-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Total konvertering – Priset → Mottatt → Solgt</h2>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Total Priset</th>
+          <th>Total Mottatt</th>
+          <th>Total Solgt</th>
+          <th>Priset → Mottatt</th>
+          <th>Mottatt → Solgt</th>
+          <th>Priset → Solgt</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="total-conversion">
+          <td id="total-priced">0</td>
+          <td id="total-received">0</td>
+          <td id="total-sold">0</td>
+          <td id="conv-priced-received" class="conv">0%</td>
+          <td id="conv-received-sold" class="conv">0%</td>
+          <td id="conv-priced-sold" class="conv">0%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Daglige detaljer (sortert nyest først)</h2>
+    <table id="daily-table">
+      <thead>
+        <tr>
+          <th>Dato</th>
+          <th>Priset</th>
+          <th>Mottatt</th>
+          <th>Solgt</th>
+          <th>Markedsføring (NOK)</th>
+          <th>Solgt pris total (NOK)</th>
+          <th>Peasy gebyr (NOK)</th>
+          <th>Notater</th>
+        </tr>
+      </thead>
+      <tbody id="daily-body"></tbody>
+    </table>
+  </div>
 
   <script>
-    const csvFile = "Peasy Daily Stats - Ark 1.csv";  // Must match exact filename in repo root
+    const csvFile = "Peasy Daily Stats - Ark 1.csv";
 
     Papa.parse(csvFile, {
       download: true,
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,           // Converts numbers automatically
-      transformHeader: function(h) {
-        // Clean up header names if needed (your file has some odd spacing)
-        return h.trim().toLowerCase().replace(/\s+/g, '_');
-      },
+      dynamicTyping: true,
+      transformHeader: h => h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
       complete: function(results) {
         document.getElementById('loading').style.display = 'none';
 
-        const data = results.data
-          .filter(row => row.date)                    // Remove invalid rows
-          .sort((a, b) => new Date(b.date) - new Date(a.date));  // Newest first
+        let data = results.data
+          .filter(row => row.date && typeof row.date === 'string' && row.date.match(/\d{4}-\d{2}-\d{2}/))
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (data.length === 0) {
-          showError("No valid data rows found in CSV.");
+          showError("Ingen gyldige data i CSV-filen.");
           return;
         }
 
-        console.log("Loaded", data.length, "rows");
+        // Update last update (use newest date)
+        const newestDate = data[0].date;
+        document.getElementById('last-update').textContent = `Sist oppdatert: ${newestDate}`;
 
-        const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '';  // Clear any old content
-
-        let totalSold = 0;
-        let totalRevenue = 0;
-        let totalFee = 0;
-
+        // Daily table
+        const dailyBody = document.getElementById('daily-body');
+        dailyBody.innerHTML = '';
         data.forEach(row => {
           const tr = document.createElement('tr');
-
-          const sold = Number(row.sold) || 0;
-          const price = Number(row.sold_price) || 0;
-          const fee = Number(row.peasy_fee) || 0;
-
-          totalSold += sold;
-          totalRevenue += price;
-          totalFee += fee;
-
           tr.innerHTML = `
-            <td>${row.date || '-'}</td>
+            <td>${row.date}</td>
             <td>${row.priced || 0}</td>
             <td>${row.received || 0}</td>
-            <td>${sold}</td>
+            <td>${row.sold || 0}</td>
             <td>${Number(row.marketing_nok || 0).toLocaleString()}</td>
-            <td>${price.toLocaleString()} NOK</td>
-            <td>${fee.toLocaleString()} NOK</td>
-            <td style="text-align:left; max-width:300px;">${row.notes || row['notes_(opt.)'] || '-'}</td>
+            <td>${Number(row.sold_price || 0).toLocaleString()} NOK</td>
+            <td>${Number(row.peasy_fee || 0).toLocaleString()} NOK</td>
+            <td style="text-align:left;">${row.notes_opt_ || row.notes || '-'}</td>
           `;
-          tbody.appendChild(tr);
+          dailyBody.appendChild(tr);
         });
 
-        // Show totals
-        document.getElementById('total-sold').textContent = totalSold;
-        document.getElementById('total-revenue').textContent = totalRevenue.toLocaleString() + ' NOK';
-        document.getElementById('total-fee').textContent = totalFee.toLocaleString() + ' NOK';
-        document.getElementById('totals-row').style.display = 'table-row';
+        // Aggregations
+        const today = new Date(newestDate);
+        const msPerDay = 24 * 60 * 60 * 1000;
 
-        // Optional: Add Chart.js example (uncomment CDN above too)
-        /*
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.map(r => r.date),
-            datasets: [{
-              label: 'Sold Price (NOK)',
-              data: data.map(r => Number(r.sold_price) || 0),
-              borderColor: '#3498db',
-              tension: 0.1
-            }, {
-              label: 'Peasy Fee (NOK)',
-              data: data.map(r => Number(r.peasy_fee) || 0),
-              borderColor: '#e74c3c',
-              tension: 0.1
-            }]
-          },
-          options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        function daysAgo(n) { return new Date(today.getTime() - n * msPerDay).toISOString().split('T')[0]; }
+
+        const last30Start = daysAgo(29);  // inclusive 30 days
+        const last60Start = daysAgo(59);
+
+        let sumP = 0, sumR = 0, sumS = 0, sumM = 0, sumPrice = 0;
+        let sumP30 = 0, sumR30 = 0, sumS30 = 0, sumM30 = 0;
+        let sumP60 = 0, sumR60 = 0, sumS60 = 0, sumM60 = 0;
+        let lastDayP = 0, lastDayR = 0, lastDayS = 0, lastDayM = 0;
+
+        data.forEach(row => {
+          const d = row.date;
+          const p = Number(row.priced) || 0;
+          const r = Number(row.received) || 0;
+          const s = Number(row.sold) || 0;
+          const m = Number(row.marketing_nok) || 0;
+          const price = Number(row.sold_price) || 0;
+
+          sumP += p; sumR += r; sumS += s; sumM += m; sumPrice += price;
+
+          if (d >= last30Start) { sumP30 += p; sumR30 += r; sumS30 += s; sumM30 += m; }
+          if (d >= last60Start) { sumP60 += p; sumR60 += r; sumS60 += s; sumM60 += m; }
+          if (d === newestDate) { lastDayP = p; lastDayR = r; lastDayS = s; lastDayM = m; }
         });
-        */
+
+        const mkPerSoldTotal = sumS > 0 ? (sumM / sumS).toFixed(0) : 0;
+        const mkPerSold30   = sumS30 > 0 ? (sumM30 / sumS30).toFixed(0) : 0;
+        const mkPerSold60   = sumS60 > 0 ? (sumM60 / sumS60).toFixed(0) : 0;
+        const mkPerSoldLast = lastDayS > 0 ? (lastDayM / lastDayS).toFixed(0) : 0;
+
+        const pct = (a, b) => b > 0 ? ((a / b) * 100).toFixed(1) + '%' : '0%';
+
+        const summaryBody = document.getElementById('summary-body');
+        summaryBody.innerHTML = `
+          <tr><td>Siste dag (${newestDate})</td><td>${lastDayP}</td><td>${lastDayR}</td><td>${pct(lastDayR, lastDayP)}</td><td>${lastDayS}</td><td>${pct(lastDayS, lastDayP)}</td><td>${mkPerSoldLast} NOK</td></tr>
+          <tr><td>Siste 30 dager</td><td>${sumP30}</td><td>${sumR30}</td><td>${pct(sumR30, sumP30)}</td><td>${sumS30}</td><td>${pct(sumS30, sumP30)}</td><td>${mkPerSold30} NOK</td></tr>
+          <tr><td>Siste 60 dager</td><td>${sumP60}</td><td>${sumR60}</td><td>${pct(sumR60, sumP60)}</td><td>${sumS60}</td><td>${pct(sumS60, sumP60)}</td><td>${mkPerSold60} NOK</td></tr>
+          <tr><td>Totalt (valgt periode)</td><td>${sumP}</td><td>${sumR}</td><td>${pct(sumR, sumP)}</td><td>${sumS}</td><td>${pct(sumS, sumP)}</td><td>${mkPerSoldTotal} NOK</td></tr>
+        `;
+
+        // Total conversion
+        document.getElementById('total-priced').textContent = sumP;
+        document.getElementById('total-received').textContent = sumR;
+        document.getElementById('total-sold').textContent = sumS;
+        document.getElementById('conv-priced-received').textContent = pct(sumR, sumP);
+        document.getElementById('conv-received-sold').textContent = pct(sumS, sumR);
+        document.getElementById('conv-priced-sold').textContent = pct(sumS, sumP);
       },
       error: function(err) {
         document.getElementById('loading').style.display = 'none';
-        showError("Failed to load CSV: " + (err.message || "Check file name and repo access."));
-        console.error("PapaParse error:", err);
+        document.getElementById('error').textContent = "Kunne ikke laste CSV: " + (err.message || "Sjekk filnavn og tilgang.");
+        document.getElementById('error').style.display = 'block';
+        console.error(err);
       }
     });
 
     function showError(msg) {
-      const errDiv = document.getElementById('error');
-      errDiv.textContent = msg;
-      errDiv.style.display = 'block';
+      document.getElementById('error').textContent = msg;
+      document.getElementById('error').style.display = 'block';
     }
   </script>
 
