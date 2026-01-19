@@ -13,10 +13,10 @@ import jinja2
 # CONFIG
 # ────────────────────────────────────────────────
 
-FILE_PATH = "report.xlsx"               # change if needed
+FILE_PATH = "report.xlsx"               # your Excel file in root
 SHEET_NAME = "Sheet1"
 
-TODAY = datetime(2026, 1, 19)           # fixed for your data snapshot
+TODAY = datetime(2026, 1, 19)           # fixed for your data snapshot - update if needed
 
 DATE_COLUMNS = ["SD mottatt på", "Mottatt", "Solgt på"]
 VALUE_COLUMNS = ["Bud", "Avgift"]
@@ -24,7 +24,7 @@ VALUE_COLUMNS = ["Bud", "Avgift"]
 PERIODS = {
     "Last 30 days": TODAY - timedelta(days=30),
     "Last 60 days": TODAY - timedelta(days=60),
-    "Total":        None                    # means no filter
+    "Total":        None                    # no start date = entire period
 }
 
 # ────────────────────────────────────────────────
@@ -62,14 +62,14 @@ for period_name, start_date in PERIODS.items():
     if start_date is None:
         period_df = df
     else:
-        period_df = df[df["Solgt på"] >= start_date]   # example: filter on sold date
-        # You can change filter column here ↑ (e.g. "Mottatt", "SD mottatt på")
+        period_df = df[df["Solgt på"] >= start_date]   # filter example on sold date
+        # Change filter column here if needed (e.g. "Mottatt", "SD mottatt på")
 
     row = {
         "Period": period_name,
-        "SD mottatt count": df[col].notna().sum() if period_name == "Total" else period_df["SD mottatt på"].notna().sum(),
-        "Mottatt count":    df["Mottatt"].notna().sum() if period_name == "Total" else period_df["Mottatt"].notna().sum(),
-        "Sold count":       df["Solgt på"].notna().sum() if period_name == "Total" else period_df["Solgt på"].notna().sum(),
+        "SD mottatt count": period_df["SD mottatt på"].notna().sum(),
+        "Mottatt count":    period_df["Mottatt"].notna().sum(),
+        "Sold count":       period_df["Solgt på"].notna().sum(),
     }
 
     sold = period_df[period_df["Solgt på"].notna()]
@@ -100,28 +100,36 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts bar chart
+# Chart 1: Counts bar chart - FIXED VERSION
 fig1, ax1 = plt.subplots(figsize=(9, 5))
-x = summary_df["Period"]
-width = 0.25
-ax1.bar(x, summary_df["SD mottatt count"], width, label="SD mottatt")
-ax1.bar(x + width/3*1, summary_df["Mottatt count"],    width, label="Mottatt")
-ax1.bar(x + width/3*2, summary_df["Sold count"],       width, label="Sold")
+
+# Use numeric positions instead of string + float
+positions = range(len(summary_df))
+bar_width = 0.25
+
+ax1.bar([p - bar_width for p in positions], summary_df["SD mottatt count"], bar_width, label="SD mottatt")
+ax1.bar(positions, summary_df["Mottatt count"], bar_width, label="Mottatt")
+ax1.bar([p + bar_width for p in positions], summary_df["Sold count"], bar_width, label="Sold")
+
+ax1.set_xticks(positions)
+ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='right')
 ax1.set_title("Counts by Period")
 ax1.set_ylabel("Number of cars")
 ax1.legend()
-plt.xticks(rotation=15)
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Average values line chart
+# Chart 2: Average values line chart - FIXED VERSION
 fig2, ax2 = plt.subplots(figsize=(9, 5))
-ax2.plot(summary_df["Period"], summary_df["Avg Bud per sold car"],    marker="o", label="Avg Bud")
-ax2.plot(summary_df["Period"], summary_df["Avg Avgift per sold car"], marker="s", label="Avg Commission")
+
+ax2.plot(range(len(summary_df)), summary_df["Avg Bud per sold car"], marker="o", label="Avg Bud")
+ax2.plot(range(len(summary_df)), summary_df["Avg Avgift per sold car"], marker="s", label="Avg Commission")
+
+ax2.set_xticks(range(len(summary_df)))
+ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='right')
 ax2.set_title("Average Values per Sold Car")
 ax2.set_ylabel("NOK")
 ax2.legend()
-plt.xticks(rotation=15)
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
@@ -210,8 +218,7 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
-# Save to file
-Path("report.html").write_text(html_content, encoding="utf-8")
+# Save to file (matches your GitHub Pages page)
+Path("test.html").write_text(html_content, encoding="utf-8")
 
-print("Report saved as report.html")
-print("Open the file in a browser to view table + charts.")
+print("Report saved as test.html")
