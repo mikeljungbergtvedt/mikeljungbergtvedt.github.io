@@ -8,10 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-  <!-- Add PapaParse for CSV parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
-    /* Your original styles unchanged */
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px 10px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
@@ -112,11 +110,8 @@
       <input type="number" id="soldCount" min="0" readonly>
       <label for="marketingCost" id="marketingLabel">Markedsføringskostnad (per dag)</label>
       <input type="number" id="marketingCost" min="0" readonly>
-      <!-- Peasy Data link -->
       <div class="peasy-link">
-        <a href="https://biladministrasjon.no/reports/peasy" target="_blank" rel="noopener noreferrer">
-          Peasy Data
-        </a>
+        <a href="https://biladministrasjon.no/reports/peasy" target="_blank" rel="noopener noreferrer">Peasy Data</a>
       </div>
     </div>
     <canvas id="dailyChart"></canvas>
@@ -179,21 +174,362 @@
 
   <script>
     const translations = {
-      no: { /* your original Norwegian translations unchanged */ },
-      en: { /* your original English translations unchanged */ }
+      no: {
+        title: "Peasy Priset → Mottatt & Solgt",
+        subtitle: "Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025",
+        monthLabel: "Vis kun måned:",
+        toggleInputBtn: "Skjul / Vis input",
+        dateLabel: "Dato",
+        todayBtn: "I dag",
+        prisetLabel: "Priset (SD mottatt på)",
+        receivedLabel: "Mottatt på lager",
+        soldLabel: "Solgte biler",
+        marketingLabel: "Markedsføringskostnad (per dag)",
+        saveBtn: "Legg til / oppdater",
+        periodHeader: "Periode",
+        prisetHeader: "Priset",
+        receivedHeader: "Mottatt",
+        ratioHeader: "Priset → Mottatt",
+        soldHeader: "Solgt",
+        prisetToSoldHeader: "Priset → Solgt",
+        marketingHeader: "Markedsføringskostnad per solgt bil",
+        lastDayLabel: "Siste dag med data",
+        last30Label: "Siste 30 dager",
+        last60Label: "Siste 60 dager",
+        totalLabel: "Totalt (valgt periode)",
+        lastUpdate: "Sist oppdatert: "
+      },
+      en: {
+        title: "Peasy Priced → Received & Sold",
+        subtitle: "Number of cars priced (SD received), received and sold per day – from July 2025",
+        monthLabel: "Show month only:",
+        toggleInputBtn: "Hide / Show input",
+        dateLabel: "Date",
+        todayBtn: "Today",
+        prisetLabel: "Priced (SD received on)",
+        receivedLabel: "Received at warehouse",
+        soldLabel: "Sold cars",
+        marketingLabel: "Marketing cost (per day)",
+        saveBtn: "Add / Update",
+        periodHeader: "Period",
+        prisetHeader: "Priced",
+        receivedHeader: "Received",
+        ratioHeader: "Priced → Received",
+        soldHeader: "Sold",
+        prisetToSoldHeader: "Priced → Sold",
+        marketingHeader: "Marketing cost per sold car",
+        lastDayLabel: "Last day with data",
+        last30Label: "Last 30 days",
+        last60Label: "Last 60 days",
+        totalLabel: "Total (selected period)",
+        lastUpdate: "Last updated: "
+      }
     };
-    // ... (keep your translations object as-is)
 
     let currentLang = 'no';
     let chart, funnelChart;
-    let pricedData = {}, receivedData = {}, soldData = {}, marketingData = {};
     let allPriced = {}, allReceived = {}, allSold = {}, allMarketing = {};
     let selectedMonth = 'all';
     const START_DATE = '2025-07-01';
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY_DEFAULT = 1000;
 
-    // Fetch and parse CSV
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.getElementById(`lang-${lang}`).classList.add('active');
+      const t = translations[lang];
+      Object.keys(t).forEach(key => {
+        const el = document.getElementById(key === 'title' || key === 'subtitle' ? key : key + (key.includes('Label') || key.includes('Header') ? '' : ''));
+        if (el) el.textContent = t[key];
+      });
+      document.getElementById('toggleInputBtn').textContent = t.toggleInputBtn;
+      updateStatsTable();
+      renderChart();
+      renderFunnelChart();
+    }
+
+    function showNotification(text) {
+      const notif = document.getElementById('notification');
+      notif.textContent = text;
+      notif.style.opacity = 1;
+      setTimeout(() => notif.style.opacity = 0, 3000);
+    }
+
+    function populateMonthFilter() {
+      const select = document.getElementById('monthFilter');
+      select.innerHTML = '<option value="all">Alle måneder</option>';
+      const months = new Set();
+      Object.keys(allPriced).forEach(date => {
+        if (date >= START_DATE) months.add(date.slice(0,7));
+      });
+      [...months].sort().forEach(m => {
+        const option = document.createElement('option');
+        option.value = m;
+        const [y, mo] = m.split('-');
+        option.textContent = new Date(y, parseInt(mo)-1).toLocaleString(currentLang === 'no' ? 'nb-NO' : 'en-US', { month: 'long', year: 'numeric' });
+        select.appendChild(option);
+      });
+    }
+
+    function loadDataForDate() {
+      const date = document.getElementById('selectedDate').value;
+      if (!date) return;
+      document.getElementById('dailyCount').value = allPriced[date] ?? '';
+      document.getElementById('receivedCount').value = allReceived[date] ?? '';
+      document.getElementById('soldCount').value = allSold[date] ?? '';
+      document.getElementById('marketingCost').value = allMarketing[date] ?? '';
+      showNotification(`Data for ${date} lastet fra CSV`);
+    }
+
+    document.getElementById('selectedDate').addEventListener('change', loadDataForDate);
+    document.getElementById('todayBtn').addEventListener('click', () => {
+      document.getElementById('selectedDate').valueAsDate = new Date();
+      loadDataForDate();
+    });
+
+    function toggleInputArea() {
+      const area = document.getElementById('inputArea');
+      const btn = document.getElementById('toggleInputBtn');
+      area.classList.toggle('hidden');
+      btn.textContent = area.classList.contains('hidden') ? translations[currentLang].toggleInputBtn.replace('Skjul', 'Vis').replace('Hide', 'Show') : translations[currentLang].toggleInputBtn.replace('Vis', 'Skjul').replace('Show', 'Hide');
+    }
+    document.getElementById('toggleInputBtn').addEventListener('click', toggleInputArea);
+
+    document.getElementById('monthFilter').addEventListener('change', e => {
+      selectedMonth = e.target.value;
+      renderChart();
+      updateStatsTable();
+      renderFunnelChart();
+    });
+
+    function calculateTrendLine(dates, data, startDateStr) {
+      const startIndex = dates.findIndex(d => d >= startDateStr);
+      if (startIndex === -1) return new Array(dates.length).fill(null);
+      const x = [], y = [];
+      for (let i = startIndex; i < dates.length; i++) {
+        const val = data[i];
+        if (val != null && !isNaN(val)) { x.push(i); y.push(val); }
+      }
+      if (x.length < 2) return new Array(dates.length).fill(null);
+      const n = x.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += x[i]; sumY += y[i]; sumXY += x[i] * y[i]; sumX2 += x[i] * x[i];
+      }
+      const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      const b = (sumY - m * sumX) / n;
+      const trend = new Array(dates.length).fill(null);
+      for (let i = startIndex; i < dates.length; i++) trend[i] = m * i + b;
+      return trend;
+    }
+
+    function externalTooltipHandler(context) {
+      const { chart, tooltip } = context;
+      let tooltipEl = chart.canvas.parentNode.querySelector('.custom-tooltip');
+      if (!tooltipEl) {
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'custom-tooltip';
+        chart.canvas.parentNode.appendChild(tooltipEl);
+      }
+      if (tooltip.opacity === 0) {
+        tooltipEl.style.opacity = 0;
+        return;
+      }
+      let innerHtml = '';
+      if (tooltip.title?.length) innerHtml += `<div style="font-size:18px; margin-bottom:6px;">${tooltip.title[0]}</div>`;
+      tooltip.body?.forEach((b, i) => {
+        const colors = tooltip.labelColors[i];
+        innerHtml += `<div><span style="background:${colors.backgroundColor};border:2px solid ${colors.borderColor};width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:8px;"></span>${b.lines.join(' ')}</div>`;
+      });
+      tooltipEl.innerHTML = innerHtml || 'Ingen data';
+      tooltipEl.style.opacity = 1;
+      // Positioning logic (your original)
+      const rect = chart.canvas.getBoundingClientRect();
+      let top = tooltip.caretY + rect.top - tooltipEl.offsetHeight - 15;
+      let left = tooltip.caretX + rect.left - tooltipEl.offsetWidth / 2;
+      if (top < rect.top + 10) top = rect.top + 10;
+      if (left < rect.left + 10) left = rect.left + 10;
+      if (left + tooltipEl.offsetWidth > rect.right - 10) left = rect.right - tooltipEl.offsetWidth - 10;
+      tooltipEl.style.top = top + 'px';
+      tooltipEl.style.left = left + 'px';
+    }
+
+    function renderChart() {
+      const dates = [];
+      let cur = new Date(START_DATE);
+      const end = new Date();
+      while (cur <= end) {
+        const d = cur.toISOString().split('T')[0];
+        if (selectedMonth === 'all' || d.startsWith(selectedMonth)) dates.push(d);
+        cur.setDate(cur.getDate() + 1);
+      }
+      const prisetVals = dates.map(d => allPriced[d] || 0);
+      const soldVals = dates.map(d => allSold[d] || 0);
+      const trendVals = calculateTrendLine(dates, prisetVals, '2025-11-01');
+      const ctx = document.getElementById('dailyChart').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: translations[currentLang].prisetHeader, data: prisetVals, backgroundColor: '#004225', borderColor: '#004225', borderWidth: 1 },
+            { label: translations[currentLang].soldHeader, data: soldVals, backgroundColor: '#ff4444', borderColor: '#ff4444', borderWidth: 1 },
+            { label: translations[currentLang].prisetHeader + ' Trend', type: 'line', data: trendVals, borderColor: '#e6b800', borderWidth: 4, pointRadius: 0, fill: false, tension: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: window.innerWidth < 768 ? 'bottom' : 'top' },
+            tooltip: { enabled: false, external: externalTooltipHandler, mode: 'index', intersect: false }
+          },
+          scales: {
+            x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'dd.MM' } }, ticks: { maxRotation: 45, minRotation: 45 } },
+            y: { beginAtZero: true, suggestedMax: 20 }
+          }
+        }
+      });
+    }
+
+    function renderFunnelChart() {
+      let totalP = 0, totalR = 0, totalS = 0;
+      Object.keys(allPriced).forEach(d => {
+        if (d >= START_DATE) {
+          totalP += allPriced[d] || 0;
+          totalR += allReceived[d] || 0;
+          totalS += allSold[d] || 0;
+        }
+      });
+      const ctx = document.getElementById('funnelChart').getContext('2d');
+      if (funnelChart) funnelChart.destroy();
+      funnelChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [translations[currentLang].prisetHeader, translations[currentLang].receivedHeader, translations[currentLang].soldHeader],
+          datasets: [{
+            data: [totalP, totalR, totalS],
+            backgroundColor: ['#004225', '#8fcbbc', '#ffcc33'],
+            borderColor: '#004225',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#004225',
+              font: { weight: 'bold', size: 16 },
+              formatter: (value, ctx) => {
+                if (ctx.dataIndex === 0) return `${value}\n(100%)`;
+                if (ctx.dataIndex === 1) return `${value}\n(${totalP > 0 ? Math.round(totalR / totalP * 100) : 0}%)`;
+                return `${value}\n(${totalP > 0 ? (totalS / totalP * 100).toFixed(1) : 0}%)`;
+              }
+            }
+          },
+          scales: { y: { beginAtZero: true, suggestedMax: Math.max(800, totalP * 1.1 || 800) } }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function updateStatsTable() {
+      const sortedDates = Object.keys(allPriced).filter(d => d >= START_DATE && (selectedMonth === 'all' || d.startsWith(selectedMonth))).sort();
+      const newestDate = sortedDates[sortedDates.length - 1] || '—';
+      document.getElementById('lastUpdate').textContent = translations[currentLang].lastUpdate + (newestDate !== '—' ? new Date(newestDate).toLocaleDateString(currentLang === 'no' ? 'nb-NO' : 'en-US') : '—');
+
+      const isSingleMonth = selectedMonth !== 'all';
+      document.getElementById('rowLastDay').style.display = isSingleMonth ? 'none' : '';
+      document.getElementById('row30days').style.display = isSingleMonth ? 'none' : '';
+      document.getElementById('row60days').style.display = isSingleMonth ? 'none' : '';
+
+      // Last day
+      if (!isSingleMonth) {
+        let lp = 0, lr = 0, ls = 0, lm = 0;
+        for (let i = sortedDates.length - 1; i >= 0; i--) {
+          const d = sortedDates[i];
+          if (allPriced[d] || allReceived[d] || allSold[d] || allMarketing[d]) {
+            lp = allPriced[d];
+            lr = allReceived[d];
+            ls = allSold[d];
+            lm = allMarketing[d];
+            break;
+          }
+        }
+        document.getElementById('lastRegistered').textContent = lp;
+        document.getElementById('lastReceived').textContent = lr;
+        document.getElementById('lastRatio').textContent = lp > 0 ? Math.round((lr / lp) * 100) + '%' : '—';
+        document.getElementById('lastSold').textContent = ls;
+        document.getElementById('lastPricedToSold').textContent = lp > 0 ? ((ls / lp) * 100).toFixed(1) + '%' : '—';
+        document.getElementById('lastMarketingCost').textContent = ls > 0 ? Math.round(lm / ls) + ' NOK' : '—';
+      }
+
+      // Period stats function
+      function getPeriodStats(days) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+        let sp = 0, sr = 0, ss = 0, sm = 0;
+        sortedDates.forEach(d => {
+          if (d >= cutoffStr) {
+            sp += allPriced[d] || 0;
+            sr += allReceived[d] || 0;
+            ss += allSold[d] || 0;
+            sm += allMarketing[d] || 0;
+          }
+        });
+        if (sp === 0) return {p:'—',r:'—',ratio:'—',s:0,mkt:'—',pts:'—'};
+        return {
+          p: sp,
+          r: sr,
+          ratio: Math.round((sr / sp) * 100) + '%',
+          s: ss,
+          mkt: ss > 0 ? Math.round(sm / ss) + ' NOK' : '—',
+          pts: sp > 0 ? ((ss / sp) * 100).toFixed(1) + '%' : '—'
+        };
+      }
+
+      if (!isSingleMonth) {
+        const s30 = getPeriodStats(30);
+        Object.assign(document.getElementById('sumRegistered30'), {textContent: s30.p});
+        document.getElementById('sumReceived30').textContent = s30.r;
+        document.getElementById('ratio30').textContent = s30.ratio;
+        document.getElementById('sold30').textContent = s30.s;
+        document.getElementById('ratioPricedSold30').textContent = s30.pts;
+        document.getElementById('marketing30').textContent = s30.mkt;
+
+        const s60 = getPeriodStats(60);
+        document.getElementById('sumRegistered60').textContent = s60.p;
+        document.getElementById('sumReceived60').textContent = s60.r;
+        document.getElementById('ratio60').textContent = s60.ratio;
+        document.getElementById('sold60').textContent = s60.s;
+        document.getElementById('ratioPricedSold60').textContent = s60.pts;
+        document.getElementById('marketing60').textContent = s60.mkt;
+      }
+
+      // Total
+      let tp = 0, tr = 0, ts = 0, tm = 0;
+      sortedDates.forEach(d => {
+        tp += allPriced[d] || 0;
+        tr += allReceived[d] || 0;
+        ts += allSold[d] || 0;
+        tm += allMarketing[d] || 0;
+      });
+      document.getElementById('totalPriset').textContent = tp;
+      document.getElementById('totalMottatt').textContent = tr;
+      document.getElementById('totalRatio').textContent = tp > 0 ? Math.round((tr / tp) * 100) + '%' : '—';
+      document.getElementById('totalSold').textContent = ts;
+      document.getElementById('totalPricedToSold').textContent = tp > 0 ? ((ts / tp) * 100).toFixed(1) + '%' : '—';
+      document.getElementById('totalMarketingCost').textContent = ts > 0 ? Math.round(tm / ts) + ' NOK' : '—';
+    }
+
+    // Load CSV
     Papa.parse("Peasy Daily Stats - Ark 1.csv", {
       download: true,
       header: true,
@@ -201,62 +537,45 @@
       dynamicTyping: true,
       transformHeader: h => h.trim().toLowerCase().replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, '_'),
       complete: function(results) {
-        if (results.errors.length > 0) {
-          console.error("CSV parse errors:", results.errors);
-          showNotification("Feil ved lasting av CSV-data");
+        if (results.errors.length) {
+          console.error("CSV errors:", results.errors);
+          showNotification("Feil ved lasting av CSV");
           return;
         }
-
         results.data.forEach(row => {
           const date = row.date;
           if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-
-          allPriced[date]    = Number(row.priced) || 0;
-          allReceived[date]  = Number(row.received) || 0;
-          allSold[date]      = Number(row.sold) || 0;
+          allPriced[date] = Number(row.priced) || 0;
+          allReceived[date] = Number(row.received) || 0;
+          allSold[date] = Number(row.sold) || 0;
           allMarketing[date] = Number(row.marketing_nok) || MARKETING_DAILY_DEFAULT;
         });
 
-        // Fill missing marketing days with default (optional, if CSV misses days)
-        let current = new Date(MARKETING_START);
+        // Fill missing marketing
+        let cur = new Date(MARKETING_START);
         const today = new Date();
-        while (current <= today) {
-          const dateStr = current.toISOString().split('T')[0];
-          if (!(dateStr in allMarketing)) {
-            allMarketing[dateStr] = MARKETING_DAILY_DEFAULT;
-          }
-          current.setDate(current.getDate() + 1);
+        while (cur <= today) {
+          const ds = cur.toISOString().split('T')[0];
+          if (!(ds in allMarketing)) allMarketing[ds] = MARKETING_DAILY_DEFAULT;
+          cur.setDate(cur.getDate() + 1);
         }
 
-        // Now initialize the rest
         setLanguage('no');
         populateMonthFilter();
-        renderChart();
+        document.getElementById('selectedDate').valueAsDate = today;
+        loadDataForDate();
         updateStatsTable();
+        renderChart();
         renderFunnelChart();
-        document.getElementById('lastUpdate').textContent = "Sist oppdatert: " + (Object.keys(allPriced).sort().pop() || "—");
       },
       error: function(err) {
-        console.error("CSV load failed:", err);
-        showNotification("Kunne ikke laste CSV – sjekk konsoll (F12)");
+        console.error("CSV fetch error:", err);
+        showNotification("Kunne ikke laste CSV – sjekk filnavn eller konsoll");
       }
     });
 
-    // Keep your setLanguage, populateMonthFilter, loadDataForDate, toggleInputArea, showNotification, calculateTrendLine functions mostly unchanged
-    // But remove localStorage and saving logic from addCountForDate (or disable the button)
-
-    document.getElementById('saveBtn').disabled = true;
-    document.getElementById('saveBtn').textContent = "Les-only (CSV kilde)";
-
-    // Your renderChart, renderFunnelChart, updateStatsTable functions remain almost identical,
-    // they now use allPriced / allReceived / allSold / allMarketing instead of the old objects
-
-    // Example adjustment in updateStatsTable (replace all references):
-    // Instead of allPriced[date] → allPriced[date]
-    // The rest stays the same
-
-    // Keep the rest of your script (event listeners, etc.) as-is
-
+    // Disable save
+    document.getElementById('saveBtn')?.setAttribute('disabled', true);
   </script>
 </body>
 </html>
