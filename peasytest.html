@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peasy Test - Google Sheet Data</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f4f0; color: #004225; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #004225; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    th { background: #e8f5e9; }
+    .total { font-weight: bold; background: #d4edda; }
+    canvas { margin: 30px auto; display: block; max-width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Peasy Test - Data fra Google Sheet</h1>
+    <p id="status">Laster data...</p>
+
+    <table id="statsTable">
+      <thead>
+        <tr>
+          <th>Dato</th>
+          <th>Priset</th>
+          <th>Mottatt</th>
+          <th>Solgt</th>
+          <th>Marketing (NOK)</th>
+          <th>Solgt totalpris (NOK)</th>
+          <th>Peasy fee (NOK)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <canvas id="chart"></canvas>
+  </div>
+
+  <script>
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWB8ejCX0vpPlUSmgnFlzhMskHA7UGmxIxj0uA_JiukkH1U1B6diVa3N1o5MFL1kiLhPzHSwSsy8DD/pub?output=csv";
+
+    async function loadAndShow() {
+      try {
+        const response = await fetch(CSV_URL + '?' + Date.now());
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+        const csv = await response.text();
+        const parsed = Papa.parse(csv, {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: true
+        });
+
+        const rows = parsed.data.filter(r => r.date && r.date.trim());
+
+        document.getElementById('status').textContent = `Lastet ${rows.length} rader fra Google Sheet`;
+
+        // Fill table
+        const tbody = document.querySelector('#statsTable tbody');
+        tbody.innerHTML = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${r.date}</td>
+            <td>${r.priced || 0}</td>
+            <td>${r.received || 0}</td>
+            <td>${r.sold || 0}</td>
+            <td>${r.marketing_nok || 0}</td>
+            <td>${r.sold_price || 0}</td>
+            <td>${r.peasy_fee || 0}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Simple total row
+        let tp = rows.reduce((sum, r) => sum + (Number(r.priced) || 0), 0);
+        let tr = rows.reduce((sum, r) => sum + (Number(r.received) || 0), 0);
+        let ts = rows.reduce((sum, r) => sum + (Number(r.sold) || 0), 0);
+        let tm = rows.reduce((sum, r) => sum + (Number(r.marketing_nok) || 0), 0);
+        let tv = rows.reduce((sum, r) => sum + (Number(r.sold_price) || 0), 0);
+        let tf = rows.reduce((sum, r) => sum + (Number(r.peasy_fee) || 0), 0);
+
+        const totalTr = document.createElement('tr');
+        totalTr.className = 'total';
+        totalTr.innerHTML = `
+          <td><b>Total</b></td>
+          <td>${tp}</td>
+          <td>${tr}</td>
+          <td>${ts}</td>
+          <td>${tm}</td>
+          <td>${tv.toLocaleString('nb-NO')} NOK</td>
+          <td>${tf.toLocaleString('nb-NO')} NOK</td>
+        `;
+        tbody.appendChild(totalTr);
+
+        // Simple chart
+        const dates = rows.map(r => r.date);
+        const priced = rows.map(r => Number(r.priced) || 0);
+        const sold = rows.map(r => Number(r.sold) || 0);
+
+        new Chart(document.getElementById('chart'), {
+          type: 'bar',
+          data: {
+            labels: dates,
+            datasets: [
+              { label: 'Priset', data: priced, backgroundColor: '#004225' },
+              { label: 'Solgt', data: sold, backgroundColor: '#ff4444' }
+            ]
+          },
+          options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        });
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').textContent = 'Feil ved lasting: ' + err.message;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
