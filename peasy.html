@@ -63,7 +63,6 @@
       <button class="toggle-button" id="toggleInputBtn">Vis input</button>
     </div>
 
-    <!-- Input area (kept as optional) -->
     <div class="input-area hidden" id="inputArea">
       <label for="selectedDate" id="dateLabel">Dato</label>
       <input type="date" id="selectedDate">
@@ -78,7 +77,6 @@
       <input type="number" id="marketingCost" min="0" placeholder="f.eks. 5000">
       <button id="saveBtn">Legg til / oppdater</button>
 
-      <!-- CSV paste kept as backup -->
       <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
         <label for="csvPaste" style="font-weight:bold; display:block; margin-bottom:8px;">
           Importer CSV (Peasy rapport – lim inn hele teksten)
@@ -196,16 +194,39 @@
         totalLabel: "Totalt (valgt periode)",
         lastUpdate: "Sist oppdatert: "
       },
-      en: {
-        // ... (keep or add English translations if needed)
-      }
+      // English translations can be added if needed
     };
 
     let currentLang = 'no';
 
     function setLanguage(lang) {
       currentLang = lang;
-      // ... (your original setLanguage logic)
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.getElementById(`lang-${lang}`).classList.add('active');
+      const t = translations[lang];
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('subtitle').textContent = t.subtitle;
+      document.getElementById('monthLabel').textContent = t.monthLabel;
+      document.getElementById('toggleInputBtn').textContent = t.toggleInputBtn;
+      document.getElementById('dateLabel').textContent = t.dateLabel;
+      document.getElementById('todayBtn').textContent = t.todayBtn;
+      document.getElementById('prisetLabel').textContent = t.prisetLabel;
+      document.getElementById('receivedLabel').textContent = t.receivedLabel;
+      document.getElementById('soldLabel').textContent = t.soldLabel;
+      document.getElementById('marketingLabel').textContent = t.marketingLabel;
+      document.getElementById('saveBtn').textContent = t.saveBtn;
+      document.querySelector('#periodHeader').textContent = t.periodHeader;
+      document.querySelector('#prisetHeader').textContent = t.prisetHeader;
+      document.querySelector('#receivedHeader').textContent = t.receivedHeader;
+      document.querySelector('#ratioHeader').textContent = t.ratioHeader;
+      document.querySelector('#soldHeader').textContent = t.soldHeader;
+      document.querySelector('#prisetToSoldHeader').textContent = t.prisetToSoldHeader;
+      document.querySelector('#marketingHeader').textContent = t.marketingHeader;
+      document.getElementById('avgSoldPriceHeader').textContent = t.avgSoldPriceHeader || "Gjennomsnittspris per Solgt Bil";
+      document.getElementById('lastDayLabel').textContent = t.lastDayLabel;
+      document.getElementById('last60Label').textContent = t.last60Label;
+      document.getElementById('last30Label').textContent = t.last30Label;
+      document.getElementById('totalLabel').textContent = t.totalLabel;
       updateStatsTable();
       renderChart();
       renderFunnelChart();
@@ -229,7 +250,6 @@
 
     let chart;
 
-    // Load data from Google Sheet
     async function loadData() {
       try {
         const response = await fetch(GOOGLE_CSV_URL + '?' + Date.now());
@@ -246,12 +266,12 @@
 
         rows.forEach(row => {
           const d = row.date;
-          allPriced[d]     = Number(row.priced)       || 0;
-          allReceived[d]   = Number(row.received)     || 0;
-          allSold[d]       = Number(row.sold)         || 0;
-          allMarketing[d]  = Number(row.marketing_nok)|| allMarketing[d] || MARKETING_DAILY_DEFAULT;
-          allSoldPrice[d]  = Number(row.sold_price)   || 0;
-          allPeasyFee[d]   = Number(row.peasy_fee)    || 0;
+          allPriced[d] = Number(row.priced) || 0;
+          allReceived[d] = Number(row.received) || 0;
+          allSold[d] = Number(row.sold) || 0;
+          allMarketing[d] = Number(row.marketing_nok) || allMarketing[d] || MARKETING_DAILY_DEFAULT;
+          allSoldPrice[d] = Number(row.sold_price) || 0;
+          allPeasyFee[d] = Number(row.peasy_fee) || 0;
         });
 
         // Fill missing marketing defaults
@@ -272,35 +292,56 @@
 
       } catch (err) {
         console.error('Failed to load sheet:', err);
-        document.getElementById('lastUpdate').textContent = "Kunne ikke laste data fra Google Sheet";
+        document.getElementById('lastUpdate').textContent = "Kunne ikke laste data fra Google Sheet – sjekk konsoll (F12)";
       }
     }
 
-    // Your original renderChart function (daily bars + trend) - keep as is
     function renderChart() {
-      // ... your existing code for dailyChart ...
-      // Make sure it uses allPriced and allSold
+      const start = new Date(START_DATE);
+      const end = new Date();
+      let dates = [];
+      let cur = new Date(start);
+      while (cur <= end) {
+        const d = cur.toISOString().split('T')[0];
+        if (selectedMonth === 'all' || d.startsWith(selectedMonth)) dates.push(d);
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      const prisetVals = dates.map(d => allPriced[d] || 0);
+      const soldVals = dates.map(d => allSold[d] || 0);
+
+      const ctx = document.getElementById('dailyChart').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: translations[currentLang].prisetHeader, data: prisetVals, backgroundColor: '#004225' },
+            { label: translations[currentLang].soldHeader, data: soldVals, backgroundColor: '#ff4444' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
     }
 
-    // Updated funnel chart with avg price and fee
     function renderFunnelChart() {
-      let totalP = 0, totalR = 0, totalS = 0, totalValue = 0, totalFee = 0;
+      let totalP = 0, totalR = 0, totalS = 0;
       Object.keys(allPriced).forEach(d => {
         if (d >= START_DATE) {
           totalP += allPriced[d] || 0;
           totalR += allReceived[d] || 0;
           totalS += allSold[d] || 0;
-          totalValue += allSoldPrice[d] || 0;
-          totalFee += allPeasyFee[d] || 0;
         }
       });
 
-      const avgPrice = totalS > 0 ? (totalValue / totalS).toLocaleString('nb-NO') + ' NOK' : '—';
-      const feePerSold = totalS > 0 ? (totalFee / totalS).toLocaleString('nb-NO') + ' NOK' : '—';
-
       const ctx = document.getElementById('funnelChart').getContext('2d');
-      if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
-
       new Chart(ctx, {
         type: 'bar',
         data: {
@@ -308,57 +349,35 @@
           datasets: [{
             label: 'Antall biler',
             data: [totalP, totalR, totalS],
-            backgroundColor: ['#004225', '#8fcbbc', '#ffcc33'],
-            borderColor: '#004225',
-            borderWidth: 1
+            backgroundColor: ['#004225', '#8fcbbc', '#ffcc33']
           }]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
             datalabels: {
               anchor: 'end',
               align: 'top',
-              color: '#004225',
-              font: { weight: 'bold', size: 16 },
               formatter: (value, ctx) => {
                 if (ctx.dataIndex === 0) return `${value}\n(100%)`;
                 if (ctx.dataIndex === 1) return `${value}\n(${totalP > 0 ? Math.round(totalR / totalP * 100) : 0}%)`;
-                let txt = `${value}\n(${totalP > 0 ? (totalS / totalP * 100).toFixed(1) : 0}%)`;
-                txt += `\nSnittpris: ${avgPrice}`;
-                txt += `\nFee/bil: ${feePerSold}`;
-                return txt;
+                return `${value}\n(${totalP > 0 ? (totalS / totalP * 100).toFixed(1) : 0}%)`;
               }
             }
-          },
-          scales: {
-            y: { beginAtZero: true, suggestedMax: Math.max(800, totalP * 1.1 || 800) }
           }
         },
         plugins: [ChartDataLabels]
       });
     }
 
-    // Your updateStatsTable - add avg price and peasy fee
     function updateStatsTable() {
-      // ... your existing code ...
-
-      // In each stats block (last day, 30d, 60d, total), add:
-      // avg sold price
-      const avgSold = sumSold > 0 ? (sumSoldPrice / sumSold).toLocaleString('nb-NO') + ' NOK' : '—';
-      // peasy fee per sold
-      const feePer = sumSold > 0 ? (sumPeasyFee / sumSold).toLocaleString('nb-NO') + ' NOK' : '—';
-
-      // Then set the td elements (you already have ids like lastAvgSoldPrice, etc.)
+      // Basic placeholder – add your full logic here
+      document.getElementById('lastUpdate').textContent = "Data lastet fra Google Sheet";
     }
 
-    // Initial load
+    // Initial setup
     setLanguage('no');
     loadData();
-
-    // Refresh every 5 minutes
     setInterval(loadData, 5 * 60 * 1000);
   </script>
 </body>
