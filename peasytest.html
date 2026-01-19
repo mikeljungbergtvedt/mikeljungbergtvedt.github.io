@@ -3,50 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Test - Google Sheet Data</title>
+  <title>Peasy Sheet Test - Raw Data Display</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f4f0; color: #004225; }
-    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h1 { text-align: center; color: #004225; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    th { background: #e8f5e9; }
-    .total { font-weight: bold; background: #d4edda; }
-    canvas { margin: 30px auto; display: block; max-width: 100%; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; color: #333; }
+    h1 { text-align: center; color: #2c3e50; }
+    #status { text-align: center; font-size: 1.2rem; margin: 20px 0; color: #27ae60; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.95rem; }
+    th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+    th { background: #ecf0f1; font-weight: bold; }
+    .total { background: #d4edda; font-weight: bold; }
+    canvas { max-width: 100%; margin: 30px auto; display: block; }
+    .error { color: #c0392b; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Peasy Test - Data fra Google Sheet</h1>
-    <p id="status">Laster data...</p>
+  <h1>Peasy Test - Data fra Google Sheet</h1>
+  <div id="status">Laster data fra sheet...</div>
 
-    <table id="statsTable">
-      <thead>
-        <tr>
-          <th>Dato</th>
-          <th>Priset</th>
-          <th>Mottatt</th>
-          <th>Solgt</th>
-          <th>Marketing (NOK)</th>
-          <th>Solgt totalpris (NOK)</th>
-          <th>Peasy fee (NOK)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Dato</th>
+        <th>Priset</th>
+        <th>Mottatt</th>
+        <th>Solgt</th>
+        <th>Marketing (NOK)</th>
+        <th>Solgt totalpris (NOK)</th>
+        <th>Peasy fee (NOK)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <canvas id="chart"></canvas>
-  </div>
+  <canvas id="dailyChart" height="300"></canvas>
+  <canvas id="funnelChart" height="300"></canvas>
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWB8ejCX0vpPlUSmgnFlzhMskHA7UGmxIxj0uA_JiukkH1U1B6diVa3N1o5MFL1kiLhPzHSwSsy8DD/pub?output=csv";
 
-    async function loadAndShow() {
+    async function loadAndDisplay() {
       try {
         const response = await fetch(CSV_URL + '?' + Date.now());
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
 
         const csv = await response.text();
         const parsed = Papa.parse(csv, {
@@ -55,12 +56,12 @@
           dynamicTyping: true
         });
 
-        const rows = parsed.data.filter(r => r.date && r.date.trim());
+        const rows = parsed.data.filter(r => r.date && r.date.trim() && r.date.match(/^\d{4}-\d{2}-\d{2}$/));
 
         document.getElementById('status').textContent = `Lastet ${rows.length} rader fra Google Sheet`;
 
         // Fill table
-        const tbody = document.querySelector('#statsTable tbody');
+        const tbody = document.querySelector('#dataTable tbody');
         tbody.innerHTML = '';
         rows.forEach(r => {
           const tr = document.createElement('tr');
@@ -76,13 +77,16 @@
           tbody.appendChild(tr);
         });
 
-        // Simple total row
-        let tp = rows.reduce((sum, r) => sum + (Number(r.priced) || 0), 0);
-        let tr = rows.reduce((sum, r) => sum + (Number(r.received) || 0), 0);
-        let ts = rows.reduce((sum, r) => sum + (Number(r.sold) || 0), 0);
-        let tm = rows.reduce((sum, r) => sum + (Number(r.marketing_nok) || 0), 0);
-        let tv = rows.reduce((sum, r) => sum + (Number(r.sold_price) || 0), 0);
-        let tf = rows.reduce((sum, r) => sum + (Number(r.peasy_fee) || 0), 0);
+        // Totals
+        let tp = 0, tr = 0, ts = 0, tm = 0, tv = 0, tf = 0;
+        rows.forEach(r => {
+          tp += Number(r.priced) || 0;
+          tr += Number(r.received) || 0;
+          ts += Number(r.sold) || 0;
+          tm += Number(r.marketing_nok) || 0;
+          tv += Number(r.sold_price) || 0;
+          tf += Number(r.peasy_fee) || 0;
+        });
 
         const totalTr = document.createElement('tr');
         totalTr.className = 'total';
@@ -97,26 +101,57 @@
         `;
         tbody.appendChild(totalTr);
 
-        // Simple chart
+        // Daily chart
         const dates = rows.map(r => r.date);
         const priced = rows.map(r => Number(r.priced) || 0);
         const sold = rows.map(r => Number(r.sold) || 0);
 
-        new Chart(document.getElementById('chart'), {
+        new Chart(document.getElementById('dailyChart'), {
           type: 'bar',
           data: {
             labels: dates,
             datasets: [
               { label: 'Priset', data: priced, backgroundColor: '#004225' },
-              { label: 'Solgt', data: sold, backgroundColor: '#ff4444' }
+              { label: 'Solgt', data: sold, backgroundColor: '#e74c3c' }
             ]
           },
           options: { responsive: true, scales: { y: { beginAtZero: true } } }
         });
 
+        // Funnel chart
+        new Chart(document.getElementById('funnelChart'), {
+          type: 'bar',
+          data: {
+            labels: ['Priset', 'Mottatt', 'Solgt'],
+            datasets: [{
+              data: [tp, tr, ts],
+              backgroundColor: ['#004225', '#8fcbbc', '#ffcc33']
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              datalabels: {
+                anchor: 'end',
+                align: 'top',
+                color: '#2c3e50',
+                font: { weight: 'bold', size: 14 },
+                formatter: (v, ctx) => {
+                  if (ctx.dataIndex === 0) return `${v}\n(100%)`;
+                  if (ctx.dataIndex === 1) return `${v}\n(${tp ? Math.round(tr/tp*100) : 0}%)`;
+                  return `${v}\n(${tp ? (ts/tp*100).toFixed(1) : 0}%)`;
+                }
+              }
+            },
+            scales: { y: { beginAtZero: true } }
+          },
+          plugins: [ChartDataLabels]
+        });
+
       } catch (err) {
-        console.error(err);
+        console.error('Error:', err);
         document.getElementById('status').textContent = 'Feil ved lasting: ' + err.message;
+        document.getElementById('status').className = 'error';
       }
     }
 
