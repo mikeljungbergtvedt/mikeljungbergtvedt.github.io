@@ -162,6 +162,7 @@
   <div id="notification"></div>
 
   <script>
+    // Translations
     const translations = {
       no: {
         title: "Peasy Priset → Mottatt & Solgt",
@@ -189,36 +190,8 @@
         last30Label: "Siste 30 dager",
         totalLabel: "Totalt (valgt periode)",
         lastUpdate: "Sist oppdatert: "
-      },
-      en: {
-        title: "Peasy Priced → Received & Sold",
-        subtitle: "Number of cars priced (SD received), received and sold per day – from July 2025",
-        monthLabel: "Show month only:",
-        toggleInputBtn: "Hide / Show input",
-        dateLabel: "Date",
-        todayBtn: "Today",
-        prisetLabel: "Priced (SD received on)",
-        receivedLabel: "Received at warehouse",
-        soldLabel: "Sold cars",
-        marketingLabel: "Marketing cost (per day)",
-        saveBtn: "Add / Update",
-        periodHeader: "Period",
-        prisetHeader: "Priced",
-        receivedHeader: "Received",
-        ratioHeader: "Priced → Received",
-        soldHeader: "Sold",
-        prisetToSoldHeader: "Priced → Sold",
-        marketingHeader: "Marketing cost per sold car",
-        avgSoldPriceHeader: "Avg sold price per sold car",
-        peasyFeeHeader: "Peasy fee per sold car",
-        lastDayLabel: "Last day with data",
-        last60Label: "Last 60 days",
-        last30Label: "Last 30 days",
-        totalLabel: "Total (selected period)",
-        lastUpdate: "Last updated: "
       }
     };
-
     let currentLang = 'no';
 
     function setLanguage(lang) {
@@ -245,10 +218,6 @@
       document.querySelector('#prisetToSoldHeader').textContent = t.prisetToSoldHeader;
       document.querySelector('#marketingHeader').textContent = t.marketingHeader;
       document.getElementById('avgSoldPriceHeader').textContent = t.avgSoldPriceHeader;
-      document.getElementById('lastDayLabel').textContent = t.lastDayLabel;
-      document.getElementById('last60Label').textContent = t.last60Label;
-      document.getElementById('last30Label').textContent = t.last30Label;
-      document.getElementById('totalLabel').textContent = t.totalLabel;
       updateStatsTable();
       renderChart();
       renderFunnelChart();
@@ -291,14 +260,16 @@
 
         const rows = parsed.data.filter(r => r.date && r.date.match(/^\d{4}-\d{2}-\d{2}$/));
 
+        console.log('Loaded ' + rows.length + ' rows from Google Sheet');
+
         rows.forEach(r => {
           const d = r.date;
-          allPriced[d] = Number(r.priced) || allPriced[d] || 0;
-          allReceived[d] = Number(r.received) || allReceived[d] || 0;
-          allSold[d] = Number(r.sold) || allSold[d] || 0;
-          allMarketing[d] = Number(r.marketing_nok) || allMarketing[d] || MARKETING_DAILY_DEFAULT;
-          allSoldPrice[d] = Number(r.sold_price) || allSoldPrice[d] || 0;
-          allPeasyFee[d] = Number(r.peasy_fee) || allPeasyFee[d] || 0;
+          allPriced[d] = Number(r.priced) || 0;
+          allReceived[d] = Number(r.received) || 0;
+          allSold[d] = Number(r.sold) || 0;
+          allMarketing[d] = Number(r.marketing_nok) || MARKETING_DAILY_DEFAULT;
+          allSoldPrice[d] = Number(r.sold_price) || 0;
+          allPeasyFee[d] = Number(r.peasy_fee) || 0;
         });
 
         // Fill missing marketing
@@ -322,19 +293,11 @@
       }
     }
 
+    // Daily Chart (priced + sold bars)
     function renderChart() {
-      const start = new Date(START_DATE);
-      const end = new Date();
-      let dates = [];
-      let cur = new Date(start);
-      while (cur <= end) {
-        const d = cur.toISOString().split('T')[0];
-        if (selectedMonth === 'all' || d.startsWith(selectedMonth)) dates.push(d);
-        cur.setDate(cur.getDate() + 1);
-      }
-
-      const prisetVals = dates.map(d => allPriced[d] || 0);
-      const soldVals = dates.map(d => allSold[d] || 0);
+      const dates = Object.keys(allPriced).sort();
+      const priced = dates.map(d => allPriced[d]);
+      const sold = dates.map(d => allSold[d]);
 
       const ctx = document.getElementById('dailyChart').getContext('2d');
       if (chart) chart.destroy();
@@ -344,8 +307,8 @@
         data: {
           labels: dates,
           datasets: [
-            { label: translations[currentLang].prisetHeader, data: prisetVals, backgroundColor: '#004225' },
-            { label: translations[currentLang].soldHeader, data: soldVals, backgroundColor: '#ff4444' }
+            { label: translations[currentLang].prisetHeader, data: priced, backgroundColor: '#004225' },
+            { label: translations[currentLang].soldHeader, data: sold, backgroundColor: '#ff4444' }
           ]
         },
         options: {
@@ -355,14 +318,13 @@
       });
     }
 
+    // Funnel Chart with percentages
     function renderFunnelChart() {
       let totalP = 0, totalR = 0, totalS = 0;
       Object.keys(allPriced).forEach(d => {
-        if (d >= START_DATE) {
-          totalP += allPriced[d] || 0;
-          totalR += allReceived[d] || 0;
-          totalS += allSold[d] || 0;
-        }
+        totalP += allPriced[d] || 0;
+        totalR += allReceived[d] || 0;
+        totalS += allSold[d] || 0;
       });
 
       const ctx = document.getElementById('funnelChart').getContext('2d');
@@ -397,38 +359,32 @@
       });
     }
 
+    // Stats Table with all columns
     function updateStatsTable() {
-      const sortedDates = Object.keys(allPriced).sort().filter(d => selectedMonth === 'all' || d.startsWith(selectedMonth));
+      const sortedDates = Object.keys(allPriced).sort();
 
-      let totalPris = 0, totalMottatt = 0, totalSold = 0, totalMkt = 0, totalValue = 0, totalFee = 0;
+      // Total
+      let tp = 0, tr = 0, ts = 0, tm = 0, tv = 0, tf = 0;
       sortedDates.forEach(d => {
-        totalPris += allPriced[d] || 0;
-        totalMottatt += allReceived[d] || 0;
-        totalSold += allSold[d] || 0;
-        totalMkt += allMarketing[d] || 0;
-        totalValue += allSoldPrice[d] || 0;
-        totalFee += allPeasyFee[d] || 0;
+        tp += allPriced[d] || 0;
+        tr += allReceived[d] || 0;
+        ts += allSold[d] || 0;
+        tm += allMarketing[d] || 0;
+        tv += allSoldPrice[d] || 0;
+        tf += allPeasyFee[d] || 0;
       });
 
-      const totalRatio = totalPris > 0 ? ((totalMottatt / totalPris) * 100).toFixed(0) + '%' : '—';
-      const totalPricedToSold = totalPris > 0 ? ((totalSold / totalPris) * 100).toFixed(1) + '%' : '—';
-      const totalMktPerSold = totalSold > 0 ? (totalMkt / totalSold).toFixed(0) + ' NOK' : '—';
-      const avgSoldPrice = totalSold > 0 ? (totalValue / totalSold).toLocaleString('nb-NO') + ' NOK' : '—';
-      const peasyFeePerSold = totalSold > 0 ? (totalFee / totalSold).toLocaleString('nb-NO') + ' NOK' : '—';
-
-      document.getElementById('totalPriset').textContent = totalPris;
-      document.getElementById('totalMottatt').textContent = totalMottatt;
-      document.getElementById('totalRatio').textContent = totalRatio;
-      document.getElementById('totalSold').textContent = totalSold;
-      document.getElementById('totalPricedToSold').textContent = totalPricedToSold;
-      document.getElementById('totalMarketingCost').textContent = totalMktPerSold;
-      document.getElementById('totalAvgSoldPrice').textContent = avgSoldPrice;
-      document.getElementById('totalPeasyFeePerSold').textContent = peasyFeePerSold;
-
-      // Add similar logic for last day, 30d, 60d if you have the ids
+      document.getElementById('totalPriset').textContent = tp;
+      document.getElementById('totalMottatt').textContent = tr;
+      document.getElementById('totalRatio').textContent = tp ? ((tr / tp) * 100).toFixed(0) + '%' : '—';
+      document.getElementById('totalSold').textContent = ts;
+      document.getElementById('totalPricedToSold').textContent = tp ? ((ts / tp) * 100).toFixed(1) + '%' : '—';
+      document.getElementById('totalMarketingCost').textContent = ts ? (tm / ts).toFixed(0) + ' NOK' : '—';
+      document.getElementById('totalAvgSoldPrice').textContent = ts ? (tv / ts).toLocaleString('nb-NO') + ' NOK' : '—';
+      document.getElementById('totalPeasyFeePerSold').textContent = ts ? (tf / ts).toLocaleString('nb-NO') + ' NOK' : '—';
     }
 
-    // Initial setup
+    // Initial load
     setLanguage('no');
     loadData();
     setInterval(loadData, 5 * 60 * 1000);
