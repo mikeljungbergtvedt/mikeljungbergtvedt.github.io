@@ -236,14 +236,15 @@
     const MARKETING_START = '2025-11-01';
     const MARKETING_DAILY_DEFAULT = 1000;
 
-    // Load and process CSV
-    Papa.parse("report.csv", {
+    // Load CSV using FULL RAW URL (Option 2 - this should fix the 404)
+    Papa.parse("https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/report.csv", {
       download: true,
       header: true,
       skipEmptyLines: true,
       dynamicTyping: true,
       transformHeader: h => h.trim().toLowerCase().replace(/\s+/g, '_'),
       complete: function(results) {
+        console.log("CSV loaded successfully! Rows:", results.data.length); // DEBUG
         if (results.errors.length > 0) {
           console.error("CSV parse errors:", results.errors);
           showNotification("Feil ved lasting av CSV-data");
@@ -265,12 +266,12 @@
           }
         });
 
-        // Fill default marketing costs
+        // Fill default marketing
         let cur = new Date(MARKETING_START);
         const today = new Date();
         while (cur <= today) {
           const ds = cur.toISOString().split('T')[0];
-          allMarketing[ds] = MARKETING_DAILY_DEFAULT;
+          allMarketing[ds] = allMarketing[ds] || MARKETING_DAILY_DEFAULT;
           cur.setDate(cur.getDate() + 1);
         }
 
@@ -594,7 +595,7 @@
       document.getElementById('totalMarketingCost').textContent = ts > 0 ? Math.round(tm / ts) + ' NOK' : '—';
     }
 
-    // Disable save
+    // Disable save button if present
     if (document.getElementById('saveBtn')) {
       document.getElementById('saveBtn').disabled = true;
       document.getElementById('saveBtn').textContent = "Les-only (CSV kilde)";
