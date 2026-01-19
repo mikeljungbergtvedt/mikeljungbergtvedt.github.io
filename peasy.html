@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peasy Priset → Mottatt & Solgt</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px 10px; background: #e0e9e5; color: #004225; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
+    .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
+    .lang-toggle { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
+    .lang-toggle a { margin: 0 8px; text-decoration: none; color: #004225; }
+    .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
+    .controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
+    .last-update { text-align: center; font-size: 1.1rem; color: #004225; margin: 15px 0; font-weight: bold; }
+    .input-area { text-align: center; margin: 20px 0; padding: 15px; background: #f5f9f6; border-radius: 10px; }
+    .input-area.hidden { display: none; }
+    .input-area label { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 6px; }
+    .input-area input, .input-area button, .input-area textarea { padding: 10px; font-size: 1.1rem; border: 1px solid #ddd; border-radius: 6px; margin: 5px 0; width: calc(100% - 20px); box-sizing: border-box; }
+    .input-area button { background: #ffcc33; color: #004225; border: none; font-weight: bold; cursor: pointer; touch-action: manipulation; }
+    .input-area button:hover { background: #e6b800; }
+    .input-area textarea { font-family: monospace; font-size: 0.95rem; height: 180px; resize: vertical; }
+    .toggle-button { margin: 10px auto; display: block; padding: 8px 15px; background: #ffcc33; color: #004225; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; touch-action: manipulation; }
+    .toggle-button:hover { background: #e6b800; }
+    canvas { margin: 40px auto; background: white; border-radius: 8px; width: 100% !important; height: 500px !important; max-width: 900px; }
+    #notification { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.3s; font-weight: bold; font-size: 0.9rem; }
+    .stats-table { margin: 30px auto; max-width: 100%; border-collapse: collapse; font-size: 0.95rem; overflow-x: auto; display: block; }
+    .stats-table th, .stats-table td { padding: 10px; text-align: center; border: 1px solid #ddd; font-weight: bold; }
+    .stats-table th { background: #f5f9f6; }
+    .stats-table td { background: white; }
+    .total-row td { background: #e8f5e9; font-weight: bold; }
+    button { touch-action: manipulation; }
+
+    @media (max-width: 768px) {
+      body { padding: 15px 10px; }
+      .container { padding: 15px; }
+      h1 { font-size: 1.6rem; }
+      .subtitle { font-size: 1.1rem; }
+      canvas { height: 400px !important; }
+      .stats-table { font-size: 0.85rem; padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="lang-toggle">
+      <a href="#" id="lang-en" class="lang-link" data-lang="en">English</a> |
+      <a href="#" id="lang-no" class="lang-link active" data-lang="no">Norsk</a>
+    </div>
+    <h1 id="title">Peasy Priset → Mottatt & Solgt</h1>
+    <div class="subtitle" id="subtitle">Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025</div>
+    <div class="controls">
+      <label for="monthFilter" id="monthLabel" style="font-weight:bold;">Vis kun måned:</label>
+      <select id="monthFilter">
+        <option value="all">Alle måneder</option>
+      </select>
+      <button class="toggle-button" id="toggleInputBtn">Vis input</button>
+    </div>
+
+    <div class="input-area hidden" id="inputArea">
+      <label for="selectedDate" id="dateLabel">Dato</label>
+      <input type="date" id="selectedDate">
+      <button type="button" id="todayBtn">I dag</button>
+      <label for="dailyCount" id="prisetLabel">Priset (SD mottatt på)</label>
+      <input type="number" id="dailyCount" min="0" placeholder="f.eks. 11">
+      <label for="receivedCount" id="receivedLabel">Mottatt på lager</label>
+      <input type="number" id="receivedCount" min="0" placeholder="f.eks. 0">
+      <label for="soldCount" id="soldLabel">Solgte biler</label>
+      <input type="number" id="soldCount" min="0" placeholder="f.eks. 2">
+      <label for="marketingCost" id="marketingLabel">Markedsføringskostnad (per dag)</label>
+      <input type="number" id="marketingCost" min="0" placeholder="f.eks. 5000">
+      <button id="saveBtn">Legg til / oppdater</button>
+
+      <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
+        <label for="csvPaste" style="font-weight:bold; display:block; margin-bottom:8px;">
+          Importer CSV (Peasy rapport – lim inn hele teksten)
+        </label>
+        <textarea id="csvPaste" rows="10" placeholder="Lim inn hele CSV her..."></textarea>
+        <button id="importCsvBtn" style="margin-top:12px; background:#004225; color:white; padding:12px 24px; font-size:1.1rem;">
+          Oppdater data fra CSV
+        </button>
+      </div>
+
+      <div class="peasy-link" style="margin-top:20px; text-align:left;">
+        <a href="https://biladministrasjon.no/reports/peasy" target="_blank" rel="noopener noreferrer">
+          Peasy Data
+        </a>
+      </div>
+    </div>
+
+    <canvas id="dailyChart"></canvas>
+    <div class="last-update" id="lastUpdate">Sist oppdatert: —</div>
+
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th id="periodHeader">Periode</th>
+          <th id="prisetHeader">Priset</th>
+          <th id="receivedHeader">Mottatt</th>
+          <th id="ratioHeader">Priset → Mottatt</th>
+          <th id="soldHeader">Solgt</th>
+          <th id="prisetToSoldHeader">Priset → Solgt</th>
+          <th id="marketingHeader">Markedsføringskostnad per solgt bil</th>
+          <th id="avgSoldPriceHeader">Gjennomsnittspris per Solgt Bil</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="rowLastDay">
+          <td id="lastDayLabel">Siste dag med data</td>
+          <td id="lastRegistered">—</td>
+          <td id="lastReceived">—</td>
+          <td id="lastRatio">—</td>
+          <td id="lastSold">—</td>
+          <td id="lastPricedToSold">—</td>
+          <td id="lastMarketingCost">—</td>
+          <td id="lastAvgSoldPrice">—</td>
+        </tr>
+        <tr id="row30days">
+          <td id="last30Label">Siste 30 dager</td>
+          <td id="sumRegistered30">—</td>
+          <td id="sumReceived30">—</td>
+          <td id="ratio30">—</td>
+          <td id="sold30">—</td>
+          <td id="ratioPricedSold30">—</td>
+          <td id="marketing30">—</td>
+          <td id="avgSoldPrice30">—</td>
+        </tr>
+        <tr id="row60days">
+          <td id="last60Label">Siste 60 dager</td>
+          <td id="sumRegistered60">—</td>
+          <td id="sumReceived60">—</td>
+          <td id="ratio60">—</td>
+          <td id="sold60">—</td>
+          <td id="ratioPricedSold60">—</td>
+          <td id="marketing60">—</td>
+          <td id="avgSoldPrice60">—</td>
+        </tr>
+        <tr class="total-row" id="rowTotal">
+          <td id="totalLabel">Totalt (valgt periode)</td>
+          <td id="totalPriset">—</td>
+          <td id="totalMottatt">—</td>
+          <td id="totalRatio">—</td>
+          <td id="totalSold">—</td>
+          <td id="totalPricedToSold">—</td>
+          <td id="totalMarketingCost">—</td>
+          <td id="totalAvgSoldPrice">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="text-align:center; color:#004225; margin:40px 0 20px; font-size:1.6rem;">Total konvertering – Priset → Mottatt → Solgt</h2>
+    <canvas id="funnelChart"></canvas>
+  </div>
+
+  <div id="notification"></div>
+
+  <script>
+    const translations = {
+      no: {
+        title: "Peasy Priset → Mottatt & Solgt",
+        subtitle: "Antall biler priset (SD mottatt), mottatt og solgt per dag – fra juli 2025",
+        monthLabel: "Vis kun måned:",
+        toggleInputBtn: "Skjul / Vis input",
+        dateLabel: "Dato",
+        todayBtn: "I dag",
+        prisetLabel: "Priset (SD mottatt på)",
+        receivedLabel: "Mottatt på lager",
+        soldLabel: "Solgte biler",
+        marketingLabel: "Markedsføringskostnad (per dag)",
+        saveBtn: "Legg til / oppdater",
+        periodHeader: "Periode",
+        prisetHeader: "Priset",
+        receivedHeader: "Mottatt",
+        ratioHeader: "Priset → Mottatt",
+        soldHeader: "Solgt",
+        prisetToSoldHeader: "Priset → Solgt",
+        marketingHeader: "Markedsføringskostnad per solgt bil",
+        avgSoldPriceHeader: "Gjennomsnittspris per Solgt Bil",
+        lastDayLabel: "Siste dag med data",
+        last60Label: "Siste 60 dager",
+        last30Label: "Siste 30 dager",
+        totalLabel: "Totalt (valgt periode)",
+        lastUpdate: "Sist oppdatert: "
+      },
+      en: {
+        title: "Peasy Priced → Received & Sold",
+        subtitle: "Number of cars priced (SD received), received and sold per day – from July 2025",
+        monthLabel: "Show month only:",
+        toggleInputBtn: "Hide / Show input",
+        dateLabel: "Date",
+        todayBtn: "Today",
+        prisetLabel: "Priced (SD received on)",
+        receivedLabel: "Received at warehouse",
+        soldLabel: "Sold cars",
+        marketingLabel: "Marketing cost (per day)",
+        saveBtn: "Add / Update",
+        periodHeader: "Period",
+        prisetHeader: "Priced",
+        receivedHeader: "Received",
+        ratioHeader: "Priced → Received",
+        soldHeader: "Sold",
+        prisetToSoldHeader: "Priced → Sold",
+        marketingHeader: "Marketing cost per sold car",
+        avgSoldPriceHeader: "Avg sold price per sold car",
+        lastDayLabel: "Last day with data",
+        last60Label: "Last 60 days",
+        last30Label: "Last 30 days",
+        totalLabel: "Total (selected period)",
+        lastUpdate: "Last updated: "
+      }
+    };
+
+    let currentLang = 'no';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.getElementById(`lang-${lang}`).classList.add('active');
+      const t = translations[lang];
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('subtitle').textContent = t.subtitle;
+      document.getElementById('monthLabel').textContent = t.monthLabel;
+      document.getElementById('toggleInputBtn').textContent = t.toggleInputBtn;
+      document.getElementById('dateLabel').textContent = t.dateLabel;
+      document.getElementById('todayBtn').textContent = t.todayBtn;
+      document.getElementById('prisetLabel').textContent = t.prisetLabel;
+      document.getElementById('receivedLabel').textContent = t.receivedLabel;
+      document.getElementById('soldLabel').textContent = t.soldLabel;
+      document.getElementById('marketingLabel').textContent = t.marketingLabel;
+      document.getElementById('saveBtn').textContent = t.saveBtn;
+      document.querySelector('#periodHeader').textContent = t.periodHeader;
+      document.querySelector('#prisetHeader').textContent = t.prisetHeader;
+      document.querySelector('#receivedHeader').textContent = t.receivedHeader;
+      document.querySelector('#ratioHeader').textContent = t.ratioHeader;
+      document.querySelector('#soldHeader').textContent = t.soldHeader;
+      document.querySelector('#prisetToSoldHeader').textContent = t.prisetToSoldHeader;
+      document.querySelector('#marketingHeader').textContent = t.marketingHeader;
+      document.getElementById('avgSoldPriceHeader').textContent = t.avgSoldPriceHeader;
+      document.getElementById('lastDayLabel').textContent = t.lastDayLabel;
+      document.getElementById('last60Label').textContent = t.last60Label;
+      document.getElementById('last30Label').textContent = t.last30Label;
+      document.getElementById('totalLabel').textContent = t.totalLabel;
+      updateStatsTable();
+      renderChart();
+      renderFunnelChart();
+    }
+
+    document.getElementById('lang-en').addEventListener('click', e => { e.preventDefault(); setLanguage('en'); });
+    document.getElementById('lang-no').addEventListener('click', e => { e.preventDefault(); setLanguage('no'); });
+
+    // Historical priced/received/sold (manual entries)
+    let pricedData = JSON.parse(localStorage.getItem('peasyPricedData') || '{}');
+    let receivedData = JSON.parse(localStorage.getItem('peasyReceivedData') || '{}');
+    let soldData = JSON.parse(localStorage.getItem('peasySoldData') || '{}');
+    let marketingData = JSON.parse(localStorage.getItem('peasyMarketingData') || '{}');
+
+    // This will be overwritten by CSV import
+    let historicalBidSumData = {};
+    let historicalSoldCountData = {};
+
+    const START_DATE = '2025-07-01';
+    const MARKETING_START = '2025-11-01';
+    const MARKETING_DAILY_DEFAULT = 1000;
+
+    let allPriced = { ...pricedData };
+    let allReceived = { ...receivedData };
+    let allSold = { ...soldData };
+    let allMarketing = { ...marketingData };
+    let allBidSum = historicalBidSumData; // updated via CSV
+
+    let current = new Date(MARKETING_START);
+    const today = new Date();
+    while (current <= today) {
+      const dateStr = current.toISOString().split('T')[0];
+      if (!(dateStr in allMarketing)) {
+        allMarketing[dateStr] = MARKETING_DAILY_DEFAULT;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    let chart;
+    let selectedMonth = 'all';
+
+    document.getElementById('selectedDate').valueAsDate = new Date();
+    document.getElementById('inputArea').classList.add('hidden');
+    document.getElementById('toggleInputBtn').textContent = "Vis input";
+    let inputUnlocked = false;
+    const INPUT_PASSWORD = "peasy2026";
+
+    function toggleInputArea() {
+      const el = document.getElementById('inputArea');
+      const btn = document.getElementById('toggleInputBtn');
+      if (el.classList.contains('hidden')) {
+        if (!inputUnlocked) {
+          const entered = prompt("Skriv inn passord for å vise input:");
+          if (entered !== INPUT_PASSWORD) { alert("Feil passord!"); return; }
+          inputUnlocked = true;
+        }
+        el.classList.remove('hidden');
+        btn.textContent = "Skjul input";
+      } else {
+        el.classList.add('hidden');
+        btn.textContent = "Vis input";
+      }
+    }
+    document.getElementById('toggleInputBtn').addEventListener('click', toggleInputArea);
+
+    function populateMonthFilter() {
+      const select = document.getElementById('monthFilter');
+      const months = new Set();
+      Object.keys(allPriced).forEach(date => {
+        if (date >= START_DATE) months.add(date.slice(0,7));
+      });
+      [...months].sort().forEach(m => {
+        const option = document.createElement('option');
+        option.value = m;
+        const [y, mo] = m.split('-');
+        option.textContent = new Date(y, parseInt(mo)-1).toLocaleString('nb-NO', { month: 'long', year: 'numeric' });
+        select.appendChild(option);
+      });
+    }
+    populateMonthFilter();
+
+    // CSV Import
+    document.getElementById('importCsvBtn').addEventListener('click', () => {
+      const csvText = document.getElementById('csvPaste').value.trim();
+      if (!csvText) {
+        alert(currentLang === 'en' ? 'Paste CSV first!' : 'Lim inn CSV først!');
+        return;
+      }
+
+      try {
+        const lines = csvText.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) throw new Error('For få rader');
+
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const soldDateIdx = headers.indexOf('sold_date');
+        const bidIdx = headers.indexOf('highest_bid');
+
+        if (soldDateIdx === -1 || bidIdx === -1) {
+          throw new Error('Fant ikke "sold_date" eller "highest_bid" kolonne');
+        }
+
+        const bidSum = {};
+        const soldCount = {};
+
+        for (let i = 1; i < lines.length; i++) {
+          let row = lines[i];
+          // Simple split - assumes no commas inside quoted fields (Peasy usually clean)
+          const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+          const dateRaw = cols[soldDateIdx];
+          const bidRaw = cols[bidIdx];
+
+          if (dateRaw && bidRaw && bidRaw !== '' && !isNaN(parseFloat(bidRaw)) && parseFloat(bidRaw) > 0) {
+            const date = dateRaw.split(' ')[0]; // YYYY-MM-DD
+            const bid = parseFloat(bidRaw);
+
+            bidSum[date] = (bidSum[date] || 0) + bid;
+            soldCount[date] = (soldCount[date] || 0) + 1;
+          }
+        }
+
+        historicalBidSumData = bidSum;
+        historicalSoldCountData = soldCount;
+
+        showNotification(currentLang === 'no'
+          ? `CSV importert: ${Object.keys(bidSum).length} salgsdager, ${Object.values(soldCount).reduce((a,b)=>a+b,0)} solgte biler`
+          : `CSV imported: ${Object.keys(bidSum).length} sale days, ${Object.values(soldCount).reduce((a,b)=>a+b,0)} sold cars`);
+
+        document.getElementById('csvPaste').value = '';
+
+        updateStatsTable();
+        renderChart();
+        renderFunnelChart();
+
+      } catch (err) {
+        alert(currentLang === 'no'
+          ? `Feil ved import: ${err.message}`
+          : `Import error: ${err.message}`);
+      }
+    });
+
+    // ... rest of your original script (loadDataForDate, addCountForDate, showNotification, formatCurrency, updateStatsTable, renderChart, renderFunnelChart, etc.) ...
+    // You can paste the rest of your existing JavaScript code here after the CSV import block
+
+    // For now, placeholder for missing functions (add your original ones)
+    function showNotification(msg) {
+      const n = document.getElementById('notification');
+      n.textContent = msg;
+      n.style.opacity = 1;
+      setTimeout(() => n.style.opacity = 0, 4000);
+    }
+
+    function formatCurrency(num) {
+      return num ? num.toLocaleString('nb-NO') + ' NOK' : '—';
+    }
+
+    // Call once on load
+    setLanguage('no');
+  </script>
+</body>
+</html>
