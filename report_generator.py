@@ -9,17 +9,13 @@ import base64
 from io import BytesIO
 import jinja2
 
-# ────────────────────────────────────────────────
 # CONFIG
-# ────────────────────────────────────────────────
-
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
-# Exact column names from Excel
-COL_PRISET = "SD mottatt på"      # display as "Priset"
+COL_PRISET = "SD mottatt på"
 COL_MOTTATT = "Mottatt"
 COL_SOLGT = "Solgt på"
 COL_BUD = "Bud"
@@ -37,13 +33,7 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# ────────────────────────────────────────────────
-# 1. Load & parse
-# ────────────────────────────────────────────────
-
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
-
-print("Columns:", df.columns.tolist())
 
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
@@ -56,16 +46,11 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# ────────────────────────────────────────────────
-# 2. Calculate metrics
-# ────────────────────────────────────────────────
-
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    # Counts
     priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
     mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
     solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
@@ -74,11 +59,10 @@ for period_name, start_date in PERIODS.items():
     row["mottatt_count"] = mottatt_count
     row["solgt_count"] = solgt_count
     
-    # Conversion %
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost - fixed date comparison
+    # Marketing - fixed
     if start_date is None:
         priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
@@ -93,7 +77,6 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages
     sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
         sold_mask &= (df[COL_SOLGT] >= start_date)
@@ -107,10 +90,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
 
-# ────────────────────────────────────────────────
-# 3. Charts
-# ────────────────────────────────────────────────
-
+# Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -128,7 +108,6 @@ ax1.bar([p - width for p in positions], summary_df["priset_count"], width, label
 ax1.bar(positions, summary_df["mottatt_count"], width, label="Mottatt")
 ax1.bar([p + width for p in positions], summary_df["solgt_count"], width, label="Sold")
 
-# Data labels on bars
 for i, v in enumerate(summary_df["priset_count"]):
     ax1.text(i - width, v + 5, str(v), ha='center', va='bottom', fontsize=9)
 for i, v in enumerate(summary_df["mottatt_count"]):
@@ -152,7 +131,6 @@ width = 0.35
 ax2.bar([p - width/2 for p in positions], summary_df["avg_bud"], width, label="Avg Bud", color="skyblue")
 ax2.bar([p + width/2 for p in positions], summary_df["avg_avgift"], width, label="Avg Commission", color="orange")
 
-# Data labels
 for i, v in enumerate(summary_df["avg_bud"]):
     ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
 for i, v in enumerate(summary_df["avg_avgift"]):
@@ -167,69 +145,109 @@ chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
 # ────────────────────────────────────────────────
-# 4. HTML
+# 4. HTML template with bilingual toggle and style
 # ────────────────────────────────────────────────
 
 template_str = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy / Driveno Daily Report</title>
+  <title>Peasy / Driveno Report</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
-    h1, h2 { color: #2c3e50; text-align: center; }
-    table { border-collapse: collapse; width: 100%; max-width: 1200px; margin: 20px auto; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }
-    th { background: #34495e; color: white; }
-    tr:nth-child(even) { background: #f2f2f2; }
-    img { max-width: 100%; height: auto; margin: 30px auto; display: block; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
+    .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
+    .lang-toggle { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
+    .lang-toggle a { margin: 0 8px; text-decoration: none; color: #004225; }
+    .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
+    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+    th, td { padding: 10px; text-align: right; border: 1px solid #ddd; font-weight: bold; }
+    th { background: #f5f9f6; }
+    td { background: white; }
+    img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
+    @media (max-width: 768px) {
+      h1 { font-size: 1.6rem; }
+      .subtitle { font-size: 1.1rem; }
+      table { font-size: 0.9rem; overflow-x: auto; display: block; }
+      img { width: 100%; }
+    }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="lang-toggle">
+      <a href="#" class="lang-link" data-lang="en">English</a> | 
+      <a href="#" class="lang-link active" data-lang="no">Norsk</a>
+    </div>
+    <h1 class="trans" data-en="Peasy / Driveno Report" data-no="Peasy / Driveno Rapport">Peasy / Driveno Rapport</h1>
+    <p style="text-align:center;" class="trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }}<br>Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }}<br>Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }}<br>Sist oppdatert: {{ now }}</p>
 
-  <h1>Peasy / Driveno Report</h1>
-  <p style="text-align:center;">Snapshot date: {{ today.strftime('%Y-%m-%d') }}<br>Last updated: {{ now }}</p>
+    <h2 class="trans" data-en="Summary Table" data-no="Sammendrag Tabell">Sammendrag Tabell</h2>
+    <table>
+      <tr>
+        <th class="trans" data-en="Period" data-no="Periode">Periode</th>
+        <th class="trans" data-en="Priset" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Mottatt" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
+        <th class="trans" data-en="Avg Bud per sold car" data-no="Gj.sn. Bud per solgt bil">Gj.sn. Bud per solgt bil</th>
+        <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
+      </tr>
+      {% for row in summary %}
+      <tr>
+        <td>{{ row.Period }}</td>
+        <td>{{ row['priset_count'] }}</td>
+        <td>{{ row['mottatt_count'] }}</td>
+        <td>{{ row['priset_to_mottatt_pct'] }} %</td>
+        <td>{{ row['solgt_count'] }}</td>
+        <td>{{ row['priset_to_solgt_pct'] }} %</td>
+        <td>{{ row['marketing_per_solgt'] | int | format_number }} NOK</td>
+        <td>{{ row['avg_bud'] | int | format_number }} NOK</td>
+        <td>{{ row['avg_avgift'] | int | format_number }} NOK</td>
+      </tr>
+      {% endfor %}
+    </table>
 
-  <h2>Summary Table</h2>
-  <table>
-    <tr>
-      <th>Period</th>
-      <th>Priset</th>
-      <th>Mottatt</th>
-      <th>Priset → Mottatt</th>
-      <th>Sold</th>
-      <th>Priset → Solgt</th>
-      <th>Markedsføringskostnad per solgt bil</th>
-      <th>Avg Bud per sold car</th>
-      <th>Avg Commission per sold car</th>
-    </tr>
-    {% for row in summary %}
-    <tr>
-      <td>{{ row.Period }}</td>
-      <td>{{ row['priset_count'] }}</td>
-      <td>{{ row['mottatt_count'] }}</td>
-      <td>{{ row['priset_to_mottatt_pct'] }} %</td>
-      <td>{{ row['solgt_count'] }}</td>
-      <td>{{ row['priset_to_solgt_pct'] }} %</td>
-      <td>{{ row['marketing_per_solgt'] | int | format_number }} NOK</td>
-      <td>{{ row['avg_bud'] | int | format_number }} NOK</td>
-      <td>{{ row['avg_avgift'] | int | format_number }} NOK</td>
-    </tr>
-    {% endfor %}
-  </table>
+    <h2 class="trans" data-en="Visual Overview" data-no="Visuell Oversikt">Visuell Oversikt</h2>
+    <h3 class="trans" data-en="Counts by Period" data-no="Antall per Periode">Antall per Periode</h3>
+    <img src="{{ chart1 }}" alt="Counts">
 
-  <h2>Visual Overview</h2>
-  <h3>Counts by Period</h3>
-  <img src="{{ chart1 }}" alt="Counts">
+    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnittlige Verdier per Solgt Bil">Gjennomsnittlige Verdier per Solgt Bil</h3>
+    <img src="{{ chart2 }}" alt="Averages">
 
-  <h3>Average Values per Sold Car</h3>
-  <img src="{{ chart2 }}" alt="Averages">
+    <footer style="margin-top:40px; text-align:center; color:#777; font-size:0.9em;">
+      Generated automatically from report.xlsx
+    </footer>
+  </div>
 
-  <footer style="margin-top:40px; text-align:center; color:#777; font-size:0.9em;">
-    Generated automatically from report.xlsx
-  </footer>
+  <script>
+    const trans = document.querySelectorAll('.trans');
+    document.querySelectorAll('.lang-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const lang = e.target.dataset.lang;
+        localStorage.setItem('lang', lang);
+        setLanguage(lang);
+      });
+    });
+
+    function setLanguage(lang) {
+      trans.forEach(el => {
+        el.textContent = el.dataset[lang] || el.dataset.no;
+      });
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+    }
+
+    const savedLang = localStorage.getItem('lang') || 'no';
+    setLanguage(savedLang);
+  </script>
 
 </body>
 </html>
@@ -248,7 +266,6 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
-# Force commit every run
 html_content = html_content.replace(
     '</footer>',
     f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
