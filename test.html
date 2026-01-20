@@ -113,7 +113,7 @@
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
         <option value="Totalt">Totalt</option>
-        <option value="Siste 7 dager" selected>Siste 7 dager</option>
+        <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
       </select>
@@ -121,7 +121,7 @@
     </div>
     <footer>
       Generated automatically from report.xlsx (data up to yesterday)
-      <p style="font-size:0.8em; color:#999; text-align:center;">Generated at 2026-01-20 18:56:03 CET (data up to yesterday)</p>
+      <p style="font-size:0.8em; color:#999; text-align:center;">Generated at 2026-01-20 20:07:49 CET (data up to yesterday)</p>
     </footer>
   </div>
 
@@ -150,7 +150,7 @@
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
 
-    // Chart logic with STRICT 7-day range
+    // Chart logic
     const ctx = document.getElementById('dailyTrendChart').getContext('2d');
     let dailyChart;
 
@@ -161,21 +161,20 @@
       let mottatt = [];
       let solgt = [];
 
+      const today = new Date();
+      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
+      let startDate = new Date(endDate);
+
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        
-        // Calculate exact start/end (timezone-safe)
-        const today = new Date();
-        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
-        const startDate = new Date(endDate);
-        startDate.setDate(endDate.getDate() - (daysBack - 1));  // exactly daysBack days inclusive
+        startDate.setDate(endDate.getDate() - (daysBack - 1));  // inclusive 7 days
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
 
         filteredData = dailyData.filter(d => d.date >= startStr && d.date <= endStr);
 
-        // Force EXACTLY the number of days
+        // Force exact period length
         const allDates = [];
         let current = new Date(startDate);
         while (current <= endDate) {
@@ -183,7 +182,6 @@
           current.setDate(current.getDate() + 1);
         }
 
-        // Merge & fill 0
         const dataMap = new Map(filteredData.map(d => [d.date, d]));
         labels = allDates;
         priset = allDates.map(date => dataMap.get(date)?.priset || 0);
@@ -218,7 +216,7 @@
       });
     }
 
-    // Period persistence: default to 'Totalt' on first visit, remember last choice
+    // Persistence + default to Totalt
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
     periodSelect.value = savedPeriod;
