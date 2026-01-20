@@ -1,39 +1,53 @@
 name: Update Peasy Report
 
 on:
-schedule:
-- cron: '0 8 * * *'           # 08:00 UTC = 09:00 CET (Norwegian time)
-workflow_dispatch:              # Allows manual trigger from Actions tab
+  schedule:
+    # Every day at 08:00 UTC = 09:00 CET (Norway)
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Allows manual trigger from Actions tab
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-steps:
-- name: Checkout repository
-uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-- name: Set up Python 3.11
-uses: actions/setup-python@v5
-with:
-python-version: '3.11'
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-- name: Install dependencies
-run: |
-         python -m pip install --upgrade pip
-          pip install pandas openpyxl matplotlib jinja2
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
           pip install pandas openpyxl matplotlib jinja2 requests
 
-     - name: Generate report
-run: |
-         echo "Starting report generation..."
-         python report_generator.py
-         echo "Report generation finished."
+      - name: Generate report
+        run: |
+          echo "Starting report generation at $(date '+%Y-%m-%d %H:%M:%S CET')"
+          python report_generator.py || { echo "Report generation failed!"; exit 1; }
+          echo "Report generation finished."
 
-     - name: Commit and push updated test.html
-run: |
-         git config --global user.name 'GitHub Action Bot'
-         git config --global user.email 'actions@github.com'
-         git add test.html
-         git commit -m "Auto-update test.html - $(date +'%Y-%m-%d %H:%M CET')" || echo "No changes to commit"
-         git push || echo "Push completed or no changes"
+      - name: Commit and push updated test.html (only if changed)
+        run: |
+          git config --global user.name 'GitHub Action Bot'
+          git config --global user.email 'actions@github.com'
+          
+          git add test.html
+          
+          # Only commit if there are actual changes
+          git diff --staged --quiet && echo "No changes to commit - skipping" && exit 0
+          
+          git commit -m "Auto-update Peasy report - $(date '+%Y-%m-%d %H:%M CET')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
