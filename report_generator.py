@@ -26,7 +26,7 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Last 7 days": TODAY - timedelta(days=6),
+    "Last 7 days": TODAY - timedelta(days=7),    # yesterday + 6 days back
     "Last 30 days": TODAY - timedelta(days=30),
     "Last 60 days": TODAY - timedelta(days=60),
     "Total": None
@@ -79,7 +79,7 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_sold"] = round(total_marketing / sold_count) if sold_count > 0 else 0
     
-    # Averages (Value = Bud)
+    # Averages
     sold_mask = df[COL_SOLD].notna()
     if start_date is not None:
         sold_mask &= (df[COL_SOLD] >= start_date)
