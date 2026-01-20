@@ -10,6 +10,7 @@ from io import BytesIO
 import jinja2
 import requests
 import io
+import json
 
 # CONFIG
 REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx"
@@ -20,17 +21,17 @@ YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
 # Column names
-COL_VALUED = "SD mottatt på"
+COL_VALUED = "SD mottatt på"      # Priset
 COL_RECEIVED = "Mottatt"
 COL_SOLD = "Solgt på"
-COL_VALUE = "Bud"
-COL_COMMISSION = "Avgift"
+COL_VALUE = "Bud"                 # Value
+COL_COMMISSION = "Avgift"         # Commission
 
 DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),  # yesterday + 6 days back
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -44,7 +45,7 @@ print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
 response.raise_for_status()  # raise error if download fails
 
-# Load from memory (no local file needed)
+# Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
 print("Columns:", df.columns.tolist())
@@ -61,16 +62,28 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude today's data (safety)
+# Exclude today's data
 df = df[df[COL_VALUED] <= YESTERDAY]
 
+# Daily aggregation for interactive chart
+df_daily = df.copy()
+df_daily['date'] = df_daily[COL_VALUED].dt.date
+daily = df_daily.groupby('date').agg({
+    COL_VALUED: 'count',
+    COL_RECEIVED: 'count',
+    COL_SOLD: 'count'
+}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLGT: 'solgt'}).reset_index()
+daily['date'] = daily['date'].astype(str)
+daily_json = daily.to_json(orient='records')
+
+# Standard calculations
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
     priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
-    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
+    mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
     solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
     row["priset_count"] = priset_count
@@ -109,7 +122,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts (keep original)
+# Static Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -192,152 +205,4 @@ template_str = """
     @media (max-width: 768px) {
       table { font-size: 0.85rem; overflow-x: auto; display: block; }
       th, td { padding: 6px 8px; }
-      canvas { height: 300px !important; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="lang-toggle">
-      <a href="#" class="lang-link" data-lang="en">English</a> | 
-      <a href="#" class="lang-link active" data-lang="no">Norsk</a>
-    </div>
-    <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
-    <p class="subtitle trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} (data up to yesterday)" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} (data opp til i går)">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} (data opp til i går)</p>
-
-    <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
-    <table>
-      <tr>
-        <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
-        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
-        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
-        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
-        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
-        <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
-        <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
-        <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
-      </tr>
-      {% for row in summary %}
-      <tr>
-        <td>{{ row.Period }}</td>
-        <td>{{ row['priset_count'] }}</td>
-        <td>{{ row['mottatt_count'] }}</td>
-        <td>{{ row['priset_to_mottatt_pct'] }} %</td>
-        <td>{{ row['solgt_count'] }}</td>
-        <td>{{ row['priset_to_solgt_pct'] }} %</td>
-        <td>{{ row['marketing_per_solgt'] | int | format_number }} NOK</td>
-        <td>{{ row['avg_value'] | int | format_number }} NOK</td>
-        <td>{{ row['avg_commission'] | int | format_number }} NOK</td>
-      </tr>
-      {% endfor %}
-    </table>
-
-    <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
-    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Priset, Mottatt & Solgt Antall">Priset, Mottatt & Solgt Antall</h3>
-    <img src="{{ chart1 }}" alt="Antall">
-
-    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
-    <img src="{{ chart2 }}" alt="Gjennomsnitt">
-
-    <h3 class="trans" data-en="Daily Trend (Priset, Received, Sold)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
-    <div id="dailyChartContainer">
-      <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
-      <select id="periodSelect">
-        <option value="Siste 7 dager">Siste 7 dager</option>
-        <option value="Siste 30 dager">Siste 30 dager</option>
-        <option value="Siste 60 dager">Siste 60 dager</option>
-        <option value="Totalt">Totalt</option>
-      </select>
-      <canvas id="dailyTrendChart"></canvas>
-    </div>
-
-    <footer>
-      Generated automatically from report.xlsx (data up to yesterday)
-    </footer>
-  </div>
-
-  <script>
-    const dailyData = {{ daily_json | safe }};
-    const trans = document.querySelectorAll('.trans');
-    document.querySelectorAll('.lang-link').forEach(link => {
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        const lang = e.target.dataset.lang;
-        localStorage.setItem('lang', lang);
-        setLanguage(lang);
-      });
-    });
-    function setLanguage(lang) {
-      trans.forEach(el => {
-        el.textContent = el.dataset[lang] || el.dataset.no;
-      });
-      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
-      document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
-    }
-    const savedLang = localStorage.getItem('lang') || 'no';
-    setLanguage(savedLang);
-    // Interactive daily trend chart
-    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
-    let dailyChart;
-    function updateDailyChart(period) {
-      let filteredData = dailyData;
-      if (period !== 'Totalt') {
-        const start = new Date();
-        start.setDate(start.getDate() - parseInt(period.split(' ')[1]));
-        filteredData = dailyData.filter(d => new Date(d.date) >= start);
-      }
-      const labels = filteredData.map(d => d.date);
-      const priset = filteredData.map(d => d.priset);
-      const mottatt = filteredData.map(d => d.mottatt);
-      const solgt = filteredData.map(d => d.solgt);
-      if (dailyChart) dailyChart.destroy();
-      dailyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1, borderWidth: 2 },
-            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1, borderWidth: 2 },
-            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1, borderWidth: 2 }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'top' } },
-          scales: { x: { title: { display: true, text: 'Dato' } }, y: { title: { display: true, text: 'Antall' }, beginAtZero: true } }
-        }
-      });
-    }
-    document.getElementById('periodSelect').addEventListener('change', e => {
-      updateDailyChart(e.target.value);
-    });
-    updateDailyChart('Siste 30 dager');
-  </script>
-</body>
-</html>
-"""
-
-env = jinja2.Environment()
-env.filters["format_number"] = lambda x: f"{x:,}"
-
-template = env.from_string(template_str)
-
-html_content = template.render(
-    today=YESTERDAY,  # show yesterday as snapshot date
-    now=datetime.now().strftime("%Y-%m-%d %H:%M"),
-    summary=summary_df.to_dict("records"),
-    chart1=chart1_b64,
-    chart2=chart2_b64,
-    daily_json=daily_json
-)
-
-# Force commit every time
-html_content = html_content.replace(
-    '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
-)
-
-Path("test.html").write_text(html_content, encoding="utf-8")
-
-print("Report saved as test.html")
+      canvas { height: 300px !
