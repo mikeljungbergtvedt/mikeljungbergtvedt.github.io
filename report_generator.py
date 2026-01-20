@@ -53,29 +53,29 @@ df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 print("Columns in Excel:", df.columns.tolist())
 print("\nFirst few rows (raw):\n", df.head(10).to_string())
 
-# Parse dates - improved for DD.MM.YYYY (with or without HH:MM)
+# Parse dates - robust for DD.MM.YYYY (with or without HH:MM)
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     
-    # First try full format with time
+    # Try full format with time first
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
     
-    # For rows that failed, try date-only (first 10 chars: DD.MM.YYYY)
+    # Fallback: date-only for failed rows
     mask_failed = parsed.isna()
     if mask_failed.any():
         parsed[mask_failed] = pd.to_datetime(
-            df.loc[mask_failed, col].str[:10],
+            df.loc[mask_failed, col].str[:10],  # DD.MM.YYYY
             format="%d.%m.%Y",
             errors="coerce"
         )
     
-    # Log parsing success
+    # Log success rate
     valid_count = parsed.notna().sum()
     print(f"Parsed dates for {col}: {valid_count} / {len(df)} successful ({valid_count/len(df)*100:.1f}%)")
     
     df[col] = parsed
 
-# Debug: show parsed dates
+# Debug parsed dates
 print("\nSample parsed dates (first 10 rows):")
 print(df[DATE_COLS].head(10))
 
@@ -90,7 +90,7 @@ print(sorted(df[COL_SOLD].dt.date.dropna().unique()))
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude all data from today onwards (apply to ALL date columns)
+# Exclude anything from today onwards (all date columns)
 df = df[
     ((df[COL_VALUED].isna()) | (df[COL_VALUED] <= YESTERDAY_END)) &
     ((df[COL_RECEIVED].isna()) | (df[COL_RECEIVED] <= YESTERDAY_END)) &
@@ -133,7 +133,7 @@ for period_name, start_date in PERIODS.items():
     
     mask = pd.Series(True, index=df.index)  # all rows for Totalt
     if start_date is not None:
-        mask = (df[COL_VALUED] >= start_date)  # periods based on valued date
+        mask = (df[COL_VALUED] >= start_date)  # anchor on valued date
 
     priset_count  = len(df[mask & df[COL_VALUED].notna()])
     mottatt_count = len(df[mask & df[COL_RECEIVED].notna()])
