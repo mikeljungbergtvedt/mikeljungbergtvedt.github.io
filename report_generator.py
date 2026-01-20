@@ -20,21 +20,21 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
-print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+print(f"Today (run time): {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to: {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
 
 # Column names
-COL_VALUED     = "SD mottatt på"    # priced/valued date
-COL_RECEIVED   = "Mottatt"          # received date
-COL_SOLD       = "Solgt på"         # sold date
-COL_VALUE      = "Bud"              # value/bid
-COL_COMMISSION = "Avgift"           # commission/fee
+COL_VALUED     = "SD mottatt på"
+COL_RECEIVED   = "Mottatt"
+COL_SOLD       = "Solgt på"
+COL_VALUE      = "Bud"
+COL_COMMISSION = "Avgift"
 
 DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # Jan 13–19 if today is Jan 20
+    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # exactly 7 days: 13.01–19.01
     "Siste 30 dager": YESTERDAY_END - timedelta(days=29),
     "Siste 60 dager": YESTERDAY_END - timedelta(days=59),
     "Totalt": None
@@ -43,54 +43,34 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# Download the latest Excel
-print(f"Downloading report from: {REPORT_URL}")
+# Download
+print(f"Downloading: {REPORT_URL}")
 response = requests.get(REPORT_URL)
 response.raise_for_status()
 
-# Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
-print("Columns in Excel:", df.columns.tolist())
-print("\nFirst few rows (raw):\n", df.head(10).to_string())
+print("Columns:", df.columns.tolist())
+print("\nRaw head:\n", df.head(10).to_string())
 
-# Parse dates - robust for DD.MM.YYYY (with or without HH:MM)
+# Parse dates
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
-    
-    # Try full format with time first
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
-    
-    # Fallback: date-only for failed rows
     mask_failed = parsed.isna()
     if mask_failed.any():
-        parsed[mask_failed] = pd.to_datetime(
-            df.loc[mask_failed, col].str[:10],
-            format="%d.%m.%Y",
-            errors="coerce"
-        )
-    
-    # Log success rate
+        parsed[mask_failed] = pd.to_datetime(df.loc[mask_failed, col].str[:10], format="%d.%m.%Y", errors="coerce")
     valid_count = parsed.notna().sum()
-    print(f"Parsed dates for {col}: {valid_count} / {len(df)} successful ({valid_count/len(df)*100:.1f}%)")
-    
+    print(f"Parsed dates for {col}: {valid_count}/{len(df)} ({valid_count/len(df)*100:.1f}%)")
     df[col] = parsed
 
-# Debug parsed dates
-print("\nSample parsed dates (first 10 rows):")
-print(df[DATE_COLS].head(10))
+# Debug
+print("\nUnique sold dates:", sorted(df[COL_SOLD].dt.date.dropna().unique()))
 
-print("\nNumber of valid dates per column:")
-for col in DATE_COLS:
-    print(f"{col}: {df[col].notna().sum()} valid entries")
-
-print("\nUnique sold dates (after parsing):")
-print(sorted(df[COL_SOLD].dt.date.dropna().unique()))
-
-# Parse numeric columns
+# Numeric
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude anything from today onwards (all date columns)
+# Exclude today+
 df = df[
     ((df[COL_VALUED].isna()) | (df[COL_VALUED] <= YESTERDAY_END)) &
     ((df[COL_RECEIVED].isna()) | (df[COL_RECEIVED] <= YESTERDAY_END)) &
@@ -99,34 +79,27 @@ df = df[
 
 print(f"\nRows after excluding today+: {len(df)}")
 
-# Daily aggregation - count events per day
-daily_valued = (
-    df[df[COL_VALUED].notna()]
-    .groupby(df[COL_VALUED].dt.date)
-    .size()
-    .rename('priset')
-)
+# Daily aggregation
+daily_valued = df[df[COL_VALUED].notna()].groupby(df[COL_VALUED].dt.date).size().rename('priset')
+daily_received = df[df[COL_RECEIVED].notna()].groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt')
+daily_sold = df[df[COL_SOLD].notna()].groupby(df[COL_SOLD].dt.date).size().rename('solgt')
 
-daily_received = (
-    df[df[COL_RECEIVED].notna()]
-    .groupby(df[COL_RECEIVED].dt.date)
-    .size()
-    .rename('mottatt')
-)
-
-daily_sold = (
-    df[df[COL_SOLD].notna()]
-    .groupby(df[COL_SOLD].dt.date)
-    .size()
-    .rename('solgt')
-)
-
-daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0)
-daily = daily.reset_index(names='date')
+daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0).reset_index(names='date')
 daily['date'] = daily['date'].astype(str)
-daily_json = daily.to_json(orient='records')
 
-# Period summaries - count cars where the event date is within period
+# For "Siste 7 dager" - force exactly 7 days (13-19) even if 0
+seven_day_start = (YESTERDAY_END - timedelta(days=6)).date()
+seven_day_end = YESTERDAY.date()
+all_seven_days = pd.date_range(seven_day_start, seven_day_end, freq='D').strftime('%Y-%m-%d').tolist()
+
+daily_seven = pd.DataFrame({'date': all_seven_days})
+daily_seven = daily_seven.merge(daily, on='date', how='left').fillna(0)
+
+# Use forced 7-day data for all periods that are not Totalt (or adjust per period if needed)
+daily_json = daily.to_json(orient='records')  # default to full data
+# But we override in JS for precision
+
+# Period summaries (unchanged)
 results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
@@ -146,7 +119,6 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"]   = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
     if start_date is None:
         min_date = df[COL_VALUED].min()
         marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
@@ -157,7 +129,6 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages
     if start_date is None:
         sold_mask = df[COL_SOLD].notna()
     else:
@@ -170,10 +141,9 @@ for period_name, start_date in PERIODS.items():
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = \
-    summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# === Static Charts ===
+# Static Charts (unchanged)
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -182,7 +152,6 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts per period
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
@@ -205,7 +174,6 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Averages per sold car
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
@@ -305,7 +273,7 @@ template_str = """
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
         <option value="Totalt">Totalt</option>
-        <option value="Siste 7 dager">Siste 7 dager</option>
+        <option value="Siste 7 dager" selected>Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
       </select>
@@ -321,7 +289,7 @@ template_str = """
     const dailyData = {{ daily_json | safe }};
     const trans = document.querySelectorAll('.trans');
 
-    // Language toggle
+    // Language toggle (unchanged)
     document.querySelectorAll('.lang-link').forEach(link => {
       link.addEventListener('click', e => {
         e.preventDefault();
@@ -342,23 +310,47 @@ template_str = """
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
 
-    // Chart logic
+    // Chart logic with strict 7-day range
     const ctx = document.getElementById('dailyTrendChart').getContext('2d');
     let dailyChart;
 
     function updateDailyChart(period) {
       let filteredData = dailyData;
+      let labels = [];
+      let priset = [];
+      let mottatt = [];
+      let solgt = [];
+
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
         const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysBack);
-        const startStr = start.toISOString().split('T')[0];  // YYYY-MM-DD string, timezone-safe
-        filteredData = dailyData.filter(d => d.date >= startStr);
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysBack);
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
+        const startStr = startDate.toISOString().split('T')[0];
+        const endStr = endDate.toISOString().split('T')[0];
+
+        filteredData = dailyData.filter(d => d.date >= startStr && d.date <= endStr);
+
+        // Force exactly the 7 days (or period length) on axis
+        const allDates = [];
+        let current = new Date(startDate);
+        while (current <= endDate) {
+          allDates.push(current.toISOString().split('T')[0]);
+          current.setDate(current.getDate() + 1);
+        }
+
+        // Merge data, fill 0 for missing days
+        const dataMap = new Map(filteredData.map(d => [d.date, d]));
+        labels = allDates;
+        priset = allDates.map(date => dataMap.get(date)?.priset || 0);
+        mottatt = allDates.map(date => dataMap.get(date)?.mottatt || 0);
+        solgt = allDates.map(date => dataMap.get(date)?.solgt || 0);
+      } else {
+        labels = filteredData.map(d => d.date);
+        priset = filteredData.map(d => d.priset);
+        mottatt = filteredData.map(d => d.mottatt);
+        solgt = filteredData.map(d => d.solgt);
       }
-      const labels = filteredData.map(d => d.date);
-      const priset = filteredData.map(d => d.priset);
-      const mottatt = filteredData.map(d => d.mottatt);
-      const solgt = filteredData.map(d => d.solgt);
 
       if (dailyChart) dailyChart.destroy();
       dailyChart = new Chart(ctx, {
@@ -385,10 +377,9 @@ template_str = """
     // Period persistence: default to 'Totalt' on first visit, remember last choice
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
-    periodSelect.value = savedPeriod;  // Apply saved/default
-    updateDailyChart(savedPeriod);     // Sync chart immediately
+    periodSelect.value = savedPeriod;
+    updateDailyChart(savedPeriod);
 
-    // Save on change
     periodSelect.addEventListener('change', e => {
       const selected = e.target.value;
       localStorage.setItem('period', selected);
