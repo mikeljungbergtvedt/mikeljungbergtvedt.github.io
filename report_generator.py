@@ -1,6 +1,4 @@
 # report_generator.py
-# Requirements: pip install pandas openpyxl matplotlib jinja2
-
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -9,17 +7,20 @@ import base64
 from io import BytesIO
 import jinja2
 
-# ────────────────────────────────────────────────
-# CONFIG
-# ────────────────────────────────────────────────
-
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
-TODAY = datetime.now()                  # current date/time
+TODAY = datetime.now()
 
-DATE_COLUMNS = ["SD mottatt på", "Mottatt", "Solgt på"]
-VALUE_COLUMNS = ["Bud", "Avgift"]
+# Exact column names from your screenshot
+COL_SD_MOTTATT = "SD mottatt på"
+COL_MOTTATT    = "Mottatt"
+COL_SOLGT      = "Solgt på"
+COL_BUD        = "Bud"
+COL_AVGIKT     = "Avgift"
+
+DATE_COLS = [COL_SD_MOTTATT, COL_MOTTATT, COL_SOLGT]
+VALUE_COLS = [COL_BUD, COL_AVGIKT]
 
 PERIODS = {
     "Last 30 days": TODAY - timedelta(days=30),
@@ -28,25 +29,37 @@ PERIODS = {
 }
 
 # ────────────────────────────────────────────────
-# 1. Load & clean data
+# Load & parse dates robustly
 # ────────────────────────────────────────────────
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
-for col in DATE_COLUMNS:
+print("Columns in Excel:", df.columns.tolist())
+
+for col in DATE_COLS:
+    # Strip whitespace and convert to string
+    df[col] = df[col].astype(str).str.strip()
+    
+    # Try full format first (with time)
     df[col] = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
+    
+    # Fallback: without time
     mask = df[col].isna()
     df.loc[mask, col] = pd.to_datetime(
-        df.loc[mask, col].astype(str).str[:10],
+        df.loc[mask, col].str[:10],
         format="%d.%m.%Y",
         errors="coerce"
     )
+    
+    # Debug: how many valid dates per column
+    valid = df[col].notna().sum()
+    print(f"{col}: {valid} valid dates (out of {len(df)} rows)")
 
-for col in VALUE_COLUMNS:
+for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # ────────────────────────────────────────────────
-# 2. Compute metrics per period
+# Calculate metrics
 # ────────────────────────────────────────────────
 
 results = []
@@ -54,31 +67,33 @@ results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
 
-    # Independent counts per column
-    for col in DATE_COLUMNS:
+    # Count for each date column independently
+    for col in DATE_COLS:
         if start_date is None:
             count = df[col].notna().sum()
         else:
             count = df[(df[col] >= start_date) & df[col].notna()].shape[0]
-        short_key = col.replace(" på", "").replace(" ", "")
-        row[f"{short_key}_count"] = count
+        short = col.replace(" ", "").replace("på", "").replace("å", "a")
+        row[f"{short}_count"] = count
 
-    # Averages: only on sold rows, period-filtered
-    if start_date is None:
-        sold_df = df[df["Solgt på"].notna()]
-    else:
-        sold_df = df[(df["Solgt på"] >= start_date) & df["Solgt på"].notna()]
+    # Averages: only on sold rows
+    sold_mask = df[COL_SOLGT].notna()
+    if start_date is not None:
+        sold_mask &= (df[COL_SOLGT] >= start_date)
+    sold = df[sold_mask]
 
-    row["avg_bud"] = sold_df["Bud"].mean() if not sold_df.empty else 0
-    row["avg_avgift"] = sold_df["Avgift"].mean() if not sold_df.empty else 0
+    row["avg_bud"] = sold[COL_BUD].mean() if not sold.empty else 0
+    row["avg_avgift"] = sold[COL_AVGIKT].mean() if not sold.empty else 0
 
     results.append(row)
 
 summary_df = pd.DataFrame(results)
 summary_df[["avg_bud", "avg_avgift"]] = summary_df[["avg_bud", "avg_avgift"]].round(0).astype(int)
 
+print("Summary DF:\n", summary_df.to_string())
+
 # ────────────────────────────────────────────────
-# 3. Charts (base64)
+# Charts (unchanged)
 # ────────────────────────────────────────────────
 
 def fig_to_base64(fig):
@@ -89,14 +104,13 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
 
-ax1.bar([p - width for p in positions], summary_df["SDmottatt_count"], width, label="SD mottatt")
-ax1.bar(positions, summary_df["Mottatt_count"], width, label="Mottatt")
-ax1.bar([p + width for p in positions], summary_df["Solgt_count"], width, label="Sold")
+ax1.bar([p - width for p in positions], summary_df[f"{COL_SD_MOTTATT.replace(' ', '').replace('på','')}_count"], width, label="SD mottatt")
+ax1.bar(positions, summary_df[f"{COL_MOTTATT}_count"], width, label="Mottatt")
+ax1.bar([p + width for p in positions], summary_df[f"{COL_SOLGT}_count"], width, label="Sold")
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
@@ -106,7 +120,6 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Averages
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 ax2.plot(range(len(summary_df)), summary_df["avg_bud"], marker="o", label="Avg Bud")
 ax2.plot(range(len(summary_df)), summary_df["avg_avgift"], marker="s", label="Avg Commission")
@@ -119,7 +132,7 @@ chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
 # ────────────────────────────────────────────────
-# 4. HTML
+# HTML
 # ────────────────────────────────────────────────
 
 template_str = """
@@ -194,7 +207,7 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
-# Force daily commit: add timestamp
+# Force commit every time
 html_content = html_content.replace(
     '</footer>',
     f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
