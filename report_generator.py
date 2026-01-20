@@ -15,6 +15,8 @@ FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
+YESTERDAY = TODAY - timedelta(days=1)
+YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
 # Column names
 COL_PRISET = "SD mottatt på"
@@ -27,9 +29,9 @@ DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": TODAY - timedelta(days=7),
-    "Siste 30 dager": TODAY - timedelta(days=30),
-    "Siste 60 dager": TODAY - timedelta(days=60),
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
+    "Siste 30 dager": YESTERDAY - timedelta(days=29),
+    "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
 }
 
@@ -38,6 +40,9 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
+print("Columns:", df.columns.tolist())
+
+# Parse dates
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -49,7 +54,10 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Daily aggregation for interactive trend chart (full history)
+# Exclude today's data (anything after yesterday)
+df = df[df[COL_PRISET] <= YESTERDAY]
+
+# Daily aggregation for interactive trend chart (up to yesterday)
 df_daily = df.copy()
 df_daily['date'] = df_daily[COL_PRISET].dt.date
 daily = df_daily.groupby('date').agg({
@@ -81,12 +89,12 @@ for period_name, start_date in PERIODS.items():
     if start_date is None:
         priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
-            priset_min = TODAY
+            priset_min = YESTERDAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
@@ -200,7 +208,7 @@ template_str = """
       <a href="#" class="lang-link active" data-lang="no">Norsk</a>
     </div>
     <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
-    <p class="subtitle trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}</p>
+    <p class="subtitle trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} (data up to yesterday)" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} (data opp til i går)">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} (data opp til i går)</p>
 
     <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
     <table>
@@ -250,7 +258,7 @@ template_str = """
     </div>
 
     <footer>
-      Generated automatically from report.xlsx
+      Generated automatically from report.xlsx (data up to yesterday)
     </footer>
   </div>
 
@@ -294,9 +302,9 @@ template_str = """
         data: {
           labels: labels,
           datasets: [
-            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1 },
-            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1 },
-            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1 }
+            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1, borderWidth: 2 },
+            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1, borderWidth: 2 },
+            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1, borderWidth: 2 }
           ]
         },
         options: {
@@ -332,7 +340,7 @@ html_content = template.render(
 # Force commit every time
 html_content = html_content.replace(
     '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
+    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
 )
 
 Path("test.html").write_text(html_content, encoding="utf-8")
