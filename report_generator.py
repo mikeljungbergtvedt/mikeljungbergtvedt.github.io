@@ -72,7 +72,7 @@ daily = df_daily.groupby('date').agg({
     COL_VALUED: 'count',
     COL_RECEIVED: 'count',
     COL_SOLD: 'count'
-}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLGT: 'solgt'}).reset_index()
+}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLD: 'solgt'}).reset_index()
 daily['date'] = daily['date'].astype(str)
 daily_json = daily.to_json(orient='records')
 
@@ -84,7 +84,7 @@ for period_name, start_date in PERIODS.items():
     
     priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
     mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
+    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -109,9 +109,9 @@ for period_name, start_date in PERIODS.items():
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLGT].notna()
+    sold_mask = df[COL_SOLD].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLGT] >= start_date)
+        sold_mask &= (df[COL_SOLD] >= start_date)
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
@@ -337,7 +337,7 @@ env.filters["format_number"] = lambda x: f"{x:,}"
 template = env.from_string(template_str)
 
 html_content = template.render(
-    today=YESTERDAY,  # show yesterday as snapshot date
+    today=YESTERDAY,
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
