@@ -64,7 +64,7 @@ for col in DATE_COLS:
     mask_failed = parsed.isna()
     if mask_failed.any():
         parsed[mask_failed] = pd.to_datetime(
-            df.loc[mask_failed, col].str[:10],  # DD.MM.YYYY
+            df.loc[mask_failed, col].str[:10],
             format="%d.%m.%Y",
             errors="coerce"
         )
@@ -126,18 +126,21 @@ daily = daily.reset_index(names='date')
 daily['date'] = daily['date'].astype(str)
 daily_json = daily.to_json(orient='records')
 
-# Period summaries
+# Period summaries - count cars where the event date is within period
 results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    mask = pd.Series(True, index=df.index)  # all rows for Totalt
-    if start_date is not None:
-        mask = (df[COL_VALUED] >= start_date)  # anchor on valued date
-
-    priset_count  = len(df[mask & df[COL_VALUED].notna()])
-    mottatt_count = len(df[mask & df[COL_RECEIVED].notna()])
-    solgt_count   = len(df[mask & df[COL_SOLD].notna()])
+    if start_date is None:
+        # Totalt: all rows with the event
+        priset_count  = df[COL_VALUED].notna().sum()
+        mottatt_count = df[COL_RECEIVED].notna().sum()
+        solgt_count   = df[COL_SOLD].notna().sum()
+    else:
+        # Period: event date >= start and <= yesterday
+        priset_count  = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
+        mottatt_count = ((df[COL_RECEIVED] >= start_date) & (df[COL_RECEIVED] <= YESTERDAY_END)).sum()
+        solgt_count   = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -145,7 +148,7 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"]   = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
+    # Marketing cost (days from max(start, marketing_start) to yesterday)
     if start_date is None:
         min_date = df[COL_VALUED].min()
         marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
@@ -156,8 +159,12 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages
-    sold_mask = mask & df[COL_SOLD].notna()
+    # Averages (only on sold cars in period)
+    if start_date is None:
+        sold_mask = df[COL_SOLD].notna()
+    else:
+        sold_mask = (df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)
+    
     sold = df[sold_mask]
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
     row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
@@ -165,8 +172,7 @@ for period_name, start_date in PERIODS.items():
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = \
-    summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
 # === Static Charts ===
 def fig_to_base64(fig):
