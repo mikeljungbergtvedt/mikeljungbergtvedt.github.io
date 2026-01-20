@@ -1,4 +1,6 @@
 # report_generator.py
+# Requirements: pip install pandas openpyxl matplotlib jinja2
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -7,67 +9,75 @@ import base64
 from io import BytesIO
 import jinja2
 
+# ────────────────────────────────────────────────
+# CONFIG
+# ────────────────────────────────────────────────
+
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
-# Exact column names from your screenshot
-COL_SD_MOTTATT = "SD mottatt på"
-COL_MOTTATT    = "Mottatt"
-COL_SOLGT      = "Solgt på"
-COL_BUD        = "Bud"
-COL_AVGIKT     = "Avgift"
+# Exact column names from your Excel
+COL_SD = "SD mottatt på"
+COL_MOTTATT = "Mottatt"
+COL_SOLGT = "Solgt på"
+COL_BUD = "Bud"
+COL_AVGIFT = "Avgift"
 
-DATE_COLS = [COL_SD_MOTTATT, COL_MOTTATT, COL_SOLGT]
-VALUE_COLS = [COL_BUD, COL_AVGIKT]
+DATE_COLS = [COL_SD, COL_MOTTATT, COL_SOLGT]
+VALUE_COLS = [COL_BUD, COL_AVGIFT]
 
 PERIODS = {
     "Last 30 days": TODAY - timedelta(days=30),
     "Last 60 days": TODAY - timedelta(days=60),
-    "Total":        None
+    "Total": None
 }
 
 # ────────────────────────────────────────────────
-# Load & parse dates robustly
+# 1. Load & parse data
 # ────────────────────────────────────────────────
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
 print("Columns in Excel:", df.columns.tolist())
 
+# Robust date parsing
 for col in DATE_COLS:
-    # Strip whitespace and convert to string
+    # Force string, strip whitespace
     df[col] = df[col].astype(str).str.strip()
     
-    # Try full format first (with time)
-    df[col] = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
+    # Try with time
+    parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
     
-    # Fallback: without time
-    mask = df[col].isna()
-    df.loc[mask, col] = pd.to_datetime(
-        df.loc[mask, col].str[:10],
-        format="%d.%m.%Y",
-        errors="coerce"
-    )
+    # For failed (NaT), try without time
+    mask = parsed.isna()
+    if mask.any():
+        parsed[mask] = pd.to_datetime(
+            df.loc[mask, col].str[:10],
+            format="%d.%m.%Y",
+            errors="coerce"
+        )
     
-    # Debug: how many valid dates per column
-    valid = df[col].notna().sum()
-    print(f"{col}: {valid} valid dates (out of {len(df)} rows)")
+    df[col] = parsed
+    
+    valid_count = df[col].notna().sum()
+    print(f"{col}: {valid_count} valid dates (out of {len(df)} rows)")
 
+# Clean numeric
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # ────────────────────────────────────────────────
-# Calculate metrics
+# 2. Calculate metrics
 # ────────────────────────────────────────────────
 
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
-
-    # Count for each date column independently
+    
+    # Independent counts
     for col in DATE_COLS:
         if start_date is None:
             count = df[col].notna().sum()
@@ -75,16 +85,16 @@ for period_name, start_date in PERIODS.items():
             count = df[(df[col] >= start_date) & df[col].notna()].shape[0]
         short = col.replace(" ", "").replace("på", "").replace("å", "a")
         row[f"{short}_count"] = count
-
-    # Averages: only on sold rows
+    
+    # Averages: only sold rows
     sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
         sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
-
+    
     row["avg_bud"] = sold[COL_BUD].mean() if not sold.empty else 0
-    row["avg_avgift"] = sold[COL_AVGIKT].mean() if not sold.empty else 0
-
+    row["avg_avgift"] = sold[COL_AVGIFT].mean() if not sold.empty else 0
+    
     results.append(row)
 
 summary_df = pd.DataFrame(results)
@@ -93,7 +103,7 @@ summary_df[["avg_bud", "avg_avgift"]] = summary_df[["avg_bud", "avg_avgift"]].ro
 print("Summary DF:\n", summary_df.to_string())
 
 # ────────────────────────────────────────────────
-# Charts (unchanged)
+# 3. Charts
 # ────────────────────────────────────────────────
 
 def fig_to_base64(fig):
@@ -104,13 +114,14 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
+# Chart 1: Counts bar
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
 
-ax1.bar([p - width for p in positions], summary_df[f"{COL_SD_MOTTATT.replace(' ', '').replace('på','')}_count"], width, label="SD mottatt")
-ax1.bar(positions, summary_df[f"{COL_MOTTATT}_count"], width, label="Mottatt")
-ax1.bar([p + width for p in positions], summary_df[f"{COL_SOLGT}_count"], width, label="Sold")
+ax1.bar([p - width for p in positions], summary_df["SDmottatt_count"], width, label="SD mottatt")
+ax1.bar(positions, summary_df["Mottatt_count"], width, label="Mottatt")
+ax1.bar([p + width for p in positions], summary_df["Solgt_count"], width, label="Sold")
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
@@ -120,6 +131,7 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
+# Chart 2: Averages line
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 ax2.plot(range(len(summary_df)), summary_df["avg_bud"], marker="o", label="Avg Bud")
 ax2.plot(range(len(summary_df)), summary_df["avg_avgift"], marker="s", label="Avg Commission")
@@ -132,7 +144,7 @@ chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
 # ────────────────────────────────────────────────
-# HTML
+# 4. HTML
 # ────────────────────────────────────────────────
 
 template_str = """
