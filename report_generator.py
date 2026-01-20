@@ -37,9 +37,6 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
-print("Columns:", df.columns.tolist())
-
-# Robust date parsing
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -128,16 +125,25 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Bid Values bracketing (histogram of Value/Bud for sold cars)
-sold_values = df[df[COL_SOLD].notna()][COL_VALUE]
-fig_value, ax_value = plt.subplots(figsize=(10, 6))
-ax_value.hist(sold_values, bins=20, color='#004225', edgecolor='white')
-ax_value.set_title("Car Values Distribution (Sold)")
-ax_value.set_xlabel("Value (NOK)")
-ax_value.set_ylabel("Number of cars")
-ax_value.grid(True, alpha=0.3)
-chart_value_b64 = fig_to_base64(fig_value)
-plt.close(fig_value)
+# Chart 2: Average Values per Sold Car bar
+fig2, ax2 = plt.subplots(figsize=(10, 6))
+positions = range(len(summary_df))
+width = 0.35
+
+ax2.bar([p - width/2 for p in positions], summary_df["avg_value"], width, label="Avg Value", color="skyblue")
+ax2.bar([p + width/2 for p in positions], summary_df["avg_commission"], width, label="Avg Commission", color="orange")
+
+for i, v in enumerate(summary_df["avg_value"]):
+    ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
+for i, v in enumerate(summary_df["avg_commission"]):
+    ax2.text(i + width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
+
+ax2.set_xticks(positions)
+ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
+ax2.set_ylabel("NOK")
+ax2.legend()
+chart2_b64 = fig_to_base64(fig2)
+plt.close(fig2)
 
 # HTML template
 template_str = """
@@ -152,6 +158,9 @@ template_str = """
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
+    .lang-toggle { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
+    .lang-toggle a { margin: 0 8px; text-decoration: none; color: #004225; }
+    .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
     table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.95rem; }
     th, td { padding: 8px 12px; text-align: right; border: 1px solid #ddd; }
     th { background: #f5f9f6; color: #004225; font-weight: bold; }
@@ -167,21 +176,25 @@ template_str = """
 </head>
 <body>
   <div class="container">
-    <h1>Peasy Report</h1>
-    <p class="subtitle">Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}</p>
+    <div class="lang-toggle">
+      <a href="#" class="lang-link" data-lang="en">English</a> | 
+      <a href="#" class="lang-link active" data-lang="no">Norsk</a>
+    </div>
+    <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
+    <p class="subtitle trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}</p>
 
-    <h2>Summary Table</h2>
+    <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
     <table>
       <tr>
-        <th>Period</th>
-        <th>Valued</th>
-        <th>Received</th>
-        <th>Valued → Received</th>
-        <th>Sold</th>
-        <th>Valued → Sold</th>
-        <th>Marketing cost per sold car</th>
-        <th>Avg Value per sold car</th>
-        <th>Avg Commission per sold car</th>
+        <th class="trans" data-en="Period" data-no="Periode">Periode</th>
+        <th class="trans" data-en="Valued" data-no="Valued">Valued</th>
+        <th class="trans" data-en="Received" data-no="Received">Received</th>
+        <th class="trans" data-en="Valued → Received" data-no="Valued → Received">Valued → Received</th>
+        <th class="trans" data-en="Sold" data-no="Sold">Sold</th>
+        <th class="trans" data-en="Valued → Sold" data-no="Valued → Sold">Valued → Sold</th>
+        <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
+        <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
+        <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
       </tr>
       {% for row in summary %}
       <tr>
@@ -198,17 +211,41 @@ template_str = """
       {% endfor %}
     </table>
 
-    <h2>Visual Overview</h2>
-    <h3>Valued, Received & Sold Counts</h3>
+    <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
+    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Valued, Received & Sold Antall">Valued, Received & Sold Antall</h3>
     <img src="{{ chart1 }}" alt="Counts">
 
-    <h3>Car Values Distribution (Sold Cars)</h3>
-    <img src="{{ chart_value }}" alt="Value Distribution">
+    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
+    <img src="{{ chart2 }}" alt="Averages">
 
     <footer>
       Generated automatically from report.xlsx
     </footer>
   </div>
+
+  <script>
+    const trans = document.querySelectorAll('.trans');
+    document.querySelectorAll('.lang-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const lang = e.target.dataset.lang;
+        localStorage.setItem('lang', lang);
+        setLanguage(lang);
+      });
+    });
+
+    function setLanguage(lang) {
+      trans.forEach(el => {
+        el.textContent = el.dataset[lang] || el.dataset.no;
+      });
+      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
+      document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+    }
+
+    const savedLang = localStorage.getItem('lang') || 'no';
+    setLanguage(savedLang);
+  </script>
+
 </body>
 </html>
 """
@@ -223,7 +260,7 @@ html_content = template.render(
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
-    chart_value=chart_value_b64
+    chart2=chart2_b64
 )
 
 # Force commit every time
