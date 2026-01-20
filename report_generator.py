@@ -16,7 +16,7 @@ import jinja2
 FILE_PATH = "report.xlsx"               # your Excel file in root
 SHEET_NAME = "Sheet1"
 
-TODAY = datetime(2026, 1, 19)           # fixed for your data snapshot - update if needed
+TODAY = datetime.now()                  # auto-update to current date
 
 DATE_COLUMNS = ["SD mottatt på", "Mottatt", "Solgt på"]
 VALUE_COLUMNS = ["Bud", "Avgift"]
@@ -59,25 +59,26 @@ for col in VALUE_COLUMNS:
 results = []
 
 for period_name, start_date in PERIODS.items():
-    if start_date is None:
-        period_df = df
-    else:
-        period_df = df[df["Solgt på"] >= start_date]   # filter example on sold date
-        # Change filter column here if needed (e.g. "Mottatt", "SD mottatt på")
-
     row = {
         "Period": period_name,
-        "SD mottatt count": period_df["SD mottatt på"].notna().sum(),
-        "Mottatt count":    period_df["Mottatt"].notna().sum(),
-        "Sold count":       period_df["Solgt på"].notna().sum(),
     }
+    for col in DATE_COLUMNS:
+        if start_date is None:
+            count = df[col].notna().sum()
+        else:
+            count = df[(df[col] >= start_date) & df[col].notna()].shape[0]
+        row[col.replace(" på", "") + " count"] = count
 
-    sold = period_df[period_df["Solgt på"].notna()]
+    if start_date is None:
+        sold = df[df["Solgt på"].notna()]
+    else:
+        sold = df[(df["Solgt på"] >= start_date) & df["Solgt på"].notna()]
+
     if not sold.empty:
-        row["Avg Bud per sold car"]    = sold["Bud"].mean()
+        row["Avg Bud per sold car"] = sold["Bud"].mean()
         row["Avg Avgift per sold car"] = sold["Avgift"].mean()
     else:
-        row["Avg Bud per sold car"]    = 0
+        row["Avg Bud per sold car"] = 0
         row["Avg Avgift per sold car"] = 0
 
     results.append(row)
@@ -85,7 +86,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 
 # Round averages for nicer display
-summary_df["Avg Bud per sold car"]    = summary_df["Avg Bud per sold car"].round(0).astype(int)
+summary_df["Avg Bud per sold car"] = summary_df["Avg Bud per sold car"].round(0).astype(int)
 summary_df["Avg Avgift per sold car"] = summary_df["Avg Avgift per sold car"].round(0).astype(int)
 
 # ────────────────────────────────────────────────
@@ -100,33 +101,33 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts bar chart - FIXED VERSION
+# Chart 1: Counts bar chart
 fig1, ax1 = plt.subplots(figsize=(9, 5))
 
-# Use numeric positions instead of string + float
+# Use numeric positions
 positions = range(len(summary_df))
 bar_width = 0.25
 
 ax1.bar([p - bar_width for p in positions], summary_df["SD mottatt count"], bar_width, label="SD mottatt")
 ax1.bar(positions, summary_df["Mottatt count"], bar_width, label="Mottatt")
-ax1.bar([p + bar_width for p in positions], summary_df["Sold count"], bar_width, label="Sold")
+ax1.bar([p + bar_width for p in positions], summary_df["Solgt count"], bar_width, label="Sold")
 
 ax1.set_xticks(positions)
-ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='right')
+ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
 ax1.set_title("Counts by Period")
 ax1.set_ylabel("Number of cars")
 ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Average values line chart - FIXED VERSION
+# Chart 2: Average values line chart
 fig2, ax2 = plt.subplots(figsize=(9, 5))
 
 ax2.plot(range(len(summary_df)), summary_df["Avg Bud per sold car"], marker="o", label="Avg Bud")
 ax2.plot(range(len(summary_df)), summary_df["Avg Avgift per sold car"], marker="s", label="Avg Commission")
 
 ax2.set_xticks(range(len(summary_df)))
-ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='right')
+ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
 ax2.set_title("Average Values per Sold Car")
 ax2.set_ylabel("NOK")
 ax2.legend()
@@ -216,6 +217,12 @@ html_content = template.render(
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
     chart2=chart2_b64
+)
+
+# Force commit every time by adding run timestamp
+html_content = html_content.replace(
+    '</footer>',
+    f'<p style="font-size:0.8em; color:#999;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
 )
 
 # Save to file (matches your GitHub Pages page)
