@@ -14,21 +14,23 @@ FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
+YESTERDAY = TODAY - timedelta(days=1)  # reference point for periods
 
 # Column names
-COL_VALUED = "SD mottatt på"      # display as "Priset"
-COL_RECEIVED = "Mottatt"          # display as "Mottatt"
-COL_SOLD = "Solgt på"             # display as "Solgt"
-COL_VALUE = "Bud"                 # display as "Verdi"
-COL_COMMISSION = "Avgift"         # display as "Avgift"
+COL_PRISET = "SD mottatt på"
+COL_MOTTATT = "Mottatt"
+COL_SOLGT = "Solgt på"
+COL_VALUE = "Bud"
+COL_COMMISSION = "Avgift"
 
-DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
+DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
+# Periods relative to yesterday
 PERIODS = {
-    "Siste 7 dager": TODAY - timedelta(days=7),
-    "Siste 30 dager": TODAY - timedelta(days=30),
-    "Siste 60 dager": TODAY - timedelta(days=60),
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),  # yesterday + 6 days back = 7 full days ending yesterday
+    "Siste 30 dager": YESTERDAY - timedelta(days=29),
+    "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
 }
 
@@ -37,6 +39,9 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
+print("Columns:", df.columns.tolist())
+
+# Robust date parsing
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -48,14 +53,17 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
+# Filter out any data from today (safety)
+df = df[df[COL_PRISET] <= YESTERDAY]
+
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
-    mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
+    priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
+    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
+    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -66,32 +74,32 @@ for period_name, start_date in PERIODS.items():
     
     # Marketing cost
     if start_date is None:
-        priset_min = df[COL_VALUED].min()
+        priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
-            priset_min = TODAY
+            priset_min = YESTERDAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLD].notna()
+    sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLD] >= start_date)
+        sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
-    row["avg_avgift"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
+    row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
     
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
 # Charts
 def fig_to_base64(fig):
@@ -132,11 +140,11 @@ positions = range(len(summary_df))
 width = 0.35
 
 ax2.bar([p - width/2 for p in positions], summary_df["avg_value"], width, label="Gj.sn. Verdi")
-ax2.bar([p + width/2 for p in positions], summary_df["avg_avgift"], width, label="Gj.sn. Avgift")
+ax2.bar([p + width/2 for p in positions], summary_df["avg_commission"], width, label="Gj.sn. Avgift")
 
 for i, v in enumerate(summary_df["avg_value"]):
     ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
-for i, v in enumerate(summary_df["avg_avgift"]):
+for i, v in enumerate(summary_df["avg_commission"]):
     ax2.text(i + width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
 
 ax2.set_xticks(positions)
@@ -189,11 +197,11 @@ template_str = """
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
-        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
-        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
-        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
-        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Priset" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Mottatt" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Solgt" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
@@ -264,6 +272,7 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
+# Force commit every time
 html_content = html_content.replace(
     '</footer>',
     f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
