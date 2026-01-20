@@ -8,13 +8,13 @@ from pathlib import Path
 import base64
 from io import BytesIO
 import jinja2
+import json
 
 # CONFIG
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
-YESTERDAY = TODAY - timedelta(days=1)  # reference point for periods
 
 # Column names
 COL_PRISET = "SD mottatt på"
@@ -26,11 +26,10 @@ COL_COMMISSION = "Avgift"
 DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
-# Periods relative to yesterday
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),  # yesterday + 6 days back = 7 full days ending yesterday
-    "Siste 30 dager": YESTERDAY - timedelta(days=29),
-    "Siste 60 dager": YESTERDAY - timedelta(days=59),
+    "Siste 7 dager": TODAY - timedelta(days=7),
+    "Siste 30 dager": TODAY - timedelta(days=30),
+    "Siste 60 dager": TODAY - timedelta(days=60),
     "Totalt": None
 }
 
@@ -39,9 +38,6 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
-print("Columns:", df.columns.tolist())
-
-# Robust date parsing
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -53,9 +49,18 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Filter out any data from today (safety)
-df = df[df[COL_PRISET] <= YESTERDAY]
+# Daily aggregation for interactive trend chart (full history)
+df_daily = df.copy()
+df_daily['date'] = df_daily[COL_PRISET].dt.date
+daily = df_daily.groupby('date').agg({
+    COL_PRISET: 'count',
+    COL_MOTTATT: 'count',
+    COL_SOLGT: 'count'
+}).rename(columns={COL_PRISET: 'priset', COL_MOTTATT: 'mottatt', COL_SOLGT: 'solgt'}).reset_index()
+daily['date'] = daily['date'].astype(str)
+daily_json = daily.to_json(orient='records')
 
+# Standard period calculations
 results = []
 
 for period_name, start_date in PERIODS.items():
@@ -76,12 +81,12 @@ for period_name, start_date in PERIODS.items():
     if start_date is None:
         priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
-            priset_min = YESTERDAY
+            priset_min = TODAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = YESTERDAY.date()
+        marketing_end = TODAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = YESTERDAY.date()
+        marketing_end = TODAY.date()
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
@@ -101,7 +106,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts
+# Static Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -155,7 +160,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template with bilingual toggle (Norwegian default)
+# HTML template with interactive trend chart + bilingual toggle
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -163,6 +168,7 @@ template_str = """
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -177,10 +183,13 @@ template_str = """
     td { background: white; }
     tr.total-row td { background: #e8f5e9; font-weight: bold; }
     img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    #dailyChartContainer { margin: 40px 0; }
+    canvas { max-width: 100%; height: 400px; }
     footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
     @media (max-width: 768px) {
       table { font-size: 0.85rem; overflow-x: auto; display: block; }
       th, td { padding: 6px 8px; }
+      canvas { height: 300px !important; }
     }
   </style>
 </head>
@@ -228,12 +237,25 @@ template_str = """
     <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
     <img src="{{ chart2 }}" alt="Gjennomsnitt">
 
+    <h3 class="trans" data-en="Daily Trend (Priset, Received, Sold)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
+    <div id="dailyChartContainer">
+      <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
+      <select id="periodSelect">
+        <option value="Siste 7 dager">Siste 7 dager</option>
+        <option value="Siste 30 dager">Siste 30 dager</option>
+        <option value="Siste 60 dager">Siste 60 dager</option>
+        <option value="Totalt">Totalt</option>
+      </select>
+      <canvas id="dailyTrendChart"></canvas>
+    </div>
+
     <footer>
       Generated automatically from report.xlsx
     </footer>
   </div>
 
   <script>
+    const dailyData = {{ daily_json | safe }};
     const trans = document.querySelectorAll('.trans');
     document.querySelectorAll('.lang-link').forEach(link => {
       link.addEventListener('click', e => {
@@ -243,7 +265,6 @@ template_str = """
         setLanguage(lang);
       });
     });
-
     function setLanguage(lang) {
       trans.forEach(el => {
         el.textContent = el.dataset[lang] || el.dataset.no;
@@ -251,9 +272,44 @@ template_str = """
       document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
       document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
     }
-
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
+    // Interactive daily trend chart
+    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
+    let dailyChart;
+    function updateDailyChart(period) {
+      let filteredData = dailyData;
+      if (period !== 'Totalt') {
+        const start = new Date();
+        start.setDate(start.getDate() - parseInt(period.split(' ')[1]));
+        filteredData = dailyData.filter(d => new Date(d.date) >= start);
+      }
+      const labels = filteredData.map(d => d.date);
+      const priset = filteredData.map(d => d.priset);
+      const mottatt = filteredData.map(d => d.mottatt);
+      const solgt = filteredData.map(d => d.solgt);
+      if (dailyChart) dailyChart.destroy();
+      dailyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1 },
+            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1 },
+            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' } },
+          scales: { x: { title: { display: true, text: 'Dato' } }, y: { title: { display: true, text: 'Antall' }, beginAtZero: true } }
+        }
+      });
+    }
+    document.getElementById('periodSelect').addEventListener('change', e => {
+      updateDailyChart(e.target.value);
+    });
+    updateDailyChart('Siste 30 dager');
   </script>
 </body>
 </html>
@@ -269,7 +325,8 @@ html_content = template.render(
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
-    chart2=chart2_b64
+    chart2=chart2_b64,
+    daily_json=daily_json
 )
 
 # Force commit every time
