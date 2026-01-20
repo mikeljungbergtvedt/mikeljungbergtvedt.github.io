@@ -20,8 +20,8 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
-print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+print(f"Today (run time): {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to: {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
 
 # Column names
 COL_VALUED     = "SD mottatt på"
@@ -34,7 +34,7 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # exactly 7 days: 13–19
+    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),
     "Siste 30 dager": YESTERDAY_END - timedelta(days=29),
     "Siste 60 dager": YESTERDAY_END - timedelta(days=59),
     "Totalt": None
@@ -50,27 +50,12 @@ response.raise_for_status()
 
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 print("Columns:", df.columns.tolist())
-print("\nRaw head:\n", df.head(10).to_string())
 
-# Parse dates - robust for your format
+# Parse dates
 for col in DATE_COLS:
-    df[col] = df[col].astype(str).str.strip()
-    
-    # Try with time first
-    parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
-    
-    # Fallback to date-only
-    mask = parsed.isna()
-    if mask.any():
-        parsed[mask] = pd.to_datetime(df.loc[mask, col].str[:10], format="%d.%m.%Y", errors="coerce")
-    
-    valid = parsed.notna().sum()
-    print(f"{col}: {valid}/{len(df)} parsed ({valid/len(df)*100:.1f}%)")
-    
-    df[col] = parsed
-
-# Debug
-print("\nUnique sold dates:", sorted(df[COL_SOLD].dt.date.dropna().unique()))
+    df[col] = pd.to_datetime(df[col].astype(str).str.strip(), dayfirst=True, errors='coerce')
+    valid = df[col].notna().sum()
+    print(f"{col}: {valid}/{len(df)} parsed")
 
 # Numeric
 for col in VALUE_COLS:
@@ -93,14 +78,19 @@ daily_sold = df[df[COL_SOLD].notna()].groupby(df[COL_SOLD].dt.date).size().renam
 daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0).reset_index(names='date')
 daily['date'] = daily['date'].astype(str)
 
-# Force strict 7-day range for chart data (13–19 Jan example)
-seven_start = (YESTERDAY_END - timedelta(days=6)).date()
-seven_end = YESTERDAY.date()
-all_seven = pd.date_range(seven_start, seven_end, freq='D').strftime('%Y-%m-%d').tolist()
+# Force period-specific ranges for chart
+def force_period_dates(days_back):
+    start = (YESTERDAY_END - timedelta(days=days_back-1)).date()
+    end = YESTERDAY.date()
+    all_dates = pd.date_range(start, end, freq='D').strftime('%Y-%m-%d').tolist()
+    df_period = pd.DataFrame({'date': all_dates})
+    df_period = df_period.merge(daily, on='date', how='left').fillna(0)
+    return df_period.to_json(orient='records')
 
-daily_seven = pd.DataFrame({'date': all_seven})
-daily_seven = daily_seven.merge(daily, on='date', how='left').fillna(0)
-daily_json = daily_seven.to_json(orient='records')  # override with forced 7-day data
+daily_json_7 = force_period_dates(7)
+daily_json_30 = force_period_dates(30)
+daily_json_60 = force_period_dates(60)
+daily_json_total = daily.to_json(orient='records')
 
 # Period summaries (unchanged)
 results = []
@@ -146,7 +136,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# === Static Charts ===
+# Static Charts (unchanged)
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -290,6 +280,7 @@ template_str = """
 
   <script>
     const dailyData = {{ daily_json | safe }};
+    const dailyData7 = {{ daily_json_7 | safe }};  // if you want separate data for 7 days
     const trans = document.querySelectorAll('.trans');
 
     // Language toggle
@@ -313,32 +304,28 @@ template_str = """
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
 
-    // Chart logic with STRICT 7-day range
+    // Chart logic
     const ctx = document.getElementById('dailyTrendChart').getContext('2d');
     let dailyChart;
 
     function updateDailyChart(period) {
-      let filteredData = dailyData;
-      let labels = [];
-      let priset = [];
-      let mottatt = [];
-      let solgt = [];
+      let dataToUse = dailyData;
+      let labels = dataToUse.map(d => d.date);
+      let priset = dataToUse.map(d => d.priset);
+      let mottatt = dataToUse.map(d => d.mottatt);
+      let solgt = dataToUse.map(d => d.solgt);
 
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        
-        // Calculate exact start/end (timezone-safe)
         const today = new Date();
-        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
         const startDate = new Date(endDate);
-        startDate.setDate(endDate.getDate() - (daysBack - 1));  // exactly daysBack days inclusive
+        startDate.setDate(endDate.getDate() - (daysBack - 1));  // inclusive
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
 
-        filteredData = dailyData.filter(d => d.date >= startStr && d.date <= endStr);
-
-        // Force EXACTLY the number of days
+        // Force exact number of days
         const allDates = [];
         let current = new Date(startDate);
         while (current <= endDate) {
@@ -347,16 +334,11 @@ template_str = """
         }
 
         // Merge & fill 0
-        const dataMap = new Map(filteredData.map(d => [d.date, d]));
+        const dataMap = new Map(dataToUse.map(d => [d.date, d]));
         labels = allDates;
         priset = allDates.map(date => dataMap.get(date)?.priset || 0);
         mottatt = allDates.map(date => dataMap.get(date)?.mottatt || 0);
         solgt = allDates.map(date => dataMap.get(date)?.solgt || 0);
-      } else {
-        labels = filteredData.map(d => d.date);
-        priset = filteredData.map(d => d.priset);
-        mottatt = filteredData.map(d => d.mottatt);
-        solgt = filteredData.map(d => d.solgt);
       }
 
       if (dailyChart) dailyChart.destroy();
@@ -381,7 +363,7 @@ template_str = """
       });
     }
 
-    // Period persistence: default to 'Totalt' on first visit, remember last choice
+    // Period persistence
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
     periodSelect.value = savedPeriod;
