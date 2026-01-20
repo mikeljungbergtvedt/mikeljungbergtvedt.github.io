@@ -121,7 +121,7 @@
     </div>
     <footer>
       Generated automatically from report.xlsx (data up to yesterday)
-      <p style="font-size:0.8em; color:#999; text-align:center;">Generated at 2026-01-20 18:18:28 CET (data up to yesterday)</p>
+      <p style="font-size:0.8em; color:#999; text-align:center;">Generated at 2026-01-20 18:36:04 CET (data up to yesterday)</p>
     </footer>
   </div>
 
@@ -158,9 +158,10 @@
       let filteredData = dailyData;
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        const start = new Date();
-        start.setDate(start.getDate() - daysBack);
-        filteredData = dailyData.filter(d => new Date(d.date) >= start);
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysBack);
+        const startStr = start.toISOString().split('T')[0];  // YYYY-MM-DD string, timezone-safe
+        filteredData = dailyData.filter(d => d.date >= startStr);
       }
       const labels = filteredData.map(d => d.date);
       const priset = filteredData.map(d => d.priset);
@@ -189,15 +190,13 @@
       });
     }
 
-    // Period persistence: default to 'Totalt' on first visit, remember choice otherwise
+    // Period persistence: default to 'Totalt' on first visit, remember last choice
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
-    periodSelect.value = savedPeriod;  // Set dropdown to saved/default value
+    periodSelect.value = savedPeriod;  // Apply saved/default
+    updateDailyChart(savedPeriod);     // Sync chart immediately
 
-    // Initialize chart with the loaded/saved period
-    updateDailyChart(savedPeriod);
-
-    // Save new choice on change
+    // Save on change
     periodSelect.addEventListener('change', e => {
       const selected = e.target.value;
       localStorage.setItem('period', selected);
