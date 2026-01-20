@@ -51,31 +51,55 @@ response.raise_for_status()
 # Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 print("Columns in Excel:", df.columns.tolist())
-print("First few rows:\n", df.head().to_string())
+print("\nFirst few rows (raw):\n", df.head(10).to_string())
 
-# Parse dates (handle both full timestamp and date-only)
+# Parse dates - improved for DD.MM.YYYY (with or without HH:MM)
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
+    
+    # First try full format with time
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
-    mask = parsed.isna()
-    if mask.any():
-        parsed[mask] = pd.to_datetime(df.loc[mask, col].str[:10], format="%d.%m.%Y", errors="coerce")
+    
+    # For rows that failed, try date-only (first 10 chars: DD.MM.YYYY)
+    mask_failed = parsed.isna()
+    if mask_failed.any():
+        parsed[mask_failed] = pd.to_datetime(
+            df.loc[mask_failed, col].str[:10],
+            format="%d.%m.%Y",
+            errors="coerce"
+        )
+    
+    # Log parsing success
+    valid_count = parsed.notna().sum()
+    print(f"Parsed dates for {col}: {valid_count} / {len(df)} successful ({valid_count/len(df)*100:.1f}%)")
+    
     df[col] = parsed
+
+# Debug: show parsed dates
+print("\nSample parsed dates (first 10 rows):")
+print(df[DATE_COLS].head(10))
+
+print("\nNumber of valid dates per column:")
+for col in DATE_COLS:
+    print(f"{col}: {df[col].notna().sum()} valid entries")
+
+print("\nUnique sold dates (after parsing):")
+print(sorted(df[COL_SOLD].dt.date.dropna().unique()))
 
 # Parse numeric columns
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# === Exclude all data from today onwards (apply to ALL date columns) ===
+# Exclude all data from today onwards (apply to ALL date columns)
 df = df[
     ((df[COL_VALUED].isna()) | (df[COL_VALUED] <= YESTERDAY_END)) &
     ((df[COL_RECEIVED].isna()) | (df[COL_RECEIVED] <= YESTERDAY_END)) &
     ((df[COL_SOLD].isna()) | (df[COL_SOLD] <= YESTERDAY_END))
 ]
 
-print(f"Rows after excluding today+: {len(df)}")
+print(f"\nRows after excluding today+: {len(df)}")
 
-# Daily aggregation - count events per day (true per-date counts)
+# Daily aggregation - count events per day
 daily_valued = (
     df[df[COL_VALUED].notna()]
     .groupby(df[COL_VALUED].dt.date)
@@ -109,7 +133,7 @@ for period_name, start_date in PERIODS.items():
     
     mask = pd.Series(True, index=df.index)  # all rows for Totalt
     if start_date is not None:
-        mask = (df[COL_VALUED] >= start_date)  # periods based on valued date (common practice)
+        mask = (df[COL_VALUED] >= start_date)  # periods based on valued date
 
     priset_count  = len(df[mask & df[COL_VALUED].notna()])
     mottatt_count = len(df[mask & df[COL_RECEIVED].notna()])
@@ -121,7 +145,7 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"]   = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost (days from max(start, marketing_start) to yesterday)
+    # Marketing cost
     if start_date is None:
         min_date = df[COL_VALUED].min()
         marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
@@ -132,7 +156,7 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages for sold cars in period
+    # Averages
     sold_mask = mask & df[COL_SOLD].notna()
     sold = df[sold_mask]
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
