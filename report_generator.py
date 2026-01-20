@@ -1,5 +1,5 @@
 # report_generator.py
-# Requirements: pip install pandas openpyxl matplotlib jinja2
+# Requirements: pip install pandas openpyxl matplotlib jinja2 requests
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,10 +8,11 @@ from pathlib import Path
 import base64
 from io import BytesIO
 import jinja2
-import json
+import requests
+import io
 
 # CONFIG
-FILE_PATH = "report.xlsx"
+REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
@@ -19,17 +20,17 @@ YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
 # Column names
-COL_PRISET = "SD mottatt på"
-COL_MOTTATT = "Mottatt"
-COL_SOLGT = "Solgt på"
+COL_VALUED = "SD mottatt på"
+COL_RECEIVED = "Mottatt"
+COL_SOLD = "Solgt på"
 COL_VALUE = "Bud"
 COL_COMMISSION = "Avgift"
 
-DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
+DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),  # yesterday + 6 days back
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -38,7 +39,13 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
+# Download the latest Excel from URL
+print(f"Downloading report from: {REPORT_URL}")
+response = requests.get(REPORT_URL)
+response.raise_for_status()  # raise error if download fails
+
+# Load from memory (no local file needed)
+df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
 print("Columns:", df.columns.tolist())
 
@@ -54,27 +61,15 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude today's data (anything after yesterday)
-df = df[df[COL_PRISET] <= YESTERDAY]
+# Exclude today's data (safety)
+df = df[df[COL_VALUED] <= YESTERDAY]
 
-# Daily aggregation for interactive trend chart (up to yesterday)
-df_daily = df.copy()
-df_daily['date'] = df_daily[COL_PRISET].dt.date
-daily = df_daily.groupby('date').agg({
-    COL_PRISET: 'count',
-    COL_MOTTATT: 'count',
-    COL_SOLGT: 'count'
-}).rename(columns={COL_PRISET: 'priset', COL_MOTTATT: 'mottatt', COL_SOLGT: 'solgt'}).reset_index()
-daily['date'] = daily['date'].astype(str)
-daily_json = daily.to_json(orient='records')
-
-# Standard period calculations
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
+    priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
     mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
     solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
@@ -87,7 +82,7 @@ for period_name, start_date in PERIODS.items():
     
     # Marketing cost
     if start_date is None:
-        priset_min = df[COL_PRISET].min()
+        priset_min = df[COL_VALUED].min()
         if pd.isna(priset_min):
             priset_min = YESTERDAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
@@ -114,7 +109,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Static Charts
+# Charts (keep original)
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -214,11 +209,11 @@ template_str = """
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Priset" data-no="Priset">Priset</th>
-        <th class="trans" data-en="Mottatt" data-no="Mottatt">Mottatt</th>
-        <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
-        <th class="trans" data-en="Solgt" data-no="Solgt">Solgt</th>
-        <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
@@ -329,7 +324,7 @@ env.filters["format_number"] = lambda x: f"{x:,}"
 template = env.from_string(template_str)
 
 html_content = template.render(
-    today=TODAY,
+    today=YESTERDAY,  # show yesterday as snapshot date
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
