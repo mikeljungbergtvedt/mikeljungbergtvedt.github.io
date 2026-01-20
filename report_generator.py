@@ -20,7 +20,7 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
-# Column names (match Excel exactly)
+# Column names (match Excel)
 COL_PRISET = "SD mottatt på"
 COL_RECEIVED = "Mottatt"
 COL_SOLD = "Solgt på"
@@ -31,7 +31,7 @@ DATE_COLS = [COL_PRISET, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -69,7 +69,7 @@ df_priset = df.groupby(df[COL_PRISET].dt.date).size().rename('priset').reset_ind
 df_mottatt = df.groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt').reset_index(name='date')
 df_solgt = df.groupby(df[COL_SOLD].dt.date).size().rename('solgt').reset_index(name='date')
 
-# Merge on date (full outer join)
+# Merge on date
 daily = pd.merge(df_priset, df_mottatt, on='date', how='outer')
 daily = pd.merge(daily, df_solgt, on='date', how='outer')
 daily = daily.fillna(0)
