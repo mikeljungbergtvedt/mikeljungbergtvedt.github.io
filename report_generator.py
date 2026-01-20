@@ -8,15 +8,16 @@ from pathlib import Path
 import base64
 from io import BytesIO
 import jinja2
-import json
 
 # CONFIG
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
-TODAY = datetime.now()
+# Use yesterday as the effective snapshot date
+YESTERDAY = datetime.now() - timedelta(days=1)
+YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
-COL_VALUED = "SD mottatt på"      # Priset
+COL_VALUED = "SD mottatt på"
 COL_RECEIVED = "Mottatt"
 COL_SOLD = "Solgt på"
 COL_VALUE = "Bud"
@@ -26,9 +27,9 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": TODAY - timedelta(days=7),
-    "Siste 30 dager": TODAY - timedelta(days=30),
-    "Siste 60 dager": TODAY - timedelta(days=60),
+    "Siste 7 dager": YESTERDAY - timedelta(days=7),
+    "Siste 30 dager": YESTERDAY - timedelta(days=30),
+    "Siste 60 dager": YESTERDAY - timedelta(days=60),
     "Totalt": None
 }
 
@@ -37,6 +38,7 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
+# Parse dates
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -48,20 +50,11 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Daily aggregation for interactive chart (full history)
-df_daily = df.copy()
-df_daily['date'] = df_daily[COL_VALUED].dt.date
-daily = df_daily.groupby('date').agg({
-    COL_VALUED: 'count',
-    COL_RECEIVED: 'count',
-    COL_SOLD: 'count'
-}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLD: 'solgt'}).reset_index()
+# Filter out today's data (anything after yesterday)
+df = df[df[COL_VALUED] <= YESTERDAY]  # main filter on Valued date
+df = df[df[COL_RECEIVED] <= YESTERDAY] if COL_RECEIVED in df.columns else df
+df = df[df[COL_SOLD] <= YESTERDAY] if COL_SOLD in df.columns else df
 
-# Convert dates to string for JSON
-daily['date'] = daily['date'].astype(str)
-daily_json = daily.to_json(orient='records')
-
-# Standard calculations (periods)
 results = []
 
 for period_name, start_date in PERIODS.items():
@@ -78,16 +71,16 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
+    # Marketing cost (up to yesterday)
     if start_date is None:
         priset_min = df[COL_VALUED].min()
         if pd.isna(priset_min):
-            priset_min = TODAY
+            priset_min = YESTERDAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = TODAY.date()
+        marketing_end = YESTERDAY.date()
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
@@ -107,7 +100,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts (keep original)
+# Charts (keep your existing ones)
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -161,7 +154,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template with interactive trend chart + bilingual toggle
+# HTML template (bilingual toggle, Norwegian default)
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -169,7 +162,6 @@ template_str = """
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -184,13 +176,10 @@ template_str = """
     td { background: white; }
     tr.total-row td { background: #e8f5e9; font-weight: bold; }
     img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    #dailyChartContainer { margin: 40px 0; }
-    canvas { max-width: 100%; height: 400px; }
     footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
     @media (max-width: 768px) {
       table { font-size: 0.85rem; overflow-x: auto; display: block; }
       th, td { padding: 6px 8px; }
-      canvas { height: 300px !important; }
     }
   </style>
 </head>
@@ -238,26 +227,12 @@ template_str = """
     <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
     <img src="{{ chart2 }}" alt="Gjennomsnitt">
 
-    <h3 class="trans" data-en="Daily Trend (Priset, Received, Sold)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
-    <div id="dailyChartContainer">
-      <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
-      <select id="periodSelect">
-        <option value="Last 7 days">Siste 7 dager</option>
-        <option value="Last 30 days">Siste 30 dager</option>
-        <option value="Last 60 days">Siste 60 dager</option>
-        <option value="Total">Totalt</option>
-      </select>
-      <canvas id="dailyTrendChart"></canvas>
-    </div>
-
     <footer>
       Generated automatically from report.xlsx
     </footer>
   </div>
 
   <script>
-    const dailyData = {{ daily_json | safe }};
-
     const trans = document.querySelectorAll('.trans');
     document.querySelectorAll('.lang-link').forEach(link => {
       link.addEventListener('click', e => {
@@ -278,50 +253,6 @@ template_str = """
 
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
-
-    // Interactive daily trend chart
-    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
-    let dailyChart;
-
-    function updateDailyChart(period) {
-      let filteredData = dailyData;
-      if (period !== 'Total') {
-        const start = new Date();
-        start.setDate(start.getDate() - parseInt(period.split(' ')[1]));
-        filteredData = dailyData.filter(d => new Date(d.date) >= start);
-      }
-
-      const labels = filteredData.map(d => d.date);
-      const priset = filteredData.map(d => d.priset);
-      const mottatt = filteredData.map(d => d.mottatt);
-      const solgt = filteredData.map(d => d.solgt);
-
-      if (dailyChart) dailyChart.destroy();
-
-      dailyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Priset', data: priset, borderColor: '#004225', fill: false },
-            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false },
-            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'top' } },
-          scales: { x: { title: { display: true, text: 'Dato' } }, y: { title: { display: true, text: 'Antall' }, beginAtZero: true } }
-        }
-      });
-    }
-
-    document.getElementById('periodSelect').addEventListener('change', e => {
-      updateDailyChart(e.target.value);
-    });
-
-    // Initial chart
-    updateDailyChart('Last 30 days');
   </script>
 </body>
 </html>
@@ -333,18 +264,17 @@ env.filters["format_number"] = lambda x: f"{x:,}"
 template = env.from_string(template_str)
 
 html_content = template.render(
-    today=TODAY,
+    today=YESTERDAY,  # use yesterday as snapshot date
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
-    chart2=chart2_b64,
-    daily_json=daily_json
+    chart2=chart2_b64
 )
 
 # Force commit every time
 html_content = html_content.replace(
     '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
+    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
 )
 
 Path("test.html").write_text(html_content, encoding="utf-8")
