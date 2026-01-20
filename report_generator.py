@@ -1,5 +1,5 @@
 # report_generator.py
-# Requirements: pip install pandas openpyxl matplotlib jinja2 requests
+# WORKING VERSION - 7-day chart shows 13-19 Jan (bet edition)
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,8 +20,8 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-print(f"Today (run time): {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
-print(f"Data included up to: {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
 
 # Column names
 COL_VALUED     = "SD mottatt på"
@@ -79,14 +79,14 @@ daily_sold = df[df[COL_SOLD].notna()].groupby(df[COL_SOLD].dt.date).size().renam
 daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0).reset_index(names='date')
 daily['date'] = daily['date'].astype(str)
 
-# Force strict 7-day range for chart data
+# Force 7-day range for chart
 seven_start = (YESTERDAY_END - timedelta(days=6)).date()
 seven_end = YESTERDAY.date()
 all_seven = pd.date_range(seven_start, seven_end, freq='D').strftime('%Y-%m-%d').tolist()
 
 daily_seven = pd.DataFrame({'date': all_seven})
 daily_seven = daily_seven.merge(daily, on='date', how='left').fillna(0)
-daily_json = daily_seven.to_json(orient='records')  # use this for all periods (or make per-period if needed)
+daily_json = daily_seven.to_json(orient='records')
 
 # Period summaries
 results = []
@@ -311,19 +311,18 @@ template_str = """
       let solgt = [];
 
       const today = new Date();
-      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
+      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
       let startDate = new Date(endDate);
 
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        startDate.setDate(endDate.getDate() - (daysBack - 1));  // inclusive 7 days
+        startDate.setDate(endDate.getDate() - (daysBack - 1));
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
 
         filteredData = dailyData.filter(d => d.date >= startStr && d.date <= endStr);
 
-        // Force exact period length
         const allDates = [];
         let current = new Date(startDate);
         while (current <= endDate) {
