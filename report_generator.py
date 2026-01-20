@@ -53,9 +53,12 @@ print("Columns:", df.columns.tolist())
 
 # Parse dates
 for col in DATE_COLS:
-    df[col] = pd.to_datetime(df[col].astype(str).str.strip(), dayfirst=True, errors='coerce')
-    valid = df[col].notna().sum()
-    print(f"{col}: {valid}/{len(df)} parsed")
+    df[col] = df[col].astype(str).str.strip()
+    parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
+    mask = parsed.isna()
+    if mask.any():
+        parsed[mask] = pd.to_datetime(df.loc[mask, col].str[:10], format="%d.%m.%Y", errors="coerce")
+    df[col] = parsed
 
 # Numeric
 for col in VALUE_COLS:
@@ -68,8 +71,6 @@ df = df[
     ((df[COL_SOLD].isna()) | (df[COL_SOLD] <= YESTERDAY_END))
 ]
 
-print(f"\nRows after excluding today+: {len(df)}")
-
 # Daily aggregation
 daily_valued = df[df[COL_VALUED].notna()].groupby(df[COL_VALUED].dt.date).size().rename('priset')
 daily_received = df[df[COL_RECEIVED].notna()].groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt')
@@ -78,21 +79,16 @@ daily_sold = df[df[COL_SOLD].notna()].groupby(df[COL_SOLD].dt.date).size().renam
 daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0).reset_index(names='date')
 daily['date'] = daily['date'].astype(str)
 
-# Force period-specific ranges for chart
-def force_period_dates(days_back):
-    start = (YESTERDAY_END - timedelta(days=days_back-1)).date()
-    end = YESTERDAY.date()
-    all_dates = pd.date_range(start, end, freq='D').strftime('%Y-%m-%d').tolist()
-    df_period = pd.DataFrame({'date': all_dates})
-    df_period = df_period.merge(daily, on='date', how='left').fillna(0)
-    return df_period.to_json(orient='records')
+# Force strict 7-day range for chart data
+seven_start = (YESTERDAY_END - timedelta(days=6)).date()
+seven_end = YESTERDAY.date()
+all_seven = pd.date_range(seven_start, seven_end, freq='D').strftime('%Y-%m-%d').tolist()
 
-daily_json_7 = force_period_dates(7)
-daily_json_30 = force_period_dates(30)
-daily_json_60 = force_period_dates(60)
-daily_json_total = daily.to_json(orient='records')
+daily_seven = pd.DataFrame({'date': all_seven})
+daily_seven = daily_seven.merge(daily, on='date', how='left').fillna(0)
+daily_json = daily_seven.to_json(orient='records')  # use this for all periods (or make per-period if needed)
 
-# Period summaries (unchanged)
+# Period summaries
 results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
@@ -136,7 +132,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Static Charts (unchanged)
+# Static Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -186,7 +182,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template ===
+# HTML Template
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -266,7 +262,7 @@ template_str = """
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
         <option value="Totalt">Totalt</option>
-        <option value="Siste 7 dager" selected>Siste 7 dager</option>
+        <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
       </select>
@@ -280,7 +276,6 @@ template_str = """
 
   <script>
     const dailyData = {{ daily_json | safe }};
-    const dailyData7 = {{ daily_json_7 | safe }};  // if you want separate data for 7 days
     const trans = document.querySelectorAll('.trans');
 
     // Language toggle
@@ -309,23 +304,26 @@ template_str = """
     let dailyChart;
 
     function updateDailyChart(period) {
-      let dataToUse = dailyData;
-      let labels = dataToUse.map(d => d.date);
-      let priset = dataToUse.map(d => d.priset);
-      let mottatt = dataToUse.map(d => d.mottatt);
-      let solgt = dataToUse.map(d => d.solgt);
+      let filteredData = dailyData;
+      let labels = [];
+      let priset = [];
+      let mottatt = [];
+      let solgt = [];
+
+      const today = new Date();
+      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); // yesterday
+      let startDate = new Date(endDate);
 
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        const today = new Date();
-        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-        const startDate = new Date(endDate);
-        startDate.setDate(endDate.getDate() - (daysBack - 1));  // inclusive
+        startDate.setDate(endDate.getDate() - (daysBack - 1));  // inclusive 7 days
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
 
-        // Force exact number of days
+        filteredData = dailyData.filter(d => d.date >= startStr && d.date <= endStr);
+
+        // Force exact period length
         const allDates = [];
         let current = new Date(startDate);
         while (current <= endDate) {
@@ -333,12 +331,16 @@ template_str = """
           current.setDate(current.getDate() + 1);
         }
 
-        // Merge & fill 0
-        const dataMap = new Map(dataToUse.map(d => [d.date, d]));
+        const dataMap = new Map(filteredData.map(d => [d.date, d]));
         labels = allDates;
         priset = allDates.map(date => dataMap.get(date)?.priset || 0);
         mottatt = allDates.map(date => dataMap.get(date)?.mottatt || 0);
         solgt = allDates.map(date => dataMap.get(date)?.solgt || 0);
+      } else {
+        labels = filteredData.map(d => d.date);
+        priset = filteredData.map(d => d.priset);
+        mottatt = filteredData.map(d => d.mottatt);
+        solgt = filteredData.map(d => d.solgt);
       }
 
       if (dailyChart) dailyChart.destroy();
@@ -363,7 +365,7 @@ template_str = """
       });
     }
 
-    // Period persistence
+    // Persistence + default to Totalt
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
     periodSelect.value = savedPeriod;
