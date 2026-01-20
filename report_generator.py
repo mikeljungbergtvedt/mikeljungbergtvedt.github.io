@@ -20,14 +20,14 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
-# Column names (match Excel)
+# Column names — match Excel exactly (Norwegian)
 COL_PRISET = "SD mottatt på"
-COL_RECEIVED = "Mottatt"
-COL_SOLD = "Solgt på"
+COL_MOTTATT = "Mottatt"
+COL_SOLGT = "Solgt på"
 COL_VALUE = "Bud"
 COL_COMMISSION = "Avgift"
 
-DATE_COLS = [COL_PRISET, COL_RECEIVED, COL_SOLD]
+DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
@@ -40,7 +40,7 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# Download latest report
+# Download latest report from API
 print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
 response.raise_for_status()
@@ -49,7 +49,7 @@ df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
 print("Columns:", df.columns.tolist())
 
-# Parse dates
+# Parse dates robustly
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -61,15 +61,15 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude today's data
+# Exclude any data from today
 df = df[df[COL_PRISET] <= YESTERDAY]
 
-# Daily aggregation - correct grouping for each metric
+# Daily aggregation — group each metric by its own date
 df_priset = df.groupby(df[COL_PRISET].dt.date).size().rename('priset').reset_index(name='date')
-df_mottatt = df.groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt').reset_index(name='date')
-df_solgt = df.groupby(df[COL_SOLD].dt.date).size().rename('solgt').reset_index(name='date')
+df_mottatt = df.groupby(df[COL_MOTTATT].dt.date).size().rename('mottatt').reset_index(name='date')
+df_solgt = df.groupby(df[COL_SOLGT].dt.date).size().rename('solgt').reset_index(name='date')
 
-# Merge on date
+# Merge on date (full outer join)
 daily = pd.merge(df_priset, df_mottatt, on='date', how='outer')
 daily = pd.merge(daily, df_solgt, on='date', how='outer')
 daily = daily.fillna(0)
@@ -83,8 +83,8 @@ for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
     priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
-    mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
+    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
+    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -109,9 +109,9 @@ for period_name, start_date in PERIODS.items():
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLD].notna()
+    sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLD] >= start_date)
+        sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
@@ -176,7 +176,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template with interactive trend chart + bilingual toggle
+# HTML template (Norwegian default, English toggle)
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
