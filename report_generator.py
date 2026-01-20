@@ -10,6 +10,7 @@ from io import BytesIO
 import jinja2
 import requests
 import io
+import json
 
 # CONFIG
 REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx"
@@ -20,17 +21,17 @@ YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
 # Column names
-COL_VALUED = "SD mottatt på"
-COL_RECEIVED = "Mottatt"
-COL_SOLD = "Solgt på"
-COL_VALUE = "Bud"
-COL_COMMISSION = "Avgift"
+COL_VALUED = "SD mottatt på"      # Priset
+COL_RECEIVED = "Mottatt"          # Mottatt
+COL_SOLD = "Solgt på"             # Solgt
+COL_VALUE = "Bud"                 # Value
+COL_COMMISSION = "Avgift"         # Commission
 
 DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),  # yesterday + 6 days back
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -44,7 +45,7 @@ print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
 response.raise_for_status()  # raise error if download fails
 
-# Load from memory (no local file needed)
+# Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
 print("Columns:", df.columns.tolist())
@@ -61,17 +62,29 @@ for col in DATE_COLS:
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude today's data (safety)
+# Exclude today's data
 df = df[df[COL_VALUED] <= YESTERDAY]
 
+# Daily aggregation for interactive chart
+df_daily = df.copy()
+df_daily['date'] = df_daily[COL_VALUED].dt.date
+daily = df_daily.groupby('date').agg({
+    COL_VALUED: 'count',
+    COL_RECEIVED: 'count',
+    COL_SOLD: 'count'
+}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLGT: 'solgt'}).reset_index()
+daily['date'] = daily['date'].astype(str)
+daily_json = daily.to_json(orient='records')
+
+# Standard calculations
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
     priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
-    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
-    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
+    mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
+    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -109,7 +122,7 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts (keep original)
+# Static Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
