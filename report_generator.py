@@ -13,12 +13,12 @@ SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
-# Exact column names
 COL_PRISET = "SD mottatt på"
 COL_MOTTATT = "Mottatt"
 COL_SOLGT = "Solgt på"
 COL_BUD = "Bud"
 COL_AVGIFT = "Avgift"
+COL_MERKE = "Merke"
 
 DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
 VALUE_COLS = [COL_BUD, COL_AVGIFT]
@@ -31,6 +31,7 @@ PERIODS = {
 
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
+DAILY_TARGET = 10
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
@@ -61,7 +62,6 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
     if start_date is None:
         priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
@@ -76,7 +76,6 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages
     sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
         sold_mask &= (df[COL_SOLGT] >= start_date)
@@ -85,7 +84,6 @@ for period_name, start_date in PERIODS.items():
     row["avg_bud"] = sold[COL_BUD].mean() if not sold.empty else 0
     row["avg_avgift"] = sold[COL_AVGIFT].mean() if not sold.empty else 0
     
-    # Average daily Priset
     if start_date is None:
         period_days = (TODAY.date() - df[COL_PRISET].min().date()).days + 1
     else:
@@ -95,7 +93,36 @@ for period_name, start_date in PERIODS.items():
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt", "avg_daily_priset"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt", "avg_daily_priset"]].round(0).astype(int)
+summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
+
+# Previous avg for highlight
+previous_avg = summary_df.loc[summary_df['Period'] == "Last 60 days", 'avg_daily_priset'].values[0] if len(summary_df) > 1 else 0
+last30_avg = summary_df.loc[summary_df['Period'] == "Last 30 days", 'avg_daily_priset'].values[0]
+
+# Daily Priset→Solgt % last 7 days for sparkline
+last7_start = TODAY - timedelta(days=6)
+daily_priset = df[(df[COL_PRISET] >= last7_start) & df[COL_PRISET].notna()].groupby(df[COL_PRISET].dt.date).size()
+daily_solgt = df[(df[COL_SOLGT] >= last7_start) & df[COL_SOLGT].notna()].groupby(df[COL_SOLGT].dt.date).size()
+daily_dates = pd.date_range(last7_start.date(), TODAY.date())
+daily_priset = daily_priset.reindex(daily_dates.date, fill_value=0)
+daily_solgt = daily_solgt.reindex(daily_dates.date, fill_value=0)
+daily_conversion = [round(s / p * 100, 1) if p > 0 else 0 for p, s in zip(daily_priset, daily_solgt)]
+
+# Bottleneck Alert
+last30_priset = summary_df.loc[summary_df['Period'] == "Last 30 days", 'priset_count'].values[0]
+last30_mottatt = summary_df.loc[summary_df['Period'] == "Last 30 days", 'mottatt_count'].values[0]
+bottleneck_alert = "Lav konvertering til lager – sjekk prosess!" if last30_mottatt < 0.5 * last30_priset else ""
+
+# Sold Velocity
+sold_velocity_mask = df[COL_PRISET].notna() & df[COL_SOLGT].notna()
+velocity_days = (df.loc[sold_velocity_mask, COL_SOLGT] - df.loc[sold_velocity_mask, COL_PRISET]).dt.days.mean()
+sold_velocity = round(velocity_days, 1) if not pd.isna(velocity_days) else 0
+
+# Top Brands Sold
+top_brands = df[df[COL_SOLGT].notna()]['Merke'].value_counts().head(5).to_dict()
+
+# Target % 
+target_pct = round(last30_avg / DAILY_TARGET * 100, 1)
 
 # Charts
 def fig_to_base64(fig):
@@ -106,6 +133,7 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
+# Chart 1: Counts bar
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
@@ -123,12 +151,12 @@ for i, v in enumerate(summary_df["solgt_count"]):
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
-ax1.set_title("Antall per periode" if "no" else "Counts by Period")
-ax1.set_ylabel("Antall biler")
+ax1.set_ylabel("Number of cars")
 ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
+# Chart 2: Averages bar
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
@@ -143,13 +171,28 @@ for i, v in enumerate(summary_df["avg_avgift"]):
 
 ax2.set_xticks(positions)
 ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
-ax2.set_title("Gjennomsnitt per solgt bil" if "no" else "Average Values per Sold Car")
 ax2.set_ylabel("NOK")
 ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template with bilingual toggle
+# Sparkline for last 7 days conversion
+fig_spark, ax_spark = plt.subplots(figsize=(4, 1))
+ax_spark.plot(daily_conversion, color='#ffcc33', linewidth=2.5)
+ax_spark.axis('off')
+spark_b64 = fig_to_base64(fig_spark)
+plt.close(fig_spark)
+
+# Pie chart for top brands
+fig_pie, ax_pie = plt.subplots(figsize=(8, 5))
+counts = list(top_brands.values())
+labels = list(top_brands.keys())
+ax_pie.pie(counts, labels=labels, autopct='%1.0f%%', startangle=90, colors=['#004225', '#ffcc33', '#8fcbbc', '#d4edda', '#f5f9f6'])
+ax_pie.set_title("Top 5 solgte merker (total)")
+pie_b64 = fig_to_base64(fig_pie)
+plt.close(fig_pie)
+
+# HTML template
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -170,13 +213,17 @@ template_str = """
     th { background: #004225; color: #ffcc33; }
     td { background: white; }
     tr.total-row td { background: #e8f5e9; font-weight: bold; }
+    .highlight-green { background: #d4edda !important; }
+    .highlight-red { background: #f8d7da !important; }
+    .alert { text-align: center; color: red; font-weight: bold; margin: 20px 0; font-size: 1.2rem; }
     img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
+    .sparkline { height: 50px; vertical-align: middle; }
+    .info-line { text-align: center; font-weight: bold; margin: 15px 0; font-size: 1.1rem; }
     @media (max-width: 768px) {
       h1 { font-size: 1.6rem; }
       .subtitle { font-size: 1.1rem; }
       table { font-size: 0.9rem; overflow-x: auto; display: block; }
-      img { width: 100%; }
+      .info-line { font-size: 1rem; }
     }
   </style>
 </head>
@@ -187,7 +234,11 @@ template_str = """
       <a href="#" class="lang-link active" data-lang="no">Norsk</a>
     </div>
     <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
-    <p style="text-align:center;" class="trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}</p>
+    <p class="subtitle trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}</p>
+
+    {% if bottleneck_alert %}
+    <div class="alert">{{ bottleneck_alert }}</div>
+    {% endif %}
 
     <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
     <table>
@@ -204,7 +255,7 @@ template_str = """
         <th class="trans" data-en="Avg daily Priset" data-no="Gj.sn. daglig Priset">Gj.sn. daglig Priset</th>
       </tr>
       {% for row in summary %}
-      <tr>
+      <tr {% if row.Period == "Last 30 days" %}class="{% if row.avg_daily_priset > previous_avg %}highlight-green{% else %}highlight-red{% endif %}"{% endif %}>
         <td>{{ row.Period }}</td>
         <td>{{ row['priset_count'] }}</td>
         <td>{{ row['mottatt_count'] }}</td>
@@ -214,19 +265,35 @@ template_str = """
         <td>{{ row['marketing_per_solgt'] | int | format_number }} NOK</td>
         <td>{{ row['avg_bud'] | int | format_number }} NOK</td>
         <td>{{ row['avg_avgift'] | int | format_number }} NOK</td>
-        <td>{{ row['avg_daily_priset'] | int | format_number }}</td>
+        <td>{{ row['avg_daily_priset'] }}</td>
       </tr>
       {% endfor %}
     </table>
 
+    <div class="info-line">
+      <span class="trans" data-en="Last 7 days Priset→Solgt conversion:" data-no="Siste 7 dager Priset→Solgt konvertering:">Siste 7 dager Priset→Solgt konvertering:</span>
+      <img class="sparkline" src="{{ spark }}" alt="Sparkline">
+    </div>
+
+    <div class="info-line">
+      <span class="trans" data-en="Average days from Priset to Sold:" data-no="Gjennomsnittlige dager fra Priset til Solgt:">Gjennomsnittlige dager fra Priset til Solgt:</span> {{ sold_velocity }} dager
+    </div>
+
+    <div class="info-line">
+      <span class="trans" data-en="Last 30 days target achievement (10/day):" data-no="Siste 30 dager måloppnåelse (10/dag):">Siste 30 dager måloppnåelse (10/dag):</span> {{ target_pct }} %
+    </div>
+
     <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
     <h3 class="trans" data-en="Counts by Period" data-no="Antall per periode">Antall per periode</h3>
-    <img src="{{ chart1 }}" alt="Antall per periode">
+    <img src="{{ chart1 }}" alt="Counts">
 
     <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
-    <img src="{{ chart2 }}" alt="Gjennomsnitt per solgt bil">
+    <img src="{{ chart2 }}" alt="Averages">
 
-    <footer style="margin-top:40px; text-align:center; color:#777; font-size:0.9em;">
+    <h3 class="trans" data-en="Top 5 Sold Brands (Total)" data-no="Top 5 solgte merker (total)">Top 5 solgte merker (total)</h3>
+    <img src="{{ pie }}" alt="Top brands">
+
+    <footer>
       Generated automatically from report.xlsx
     </footer>
   </div>
@@ -253,7 +320,6 @@ template_str = """
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
   </script>
-
 </body>
 </html>
 """
@@ -268,9 +334,16 @@ html_content = template.render(
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
-    chart2=chart2_b64
+    chart2=chart2_b64,
+    spark=spark_b64,
+    pie=pie_b64,
+    bottleneck_alert=bottleneck_alert,
+    sold_velocity=sold_velocity,
+    target_pct=target_pct,
+    previous_avg=previous_avg
 )
 
+# Force commit every time
 html_content = html_content.replace(
     '</footer>',
     f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
