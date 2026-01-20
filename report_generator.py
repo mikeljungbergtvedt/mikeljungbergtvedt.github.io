@@ -1,6 +1,4 @@
 # report_generator.py
-# Requirements: pip install pandas openpyxl matplotlib jinja2
-
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -15,6 +13,7 @@ SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
+# Exact column names
 COL_PRISET = "SD mottatt på"
 COL_MOTTATT = "Mottatt"
 COL_SOLGT = "Solgt på"
@@ -62,7 +61,7 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing - fixed
+    # Marketing cost
     if start_date is None:
         priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
@@ -77,6 +76,7 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
+    # Averages
     sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
         sold_mask &= (df[COL_SOLGT] >= start_date)
@@ -85,10 +85,17 @@ for period_name, start_date in PERIODS.items():
     row["avg_bud"] = sold[COL_BUD].mean() if not sold.empty else 0
     row["avg_avgift"] = sold[COL_AVGIFT].mean() if not sold.empty else 0
     
+    # Average daily Priset
+    if start_date is None:
+        period_days = (TODAY.date() - df[COL_PRISET].min().date()).days + 1
+    else:
+        period_days = (TODAY.date() - start_date.date()).days + 1
+    row["avg_daily_priset"] = round(priset_count / period_days, 1) if period_days > 0 else 0
+    
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt", "avg_daily_priset"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt", "avg_daily_priset"]].round(0).astype(int)
 
 # Charts
 def fig_to_base64(fig):
@@ -99,7 +106,6 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts bar
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
@@ -117,13 +123,12 @@ for i, v in enumerate(summary_df["solgt_count"]):
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
-ax1.set_title("Counts by Period")
-ax1.set_ylabel("Number of cars")
+ax1.set_title("Antall per periode" if "no" else "Counts by Period")
+ax1.set_ylabel("Antall biler")
 ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Averages bar
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
@@ -138,23 +143,20 @@ for i, v in enumerate(summary_df["avg_avgift"]):
 
 ax2.set_xticks(positions)
 ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
-ax2.set_title("Average Values per Sold Car")
+ax2.set_title("Gjennomsnitt per solgt bil" if "no" else "Average Values per Sold Car")
 ax2.set_ylabel("NOK")
 ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# ────────────────────────────────────────────────
-# 4. HTML template with bilingual toggle and style
-# ────────────────────────────────────────────────
-
+# HTML template with bilingual toggle
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy / Driveno Report</title>
+  <title>Peasy Rapport</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -165,8 +167,9 @@ template_str = """
     .lang-toggle a.active { color: #ffcc33; border-bottom: 2px solid #ffcc33; }
     table { border-collapse: collapse; width: 100%; margin: 20px 0; }
     th, td { padding: 10px; text-align: right; border: 1px solid #ddd; font-weight: bold; }
-    th { background: #f5f9f6; }
+    th { background: #004225; color: #ffcc33; }
     td { background: white; }
+    tr.total-row td { background: #e8f5e9; font-weight: bold; }
     img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
     @media (max-width: 768px) {
@@ -183,10 +186,10 @@ template_str = """
       <a href="#" class="lang-link" data-lang="en">English</a> | 
       <a href="#" class="lang-link active" data-lang="no">Norsk</a>
     </div>
-    <h1 class="trans" data-en="Peasy / Driveno Report" data-no="Peasy / Driveno Rapport">Peasy / Driveno Rapport</h1>
-    <p style="text-align:center;" class="trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }}<br>Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }}<br>Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }}<br>Sist oppdatert: {{ now }}</p>
+    <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
+    <p style="text-align:center;" class="trans" data-en="Snapshot date: {{ today.strftime('%Y-%m-%d') }} Last updated: {{ now }}" data-no="Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}">Snapshot dato: {{ today.strftime('%Y-%m-%d') }} Sist oppdatert: {{ now }}</p>
 
-    <h2 class="trans" data-en="Summary Table" data-no="Sammendrag Tabell">Sammendrag Tabell</h2>
+    <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
@@ -198,6 +201,7 @@ template_str = """
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Bud per sold car" data-no="Gj.sn. Bud per solgt bil">Gj.sn. Bud per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
+        <th class="trans" data-en="Avg daily Priset" data-no="Gj.sn. daglig Priset">Gj.sn. daglig Priset</th>
       </tr>
       {% for row in summary %}
       <tr>
@@ -210,16 +214,17 @@ template_str = """
         <td>{{ row['marketing_per_solgt'] | int | format_number }} NOK</td>
         <td>{{ row['avg_bud'] | int | format_number }} NOK</td>
         <td>{{ row['avg_avgift'] | int | format_number }} NOK</td>
+        <td>{{ row['avg_daily_priset'] | int | format_number }}</td>
       </tr>
       {% endfor %}
     </table>
 
-    <h2 class="trans" data-en="Visual Overview" data-no="Visuell Oversikt">Visuell Oversikt</h2>
-    <h3 class="trans" data-en="Counts by Period" data-no="Antall per Periode">Antall per Periode</h3>
-    <img src="{{ chart1 }}" alt="Counts">
+    <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
+    <h3 class="trans" data-en="Counts by Period" data-no="Antall per periode">Antall per periode</h3>
+    <img src="{{ chart1 }}" alt="Antall per periode">
 
-    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnittlige Verdier per Solgt Bil">Gjennomsnittlige Verdier per Solgt Bil</h3>
-    <img src="{{ chart2 }}" alt="Averages">
+    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
+    <img src="{{ chart2 }}" alt="Gjennomsnitt per solgt bil">
 
     <footer style="margin-top:40px; text-align:center; color:#777; font-size:0.9em;">
       Generated automatically from report.xlsx
