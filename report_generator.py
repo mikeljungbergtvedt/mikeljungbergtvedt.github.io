@@ -20,7 +20,7 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
-# Column names
+# Column names (match Excel exactly)
 COL_PRISET = "SD mottatt på"
 COL_RECEIVED = "Mottatt"
 COL_SOLD = "Solgt på"
@@ -31,7 +31,7 @@ DATE_COLS = [COL_PRISET, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -67,7 +67,7 @@ df = df[df[COL_PRISET] <= YESTERDAY]
 # Daily aggregation - correct grouping for each metric
 df_priset = df.groupby(df[COL_PRISET].dt.date).size().rename('priset').reset_index(name='date')
 df_mottatt = df.groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt').reset_index(name='date')
-df_solgt = df.groupby(df[COL_SOLGT].dt.date).size().rename('solgt').reset_index(name='date')
+df_solgt = df.groupby(df[COL_SOLD].dt.date).size().rename('solgt').reset_index(name='date')
 
 # Merge on date (full outer join)
 daily = pd.merge(df_priset, df_mottatt, on='date', how='outer')
@@ -84,7 +84,7 @@ for period_name, start_date in PERIODS.items():
     
     priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
     mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
+    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -109,9 +109,9 @@ for period_name, start_date in PERIODS.items():
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLGT].notna()
+    sold_mask = df[COL_SOLD].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLGT] >= start_date)
+        sold_mask &= (df[COL_SOLD] >= start_date)
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
