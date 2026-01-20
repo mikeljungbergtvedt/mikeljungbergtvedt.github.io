@@ -16,7 +16,7 @@ import jinja2
 FILE_PATH = "report.xlsx"               # your Excel file in root
 SHEET_NAME = "Sheet1"
 
-TODAY = datetime.now()                  # auto-update to current date
+TODAY = datetime.now()                  # auto-update to current date/time
 
 DATE_COLUMNS = ["SD mottatt på", "Mottatt", "Solgt på"]
 VALUE_COLUMNS = ["Bud", "Avgift"]
@@ -59,16 +59,19 @@ for col in VALUE_COLUMNS:
 results = []
 
 for period_name, start_date in PERIODS.items():
-    row = {
-        "Period": period_name,
-    }
+    row = {"Period": period_name}
+
+    # Counts: each uses its own date column
     for col in DATE_COLUMNS:
         if start_date is None:
             count = df[col].notna().sum()
         else:
             count = df[(df[col] >= start_date) & df[col].notna()].shape[0]
-        row[col.replace(" på", "") + " count"] = count
+        # Use short key for template
+        short_key = col.replace(" på", "").replace(" ", "")
+        row[short_key + " count"] = count
 
+    # Averages: only sold cars (non-empty Solgt på), filtered by period
     if start_date is None:
         sold = df[df["Solgt på"].notna()]
     else:
@@ -85,12 +88,12 @@ for period_name, start_date in PERIODS.items():
 
 summary_df = pd.DataFrame(results)
 
-# Round averages for nicer display
+# Round averages
 summary_df["Avg Bud per sold car"] = summary_df["Avg Bud per sold car"].round(0).astype(int)
 summary_df["Avg Avgift per sold car"] = summary_df["Avg Avgift per sold car"].round(0).astype(int)
 
 # ────────────────────────────────────────────────
-# 3. Create charts → base64 for embedding in HTML
+# 3. Create charts → base64 for embedding
 # ────────────────────────────────────────────────
 
 def fig_to_base64(fig):
@@ -102,13 +105,11 @@ def fig_to_base64(fig):
 plt.style.use("ggplot")
 
 # Chart 1: Counts bar chart
-fig1, ax1 = plt.subplots(figsize=(9, 5))
-
-# Use numeric positions
+fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 bar_width = 0.25
 
-ax1.bar([p - bar_width for p in positions], summary_df["SD mottatt count"], bar_width, label="SD mottatt")
+ax1.bar([p - bar_width for p in positions], summary_df["SDmottatt count"], bar_width, label="SD mottatt")
 ax1.bar(positions, summary_df["Mottatt count"], bar_width, label="Mottatt")
 ax1.bar([p + bar_width for p in positions], summary_df["Solgt count"], bar_width, label="Sold")
 
@@ -121,11 +122,9 @@ chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
 # Chart 2: Average values line chart
-fig2, ax2 = plt.subplots(figsize=(9, 5))
-
+fig2, ax2 = plt.subplots(figsize=(10, 6))
 ax2.plot(range(len(summary_df)), summary_df["Avg Bud per sold car"], marker="o", label="Avg Bud")
 ax2.plot(range(len(summary_df)), summary_df["Avg Avgift per sold car"], marker="s", label="Avg Commission")
-
 ax2.set_xticks(range(len(summary_df)))
 ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
 ax2.set_title("Average Values per Sold Car")
@@ -135,7 +134,7 @@ chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
 # ────────────────────────────────────────────────
-# 4. HTML template with Jinja2
+# 4. HTML template
 # ────────────────────────────────────────────────
 
 template_str = """
@@ -148,14 +147,7 @@ template_str = """
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
     h1, h2 { color: #2c3e50; }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 1100px;
-      margin: 20px 0;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+    table { border-collapse: collapse; width: 100%; max-width: 1100px; margin: 20px 0; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }
     th { background: #34495e; color: white; }
     tr:nth-child(even) { background: #f2f2f2; }
@@ -166,8 +158,7 @@ template_str = """
 <body>
 
   <h1>Peasy / Driveno Report</h1>
-  <p class="center">Snapshot date: {{ today.strftime('%Y-%m-%d') }}<br>
-  Last updated: {{ now }}</p>
+  <p class="center">Snapshot date: {{ today.strftime('%Y-%m-%d') }}<br>Last updated: {{ now }}</p>
 
   <h2>Summary Table</h2>
   <table>
@@ -182,9 +173,9 @@ template_str = """
     {% for row in summary %}
     <tr>
       <td>{{ row.Period }}</td>
-      <td>{{ row['SD mottatt count'] }}</td>
+      <td>{{ row['SDmottatt count'] }}</td>
       <td>{{ row['Mottatt count'] }}</td>
-      <td>{{ row['Sold count'] }}</td>
+      <td>{{ row['Solgt count'] }}</td>
       <td>{{ row['Avg Bud per sold car'] | int | format_number }} NOK</td>
       <td>{{ row['Avg Avgift per sold car'] | int | format_number }} NOK</td>
     </tr>
@@ -219,13 +210,12 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
-# Force commit every time by adding run timestamp
+# Force commit every time (timestamp changes)
 html_content = html_content.replace(
     '</footer>',
-    f'<p style="font-size:0.8em; color:#999;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
+    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
 )
 
-# Save to file (matches your GitHub Pages page)
 Path("test.html").write_text(html_content, encoding="utf-8")
 
 print("Report saved as test.html")
