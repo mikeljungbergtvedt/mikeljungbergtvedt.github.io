@@ -15,11 +15,15 @@ import io
 # CONFIG
 REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx"
 SHEET_NAME = "Sheet1"
+
 TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
-YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
+YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-# Column names (from your provided list)
+print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+
+# Column names
 COL_VALUED     = "SD mottatt på"    # priced/valued date
 COL_RECEIVED   = "Mottatt"          # received date
 COL_SOLD       = "Solgt på"         # sold date
@@ -30,26 +34,26 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),
-    "Siste 30 dager": YESTERDAY - timedelta(days=29),
-    "Siste 60 dager": YESTERDAY - timedelta(days=59),
+    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # 7 full days ending yesterday
+    "Siste 30 dager": YESTERDAY_END - timedelta(days=29),
+    "Siste 60 dager": YESTERDAY_END - timedelta(days=59),
     "Totalt": None
 }
 
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# Download the latest Excel from URL
+# Download the latest Excel
 print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
-response.raise_for_status()  # raise error if download fails
+response.raise_for_status()
 
-# Load from memory (no local file needed)
+# Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
-print("Columns:", df.columns.tolist())
-print(df.head())  # For debugging: see first few rows
+print("Columns in Excel:", df.columns.tolist())
+print("First few rows:\n", df.head().to_string())
 
-# Parse dates
+# Parse dates (handle both full timestamp and date-only)
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -58,15 +62,20 @@ for col in DATE_COLS:
         parsed[mask] = pd.to_datetime(df.loc[mask, col].str[:10], format="%d.%m.%Y", errors="coerce")
     df[col] = parsed
 
-# Parse numeric values
+# Parse numeric columns
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Exclude today's data (anything after yesterday)
-df = df[df[COL_VALUED] <= YESTERDAY]
+# === Exclude all data from today onwards (apply to ALL date columns) ===
+df = df[
+    ((df[COL_VALUED].isna()) | (df[COL_VALUED] <= YESTERDAY_END)) &
+    ((df[COL_RECEIVED].isna()) | (df[COL_RECEIVED] <= YESTERDAY_END)) &
+    ((df[COL_SOLD].isna()) | (df[COL_SOLD] <= YESTERDAY_END))
+]
 
-# Daily aggregation for interactive trend chart (up to yesterday)
-# Count per day for each event type
+print(f"Rows after excluding today+: {len(df)}")
+
+# Daily aggregation - count events per day (true per-date counts)
 daily_valued = (
     df[df[COL_VALUED].notna()]
     .groupby(df[COL_VALUED].dt.date)
@@ -88,47 +97,42 @@ daily_sold = (
     .rename('solgt')
 )
 
-# Combine into one DataFrame, fill missing days with 0
 daily = pd.concat([daily_valued, daily_received, daily_sold], axis=1).fillna(0)
 daily = daily.reset_index(names='date')
-daily['date'] = daily['date'].astype(str)  # for JSON/JS
+daily['date'] = daily['date'].astype(str)
 daily_json = daily.to_json(orient='records')
 
-# Standard period calculations
+# Period summaries
 results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    mask = pd.Series(True, index=df.index)  # all rows for total
+    mask = pd.Series(True, index=df.index)  # all rows for Totalt
     if start_date is not None:
-        mask = (df[COL_VALUED] >= start_date)
-    
-    priset_count = len(df[mask & df[COL_VALUED].notna()])
+        mask = (df[COL_VALUED] >= start_date)  # periods based on valued date (common practice)
+
+    priset_count  = len(df[mask & df[COL_VALUED].notna()])
     mottatt_count = len(df[mask & df[COL_RECEIVED].notna()])
-    solgt_count = len(df[mask & df[COL_SOLD].notna()])
+    solgt_count   = len(df[mask & df[COL_SOLD].notna()])
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
     row["solgt_count"] = solgt_count
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
-    row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
+    row["priset_to_solgt_pct"]   = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
+    # Marketing cost (days from max(start, marketing_start) to yesterday)
     if start_date is None:
-        priset_min = df[COL_VALUED].min()
-        if pd.isna(priset_min):
-            priset_min = YESTERDAY
-        marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = YESTERDAY.date()
+        min_date = df[COL_VALUED].min()
+        marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
     else:
-        marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = YESTERDAY.date()
+        marketing_start_date = max(MARKETING_START.date(), start_date.date())
     
-    days = (marketing_end - marketing_start).days + 1
+    days = (YESTERDAY.date() - marketing_start_date).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages
+    # Averages for sold cars in period
     sold_mask = mask & df[COL_SOLD].notna()
     sold = df[sold_mask]
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
@@ -137,9 +141,10 @@ for period_name, start_date in PERIODS.items():
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = \
+    summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
-# Static Charts
+# === Static Charts ===
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -148,7 +153,7 @@ def fig_to_base64(fig):
 
 plt.style.use("ggplot")
 
-# Chart 1: Counts bar
+# Chart 1: Counts per period
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
@@ -171,7 +176,7 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Average Values per Sold Car bar
+# Chart 2: Averages per sold car
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
@@ -191,7 +196,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template with interactive trend chart + bilingual toggle
+# === HTML Template ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -237,11 +242,11 @@ template_str = """
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
-        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
-        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
-        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
-        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Priset" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Mottatt" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Solgt" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
@@ -262,11 +267,11 @@ template_str = """
     </table>
 
     <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
-    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Priset, Mottatt & Solgt Antall">Priset, Mottatt & Solgt Antall</h3>
+    <h3 class="trans" data-en="Priset, Mottatt & Solgt Antall" data-no="Priset, Mottatt & Solgt Antall">Priset, Mottatt & Solgt Antall</h3>
     <img src="{{ chart1 }}" alt="Antall">
-    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
+    <h3 class="trans" data-en="Gjennomsnitt per solgt bil" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
     <img src="{{ chart2 }}" alt="Gjennomsnitt">
-    <h3 class="trans" data-en="Daily Trend (Valued, Received, Sold)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
+    <h3 class="trans" data-en="Daily Trend (Priset, Mottatt, Solgt)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
     <div id="dailyChartContainer">
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
@@ -279,8 +284,10 @@ template_str = """
     </div>
     <footer>
       Generated automatically from report.xlsx (data up to yesterday)
+      <p style="font-size:0.8em; color:#999; text-align:center;">Generated at {{ now }} (data up to yesterday)</p>
     </footer>
   </div>
+
   <script>
     const dailyData = {{ daily_json | safe }};
     const trans = document.querySelectorAll('.trans');
@@ -301,7 +308,7 @@ template_str = """
     }
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
-    // Interactive daily trend chart
+
     const ctx = document.getElementById('dailyTrendChart').getContext('2d');
     let dailyChart;
     function updateDailyChart(period) {
@@ -345,20 +352,16 @@ template_str = """
 env = jinja2.Environment()
 env.filters["format_number"] = lambda x: f"{x:,}".replace(',', ' ')
 template = env.from_string(template_str)
+
 html_content = template.render(
     snapshot_date=YESTERDAY,
-    now=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    now=datetime.now().strftime("%Y-%m-%d %H:%M:%S CET"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
     chart2=chart2_b64,
     daily_json=daily_json
 )
 
-# Force commit every time by adding unique timestamp
-html_content = html_content.replace(
-    '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
-)
-
 Path("test.html").write_text(html_content, encoding="utf-8")
 print("Report saved as test.html")
+print("Done.")
