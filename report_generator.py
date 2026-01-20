@@ -20,14 +20,14 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
-# Column names — exact match to Excel (Norwegian)
+# Column names (match Excel exactly)
 COL_PRISET = "SD mottatt på"
-COL_MOTTATT = "Mottatt"
-COL_SOLGT = "Solgt på"
+COL_RECEIVED = "Mottatt"
+COL_SOLD = "Solgt på"
 COL_VALUE = "Bud"
 COL_COMMISSION = "Avgift"
 
-DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
+DATE_COLS = [COL_PRISET, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
@@ -40,7 +40,7 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# Download latest report from API
+# Download latest report
 print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
 response.raise_for_status()
@@ -64,15 +64,14 @@ for col in VALUE_COLS:
 # Exclude today's data
 df = df[df[COL_PRISET] <= YESTERDAY]
 
-# Daily aggregation — group each metric by its own date column
-df_priset = df.groupby(df[COL_PRISET].dt.date).size().rename('priset').reset_index(name='date')
-df_mottatt = df.groupby(df[COL_MOTTATT].dt.date).size().rename('mottatt').reset_index(name='date')
-df_solgt = df.groupby(df[COL_SOLGT].dt.date).size().rename('solgt').reset_index(name='date')
-
-# Merge on date (full outer join)
-daily = pd.merge(df_priset, df_mottatt, on='date', how='outer')
-daily = pd.merge(daily, df_solgt, on='date', how='outer')
-daily = daily.fillna(0)
+# Daily aggregation for trend chart
+df_daily = df.copy()
+df_daily['date'] = df_daily[COL_PRISET].dt.date
+daily = df_daily.groupby('date').agg({
+    COL_PRISET: 'count',
+    COL_RECEIVED: 'count',
+    COL_SOLD: 'count'
+}).rename(columns={COL_PRISET: 'priset', COL_RECEIVED: 'mottatt', COL_SOLD: 'solgt'}).reset_index()
 daily['date'] = daily['date'].astype(str)
 daily_json = daily.to_json(orient='records')
 
@@ -83,8 +82,8 @@ for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
     priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
-    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
-    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
+    mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
+    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -114,13 +113,13 @@ for period_name, start_date in PERIODS.items():
         sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
     
-    row["gj_sn_verdi"] = sold[COL_VALUE].mean() if not sold.empty else 0
-    row["gj_sn_avgift"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
+    row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
+    row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
     
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["gj_sn_verdi", "gj_sn_avgift", "marketing_per_solgt"]] = summary_df[["gj_sn_verdi", "gj_sn_avgift", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
 # Static Charts
 def fig_to_base64(fig):
@@ -160,12 +159,12 @@ fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
 
-ax2.bar([p - width/2 for p in positions], summary_df["gj_sn_verdi"], width, label="Gj.sn. Verdi")
-ax2.bar([p + width/2 for p in positions], summary_df["gj_sn_avgift"], width, label="Gj.sn. Avgift")
+ax2.bar([p - width/2 for p in positions], summary_df["avg_value"], width, label="Gj.sn. Verdi")
+ax2.bar([p + width/2 for p in positions], summary_df["avg_commission"], width, label="Gj.sn. Avgift")
 
-for i, v in enumerate(summary_df["gj_sn_verdi"]):
+for i, v in enumerate(summary_df["avg_value"]):
     ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
-for i, v in enumerate(summary_df["gj_sn_avgift"]):
+for i, v in enumerate(summary_df["avg_commission"]):
     ax2.text(i + width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
 
 ax2.set_xticks(positions)
@@ -176,7 +175,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template — Norwegian by default
+# HTML template with bilingual toggle (Norwegian default)
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -197,6 +196,7 @@ template_str = """
     th, td { padding: 8px 12px; text-align: right; border: 1px solid #ddd; }
     th { background: #f5f9f6; color: #004225; font-weight: bold; }
     td { background: white; }
+    tr.total-row td { background: #e8f5e9; font-weight: bold; }
     img { max-width: 100%; height: auto; margin: 20px 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     #dailyChartContainer { margin: 40px 0; }
     canvas { max-width: 100%; height: 400px; }
@@ -246,15 +246,15 @@ template_str = """
     </table>
 
     <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
-    <h3 class="trans" data-en="Priset, Mottatt & Solgt Antall" data-no="Priset, Mottatt & Solgt Antall">Priset, Mottatt & Solgt Antall</h3>
+    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Priset, Mottatt & Solgt Antall">Priset, Mottatt & Solgt Antall</h3>
     <img src="{{ chart1 }}" alt="Antall">
 
-    <h3 class="trans" data-en="Gjennomsnitt per solgt bil" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
+    <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
     <img src="{{ chart2 }}" alt="Gjennomsnitt">
 
-    <h3 class="trans" data-en="Daglig trend (Priset, Mottatt, Solgt)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
+    <h3 class="trans" data-en="Daily Trend (Priset, Received, Sold)" data-no="Daglig trend (Priset, Mottatt, Solgt)">Daglig trend (Priset, Mottatt, Solgt)</h3>
     <div id="dailyChartContainer">
-      <label for="periodSelect" class="trans" data-en="Velg periode:" data-no="Velg periode:">Velg periode:</label>
+      <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
         <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
@@ -265,7 +265,7 @@ template_str = """
     </div>
 
     <footer>
-      Generert automatisk fra report.xlsx (data opp til i går)
+      Generated automatically from report.xlsx (data up to yesterday)
     </footer>
   </div>
 
@@ -324,7 +324,7 @@ template_str = """
     document.getElementById('periodSelect').addEventListener('change', e => {
       updateDailyChart(e.target.value);
     });
-    updateDailyChart('Siste 7 dager');
+    updateDailyChart('Siste 30 dager');
   </script>
 </body>
 </html>
@@ -347,7 +347,7 @@ html_content = template.render(
 # Force commit every time
 html_content = html_content.replace(
     '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generert {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data opp til i går)</p></footer>'
+    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
 )
 
 Path("test.html").write_text(html_content, encoding="utf-8")
