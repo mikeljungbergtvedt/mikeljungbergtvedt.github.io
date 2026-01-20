@@ -20,8 +20,8 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
-print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+print(f"Today (run time): {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to: {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
 
 # Column names
 COL_VALUED     = "SD mottatt på"    # priced/valued date
@@ -34,7 +34,7 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # 7 full days ending yesterday
+    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),
     "Siste 30 dager": YESTERDAY_END - timedelta(days=29),
     "Siste 60 dager": YESTERDAY_END - timedelta(days=59),
     "Totalt": None
@@ -133,14 +133,14 @@ for period_name, start_date in PERIODS.items():
     
     if start_date is None:
         # Totalt: all rows with the event
-        priset_count  = df[COL_VALUED].notna().sum()
+        priset_count = df[COL_VALUED].notna().sum()
         mottatt_count = df[COL_RECEIVED].notna().sum()
-        solgt_count   = df[COL_SOLD].notna().sum()
+        solgt_count = df[COL_SOLD].notna().sum()
     else:
         # Period: event date >= start and <= yesterday
-        priset_count  = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
+        priset_count = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
         mottatt_count = ((df[COL_RECEIVED] >= start_date) & (df[COL_RECEIVED] <= YESTERDAY_END)).sum()
-        solgt_count   = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
+        solgt_count = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -148,7 +148,7 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"]   = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost (days from max(start, marketing_start) to yesterday)
+    # Marketing cost
     if start_date is None:
         min_date = df[COL_VALUED].min()
         marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
@@ -159,7 +159,7 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
-    # Averages (only on sold cars in period)
+    # Averages
     if start_date is None:
         sold_mask = df[COL_SOLD].notna()
     else:
@@ -172,7 +172,8 @@ for period_name, start_date in PERIODS.items():
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = \
+    summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
 
 # === Static Charts ===
 def fig_to_base64(fig):
@@ -226,7 +227,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template ===
+# === HTML Template with updated JS ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -305,10 +306,10 @@ template_str = """
     <div id="dailyChartContainer">
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
+        <option value="Totalt">Totalt</option>
         <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
-        <option value="Totalt">Totalt</option>
       </select>
       <canvas id="dailyTrendChart"></canvas>
     </div>
@@ -321,6 +322,8 @@ template_str = """
   <script>
     const dailyData = {{ daily_json | safe }};
     const trans = document.querySelectorAll('.trans');
+
+    // Language toggle
     document.querySelectorAll('.lang-link').forEach(link => {
       link.addEventListener('click', e => {
         e.preventDefault();
@@ -329,6 +332,7 @@ template_str = """
         setLanguage(lang);
       });
     });
+
     function setLanguage(lang) {
       trans.forEach(el => {
         el.textContent = el.dataset[lang] || el.dataset.no;
@@ -336,22 +340,27 @@ template_str = """
       document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
       document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
     }
+
     const savedLang = localStorage.getItem('lang') || 'no';
     setLanguage(savedLang);
 
+    // Chart logic
     const ctx = document.getElementById('dailyTrendChart').getContext('2d');
     let dailyChart;
+
     function updateDailyChart(period) {
       let filteredData = dailyData;
       if (period !== 'Totalt') {
+        const daysBack = parseInt(period.split(' ')[1]);
         const start = new Date();
-        start.setDate(start.getDate() - parseInt(period.split(' ')[1]));
+        start.setDate(start.getDate() - daysBack);
         filteredData = dailyData.filter(d => new Date(d.date) >= start);
       }
       const labels = filteredData.map(d => d.date);
       const priset = filteredData.map(d => d.priset);
       const mottatt = filteredData.map(d => d.mottatt);
       const solgt = filteredData.map(d => d.solgt);
+
       if (dailyChart) dailyChart.destroy();
       dailyChart = new Chart(ctx, {
         type: 'line',
@@ -366,14 +375,28 @@ template_str = """
         options: {
           responsive: true,
           plugins: { legend: { position: 'top' } },
-          scales: { x: { title: { display: true, text: 'Dato' } }, y: { title: { display: true, text: 'Antall' }, beginAtZero: true } }
+          scales: { 
+            x: { title: { display: true, text: 'Dato' } }, 
+            y: { title: { display: true, text: 'Antall' }, beginAtZero: true } 
+          }
         }
       });
     }
-    document.getElementById('periodSelect').addEventListener('change', e => {
-      updateDailyChart(e.target.value);
+
+    // Period persistence: default to 'Totalt' on first visit, remember choice otherwise
+    const periodSelect = document.getElementById('periodSelect');
+    const savedPeriod = localStorage.getItem('period') || 'Totalt';
+    periodSelect.value = savedPeriod;  // Set dropdown to saved/default value
+
+    // Initialize chart with the loaded/saved period
+    updateDailyChart(savedPeriod);
+
+    // Save new choice on change
+    periodSelect.addEventListener('change', e => {
+      const selected = e.target.value;
+      localStorage.setItem('period', selected);
+      updateDailyChart(selected);
     });
-    updateDailyChart('Siste 30 dager');
   </script>
 </body>
 </html>
