@@ -1,4 +1,6 @@
 # report_generator.py
+# Requirements: pip install pandas openpyxl matplotlib jinja2
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -7,13 +9,17 @@ import base64
 from io import BytesIO
 import jinja2
 
+# ────────────────────────────────────────────────
+# CONFIG
+# ────────────────────────────────────────────────
+
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
-# Exact column names
-COL_PRISET = "SD mottatt på"      # internal name, display as "Priset"
+# Exact column names from Excel
+COL_PRISET = "SD mottatt på"      # display as "Priset"
 COL_MOTTATT = "Mottatt"
 COL_SOLGT = "Solgt på"
 COL_BUD = "Bud"
@@ -31,9 +37,14 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
+# ────────────────────────────────────────────────
+# 1. Load & parse
+# ────────────────────────────────────────────────
+
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
-# Robust date parsing
+print("Columns:", df.columns.tolist())
+
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -44,6 +55,10 @@ for col in DATE_COLS:
 
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+# ────────────────────────────────────────────────
+# 2. Calculate metrics
+# ────────────────────────────────────────────────
 
 results = []
 
@@ -63,9 +78,12 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost
+    # Marketing cost - fixed date comparison
     if start_date is None:
-        marketing_start = max(MARKETING_START, df[COL_PRISET].min().date())
+        priset_min = df[COL_PRISET].min()
+        if pd.isna(priset_min):
+            priset_min = TODAY
+        marketing_start = max(MARKETING_START.date(), priset_min.date())
         marketing_end = TODAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
@@ -89,7 +107,10 @@ for period_name, start_date in PERIODS.items():
 summary_df = pd.DataFrame(results)
 summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts
+# ────────────────────────────────────────────────
+# 3. Charts
+# ────────────────────────────────────────────────
+
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -107,13 +128,13 @@ ax1.bar([p - width for p in positions], summary_df["priset_count"], width, label
 ax1.bar(positions, summary_df["mottatt_count"], width, label="Mottatt")
 ax1.bar([p + width for p in positions], summary_df["solgt_count"], width, label="Sold")
 
-# Add data labels on bars
+# Data labels on bars
 for i, v in enumerate(summary_df["priset_count"]):
-    ax1.text(i - width, v + max(summary_df["priset_count"].max() * 0.02, 5), str(v), ha='center', va='bottom', fontsize=9)
+    ax1.text(i - width, v + 5, str(v), ha='center', va='bottom', fontsize=9)
 for i, v in enumerate(summary_df["mottatt_count"]):
-    ax1.text(i, v + max(summary_df["mottatt_count"].max() * 0.02, 5), str(v), ha='center', va='bottom', fontsize=9)
+    ax1.text(i, v + 5, str(v), ha='center', va='bottom', fontsize=9)
 for i, v in enumerate(summary_df["solgt_count"]):
-    ax1.text(i + width, v + max(summary_df["solgt_count"].max() * 0.02, 5), str(v), ha='center', va='bottom', fontsize=9)
+    ax1.text(i + width, v + 5, str(v), ha='center', va='bottom', fontsize=9)
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
@@ -123,7 +144,7 @@ ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Averages bar (changed from line)
+# Chart 2: Averages bar
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
@@ -145,7 +166,10 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML
+# ────────────────────────────────────────────────
+# 4. HTML
+# ────────────────────────────────────────────────
+
 template_str = """
 <!DOCTYPE html>
 <html lang="en">
@@ -224,7 +248,7 @@ html_content = template.render(
     chart2=chart2_b64
 )
 
-# Force commit every time
+# Force commit every run
 html_content = html_content.replace(
     '</footer>',
     f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
