@@ -20,8 +20,8 @@ TODAY = datetime.now()
 YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY_END = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-print(f"Today (run time): {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
-print(f"Data included up to: {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
+print(f"Today (run time):     {TODAY.strftime('%Y-%m-%d %H:%M:%S CET')}")
+print(f"Data included up to:  {YESTERDAY.strftime('%Y-%m-%d')} (end of day)")
 
 # Column names
 COL_VALUED     = "SD mottatt på"    # priced/valued date
@@ -34,7 +34,7 @@ DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),
+    "Siste 7 dager":  YESTERDAY_END - timedelta(days=6),   # Jan 13–19 if today is Jan 20
     "Siste 30 dager": YESTERDAY_END - timedelta(days=29),
     "Siste 60 dager": YESTERDAY_END - timedelta(days=59),
     "Totalt": None
@@ -132,15 +132,13 @@ for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
     if start_date is None:
-        # Totalt: all rows with the event
-        priset_count = df[COL_VALUED].notna().sum()
+        priset_count  = df[COL_VALUED].notna().sum()
         mottatt_count = df[COL_RECEIVED].notna().sum()
-        solgt_count = df[COL_SOLD].notna().sum()
+        solgt_count   = df[COL_SOLD].notna().sum()
     else:
-        # Period: event date >= start and <= yesterday
-        priset_count = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
+        priset_count  = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
         mottatt_count = ((df[COL_RECEIVED] >= start_date) & (df[COL_RECEIVED] <= YESTERDAY_END)).sum()
-        solgt_count = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
+        solgt_count   = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -227,7 +225,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template with updated JS ===
+# === HTML Template ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -352,9 +350,10 @@ template_str = """
       let filteredData = dailyData;
       if (period !== 'Totalt') {
         const daysBack = parseInt(period.split(' ')[1]);
-        const start = new Date();
-        start.setDate(start.getDate() - daysBack);
-        filteredData = dailyData.filter(d => new Date(d.date) >= start);
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysBack);
+        const startStr = start.toISOString().split('T')[0];  // YYYY-MM-DD string, timezone-safe
+        filteredData = dailyData.filter(d => d.date >= startStr);
       }
       const labels = filteredData.map(d => d.date);
       const priset = filteredData.map(d => d.priset);
@@ -383,15 +382,13 @@ template_str = """
       });
     }
 
-    // Period persistence: default to 'Totalt' on first visit, remember choice otherwise
+    // Period persistence: default to 'Totalt' on first visit, remember last choice
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
-    periodSelect.value = savedPeriod;  // Set dropdown to saved/default value
+    periodSelect.value = savedPeriod;  // Apply saved/default
+    updateDailyChart(savedPeriod);     // Sync chart immediately
 
-    // Initialize chart with the loaded/saved period
-    updateDailyChart(savedPeriod);
-
-    // Save new choice on change
+    // Save on change
     periodSelect.addEventListener('change', e => {
       const selected = e.target.value;
       localStorage.setItem('period', selected);
