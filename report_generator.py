@@ -8,6 +8,7 @@ from pathlib import Path
 import base64
 from io import BytesIO
 import jinja2
+import numpy as np  # for trendline
 
 # CONFIG
 FILE_PATH = "report.xlsx"
@@ -15,18 +16,17 @@ SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()
 
-# Column names
-COL_VALUED = "SD mottatt på"      # display as "Valued"
-COL_RECEIVED = "Mottatt"          # display as "Received"
-COL_SOLD = "Solgt på"             # display as "Sold"
-COL_VALUE = "Bud"                 # display as "Value"
-COL_COMMISSION = "Avgift"         # display as "Commission"
+COL_PRISET = "SD mottatt på"
+COL_MOTTATT = "Mottatt"
+COL_SOLGT = "Solgt på"
+COL_BUD = "Bud"
+COL_AVGIFT = "Avgift"
 
-DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
-VALUE_COLS = [COL_VALUE, COL_COMMISSION]
+DATE_COLS = [COL_PRISET, COL_MOTTATT, COL_SOLGT]
+VALUE_COLS = [COL_BUD, COL_AVGIFT]
 
 PERIODS = {
-    "Last 7 days": TODAY - timedelta(days=7),    # yesterday + 6 days back
+    "Last 7 days": TODAY - timedelta(days=7),
     "Last 30 days": TODAY - timedelta(days=30),
     "Last 60 days": TODAY - timedelta(days=60),
     "Total": None
@@ -53,23 +53,23 @@ results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    valued_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
-    received_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    sold_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
+    priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
+    mottatt_count = df[COL_MOTTATT].notna().sum() if start_date is None else df[(df[COL_MOTTATT] >= start_date) & df[COL_MOTTATT].notna()].shape[0]
+    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
-    row["valued_count"] = valued_count
-    row["received_count"] = received_count
-    row["sold_count"] = sold_count
+    row["priset_count"] = priset_count
+    row["mottatt_count"] = mottatt_count
+    row["solgt_count"] = solgt_count
     
-    row["valued_to_received_pct"] = round(received_count / valued_count * 100, 1) if valued_count > 0 else 0
-    row["valued_to_sold_pct"] = round(sold_count / valued_count * 100, 1) if valued_count > 0 else 0
+    row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
+    row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
     # Marketing cost
     if start_date is None:
-        valued_min = df[COL_VALUED].min()
-        if pd.isna(valued_min):
-            valued_min = TODAY
-        marketing_start = max(MARKETING_START.date(), valued_min.date())
+        priset_min = df[COL_PRISET].min()
+        if pd.isna(priset_min):
+            priset_min = TODAY
+        marketing_start = max(MARKETING_START.date(), priset_min.date())
         marketing_end = TODAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
@@ -77,21 +77,35 @@ for period_name, start_date in PERIODS.items():
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
-    row["marketing_per_sold"] = round(total_marketing / sold_count) if sold_count > 0 else 0
+    row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLD].notna()
+    sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLD] >= start_date)
+        sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
     
-    row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
-    row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
+    row["avg_bud"] = sold[COL_BUD].mean() if not sold.empty else 0
+    row["avg_avgift"] = sold[COL_AVGIFT].mean() if not sold.empty else 0
     
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_sold"]] = summary_df[["avg_value", "avg_commission", "marketing_per_sold"]].round(0).astype(int)
+summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_bud", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
+
+# Daily average Priset trendline (last 30 days for example)
+last30_start = TODAY - timedelta(days=30)
+daily_priset = df[(df[COL_PRISET] >= last30_start) & df[COL_PRISET].notna()].groupby(df[COL_PRISET].dt.date).size()
+daily_dates = pd.date_range(last30_start.date(), TODAY.date())
+daily_priset = daily_priset.reindex(daily_dates.date, fill_value=0)
+x = np.arange(len(daily_dates))
+y = daily_priset.values
+if len(x) > 1:
+    z = np.polyfit(x, y, 1)
+    p = np.poly1d(z)
+    trend = p(x)
+else:
+    trend = [0] * len(x)
 
 # Charts
 def fig_to_base64(fig):
@@ -107,43 +121,57 @@ fig1, ax1 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.25
 
-ax1.bar([p - width for p in positions], summary_df["valued_count"], width, label="Valued")
-ax1.bar(positions, summary_df["received_count"], width, label="Received")
-ax1.bar([p + width for p in positions], summary_df["sold_count"], width, label="Sold")
+ax1.bar([p - width for p in positions], summary_df["priset_count"], width, label="Priset")
+ax1.bar(positions, summary_df["mottatt_count"], width, label="Mottatt")
+ax1.bar([p + width for p in positions], summary_df["solgt_count"], width, label="Sold")
 
-for i, v in enumerate(summary_df["valued_count"]):
+for i, v in enumerate(summary_df["priset_count"]):
     ax1.text(i - width, v + 5, str(v), ha='center', va='bottom', fontsize=9)
-for i, v in enumerate(summary_df["received_count"]):
+for i, v in enumerate(summary_df["mottatt_count"]):
     ax1.text(i, v + 5, str(v), ha='center', va='bottom', fontsize=9)
-for i, v in enumerate(summary_df["sold_count"]):
+for i, v in enumerate(summary_df["solgt_count"]):
     ax1.text(i + width, v + 5, str(v), ha='center', va='bottom', fontsize=9)
 
 ax1.set_xticks(positions)
 ax1.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
-ax1.set_ylabel("Number of cars")
+ax1.set_title("Antall per periode")
+ax1.set_ylabel("Antall biler")
 ax1.legend()
 chart1_b64 = fig_to_base64(fig1)
 plt.close(fig1)
 
-# Chart 2: Average Values per Sold Car bar
+# Chart 2: Averages bar
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 positions = range(len(summary_df))
 width = 0.35
 
-ax2.bar([p - width/2 for p in positions], summary_df["avg_value"], width, label="Avg Value", color="skyblue")
-ax2.bar([p + width/2 for p in positions], summary_df["avg_commission"], width, label="Avg Commission", color="orange")
+ax2.bar([p - width/2 for p in positions], summary_df["avg_bud"], width, label="Gj.sn. Bud")
+ax2.bar([p + width/2 for p in positions], summary_df["avg_avgift"], width, label="Gj.sn. Avgift")
 
-for i, v in enumerate(summary_df["avg_value"]):
+for i, v in enumerate(summary_df["avg_bud"]):
     ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
-for i, v in enumerate(summary_df["avg_commission"]):
+for i, v in enumerate(summary_df["avg_avgift"]):
     ax2.text(i + width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
 
 ax2.set_xticks(positions)
 ax2.set_xticklabels(summary_df["Period"], rotation=15, ha='center')
+ax2.set_title("Gjennomsnitt per solgt bil")
 ax2.set_ylabel("NOK")
 ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
+
+# Trendline chart for daily average Priset
+fig3, ax3 = plt.subplots(figsize=(10, 6))
+ax3.bar(daily_dates, daily_priset, label="Daily Priset", color="#004225")
+ax3.plot(daily_dates, trend, "r--", label="Trendline")
+ax3.set_title("Daily Average Priset Trend (Last 30 days)")
+ax3.set_xlabel("Date")
+ax3.set_ylabel("Number of cars")
+ax3.legend()
+ax3.tick_params(axis='x', rotation=45)
+trend_b64 = fig_to_base64(fig3)
+plt.close(fig3)
 
 # HTML template
 template_str = """
@@ -152,7 +180,7 @@ template_str = """
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Report</title>
+  <title>Peasy Rapport</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -187,11 +215,11 @@ template_str = """
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Valued" data-no="Valued">Valued</th>
-        <th class="trans" data-en="Received" data-no="Received">Received</th>
-        <th class="trans" data-en="Valued → Received" data-no="Valued → Received">Valued → Received</th>
-        <th class="trans" data-en="Sold" data-no="Sold">Sold</th>
-        <th class="trans" data-en="Valued → Sold" data-no="Valued → Sold">Valued → Sold</th>
+        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
@@ -212,7 +240,7 @@ template_str = """
     </table>
 
     <h2 class="trans" data-en="Visual Overview" data-no="Visuell oversikt">Visuell oversikt</h2>
-    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Valued, Received & Sold Antall">Valued, Received & Sold Antall</h3>
+    <h3 class="trans" data-en="Valued, Received & Sold Counts" data-no="Valued, Mottatt & Solgt Antall">Valued, Mottatt & Solgt Antall</h3>
     <img src="{{ chart1 }}" alt="Counts">
 
     <h3 class="trans" data-en="Average Values per Sold Car" data-no="Gjennomsnitt per solgt bil">Gjennomsnitt per solgt bil</h3>
@@ -249,26 +277,3 @@ template_str = """
 </body>
 </html>
 """
-
-env = jinja2.Environment()
-env.filters["format_number"] = lambda x: f"{x:,}"
-
-template = env.from_string(template_str)
-
-html_content = template.render(
-    today=TODAY,
-    now=datetime.now().strftime("%Y-%m-%d %H:%M"),
-    summary=summary_df.to_dict("records"),
-    chart1=chart1_b64,
-    chart2=chart2_b64
-)
-
-# Force commit every time
-html_content = html_content.replace(
-    '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
-)
-
-Path("test.html").write_text(html_content, encoding="utf-8")
-
-print("Report saved as test.html")
