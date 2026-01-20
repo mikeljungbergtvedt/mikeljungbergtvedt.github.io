@@ -13,23 +13,22 @@ import jinja2
 FILE_PATH = "report.xlsx"
 SHEET_NAME = "Sheet1"
 
-# Use yesterday as the effective snapshot date
-YESTERDAY = datetime.now() - timedelta(days=1)
-YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
+TODAY = datetime.now()
 
-COL_VALUED = "SD mottatt på"
-COL_RECEIVED = "Mottatt"
-COL_SOLD = "Solgt på"
-COL_VALUE = "Bud"
-COL_COMMISSION = "Avgift"
+# Column names
+COL_VALUED = "SD mottatt på"      # display as "Priset"
+COL_RECEIVED = "Mottatt"          # display as "Mottatt"
+COL_SOLD = "Solgt på"             # display as "Solgt"
+COL_VALUE = "Bud"                 # display as "Verdi"
+COL_COMMISSION = "Avgift"         # display as "Avgift"
 
 DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=7),
-    "Siste 30 dager": YESTERDAY - timedelta(days=30),
-    "Siste 60 dager": YESTERDAY - timedelta(days=60),
+    "Siste 7 dager": TODAY - timedelta(days=7),
+    "Siste 30 dager": TODAY - timedelta(days=30),
+    "Siste 60 dager": TODAY - timedelta(days=60),
     "Totalt": None
 }
 
@@ -38,7 +37,6 @@ MARKETING_START = datetime(2025, 11, 1)
 
 df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
 
-# Parse dates
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
@@ -49,11 +47,6 @@ for col in DATE_COLS:
 
 for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-# Filter out today's data (anything after yesterday)
-df = df[df[COL_VALUED] <= YESTERDAY]  # main filter on Valued date
-df = df[df[COL_RECEIVED] <= YESTERDAY] if COL_RECEIVED in df.columns else df
-df = df[df[COL_SOLD] <= YESTERDAY] if COL_SOLD in df.columns else df
 
 results = []
 
@@ -71,16 +64,16 @@ for period_name, start_date in PERIODS.items():
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
     
-    # Marketing cost (up to yesterday)
+    # Marketing cost
     if start_date is None:
         priset_min = df[COL_VALUED].min()
         if pd.isna(priset_min):
-            priset_min = YESTERDAY
+            priset_min = TODAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
-        marketing_end = YESTERDAY.date()
+        marketing_end = TODAY.date()
     else:
         marketing_start = max(MARKETING_START.date(), start_date.date())
-        marketing_end = YESTERDAY.date()
+        marketing_end = TODAY.date()
     
     days = (marketing_end - marketing_start).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
@@ -93,14 +86,14 @@ for period_name, start_date in PERIODS.items():
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
-    row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
+    row["avg_avgift"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
     
     results.append(row)
 
 summary_df = pd.DataFrame(results)
-summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_commission", "marketing_per_solgt"]].round(0).astype(int)
+summary_df[["avg_value", "avg_avgift", "marketing_per_solgt"]] = summary_df[["avg_value", "avg_avgift", "marketing_per_solgt"]].round(0).astype(int)
 
-# Charts (keep your existing ones)
+# Charts
 def fig_to_base64(fig):
     buf = BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
@@ -139,11 +132,11 @@ positions = range(len(summary_df))
 width = 0.35
 
 ax2.bar([p - width/2 for p in positions], summary_df["avg_value"], width, label="Gj.sn. Verdi")
-ax2.bar([p + width/2 for p in positions], summary_df["avg_commission"], width, label="Gj.sn. Avgift")
+ax2.bar([p + width/2 for p in positions], summary_df["avg_avgift"], width, label="Gj.sn. Avgift")
 
 for i, v in enumerate(summary_df["avg_value"]):
     ax2.text(i - width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
-for i, v in enumerate(summary_df["avg_commission"]):
+for i, v in enumerate(summary_df["avg_avgift"]):
     ax2.text(i + width/2, v + 1000, f"{v:,}", ha='center', va='bottom', fontsize=10)
 
 ax2.set_xticks(positions)
@@ -154,7 +147,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# HTML template (bilingual toggle, Norwegian default)
+# HTML template with bilingual toggle (Norwegian default)
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -264,17 +257,16 @@ env.filters["format_number"] = lambda x: f"{x:,}"
 template = env.from_string(template_str)
 
 html_content = template.render(
-    today=YESTERDAY,  # use yesterday as snapshot date
+    today=TODAY,
     now=datetime.now().strftime("%Y-%m-%d %H:%M"),
     summary=summary_df.to_dict("records"),
     chart1=chart1_b64,
     chart2=chart2_b64
 )
 
-# Force commit every time
 html_content = html_content.replace(
     '</footer>',
-    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")} (data up to yesterday)</p></footer>'
+    f'<p style="font-size:0.8em; color:#999; text-align:center;">Generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S CET")}</p></footer>'
 )
 
 Path("test.html").write_text(html_content, encoding="utf-8")
