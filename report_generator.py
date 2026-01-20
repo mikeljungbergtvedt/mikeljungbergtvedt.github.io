@@ -21,17 +21,17 @@ YESTERDAY = TODAY - timedelta(days=1)
 YESTERDAY = YESTERDAY.replace(hour=23, minute=59, second=59, microsecond=999999)  # end of yesterday
 
 # Column names
-COL_VALUED = "SD mottatt på"      # Priset
-COL_RECEIVED = "Mottatt"          # Mottatt
-COL_SOLD = "Solgt på"             # Solgt
-COL_VALUE = "Bud"                 # Value
-COL_COMMISSION = "Avgift"         # Commission
+COL_PRISET = "SD mottatt på"
+COL_RECEIVED = "Mottatt"
+COL_SOLD = "Solgt på"
+COL_VALUE = "Bud"
+COL_COMMISSION = "Avgift"
 
-DATE_COLS = [COL_VALUED, COL_RECEIVED, COL_SOLD]
+DATE_COLS = [COL_PRISET, COL_RECEIVED, COL_SOLD]
 VALUE_COLS = [COL_VALUE, COL_COMMISSION]
 
 PERIODS = {
-    "Siste 7 dager": YESTERDAY - timedelta(days=6),   # yesterday + 6 days back
+    "Siste 7 dager": YESTERDAY - timedelta(days=6),
     "Siste 30 dager": YESTERDAY - timedelta(days=29),
     "Siste 60 dager": YESTERDAY - timedelta(days=59),
     "Totalt": None
@@ -40,12 +40,11 @@ PERIODS = {
 MARKETING_DAILY = 1000
 MARKETING_START = datetime(2025, 11, 1)
 
-# Download the latest Excel from URL
+# Download latest report
 print(f"Downloading report from: {REPORT_URL}")
 response = requests.get(REPORT_URL)
-response.raise_for_status()  # raise error if download fails
+response.raise_for_status()
 
-# Load from memory
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
 print("Columns:", df.columns.tolist())
@@ -63,28 +62,29 @@ for col in VALUE_COLS:
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # Exclude today's data
-df = df[df[COL_VALUED] <= YESTERDAY]
+df = df[df[COL_PRISET] <= YESTERDAY]
 
-# Daily aggregation for interactive chart
-df_daily = df.copy()
-df_daily['date'] = df_daily[COL_VALUED].dt.date
-daily = df_daily.groupby('date').agg({
-    COL_VALUED: 'count',
-    COL_RECEIVED: 'count',
-    COL_SOLD: 'count'
-}).rename(columns={COL_VALUED: 'priset', COL_RECEIVED: 'mottatt', COL_SOLD: 'solgt'}).reset_index()
+# Daily aggregation - correct grouping for each metric
+df_priset = df.groupby(df[COL_PRISET].dt.date).size().rename('priset').reset_index(name='date')
+df_mottatt = df.groupby(df[COL_RECEIVED].dt.date).size().rename('mottatt').reset_index(name='date')
+df_solgt = df.groupby(df[COL_SOLGT].dt.date).size().rename('solgt').reset_index(name='date')
+
+# Merge on date (full outer join)
+daily = pd.merge(df_priset, df_mottatt, on='date', how='outer')
+daily = pd.merge(daily, df_solgt, on='date', how='outer')
+daily = daily.fillna(0)
 daily['date'] = daily['date'].astype(str)
 daily_json = daily.to_json(orient='records')
 
-# Standard calculations
+# Period calculations
 results = []
 
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
     
-    priset_count = df[COL_VALUED].notna().sum() if start_date is None else df[(df[COL_VALUED] >= start_date) & df[COL_VALUED].notna()].shape[0]
+    priset_count = df[COL_PRISET].notna().sum() if start_date is None else df[(df[COL_PRISET] >= start_date) & df[COL_PRISET].notna()].shape[0]
     mottatt_count = df[COL_RECEIVED].notna().sum() if start_date is None else df[(df[COL_RECEIVED] >= start_date) & df[COL_RECEIVED].notna()].shape[0]
-    solgt_count = df[COL_SOLD].notna().sum() if start_date is None else df[(df[COL_SOLD] >= start_date) & df[COL_SOLD].notna()].shape[0]
+    solgt_count = df[COL_SOLGT].notna().sum() if start_date is None else df[(df[COL_SOLGT] >= start_date) & df[COL_SOLGT].notna()].shape[0]
     
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
@@ -95,7 +95,7 @@ for period_name, start_date in PERIODS.items():
     
     # Marketing cost
     if start_date is None:
-        priset_min = df[COL_VALUED].min()
+        priset_min = df[COL_PRISET].min()
         if pd.isna(priset_min):
             priset_min = YESTERDAY
         marketing_start = max(MARKETING_START.date(), priset_min.date())
@@ -109,9 +109,9 @@ for period_name, start_date in PERIODS.items():
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
     
     # Averages
-    sold_mask = df[COL_SOLD].notna()
+    sold_mask = df[COL_SOLGT].notna()
     if start_date is not None:
-        sold_mask &= (df[COL_SOLD] >= start_date)
+        sold_mask &= (df[COL_SOLGT] >= start_date)
     sold = df[sold_mask]
     
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
@@ -222,11 +222,11 @@ template_str = """
     <table>
       <tr>
         <th class="trans" data-en="Period" data-no="Periode">Periode</th>
-        <th class="trans" data-en="Valued" data-no="Priset">Priset</th>
-        <th class="trans" data-en="Received" data-no="Mottatt">Mottatt</th>
-        <th class="trans" data-en="Valued → Received" data-no="Priset → Mottatt">Priset → Mottatt</th>
-        <th class="trans" data-en="Sold" data-no="Solgt">Solgt</th>
-        <th class="trans" data-en="Valued → Sold" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Priset" data-no="Priset">Priset</th>
+        <th class="trans" data-en="Mottatt" data-no="Mottatt">Mottatt</th>
+        <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
+        <th class="trans" data-en="Solgt" data-no="Solgt">Solgt</th>
+        <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
