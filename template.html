@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Peasy Exec Rapport</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.5; color: #333; max-width: 1000px; margin: 0 auto; }
+        h1, h2 { text-align: center; color: #004225; }
+        .periode { text-align: center; font-size: 1.2em; margin: 20px 0; }
+        .summary { font-size: 1.1em; text-align: center; margin: 20px 0; color: #555; }
+        .key-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 30px 0; }
+        .key-metrics div { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .key-metrics strong { display: block; font-size: 1.3em; margin-bottom: 5px; }
+        .conversion-rates { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin: 30px 0; }
+        .goal { color: #c00; font-weight: bold; }
+        .funnel { text-align: center; margin: 40px 0; font-size: 1.1em; }
+        .funnel div { margin: 15px 0; padding: 10px; background: #e8f5e9; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #f5f9f6; color: #004225; }
+        .highlight { font-weight: bold; background: #e8f5e9; }
+        .buttons { text-align: center; margin: 40px 0; }
+        button { padding: 12px 24px; margin: 0 10px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 6px; }
+        .print { background: #ffcc33; color: #004225; }
+        .pdf { background: #004225; color: white; }
+        .link { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+
+<h1>Peasy Exec Rapport</h1>
+
+<div class="periode">
+    <strong>Periode: {{ periode_name }} ({{ periode_start }} – {{ periode_end }})</strong>
+</div>
+
+<div class="summary">
+    {{ priset_to_mottatt }}% prissatte biler mottatt / {{ mottatt_to_solgt }}% mottatte biler solgt<br>
+    Markedsføringskostnad per solgt bil: {{ markedsforing_per_solgt }} NOK<br>
+    Total kostnad per solgt bil: {{ total_kost_per_solgt }} NOK<br>
+    – brutto fortjeneste per solgt bil {{ brutto_fortjeneste_per_solgt }} NOK<br>
+    +{{ autoringen_kommisjon }} NOK Autoringen Kommisjon
+</div>
+
+<div class="buttons">
+    <button class="print" onclick="window.print()">Skriv ut</button>
+    <button class="pdf">Lagre som PDF</button>
+    <button class="link">Kopier delbar lenke</button>
+</div>
+
+<h2>Nøkkeltall</h2>
+<div class="key-metrics">
+    <div><strong>Biler Priset</strong>{{ biler_priset }}</div>
+    <div><strong>Biler Mottatt</strong>{{ biler_mottatt }}</div>
+    <div><strong>Biler Solgt</strong>{{ biler_solgt }}</div>
+    <div><strong>Biler Returnert</strong>{{ biler_returnert }}</div>
+    <div><strong>Solgt Omsetning</strong>{{ solgt_omsetning }} NOK</div>
+    <div><strong>Gjennomsnittspris per Solgt Bil</strong>{{ gj_snitt_pris_solgt }} NOK</div>
+    <div><strong>Brutto Fortjeneste per Solgt Bil</strong>{{ brutto_per_solgt }} NOK</div>
+</div>
+
+<h2>Nøkkelkonverteringsrater</h2>
+<div class="conversion-rates">
+    <div><strong>Priset → Mottatt</strong><br>{{ priset_to_mottatt }}% <span class="goal">Mål: {{ goals.priset_to_mottatt }}%</span></div>
+    <div><strong>Priset → Returnert</strong><br>{{ priset_to_returnert }}%</div>
+    <div><strong>Mottatt → Solgt</strong><br>{{ mottatt_to_solgt }}% <span class="goal">Mål: >{{ goals.mottatt_to_sold }}%</span></div>
+    <div><strong>Returneringsrate</strong><br>{{ returneringsrate }}% <span class="goal">Mål: <{{ goals.return_rate_max }}%</span></div>
+</div>
+
+<h2>Konverteringstrakt</h2>
+<div class="funnel">
+    <div><strong>Priset</strong><br>{{ biler_priset }} (100%)<br>↓ {{ priset_to_mottatt }}%</div>
+    <div><strong>Mottatt</strong><br>{{ biler_mottatt }}<br>↓</div>
+    <div><strong>Solgt</strong><br>{{ biler_solgt }} ({{ mottatt_to_solgt }}% av mottatt)<br>↓</div>
+    <div><strong>Returnert</strong><br>{{ biler_returnert }} ({{ returneringsrate }}% av mottatt)</div>
+</div>
+
+<h2>Konvertering av mottatte biler</h2>
+<div>
+    <strong>Solgt</strong><br>{{ biler_solgt }} biler – {{ mottatt_to_solgt }}%
+</div>
+<div>
+    <strong>Returnert</strong><br>{{ biler_returnert }} biler – {{ returneringsrate }}%
+</div>
+
+<h2>Finansiell Oppsummering</h2>
+<table>
+    <tr><th>Post</th><th>Verdi</th></tr>
+    <tr><td>Markedsføringskostnad</td><td>{{ markedsforing_kost }} NOK</td></tr>
+    <tr><td>Produksjonskostnad (trinnbasert)</td><td>{{ produksjon_kost }} NOK</td></tr>
+    <tr><td>Gire Kostnad (750 NOK per mottatt)</td><td>{{ gire_kost }} NOK</td></tr>
+    <tr><td>Markedsføringskostnad per Solgt Bil</td><td>{{ markedsforing_per_solgt }} NOK</td></tr>
+    <tr><td>Total Kostnad per Solgt Bil</td><td>{{ total_kost_per_solgt }} NOK</td></tr>
+    <tr class="highlight"><td>Brutto Fortjeneste per Solgt Bil (Peasy)</td><td class="highlight">{{ brutto_fortjeneste_per_solgt }} NOK</td></tr>
+    <tr class="highlight"><td>Totale Kostnader</td><td class="highlight">{{ totale_kostnader }} NOK</td></tr>
+    <tr><td>Total Inntekt (NOK)</td><td>{{ total_inntekt }} NOK</td></tr>
+    <tr class="highlight"><td>Brutto Fortjeneste/Tap (Peasy)</td><td class="highlight">{{ brutto_fortjeneste }} NOK</td></tr>
+    <tr class="highlight"><td>Autoringen Kommisjon (2.7% av solgt omsetning)</td><td class="highlight">+{{ autoringen_kommisjon }} NOK</td></tr>
+</table>
+
+</body>
+</html>
