@@ -128,12 +128,10 @@ for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
   
     if start_date is None:
-        # Totalt: all rows with the event
         priset_count = df[COL_VALUED].notna().sum()
         mottatt_count = df[COL_RECEIVED].notna().sum()
         solgt_count = df[COL_SOLD].notna().sum()
     else:
-        # Period: event date >= start and <= yesterday
         priset_count = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
         mottatt_count = ((df[COL_RECEIVED] >= start_date) & (df[COL_RECEIVED] <= YESTERDAY_END)).sum()
         solgt_count = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
@@ -155,7 +153,7 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
   
-    # === NEW: Average days from Priset to Sold ===
+    # === Average days from Priset to Sold ===
     if start_date is None:
         sold_mask = df[COL_SOLD].notna() & df[COL_VALUED].notna()
     else:
@@ -228,7 +226,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template ===
+# === HTML Template with password overlay + auto-logout ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -238,8 +236,8 @@ template_str = """
   <title class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e0e9e5; color: #004225; }
-    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #e0e9e5; color: #004225; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); filter: blur(10px); transition: filter 0.5s; }
     h1 { text-align: center; color: #004225; font-size: 2rem; margin-bottom: 10px; }
     .subtitle { text-align: center; font-size: 1.3rem; margin-bottom: 20px; color: #004225; }
     .lang-toggle { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
@@ -254,14 +252,59 @@ template_str = """
     #dailyChartContainer { margin: 40px 0; }
     canvas { max-width: 100%; height: 400px; }
     footer { margin-top: 40px; text-align: center; color: #777; font-size: 0.9em; }
+    #passwordOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    #passwordOverlay.hidden { display: none; }
+    #passwordInput {
+      padding: 14px;
+      font-size: 18px;
+      width: 320px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+    #unlockBtn {
+      padding: 14px 40px;
+      font-size: 18px;
+      background: #004225;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #unlockBtn:hover { background: #00351a; }
+    #errorMsg { color: #ffcc33; margin-top: 15px; display: none; font-size: 16px; }
     @media (max-width: 768px) {
       table { font-size: 0.85rem; overflow-x: auto; display: block; }
       th, td { padding: 6px 8px; }
       canvas { height: 300px !important; }
+      #passwordInput { width: 90%; }
     }
   </style>
 </head>
 <body>
+  <div id="passwordOverlay">
+    <h2>Peasy Rapport - Tilgang kreves</h2>
+    <p>Skriv inn passord for å se rapporten</p>
+    <input type="password" id="passwordInput" placeholder="Passord" autofocus>
+    <button id="unlockBtn" onclick="checkPassword()">Åpne rapport</button>
+    <p id="errorMsg">Feil passord – prøv igjen</p>
+  </div>
+
   <div class="container">
     <div class="lang-toggle">
       <a href="#" class="lang-link" data-lang="en">English</a> |
@@ -323,72 +366,41 @@ template_str = """
   </div>
 
   <script>
-    const dailyData = {{ daily_json | safe }};
-    const trans = document.querySelectorAll('.trans');
-    // Language toggle
-    document.querySelectorAll('.lang-link').forEach(link => {
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        const lang = e.target.dataset.lang;
-        localStorage.setItem('lang', lang);
-        setLanguage(lang);
-      });
-    });
-    function setLanguage(lang) {
-      trans.forEach(el => {
-        el.textContent = el.dataset[lang] || el.dataset.no;
-      });
-      document.querySelectorAll('.lang-link').forEach(a => a.classList.remove('active'));
-      document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+    const PASSWORD = 'easypeasy';
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+    let inactivityTimer;
+
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(logout, INACTIVITY_TIMEOUT);
     }
-    const savedLang = localStorage.getItem('lang') || 'no';
-    setLanguage(savedLang);
-    // Chart logic
-    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
-    let dailyChart;
-    function updateDailyChart(period) {
-      let filteredData = dailyData;
-      if (period !== 'Totalt') {
-        const daysBack = parseInt(period.split(' ')[1]);
-        const start = new Date();
-        start.setDate(start.getDate() - daysBack);
-        filteredData = dailyData.filter(d => new Date(d.date) >= start);
+
+    function logout() {
+      document.getElementById('passwordOverlay').style.display = 'flex';
+      document.querySelector('.container').style.filter = 'blur(10px)';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function checkPassword() {
+      const input = document.getElementById('passwordInput').value.trim();
+      if (input === PASSWORD) {
+        document.getElementById('passwordOverlay').style.display = 'none';
+        document.querySelector('.container').style.filter = 'none';
+        resetInactivityTimer();
+      } else {
+        document.getElementById('errorMsg').style.display = 'block';
       }
-      const labels = filteredData.map(d => d.date);
-      const priset = filteredData.map(d => d.priset);
-      const mottatt = filteredData.map(d => d.mottatt);
-      const solgt = filteredData.map(d => d.solgt);
-      if (dailyChart) dailyChart.destroy();
-      dailyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1, borderWidth: 2 },
-            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1, borderWidth: 2 },
-            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1, borderWidth: 2 }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            x: { title: { display: true, text: 'Dato' } },
-            y: { title: { display: true, text: 'Antall' }, beginAtZero: true }
-          }
-        }
-      });
     }
-    // Period persistence
-    const periodSelect = document.getElementById('periodSelect');
-    const savedPeriod = localStorage.getItem('period') || 'Totalt';
-    periodSelect.value = savedPeriod;
-    updateDailyChart(savedPeriod);
-    periodSelect.addEventListener('change', e => {
-      const selected = e.target.value;
-      localStorage.setItem('period', selected);
-      updateDailyChart(selected);
+
+    // Reset timer on activity
+    ['mousemove', 'keydown', 'scroll', 'click'].forEach(event => {
+      document.addEventListener(event, resetInactivityTimer);
     });
+
+    // Initial focus
+    document.getElementById('passwordInput').focus();
   </script>
 </body>
 </html>
@@ -397,6 +409,7 @@ template_str = """
 env = jinja2.Environment()
 env.filters["format_number"] = lambda x: f"{x:,}".replace(',', ' ')
 template = env.from_string(template_str)
+
 html_content = template.render(
     snapshot_date=YESTERDAY,
     now=datetime.now().strftime("%Y-%m-%d %H:%M:%S CET"),
@@ -405,6 +418,7 @@ html_content = template.render(
     chart2=chart2_b64,
     daily_json=daily_json
 )
+
 Path("test.html").write_text(html_content, encoding="utf-8")
 print("Report saved as test.html")
 print("Done.")
