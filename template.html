@@ -60,14 +60,15 @@
             margin: 70px 0 40px;
             border-bottom: 4px solid #ffcc33;
             padding-bottom: 16px;
+            text-align: center;
         }
-        .overordnet-grid {
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 40px;
             margin-bottom: 80px;
         }
-        .overordnet-card {
+        .card {
             background: #f8faf9;
             padding: 40px;
             border-radius: 16px;
@@ -75,23 +76,23 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.06);
             text-align: center;
         }
-        .overordnet-card strong {
-            font-size: 1.8rem;
-            font-weight: 700;
+        .card strong {
+            font-size: 1.5rem;
+            font-weight: 600;
             display: block;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             color: #004225;
         }
-        .overordnet-card .total {
-            font-size: 4rem;
+        .card .number {
+            font-size: 3.5rem;
             font-weight: 800;
             color: #004225;
-            margin-bottom: 30px;
         }
-        .overordnet-subgrid {
+        .sub-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
+            margin-top: 30px;
         }
         .sub-card {
             background: #e0e9e5;
@@ -105,7 +106,7 @@
             display: block;
             margin-bottom: 12px;
         }
-        .sub-card span {
+        .sub-card .number {
             font-size: 2.8rem;
             font-weight: 700;
             color: #004225;
@@ -141,8 +142,8 @@
             font-weight: 600;
             color: #555;
         }
-        .kost-card .per { color: #c0392b; } /* Rød for kostnader */
-        .inntekt-card .per { color: #004225; } /* Grønn for inntekter */
+        .kost-card .per { color: #c0392b; }
+        .inntekt-card .per { color: #004225; }
         .resultat-card {
             background: #004225;
             color: white;
@@ -200,7 +201,7 @@
 <div class="subtitle">Overordnet – Kostnader – Inntekter – Resultat</div>
 
 <div class="timestamp">
-    Generert: <span id="timestamp"></span> | Versjon: v1.7
+    Generert: <span id="timestamp"></span> | Versjon: v1.9
 </div>
 
 <div class="periode">
@@ -213,13 +214,12 @@
         <option value="total">Totalt</option>
         <option disabled>──────────────</option>
         {% for m in months %}
-            {% if m < current_month %} <!-- bare fullførte måneder -->
+            {% set year, month_num = m.split('-') %}
+            {% set ym = year ~ month_num | int %}
+            {% set now_ym = now_year ~ now_month | int %}
+            {% if ym < now_ym %}
                 <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
                     {{ m | replace('-', ' ') | title }}
-                </option>
-            {% else %}
-                <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
-                    {{ m | replace('-', ' ') | title }} (ufullstendig)
                 </option>
             {% endif %}
         {% endfor %}
@@ -279,8 +279,8 @@
     </div>
     <div class="inntekt-card">
         <strong>Omsetning (Bud) per bil</strong>
-        <div class="per" id="revenue_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="total_bud">0</span> NOK</div>
+        <div class="per" id="omsetning_per_solgt">0</div>
+        <div class="samlet">Samlet: <span id="total_omsetning">0</span> NOK</div>
     </div>
 </div>
 
@@ -310,27 +310,93 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
 }) + ' CET';
 
-function calculateMetrics(period) {
-    let filteredCars = allData;
-    let month = period;
+function calculateMetrics(month) {
+    const [year, mon] = month.split('-').map(Number);
+    const monthStart = new Date(year, mon - 1, 1);
+    const monthEnd = new Date(year, mon, 0, 23, 59, 59);
+    const daysInMonth = new Date(year, mon, 0).getDate();
 
-    if (period === "last30") {
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        filteredCars = allData.filter(row => {
-            const soldDate = row['Solgt på'] ? new Date(row['Solgt på']) : null;
-            const retDate = row['Returnert på'] ? new Date(row['Returnert på']) : null;
-            return (soldDate && soldDate >= start) || (retDate && retDate >= start);
-        });
-        month = "Siste 30 dager";
-    } else if (period === "last60") {
-        // lignende logikk for 60 dager
-    } // ... (du kan utvide for andre faste perioder)
+    const soldCars = allData.filter(row => row['Solgt på_month'] === month);
+    const returnedCars = allData.filter(row => row['Returnert på_month'] === month);
 
-    // [resten av calculateMetrics som før, men bruk filteredCars i stedet for soldCars/returnedCars]
-    // For enkelhet holder vi det til måned her, men du kan utvide for faste perioder
-    // ...
+    let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
+    let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
+
+    soldCars.forEach(row => {
+        const b = parseFloat(row['Bud'] || 0);
+        const a = parseFloat(row['Avgift'] || 0);
+        omsetning += b;
+        income += a;
+        transportCost += 750;
+        if (b < 25000) {
+            soldUnder++;
+            prodCost += 2000;
+        } else {
+            soldOver++;
+            prodCost += 2500;
+        }
+    });
+
+    returnedCars.forEach(row => {
+        const b = parseFloat(row['Bud'] || 0);
+        transportCost += 750;
+        if (b < 25000) {
+            retUnder++;
+            prodCost += 1300;
+        } else {
+            retOver++;
+            prodCost += 1700;
+        }
+    });
+
+    const totalSold = soldUnder + soldOver;
+    const totalReturned = retUnder + retOver;
+    const marketingCost = 1000 * daysInMonth;
+    const totalCosts = marketingCost + prodCost + transportCost;
+    const bruttoFortjeneste = income - totalCosts;
+    const commission = omsetning * 0.027;
+
+    const grossProfitPerSold = totalSold > 0 ? Math.round(bruttoFortjeneste / totalSold) : 0;
+    const inntektPerSold = totalSold > 0 ? Math.round(income / totalSold) : 0;
+    const omsetningPerSold = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
+    const markedsPerSold = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
+    const totalKostPerSold = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
+    const prodPerSold = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
+    const girePerSold = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
+
+    // Update DOM
+    document.getElementById('solgt_total').textContent = totalSold;
+    document.getElementById('total_returnert').textContent = totalReturned;
+    document.getElementById('sold_under').textContent = soldUnder;
+    document.getElementById('sold_over').textContent = soldOver;
+    document.getElementById('ret_under').textContent = retUnder;
+    document.getElementById('ret_over').textContent = retOver;
+
+    document.getElementById('prod_per_solgt').textContent = prodPerSold.toLocaleString('no-NO');
+    document.getElementById('gire_per_solgt').textContent = girePerSold.toLocaleString('no-NO');
+    document.getElementById('markeds_per_solgt').textContent = markedsPerSold.toLocaleString('no-NO');
+    document.getElementById('total_kost_per_solgt').textContent = totalKostPerSold.toLocaleString('no-NO');
+
+    document.getElementById('inntekt_per_solgt').textContent = inntektPerSold.toLocaleString('no-NO');
+    document.getElementById('omsetning_per_solgt').textContent = omsetningPerSold.toLocaleString('no-NO');
+
+    document.getElementById('prod_kost').textContent = prodCost.toLocaleString('no-NO');
+    document.getElementById('gire_kost').textContent = transportCost.toLocaleString('no-NO');
+    document.getElementById('markeds_kost').textContent = marketingCost.toLocaleString('no-NO');
+    document.getElementById('totale_kostnader').textContent = totalCosts.toLocaleString('no-NO');
+
+    document.getElementById('total_inntekt').textContent = income.toLocaleString('no-NO');
+    document.getElementById('total_bud').textContent = omsetning.toLocaleString('no-NO');
+    document.getElementById('brutto_fortjeneste').textContent = bruttoFortjeneste.toLocaleString('no-NO');
+
+    document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
+    document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
+
+    // Negative farge
+    const profitEl = document.getElementById('gross_profit_per_solgt');
+    const bruttoEl = document.getElementById('brutto_fortjeneste');
+    profitEl.classList.toggle('negative', grossProfitPerSold < 0);
+    bruttoEl.classList.toggle('negative', bruttoFortjeneste < 0);
 }
 
 window.onload = function() {
