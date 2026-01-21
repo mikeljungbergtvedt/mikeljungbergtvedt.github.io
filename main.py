@@ -1,4 +1,3 @@
-# main.py
 import pandas as pd
 import requests
 import io
@@ -58,15 +57,22 @@ default_dt = today - relativedelta(months=2)
 default_month = default_dt.strftime('%Y-%m')
 
 if default_month not in all_months and all_months:
-    default_month = all_months[-1]  # latest month with data
+    default_month = all_months[-1]
 
 data_rows = df.to_dict(orient='records')
+
+# NEW: Pass current year and month to template for complete months filter
+now = datetime.now()
+now_year = now.strftime('%Y')
+now_month = now.strftime('%m')
 
 context = {
     "data_json": json.dumps(data_rows, default=str),
     "months": all_months,
     "default_month": default_month,
-    "min_date_str": "November 2025"
+    "min_date_str": "November 2025",
+    "now_year": now_year,
+    "now_month": now_month
 }
 
 env = Environment(loader=FileSystemLoader("."))
