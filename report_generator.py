@@ -164,7 +164,7 @@ for period_name, start_date in PERIODS.items():
     avg_days = round(days_to_sold.mean(), 1) if not days_to_sold.empty else "-"
     row["avg_days_priset_to_sold"] = avg_days
   
-    # Averages (unchanged)
+    # Averages
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
     row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
   
@@ -367,7 +367,7 @@ template_str = """
 
   <script>
     const PASSWORD = 'easypeasy';
-    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in ms
 
     let inactivityTimer;
 
@@ -394,12 +394,12 @@ template_str = """
       }
     }
 
-    // Reset timer on activity
+    // Reset timer on any activity
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(event => {
       document.addEventListener(event, resetInactivityTimer);
     });
 
-    // Initial focus
+    // Initial setup
     document.getElementById('passwordInput').focus();
   </script>
 </body>
@@ -419,6 +419,6 @@ html_content = template.render(
     daily_json=daily_json
 )
 
-Path("test.html").write_text(html_content, encoding="utf-8")
-print("Report saved as test.html")
+Path("peasyreport.html").write_text(html_content, encoding="utf-8")
+print("Report saved as peasyreport.html")
 print("Done.")
