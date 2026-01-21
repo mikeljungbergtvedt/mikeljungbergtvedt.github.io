@@ -56,10 +56,10 @@ print("\nFirst few rows (raw):\n", df.head(10).to_string())
 # Parse dates - robust for DD.MM.YYYY (with or without HH:MM)
 for col in DATE_COLS:
     df[col] = df[col].astype(str).str.strip()
-   
+  
     # Try full format with time first
     parsed = pd.to_datetime(df[col], format="%d.%m.%Y %H:%M", errors="coerce")
-   
+  
     # Fallback: date-only for failed rows
     mask_failed = parsed.isna()
     if mask_failed.any():
@@ -68,11 +68,11 @@ for col in DATE_COLS:
             format="%d.%m.%Y",
             errors="coerce"
         )
-   
+  
     # Log success rate
     valid_count = parsed.notna().sum()
     print(f"Parsed dates for {col}: {valid_count} / {len(df)} successful ({valid_count/len(df)*100:.1f}%)")
-   
+  
     df[col] = parsed
 
 # Debug parsed dates
@@ -128,7 +128,7 @@ daily_json = daily.to_json(orient='records')
 results = []
 for period_name, start_date in PERIODS.items():
     row = {"Period": period_name}
-   
+  
     if start_date is None:
         # Totalt: all rows with the event
         priset_count = df[COL_VALUED].notna().sum()
@@ -139,34 +139,34 @@ for period_name, start_date in PERIODS.items():
         priset_count = ((df[COL_VALUED] >= start_date) & (df[COL_VALUED] <= YESTERDAY_END)).sum()
         mottatt_count = ((df[COL_RECEIVED] >= start_date) & (df[COL_RECEIVED] <= YESTERDAY_END)).sum()
         solgt_count = ((df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)).sum()
-   
+  
     row["priset_count"] = priset_count
     row["mottatt_count"] = mottatt_count
     row["solgt_count"] = solgt_count
     row["priset_to_mottatt_pct"] = round(mottatt_count / priset_count * 100, 1) if priset_count > 0 else 0
     row["priset_to_solgt_pct"] = round(solgt_count / priset_count * 100, 1) if priset_count > 0 else 0
-   
+  
     # Marketing cost
     if start_date is None:
         min_date = df[COL_VALUED].min()
         marketing_start_date = max(MARKETING_START.date(), min_date.date() if pd.notna(min_date) else YESTERDAY.date())
     else:
         marketing_start_date = max(MARKETING_START.date(), start_date.date())
-   
+  
     days = (YESTERDAY.date() - marketing_start_date).days + 1
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
-   
+  
     # Averages
     if start_date is None:
         sold_mask = df[COL_SOLD].notna()
     else:
         sold_mask = (df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)
-   
+  
     sold = df[sold_mask]
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
     row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
-   
+  
     results.append(row)
 
 summary_df = pd.DataFrame(results)
@@ -304,7 +304,7 @@ template_str = """
     <div id="dailyChartContainer">
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
-        <option value="Totalt">Totalt</option>
+        <option value="Totalt" selected>Totalt</option>
         <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
