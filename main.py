@@ -61,7 +61,7 @@ if default_month not in all_months and all_months:
 
 data_rows = df.to_dict(orient='records')
 
-# NEW: Pass current year and month to template for complete months filter
+# FIX: Add current year and month for template to filter complete months
 now = datetime.now()
 now_year = now.strftime('%Y')
 now_month = now.strftime('%m')
