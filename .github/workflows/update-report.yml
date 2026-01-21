@@ -2,11 +2,11 @@ name: Update Peasy Report
 
 on:
   schedule:
-    # 06:00 UTC = 07:00 CET (Norway)
+    # 06:00 UTC = 07:00 CET
     - cron: '0 6 * * *'
-    # 12:00 UTC = 13:00 CET (Norway)
+    # 12:00 UTC = 13:00 CET
     - cron: '0 12 * * *'
-  workflow_dispatch:  # Allows manual trigger from Actions tab
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   build:
@@ -21,13 +21,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -39,14 +32,13 @@ jobs:
           python report_generator.py || { echo "Report generation failed!"; exit 1; }
           echo "Report generation finished."
 
-      - name: Commit and push updated test.html (only if changed)
+      - name: Commit and push updated peasyreport.html (only if changed)
         run: |
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'actions@github.com'
           
-          git add test.html
+          git add peasyreport.html
           
-          # Only commit if there are actual changes
           git diff --staged --quiet && echo "No changes to commit - skipping" && exit 0
           
           git commit -m "Auto-update Peasy report - $(date '+%Y-%m-%d %H:%M CET')"
