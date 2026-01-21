@@ -1,4 +1,3 @@
-
 # report_generator.py
 # Requirements: pip install pandas openpyxl matplotlib jinja2 requests
 
@@ -227,7 +226,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template - NO PASSWORD, chart fully working ===
+# === HTML Template ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -261,6 +260,26 @@ template_str = """
   </style>
 </head>
 <body>
+  <script>
+    const PASSWORD = 'easypeasy';
+    let attempts = 3;
+
+    while (attempts > 0) {
+      const pass = prompt(`Enter password to view Peasy Report (${attempts} attempts left):`);
+      if (pass === PASSWORD) {
+        break; // correct → continue loading
+      }
+      attempts--;
+      if (attempts === 0) {
+        alert('Too many failed attempts. Access denied.');
+        document.body.innerHTML = '<h1 style="text-align:center; color:red; margin-top:100px;">Access Denied</h1>';
+        break;
+      } else {
+        alert('Wrong password. Try again.');
+      }
+    }
+  </script>
+
   <div class="container">
     <div class="lang-toggle">
       <a href="#" class="lang-link" data-lang="en">English</a> |
@@ -389,7 +408,7 @@ template_str = """
     const periodSelect = document.getElementById('periodSelect');
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
     periodSelect.value = savedPeriod;
-    updateDailyChart(savedPeriod);  // Chart loads NOW
+    updateDailyChart(savedPeriod); // Chart loads NOW
 
     periodSelect.addEventListener('change', e => {
       const selected = e.target.value;
