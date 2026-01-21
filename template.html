@@ -8,17 +8,18 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 40px 20px;
+            padding: 0;
             background: #e0e9e5;
             color: #004225;
         }
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 40px auto;
             background: white;
             padding: 50px;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none; /* Hidden until password correct */
         }
         h1 {
             text-align: center;
@@ -192,9 +193,44 @@
         .negative {
             color: #c0392b !important;
         }
+        #denied {
+            display: none;
+            text-align: center;
+            margin-top: 200px;
+            font-size: 3rem;
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
+
+<script>
+    const PASSWORD = 'easypeasy';
+    let attempts = 3;
+
+    // Start with container hidden
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.container');
+        container.style.display = 'none';
+
+        while (attempts > 0) {
+            const pass = prompt(`Enter password to view Peasy Exec Rapport (${attempts} attempts left):`);
+            if (pass === PASSWORD) {
+                container.style.display = 'block';
+                break;
+            }
+            attempts--;
+            if (attempts === 0) {
+                alert('Too many failed attempts. Access denied.');
+                document.body.innerHTML = '<h1 id="denied">Access Denied</h1>';
+                break;
+            } else {
+                alert('Wrong password. Try again.');
+            }
+        }
+    });
+</script>
 
 <div class="container">
 
@@ -208,8 +244,6 @@
 <div class="periode">
     <label for="period-select">Periode: </label>
     <select id="period-select">
-        <option value="all">Alle måneder</option>
-        <option disabled>──────────────</option>
         {% for m in months %}
             {% set year, month_num = m.split('-') %}
             {% set ym = year ~ month_num | int %}
@@ -307,30 +341,19 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
 }) + ' CET';
 
-function calculateMetrics(period) {
-    let filteredSold = allData.filter(row => row['Solgt på_month']);
-    let filteredReturned = allData.filter(row => row['Returnert på_month']);
+function calculateMetrics(month) {
+    const [year, mon] = month.split('-').map(Number);
+    const monthStart = new Date(year, mon - 1, 1);
+    const monthEnd = new Date(year, mon, 0, 23, 59, 59);
+    const daysInMonth = new Date(year, mon, 0).getDate();
 
-    if (period !== "all") {
-        const [year, mon] = period.split('-').map(Number);
-        const monthStart = new Date(year, mon - 1, 1);
-        const monthEnd = new Date(year, mon, 0, 23, 59, 59);
-
-        filteredSold = allData.filter(row => {
-            const soldDate = row['Solgt på'] ? new Date(row['Solgt på']) : null;
-            return soldDate && soldDate >= monthStart && soldDate <= monthEnd;
-        });
-
-        filteredReturned = allData.filter(row => {
-            const retDate = row['Returnert på'] ? new Date(row['Returnert på']) : null;
-            return retDate && retDate >= monthStart && retDate <= monthEnd;
-        });
-    }
+    const soldCars = allData.filter(row => row['Solgt på_month'] === month);
+    const returnedCars = allData.filter(row => row['Returnert på_month'] === month);
 
     let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
     let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
 
-    filteredSold.forEach(row => {
+    soldCars.forEach(row => {
         const b = parseFloat(row['Bud'] || 0);
         const a = parseFloat(row['Avgift'] || 0);
         omsetning += b;
@@ -345,7 +368,7 @@ function calculateMetrics(period) {
         }
     });
 
-    filteredReturned.forEach(row => {
+    returnedCars.forEach(row => {
         const b = parseFloat(row['Bud'] || 0);
         transportCost += 750;
         if (b < 25000) {
@@ -359,7 +382,7 @@ function calculateMetrics(period) {
 
     const totalSold = soldUnder + soldOver;
     const totalReturned = retUnder + retOver;
-    const marketingCost = period === "all" ? 0 : 1000 * daysInMonth; // No marketing for "all" or adjust as needed
+    const marketingCost = 1000 * daysInMonth;
     const totalCosts = marketingCost + prodCost + transportCost;
     const bruttoFortjeneste = income - totalCosts;
     const commission = omsetning * 0.027;
@@ -400,6 +423,7 @@ function calculateMetrics(period) {
     document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
     document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
 
+    // Negative farge
     const profitEl = document.getElementById('gross_profit_per_solgt');
     const bruttoEl = document.getElementById('brutto_fortjeneste');
     profitEl.classList.toggle('negative', grossProfitPerSold < 0);
