@@ -1,0 +1,35 @@
+name: Daily Peasy Exec Report Refresh
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 5:00 UTC = 6:00 CET (winter) / 7:00 CEST (summer) — adjust if exact 7am needed
+  workflow_dispatch:     # allows manual run from Actions tab
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl requests pyyaml jinja2 python-dateutil
+
+      - name: Run main.py to generate report
+        run: python main.py
+
+      - name: Commit updated report
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add Peasy_Exec_Report.html
+          git commit -m "Auto-refresh: Daily Peasy Exec Report update [ci skip]" || echo "No changes"
+          git push
