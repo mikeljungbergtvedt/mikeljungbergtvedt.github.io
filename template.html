@@ -4,26 +4,25 @@
     <meta charset="UTF-8">
     <title>Peasy Exec Rapport</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.5; color: #333; max-width: 1000px; margin: 0 auto; }
+        body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.5; color: #333; max-width: 1000px; margin: 0 auto; background: #f9f9f9; }
         h1, h2 { text-align: center; color: #004225; }
-        .periode { text-align: center; font-size: 1.2em; margin: 20px 0; }
-        .summary { font-size: 1.1em; text-align: center; margin: 20px 0; color: #555; }
+        .periode { text-align: center; margin: 30px 0; font-size: 1.2em; }
+        select { padding: 8px 16px; font-size: 1.1em; border-radius: 6px; border: 1px solid #ccc; }
         .key-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 30px 0; }
-        .key-metrics div { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .key-metrics strong { display: block; font-size: 1.3em; margin-bottom: 5px; }
+        .metric { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .metric strong { display: block; font-size: 1.4em; margin-bottom: 8px; color: #004225; }
         .conversion-rates { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin: 30px 0; }
         .goal { color: #c00; font-weight: bold; }
         .funnel { text-align: center; margin: 40px 0; font-size: 1.1em; }
-        .funnel div { margin: 15px 0; padding: 10px; background: #e8f5e9; border-radius: 6px; }
-        table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+        .funnel div { margin: 20px 0; padding: 15px; background: #e8f5e9; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 40px 0; background: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background: #f5f9f6; color: #004225; }
+        th { background: #f5f9f6; color: #004225; font-weight: bold; }
         .highlight { font-weight: bold; background: #e8f5e9; }
         .buttons { text-align: center; margin: 40px 0; }
         button { padding: 12px 24px; margin: 0 10px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 6px; }
         .print { background: #ffcc33; color: #004225; }
-        .pdf { background: #004225; color: white; }
-        .link { background: #28a745; color: white; }
+        .warning { color: #c00; font-weight: bold; text-align: center; margin: 20px 0; font-size: 1.1em; }
     </style>
 </head>
 <body>
@@ -31,16 +30,64 @@
 <h1>Peasy Exec Rapport</h1>
 
 <div class="periode">
-    <strong>Periode: {{ periode_name }} ({{ periode_start }} – {{ periode_end }})</strong>
+    <label for="period-select">Periode: </label>
+    <select id="period-select">
+        {% for m in months %}
+            <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
+                {{ m | replace('-', ' ') | title }}
+            </option>
+        {% endfor %}
+    </select>
 </div>
 
-<div class="summary">
-    {{ priset_to_mottatt }}% prissatte biler mottatt / {{ mottatt_to_solgt }}% mottatte biler solgt<br>
-    Markedsføringskostnad per solgt bil: {{ markedsforing_per_solgt }} NOK<br>
-    Total kostnad per solgt bil: {{ total_kost_per_solgt }} NOK<br>
-    – brutto fortjeneste per solgt bil {{ brutto_fortjeneste_per_solgt }} NOK<br>
-    +{{ autoringen_kommisjon }} NOK Autoringen Kommisjon
+<div id="warning" class="warning" style="display:none;">
+    Advarsel: Solgt + Returnert stemmer ikke med Mottatt! Sjekk innputtene.
 </div>
+
+<div class="key-metrics">
+    <div class="metric"><strong>Biler Priset</strong><span id="priset">0</span></div>
+    <div class="metric"><strong>Biler Mottatt</strong><span id="mottatt">0</span></div>
+    <div class="metric"><strong>Biler Solgt</strong><span id="solgt">0</span></div>
+    <div class="metric"><strong>Biler Returnert</strong><span id="returnert">0</span></div>
+    <div class="metric"><strong>Solgt Omsetning</strong><span id="omsetning">0</span> NOK</div>
+    <div class="metric"><strong>Gjennomsnittspris per Solgt Bil</strong><span id="gjennomsnitt">–</span> NOK</div>
+    <div class="metric"><strong>Brutto Fortjeneste per Solgt Bil</strong><span id="brutto_per_solgt">–</span> NOK</div>
+</div>
+
+<h2>Nøkkelkonverteringsrater</h2>
+<div class="conversion-rates">
+    <div><strong>Priset → Mottatt</strong><br><span id="priset_mottatt">0.0</span>% <span class="goal">Mål: 10.0%</span></div>
+    <div><strong>Priset → Returnert</strong><br><span id="priset_returnert">0.0</span>%</div>
+    <div><strong>Mottatt → Solgt</strong><br><span id="mottatt_solgt">0.0</span>% <span class="goal">Mål: >70.0%</span></div>
+    <div><strong>Returneringsrate</strong><br><span id="return_rate">0.0</span>% <span class="goal">Mål: <30.0%</span></div>
+</div>
+
+<h2>Konverteringstrakt</h2>
+<div class="funnel">
+    <div><strong>Priset</strong><br><span id="trakt_priset">0</span> (100%)<br>↓ <span id="priset_pct">0.0</span>%</div>
+    <div><strong>Mottatt</strong><br><span id="trakt_mottatt">0</span><br>↓</div>
+    <div><strong>Solgt</strong><br><span id="trakt_solgt">0</span> (<span id="solgt_pct">0.0</span>% av mottatt)<br>↓</div>
+    <div><strong>Returnert</strong><br><span id="trakt_returnert">0</span> (<span id="return_pct">0.0</span>% av mottatt)</div>
+</div>
+
+<h2>Konvertering av mottatte biler</h2>
+<div><strong>Solgt</strong><br><span id="konv_solgt">0</span> biler – <span id="konv_solgt_pct">0.0</span>%</div>
+<div><strong>Returnert</strong><br><span id="konv_returnert">0</span> biler – <span id="konv_return_pct">0.0</span>%</div>
+
+<h2>Finansiell Oppsummering</h2>
+<table>
+    <tr><th>Post</th><th>Verdi</th></tr>
+    <tr><td>Markedsføringskostnad</td><td><span id="markeds_kost">0</span> NOK</td></tr>
+    <tr><td>Produksjonskostnad (trinnbasert)</td><td><span id="prod_kost">0</span> NOK</td></tr>
+    <tr><td>Gire Kostnad (750 NOK per mottatt)</td><td><span id="gire_kost">0</span> NOK</td></tr>
+    <tr><td>Markedsføringskostnad per Solgt Bil</td><td><span id="markeds_per_solgt">0</span> NOK</td></tr>
+    <tr><td>Total Kostnad per Solgt Bil</td><td><span id="total_kost_per_solgt">0</span> NOK</td></tr>
+    <tr class="highlight"><td>Brutto Fortjeneste per Solgt Bil (Peasy)</td><td class="highlight"><span id="brutto_per_solgt_table">–</span> NOK</td></tr>
+    <tr class="highlight"><td>Totale Kostnader</td><td class="highlight"><span id="totale_kostnader">0</span> NOK</td></tr>
+    <tr><td>Total Inntekt (NOK)</td><td><span id="total_inntekt">0</span> NOK</td></tr>
+    <tr class="highlight"><td>Brutto Fortjeneste/Tap (Peasy)</td><td class="highlight"><span id="brutto_fortjeneste">0</span> NOK</td></tr>
+    <tr class="highlight"><td>Autoringen Kommisjon (2.7% av solgt omsetning)</td><td class="highlight">+<span id="kommisjon">0</span> NOK</td></tr>
+</table>
 
 <div class="buttons">
     <button class="print" onclick="window.print()">Skriv ut</button>
@@ -48,55 +95,115 @@
     <button class="link">Kopier delbar lenke</button>
 </div>
 
-<h2>Nøkkeltall</h2>
-<div class="key-metrics">
-    <div><strong>Biler Priset</strong>{{ biler_priset }}</div>
-    <div><strong>Biler Mottatt</strong>{{ biler_mottatt }}</div>
-    <div><strong>Biler Solgt</strong>{{ biler_solgt }}</div>
-    <div><strong>Biler Returnert</strong>{{ biler_returnert }}</div>
-    <div><strong>Solgt Omsetning</strong>{{ solgt_omsetning }} NOK</div>
-    <div><strong>Gjennomsnittspris per Solgt Bil</strong>{{ gj_snitt_pris_solgt }} NOK</div>
-    <div><strong>Brutto Fortjeneste per Solgt Bil</strong>{{ brutto_per_solgt }} NOK</div>
-</div>
+<script>
+const allData = {{ data_json | safe }};
+const months = {{ months | tojson }};
+const defaultMonth = "{{ default_month }}";
 
-<h2>Nøkkelkonverteringsrater</h2>
-<div class="conversion-rates">
-    <div><strong>Priset → Mottatt</strong><br>{{ priset_to_mottatt }}% <span class="goal">Mål: {{ goals.priset_to_mottatt }}%</span></div>
-    <div><strong>Priset → Returnert</strong><br>{{ priset_to_returnert }}%</div>
-    <div><strong>Mottatt → Solgt</strong><br>{{ mottatt_to_solgt }}% <span class="goal">Mål: >{{ goals.mottatt_to_sold }}%</span></div>
-    <div><strong>Returneringsrate</strong><br>{{ returneringsrate }}% <span class="goal">Mål: <{{ goals.return_rate_max }}%</span></div>
-</div>
+function calculateMetrics(month) {
+    const filtered = allData.filter(row => {
+        return (
+            row['SD mottatt på_month'] === month ||
+            row['Mottatt_month'] === month ||
+            row['Solgt på_month'] === month ||
+            row['Returnert på_month'] === month
+        );
+    });
 
-<h2>Konverteringstrakt</h2>
-<div class="funnel">
-    <div><strong>Priset</strong><br>{{ biler_priset }} (100%)<br>↓ {{ priset_to_mottatt }}%</div>
-    <div><strong>Mottatt</strong><br>{{ biler_mottatt }}<br>↓</div>
-    <div><strong>Solgt</strong><br>{{ biler_solgt }} ({{ mottatt_to_solgt }}% av mottatt)<br>↓</div>
-    <div><strong>Returnert</strong><br>{{ biler_returnert }} ({{ returneringsrate }}% av mottatt)</div>
-</div>
+    let priset = 0, mottatt = 0, solgt = 0, returnert = 0;
+    let income = 0, prodCost = 0, transportCost = 0;
+    let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
 
-<h2>Konvertering av mottatte biler</h2>
-<div>
-    <strong>Solgt</strong><br>{{ biler_solgt }} biler – {{ mottatt_to_solgt }}%
-</div>
-<div>
-    <strong>Returnert</strong><br>{{ biler_returnert }} biler – {{ returneringsrate }}%
-</div>
+    filtered.forEach(row => {
+        const bud = parseFloat(row['Bud'] || 0);
+        const avgift = parseFloat(row['Avgift'] || 0);
 
-<h2>Finansiell Oppsummering</h2>
-<table>
-    <tr><th>Post</th><th>Verdi</th></tr>
-    <tr><td>Markedsføringskostnad</td><td>{{ markedsforing_kost }} NOK</td></tr>
-    <tr><td>Produksjonskostnad (trinnbasert)</td><td>{{ produksjon_kost }} NOK</td></tr>
-    <tr><td>Gire Kostnad (750 NOK per mottatt)</td><td>{{ gire_kost }} NOK</td></tr>
-    <tr><td>Markedsføringskostnad per Solgt Bil</td><td>{{ markedsforing_per_solgt }} NOK</td></tr>
-    <tr><td>Total Kostnad per Solgt Bil</td><td>{{ total_kost_per_solgt }} NOK</td></tr>
-    <tr class="highlight"><td>Brutto Fortjeneste per Solgt Bil (Peasy)</td><td class="highlight">{{ brutto_fortjeneste_per_solgt }} NOK</td></tr>
-    <tr class="highlight"><td>Totale Kostnader</td><td class="highlight">{{ totale_kostnader }} NOK</td></tr>
-    <tr><td>Total Inntekt (NOK)</td><td>{{ total_inntekt }} NOK</td></tr>
-    <tr class="highlight"><td>Brutto Fortjeneste/Tap (Peasy)</td><td class="highlight">{{ brutto_fortjeneste }} NOK</td></tr>
-    <tr class="highlight"><td>Autoringen Kommisjon (2.7% av solgt omsetning)</td><td class="highlight">+{{ autoringen_kommisjon }} NOK</td></tr>
-</table>
+        if (row['SD mottatt på']) priset++;
+        if (row['Mottatt']) mottatt++;
+        if (row['Solgt på']) {
+            solgt++;
+            income += avgift;
+            if (bud < 25000) soldUnder++; else soldOver++;
+            prodCost += (bud < 25000 ? 2000 : 2500);
+        }
+        if (row['Returnert på']) {
+            returnert++;
+            if (bud < 25000) retUnder++; else retOver++;
+            prodCost += (bud < 25000 ? 1300 : 1700);
+        }
+        if (row['Mottatt']) transportCost += 750;
+    });
+
+    // Marketing: per priset car if month >= 2025-11
+    const yearMonth = parseInt(month.replace('-',''));
+    const marketingCost = (yearMonth >= 202511) ? priset * 1000 : 0;
+
+    const totalCosts = marketingCost + prodCost + transportCost;
+    const bruttoFortjeneste = income - totalCosts;
+    const commission = income * 0.027;
+
+    const marketingPerSold = solgt > 0 ? Math.round(marketingCost / solgt) : 0;
+    const totalCostPerSold = solgt > 0 ? Math.round(totalCosts / solgt) : 0;
+    const bruttoPerSold = solgt > 0 ? Math.round(bruttoFortjeneste / solgt) : 0;
+
+    const prisetToMottatt = priset > 0 ? (mottatt / priset * 100).toFixed(1) : 0;
+    const prisetToReturn  = priset > 0 ? (returnert / priset * 100).toFixed(1) : 0;
+    const mottattToSolgt  = mottatt > 0 ? (solgt / mottatt * 100).toFixed(1) : 0;
+    const returnRate      = mottatt > 0 ? (returnert / mottatt * 100).toFixed(1) : 0;
+
+    // Update DOM
+    document.getElementById('priset').textContent = priset;
+    document.getElementById('mottatt').textContent = mottatt;
+    document.getElementById('solgt').textContent = solgt;
+    document.getElementById('returnert').textContent = returnert;
+
+    document.getElementById('omsetning').textContent = income.toLocaleString('no-NO');
+    document.getElementById('gjennomsnitt').textContent = solgt > 0 ? Math.round(income / solgt).toLocaleString('no-NO') : '–';
+    document.getElementById('brutto_per_solgt').textContent = solgt > 0 ? bruttoPerSold.toLocaleString('no-NO') : '–';
+
+    document.getElementById('priset_mottatt').textContent = prisetToMottatt;
+    document.getElementById('priset_returnert').textContent = prisetToReturn;
+    document.getElementById('mottatt_solgt').textContent = mottattToSolgt;
+    document.getElementById('return_rate').textContent = returnRate;
+
+    document.getElementById('trakt_priset').textContent = priset;
+    document.getElementById('trakt_mottatt').textContent = mottatt;
+    document.getElementById('trakt_solgt').textContent = solgt;
+    document.getElementById('trakt_returnert').textContent = returnert;
+    document.getElementById('priset_pct').textContent = prisetToMottatt;
+    document.getElementById('solgt_pct').textContent = mottattToSolgt;
+    document.getElementById('return_pct').textContent = returnRate;
+
+    document.getElementById('konv_solgt').textContent = solgt;
+    document.getElementById('konv_solgt_pct').textContent = mottattToSolgt;
+    document.getElementById('konv_returnert').textContent = returnert;
+    document.getElementById('konv_return_pct').textContent = returnRate;
+
+    document.getElementById('markeds_kost').textContent = marketingCost.toLocaleString('no-NO');
+    document.getElementById('prod_kost').textContent = prodCost.toLocaleString('no-NO');
+    document.getElementById('gire_kost').textContent = transportCost.toLocaleString('no-NO');
+    document.getElementById('markeds_per_solgt').textContent = marketingPerSold.toLocaleString('no-NO');
+    document.getElementById('total_kost_per_solgt').textContent = totalCostPerSold.toLocaleString('no-NO');
+    document.getElementById('brutto_per_solgt_table').textContent = solgt > 0 ? bruttoPerSold.toLocaleString('no-NO') : '–';
+    document.getElementById('totale_kostnader').textContent = totalCosts.toLocaleString('no-NO');
+    document.getElementById('total_inntekt').textContent = income.toLocaleString('no-NO');
+    document.getElementById('brutto_fortjeneste').textContent = bruttoFortjeneste.toLocaleString('no-NO');
+    document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
+
+    // Simple warning check
+    document.getElementById('warning').style.display = (solgt + returnert !== mottatt) ? 'block' : 'none';
+}
+
+// Init
+window.onload = function() {
+    document.getElementById('period-select').value = defaultMonth;
+    calculateMetrics(defaultMonth);
+
+    document.getElementById('period-select').addEventListener('change', function(e) {
+        calculateMetrics(e.target.value);
+    });
+};
+</script>
 
 </body>
 </html>
