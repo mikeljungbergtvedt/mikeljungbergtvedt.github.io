@@ -104,14 +104,12 @@ daily_valued = (
     .size()
     .rename('priset')
 )
-
 daily_received = (
     df[df[COL_RECEIVED].notna()]
     .groupby(df[COL_RECEIVED].dt.date)
     .size()
     .rename('mottatt')
 )
-
 daily_sold = (
     df[df[COL_SOLD].notna()]
     .groupby(df[COL_SOLD].dt.date)
@@ -157,13 +155,18 @@ for period_name, start_date in PERIODS.items():
     total_marketing = days * MARKETING_DAILY if days > 0 else 0
     row["marketing_per_solgt"] = round(total_marketing / solgt_count) if solgt_count > 0 else 0
   
-    # Averages
+    # === NEW: Average days from Priset to Sold ===
     if start_date is None:
-        sold_mask = df[COL_SOLD].notna()
+        sold_mask = df[COL_SOLD].notna() & df[COL_VALUED].notna()
     else:
-        sold_mask = (df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END)
+        sold_mask = (df[COL_SOLD] >= start_date) & (df[COL_SOLD] <= YESTERDAY_END) & df[COL_VALUED].notna()
   
     sold = df[sold_mask]
+    days_to_sold = (sold[COL_SOLD] - sold[COL_VALUED]).dt.days
+    avg_days = round(days_to_sold.mean(), 1) if not days_to_sold.empty else "-"
+    row["avg_days_priset_to_sold"] = avg_days
+  
+    # Averages (unchanged)
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
     row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
   
@@ -265,7 +268,7 @@ template_str = """
       <a href="#" class="lang-link active" data-lang="no">Norsk</a>
     </div>
     <h1 class="trans" data-en="Peasy Report" data-no="Peasy Rapport">Peasy Rapport</h1>
-    <p class="subtitle trans" data-en="Snapshot date: {{ snapshot_date.strftime('%Y-%m-%d') }} (data up to yesterday)" data-no="Snapshot dato: {{ snapshot_date.strftime('%Y-%m-%d') }} (data opp til i går)">Snapshot dato: {{ snapshot_date.strftime('%Y-%m-%d') }} (data opp til i går)</p>
+    <p class="subtitle trans" data-en="Data fra 1.11.25 - Snapshot date: {{ snapshot_date.strftime('%Y-%m-%d') }} (data up to yesterday)" data-no="Data fra 1.11.25 - Snapshot dato: {{ snapshot_date.strftime('%Y-%m-%d') }} (data opp til i går)">Data fra 1.11.25 - Snapshot dato: {{ snapshot_date.strftime('%Y-%m-%d') }} (data opp til i går)</p>
 
     <h2 class="trans" data-en="Summary Table" data-no="Sammendragstabell">Sammendragstabell</h2>
     <table>
@@ -276,6 +279,7 @@ template_str = """
         <th class="trans" data-en="Priset → Mottatt" data-no="Priset → Mottatt">Priset → Mottatt</th>
         <th class="trans" data-en="Solgt" data-no="Solgt">Solgt</th>
         <th class="trans" data-en="Priset → Solgt" data-no="Priset → Solgt">Priset → Solgt</th>
+        <th class="trans" data-en="Gj.sn. dager Priset → Solgt" data-no="Gj.sn. dager Priset → Solgt">Gj.sn. dager Priset → Solgt</th>
         <th class="trans" data-en="Marketing cost per sold car" data-no="Markedsføringskostnad per solgt bil">Markedsføringskostnad per solgt bil</th>
         <th class="trans" data-en="Avg Value per sold car" data-no="Gj.sn. Verdi per solgt bil">Gj.sn. Verdi per solgt bil</th>
         <th class="trans" data-en="Avg Commission per sold car" data-no="Gj.sn. Avgift per solgt bil">Gj.sn. Avgift per solgt bil</th>
@@ -288,6 +292,7 @@ template_str = """
         <td>{{ row.priset_to_mottatt_pct }} %</td>
         <td>{{ row.solgt_count }}</td>
         <td>{{ row.priset_to_solgt_pct }} %</td>
+        <td>{{ row.avg_days_priset_to_sold if row.avg_days_priset_to_sold != '-' else '-' }}</td>
         <td>{{ row.marketing_per_solgt | int | format_number }} NOK</td>
         <td>{{ row.avg_value | int | format_number }} NOK</td>
         <td>{{ row.avg_commission | int | format_number }} NOK</td>
@@ -304,7 +309,7 @@ template_str = """
     <div id="dailyChartContainer">
       <label for="periodSelect" class="trans" data-en="Select period:" data-no="Velg periode:">Velg periode:</label>
       <select id="periodSelect">
-        <option value="Totalt" selected>Totalt</option>
+        <option value="Totalt">Totalt</option>
         <option value="Siste 7 dager">Siste 7 dager</option>
         <option value="Siste 30 dager">Siste 30 dager</option>
         <option value="Siste 60 dager">Siste 60 dager</option>
@@ -376,12 +381,9 @@ template_str = """
     }
     // Period persistence
     const periodSelect = document.getElementById('periodSelect');
-    // Load saved period (or default to 'Totalt' on first visit)
     const savedPeriod = localStorage.getItem('period') || 'Totalt';
-    periodSelect.value = savedPeriod; // Set dropdown to saved value
-    // Initialize chart with the loaded/saved period
+    periodSelect.value = savedPeriod;
     updateDailyChart(savedPeriod);
-    // Save new choice on change
     periodSelect.addEventListener('change', e => {
       const selected = e.target.value;
       localStorage.setItem('period', selected);
