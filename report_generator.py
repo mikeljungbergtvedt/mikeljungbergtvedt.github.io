@@ -164,7 +164,7 @@ for period_name, start_date in PERIODS.items():
     avg_days = round(days_to_sold.mean(), 1) if not days_to_sold.empty else "-"
     row["avg_days_priset_to_sold"] = avg_days
   
-    # Averages
+    # Averages (unchanged)
     row["avg_value"] = sold[COL_VALUE].mean() if not sold.empty else 0
     row["avg_commission"] = sold[COL_COMMISSION].mean() if not sold.empty else 0
   
@@ -226,7 +226,7 @@ ax2.legend()
 chart2_b64 = fig_to_base64(fig2)
 plt.close(fig2)
 
-# === HTML Template with password overlay + auto-logout ===
+# === HTML Template with password overlay + auto-logout + fixed chart ===
 template_str = """
 <!DOCTYPE html>
 <html lang="no">
@@ -367,7 +367,7 @@ template_str = """
 
   <script>
     const PASSWORD = 'easypeasy';
-    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in ms
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
     let inactivityTimer;
 
@@ -388,18 +388,76 @@ template_str = """
       if (input === PASSWORD) {
         document.getElementById('passwordOverlay').style.display = 'none';
         document.querySelector('.container').style.filter = 'none';
+        // Re-init chart after unlock
+        const periodSelect = document.getElementById('periodSelect');
+        updateDailyChart(periodSelect.value);
         resetInactivityTimer();
       } else {
         document.getElementById('errorMsg').style.display = 'block';
       }
     }
 
-    // Reset timer on any activity
+    // Reset timer on activity
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(event => {
       document.addEventListener(event, resetInactivityTimer);
     });
 
-    // Initial setup
+    // Chart logic (moved here so it can run after unlock)
+    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
+    let dailyChart;
+
+    function updateDailyChart(period) {
+      let filteredData = dailyData;
+      if (period !== 'Totalt') {
+        const daysBack = parseInt(period.split(' ')[1]);
+        const start = new Date();
+        start.setDate(start.getDate() - daysBack);
+        filteredData = dailyData.filter(d => new Date(d.date) >= start);
+      }
+      const labels = filteredData.map(d => d.date);
+      const priset = filteredData.map(d => d.priset);
+      const mottatt = filteredData.map(d => d.mottatt);
+      const solgt = filteredData.map(d => d.solgt);
+
+      if (dailyChart) dailyChart.destroy();
+      dailyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Priset', data: priset, borderColor: '#004225', fill: false, tension: 0.1, borderWidth: 2 },
+            { label: 'Mottatt', data: mottatt, borderColor: '#8fcbbc', fill: false, tension: 0.1, borderWidth: 2 },
+            { label: 'Solgt', data: solgt, borderColor: '#ffcc33', fill: false, tension: 0.1, borderWidth: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Dato' } },
+            y: { title: { display: true, text: 'Antall' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // Period persistence
+    const periodSelect = document.getElementById('periodSelect');
+    const savedPeriod = localStorage.getItem('period') || 'Totalt';
+    periodSelect.value = savedPeriod;
+
+    // Only init chart after unlock (or if already unlocked)
+    if (document.getElementById('passwordOverlay').style.display !== 'flex') {
+      updateDailyChart(savedPeriod);
+    }
+
+    periodSelect.addEventListener('change', e => {
+      const selected = e.target.value;
+      localStorage.setItem('period', selected);
+      updateDailyChart(selected);
+    });
+
+    // Initial focus on password
     document.getElementById('passwordInput').focus();
   </script>
 </body>
