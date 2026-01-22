@@ -200,7 +200,7 @@
             border-radius: 16px;
             border: 1px solid #ddd;
             box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-            height: 400px; /* fixed height for better bar chart appearance */
+            height: 400px;
         }
         .chart-title {
             text-align: center;
@@ -219,7 +219,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.11.2
+        Generert: <span id="timestamp"></span> | Versjon: v1.11.3
     </div>
 
     <div class="periode">
@@ -261,6 +261,11 @@
     <div class="chart-container">
         <div class="chart-title">Aktivitet per måned – Solgte, Returnerte og Prisete biler</div>
         <canvas id="activityChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Kumulativt antall solgte biler over tid</div>
+        <canvas id="cumulativeChart"></canvas>
     </div>
 
     <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
@@ -330,7 +335,7 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// ACTIVITY CHART – Grouped vertical bars – only completed months
+// MONTHLY ACTIVITY – Grouped vertical bars
 // ────────────────────────────────────────────────
 function renderActivityChart() {
     const monthlyData = {};
@@ -348,18 +353,11 @@ function renderActivityChart() {
         if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
     });
 
-    // Only completed months (before current year-month)
-    const now_ym = now_year + now_month; // e.g. "202601"
-    const completedMonths = months.filter(m => {
-        const ym = m.replace('-', '');
-        return ym < now_ym;
-    });
+    const now_ym = now_year + now_month;
+    const completedMonths = months.filter(m => m.replace('-', '') < now_ym);
 
-    // Only months with activity + sorted chronologically
     const labels = completedMonths.filter(m =>
-        monthlyData[m].solgt > 0 ||
-        monthlyData[m].returnert > 0 ||
-        monthlyData[m].priset > 0
+        monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0
     ).sort();
 
     if (labels.length === 0) {
@@ -371,72 +369,92 @@ function renderActivityChart() {
     const returnertData = labels.map(m => monthlyData[m].returnert);
     const prisetData    = labels.map(m => monthlyData[m].priset);
 
-    const ctx = document.getElementById('activityChart').getContext('2d');
-
-    new Chart(ctx, {
+    new Chart(document.getElementById('activityChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [
-                {
-                    label: 'Solgte biler',
-                    data: solgtData,
-                    backgroundColor: 'rgba(0, 66, 37, 0.75)',
-                    borderColor: '#004225',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Returnerte biler',
-                    data: returnertData,
-                    backgroundColor: 'rgba(192, 57, 43, 0.75)',
-                    borderColor: '#c0392b',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Prisete biler',
-                    data: prisetData,
-                    backgroundColor: 'rgba(39, 174, 96, 0.75)',
-                    borderColor: '#27ae60',
-                    borderWidth: 1
-                }
+                { label: 'Solgte biler',     data: solgtData,     backgroundColor: 'rgba(0, 66, 37, 0.75)',    borderColor: '#004225', borderWidth: 1 },
+                { label: 'Returnerte biler', data: returnertData, backgroundColor: 'rgba(192, 57, 43, 0.75)',  borderColor: '#c0392b', borderWidth: 1 },
+                { label: 'Prisete biler',    data: prisetData,    backgroundColor: 'rgba(39, 174, 96, 0.75)',  borderColor: '#27ae60', borderWidth: 1 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 14, weight: '600' }, color: '#004225', padding: 16 } } },
+            scales: {
+                x: { stacked: false, title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } }, ticks: { color: '#004225' }, grid: { display: false } },
+                y: { beginAtZero: true, stacked: false, title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } }, ticks: { color: '#004225', stepSize: 10 }, grid: { color: 'rgba(0,0,0,0.08)' } }
+            }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// CUMULATIVE SOLD CARS – Line + filled area
+// ────────────────────────────────────────────────
+function renderCumulativeChart() {
+    const monthlySold = {};
+    months.forEach(m => monthlySold[m] = 0);
+
+    allData.forEach(row => {
+        const soldMonth = row['Solgt på_month'];
+        if (soldMonth && monthlySold[soldMonth] !== undefined) {
+            monthlySold[soldMonth]++;
+        }
+    });
+
+    const now_ym = now_year + now_month;
+    const completedMonths = months.filter(m => m.replace('-', '') < now_ym).sort();
+
+    const labels = completedMonths.filter(m => monthlySold[m] > 0 || true); // show even zero months for continuity
+
+    if (labels.length <= 1) {  // need at least 2 points for meaningful cumulative
+        document.getElementById('cumulativeChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    let cumulative = 0;
+    const cumulativeData = labels.map(m => {
+        cumulative += monthlySold[m];
+        return cumulative;
+    });
+
+    new Chart(document.getElementById('cumulativeChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Kumulativt solgte biler',
+                data: cumulativeData,
+                borderColor: '#004225',
+                backgroundColor: 'rgba(0, 66, 37, 0.25)',
+                fill: true,
+                tension: 0.1,
+                borderWidth: 3,
+                pointBackgroundColor: '#004225',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        font: { size: 14, weight: '600' },
-                        color: '#004225',
-                        padding: 16
-                    }
-                }
+                legend: { position: 'top', labels: { font: { size: 14, weight: '600' }, color: '#004225' } }
             },
             scales: {
                 x: {
-                    stacked: false,
-                    title: {
-                        display: true,
-                        text: 'Måned',
-                        color: '#004225',
-                        font: { size: 14 }
-                    },
+                    title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } },
                     ticks: { color: '#004225' },
                     grid: { display: false }
                 },
                 y: {
                     beginAtZero: true,
-                    stacked: false,
-                    title: {
-                        display: true,
-                        text: 'Antall biler',
-                        color: '#004225',
-                        font: { size: 14 }
-                    },
-                    ticks: { color: '#004225', stepSize: 10 },
-                    grid: { color: 'rgba(0,0,0,0.08)' }
+                    title: { display: true, text: 'Totalt antall solgte biler', color: '#004225', font: { size: 14 } },
+                    ticks: { color: '#004225', stepSize: Math.ceil(cumulativeData[cumulativeData.length-1]/10)*10 || 10 }
                 }
             }
         }
@@ -444,12 +462,10 @@ function renderActivityChart() {
 }
 
 // ────────────────────────────────────────────────
-// MONTHLY METRICS CALCULATION
+// MONTHLY METRICS (unchanged)
 // ────────────────────────────────────────────────
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
-    const monthStart = new Date(year, mon - 1, 1);
-    const monthEnd = new Date(year, mon, 0, 23, 59, 59);
     const daysInMonth = new Date(year, mon, 0).getDate();
 
     const soldCars = allData.filter(row => row['Solgt på_month'] === month);
@@ -464,25 +480,13 @@ function calculateMetrics(month) {
         omsetning += b;
         income += a;
         transportCost += 750;
-        if (b < 25000) {
-            soldUnder++;
-            prodCost += 2000;
-        } else {
-            soldOver++;
-            prodCost += 2500;
-        }
+        if (b < 25000) { soldUnder++; prodCost += 2000; } else { soldOver++; prodCost += 2500; }
     });
 
     returnedCars.forEach(row => {
         const b = parseFloat(row['Bud'] || 0);
         transportCost += 750;
-        if (b < 25000) {
-            retUnder++;
-            prodCost += 1300;
-        } else {
-            retOver++;
-            prodCost += 1700;
-        }
+        if (b < 25000) { retUnder++; prodCost += 1300; } else { retOver++; prodCost += 1700; }
     });
 
     const totalSold = soldUnder + soldOver;
@@ -500,7 +504,6 @@ function calculateMetrics(month) {
     const prodPerSold        = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
     const girePerSold        = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
 
-    // Update DOM
     document.getElementById('solgt_total').textContent = totalSold;
     document.getElementById('total_returnert').textContent = totalReturned;
     document.getElementById('sold_under').textContent = soldUnder;
@@ -540,11 +543,10 @@ function calculateMetrics(month) {
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    document.getElementById('period-select').addEventListener('change', e => {
-        calculateMetrics(e.target.value);
-    });
+    document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
 
     renderActivityChart();
+    renderCumulativeChart();
 };
 </script>
 
