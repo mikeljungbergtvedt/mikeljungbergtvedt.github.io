@@ -113,37 +113,6 @@
             font-weight: 700;
             color: #004225;
         }
-        .kost-grid, .inntekt-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-            gap: 40px;
-            margin-bottom: 80px;
-        }
-        .line-card {
-            background: #f8faf9;
-            padding: 35px;
-            border-radius: 16px;
-            border: 1px solid #ddd;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-            text-align: center;
-        }
-        .line-card strong {
-            font-size: 1.5rem;
-            font-weight: 600;
-            display: block;
-            margin-bottom: 20px;
-            color: #004225;
-        }
-        .line-card .per {
-            font-size: 2.6rem;
-            font-weight: 800;
-            margin-bottom: 15px;
-        }
-        .line-card .samlet {
-            font-size: 1.9rem;
-            font-weight: 600;
-            color: #555;
-        }
         .negative {
             color: #c0392b !important;
         }
@@ -200,7 +169,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.11.10
+        Generert: <span id="timestamp"></span> | Versjon: v1.12.0
     </div>
 
     <div class="periode">
@@ -257,8 +226,8 @@
             <strong>Priset → Mottatt</strong>
             <div class="number" id="priset_to_mottatt">– %</div>
             <div class="sub-grid">
-                <div class="sub-card"><strong>Priset</strong><span id="count_priset">0</span></div>
-                <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt">0</span></div>
+                <div class="sub-card"><strong>Priset</strong><span id="count_priset_month">0</span></div>
+                <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt_month">0</span></div>
             </div>
         </div>
 
@@ -266,8 +235,8 @@
             <strong>Mottatt → Solgt</strong>
             <div class="number" id="mottatt_to_solgt">– %</div>
             <div class="sub-grid">
-                <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt_2">0</span></div>
-                <div class="sub-card"><strong>Solgte</strong><span id="count_solgt">0</span></div>
+                <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt_month_2">0</span></div>
+                <div class="sub-card"><strong>Solgte</strong><span id="count_solgt_month">0</span></div>
             </div>
         </div>
     </div>
@@ -369,38 +338,42 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// GLOBAL FUNNEL RATIOS – Priset→Mottatt and Mottatt→Solgt
+// FUNNEL RATIOS – PER SELECTED MONTH
 // ────────────────────────────────────────────────
-function updateFunnelRatios() {
+function updateFunnelRatios(month) {
     let countPriset  = 0;
     let countMottatt = 0;
     let countSolgt   = 0;
+    let countRet     = 0;
 
     allData.forEach(row => {
-        // Priset
-        if (row['SD mottatt på'] && String(row['SD mottatt på']).trim() !== '') {
-            countPriset++;
-        }
+        if (row['Solgt på_month'] === month || row['Returnert på_month'] === month) {
+            // Only count cars that were sold or returned in this month
 
-        // Mottatt – column Q
-        const mottattVal = row['Mottatt'];
-        if (mottattVal && String(mottattVal).trim() !== '' && /\d/.test(String(mottattVal))) {
-            countMottatt++;
-        }
+            if (row['SD mottatt på'] && String(row['SD mottatt på']).trim() !== '') {
+                countPriset++;
+            }
 
-        // Solgt
-        if (row['Solgt på'] && String(row['Solgt på']).trim() !== '') {
-            countSolgt++;
+            const mottattVal = row['Mottatt'];
+            if (mottattVal && String(mottattVal).trim() !== '' && /\d/.test(String(mottattVal))) {
+                countMottatt++;
+            }
+
+            if (row['Solgt på'] && String(row['Solgt på']).trim() !== '') {
+                countSolgt++;
+            }
+
+            if (row['Returnert på'] && String(row['Returnert på']).trim() !== '') {
+                countRet++;
+            }
         }
     });
 
-    // Priset → Mottatt
     const r1 = countPriset > 0 ? Math.round((countMottatt / countPriset) * 100) : 0;
     document.getElementById('priset_to_mottatt').textContent = r1 + ' %';
     document.getElementById('count_priset').textContent = countPriset;
     document.getElementById('count_mottatt').textContent = countMottatt;
 
-    // Mottatt → Solgt
     const r2 = countMottatt > 0 ? Math.round((countSolgt / countMottatt) * 100) : 0;
     document.getElementById('mottatt_to_solgt').textContent = r2 + ' %';
     document.getElementById('count_mottatt_2').textContent = countMottatt;
@@ -411,91 +384,10 @@ function updateFunnelRatios() {
 }
 
 // ────────────────────────────────────────────────
-// ACTIVITY CHART (unchanged)
-// ────────────────────────────────────────────────
-function renderActivityChart() {
-    const monthlyData = {};
-    months.forEach(m => {
-        monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
-    });
-
-    allData.forEach(row => {
-        const soldMonth   = row['Solgt på_month'];
-        const retMonth    = row['Returnert på_month'];
-        const prisetMonth = row['SD mottatt på_month'];
-
-        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
-        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
-        if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
-    });
-
-    const now_ym = now_year + now_month;
-    const labels = months
-        .filter(m => m.replace('-', '') < now_ym)
-        .filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0)
-        .sort();
-
-    if (labels.length === 0) {
-        document.getElementById('activityChart').parentElement.style.display = 'none';
-        return;
-    }
-
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels.map(m => m.replace('-', ' ')),
-            datasets: [
-                {
-                    label: 'Solgte biler',
-                    data: labels.map(m => monthlyData[m].solgt),
-                    backgroundColor: 'rgba(0, 66, 37, 0.75)',
-                    borderColor: '#004225',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Returnerte biler',
-                    data: labels.map(m => monthlyData[m].returnert),
-                    backgroundColor: 'rgba(192, 57, 43, 0.75)',
-                    borderColor: '#c0392b',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Prisete biler',
-                    data: labels.map(m => monthlyData[m].priset),
-                    backgroundColor: 'rgba(39, 174, 96, 0.75)',
-                    borderColor: '#27ae60',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        font: { size: 14, weight: '600' },
-                        color: '#004225'
-                    }
-                }
-            },
-            scales: {
-                x: { stacked: false, title: { display: true, text: 'Måned' }, ticks: { color: '#004225' }, grid: { display: false } },
-                y: { beginAtZero: true, stacked: false, title: { display: true, text: 'Antall biler' }, ticks: { color: '#004225' } }
-            }
-        }
-    });
-}
-
-// ────────────────────────────────────────────────
-// MONTHLY METRICS CALCULATION (unchanged)
+// MONTHLY METRICS CALCULATION (updated to call funnel update)
 // ────────────────────────────────────────────────
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
-    const monthStart = new Date(year, mon - 1, 1);
-    const monthEnd = new Date(year, mon, 0, 23, 59, 59);
     const daysInMonth = new Date(year, mon, 0).getDate();
 
     const soldCars = allData.filter(row => row['Solgt på_month'] === month);
@@ -510,25 +402,13 @@ function calculateMetrics(month) {
         omsetning += b;
         income += a;
         transportCost += 750;
-        if (b < 25000) {
-            soldUnder++;
-            prodCost += 2000;
-        } else {
-            soldOver++;
-            prodCost += 2500;
-        }
+        if (b < 25000) { soldUnder++; prodCost += 2000; } else { soldOver++; prodCost += 2500; }
     });
 
     returnedCars.forEach(row => {
         const b = parseFloat(row['Bud'] || 0);
         transportCost += 750;
-        if (b < 25000) {
-            retUnder++;
-            prodCost += 1300;
-        } else {
-            retOver++;
-            prodCost += 1700;
-        }
+        if (b < 25000) { retUnder++; prodCost += 1300; } else { retOver++; prodCost += 1700; }
     });
 
     const totalSold = soldUnder + soldOver;
@@ -539,12 +419,12 @@ function calculateMetrics(month) {
     const commission = omsetning * 0.027;
 
     const grossProfitPerSold = totalSold > 0 ? Math.round(bruttoFortjeneste / totalSold) : 0;
-    const inntektPerSold = totalSold > 0 ? Math.round(income / totalSold) : 0;
-    const omsetningPerSold = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
-    const markedsPerSold = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
-    const totalKostPerSold = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
-    const prodPerSold = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
-    const girePerSold = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
+    const inntektPerSold     = totalSold > 0 ? Math.round(income / totalSold) : 0;
+    const omsetningPerSold   = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
+    const markedsPerSold     = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
+    const totalKostPerSold   = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
+    const prodPerSold        = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
+    const girePerSold        = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
 
     document.getElementById('solgt_total').textContent = totalSold;
     document.getElementById('total_returnert').textContent = totalReturned;
@@ -573,10 +453,11 @@ function calculateMetrics(month) {
     document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
     document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
 
-    const profitEl = document.getElementById('gross_profit_per_solgt');
-    const bruttoEl = document.getElementById('brutto_fortjeneste');
-    profitEl.classList.toggle('negative', grossProfitPerSold < 0);
-    bruttoEl.classList.toggle('negative', bruttoFortjeneste < 0);
+    document.getElementById('gross_profit_per_solgt').classList.toggle('negative', grossProfitPerSold < 0);
+    document.getElementById('brutto_fortjeneste').classList.toggle('negative', bruttoFortjeneste < 0);
+
+    // Update funnel for this month
+    updateFunnelRatios(month);
 }
 
 // ────────────────────────────────────────────────
@@ -585,7 +466,6 @@ function calculateMetrics(month) {
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    updateFunnelRatios();  // Update funnel percentages
 
     document.getElementById('period-select').addEventListener('change', e => {
         calculateMetrics(e.target.value);
