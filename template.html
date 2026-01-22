@@ -39,7 +39,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.11.7
+        Generert: <span id="timestamp"></span> | Versjon: v1.12.1
     </div>
 
     <div class="periode">
@@ -69,7 +69,6 @@
             <div class="number" id="priset_to_mottatt_pct">– %</div>
             <div class="sub-grid">
                 <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt">0</span></div>
-                <div class="sub-card"><strong>fra priset</strong><span id="pct_received">0%</span></div>
             </div>
         </div>
         <div class="card">
@@ -77,27 +76,6 @@
             <div class="number" id="mottatt_to_solgt_pct">– %</div>
             <div class="sub-grid">
                 <div class="sub-card"><strong>Solgt</strong><span id="count_solgt">0</span></div>
-                <div class="sub-card"><strong>fra mottatt</strong><span id="pct_sold">0%</span></div>
-            </div>
-        </div>
-    </div>
-
-    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
-    <div class="grid">
-        <div class="card">
-            <strong>Solgte biler</strong>
-            <div class="number" id="solgt_total">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
-            </div>
-        </div>
-        <div class="card">
-            <strong>Returnerte biler</strong>
-            <div class="number" id="total_returnert">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
             </div>
         </div>
     </div>
@@ -130,6 +108,26 @@
     <div class="chart-container">
         <div class="chart-title">Kumulativ Gross Profit over tid (NOK)</div>
         <canvas id="cumulativeProfitChart"></canvas>
+    </div>
+
+    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
+    <div class="grid">
+        <div class="card">
+            <strong>Solgte biler</strong>
+            <div class="number" id="solgt_total">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <strong>Returnerte biler</strong>
+            <div class="number" id="total_returnert">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
+            </div>
+        </div>
     </div>
 
     <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
@@ -199,7 +197,7 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// FUNNEL – Priset → Mottatt → Solgt (global)
+// FUNNEL RATIOS – Priset → Mottatt → Solgt (global)
 // ────────────────────────────────────────────────
 function updateFunnelRatios() {
     let p = 0, m = 0, s = 0;
@@ -268,11 +266,12 @@ function renderActivityChart() {
 }
 
 // ────────────────────────────────────────────────
-// CUMULATIVE SOLD
+// CUMULATIVE SOLD CARS
 // ────────────────────────────────────────────────
 function renderCumulativeChart() {
     const monthlySold = {};
     months.forEach(m => monthlySold[m] = 0);
+
     allData.forEach(row => {
         const m = row['Solgt på_month'];
         if (m && monthlySold[m] !== undefined) monthlySold[m]++;
@@ -312,12 +311,230 @@ function renderCumulativeChart() {
 }
 
 // ────────────────────────────────────────────────
-// PROFIT PER CAR, RETURN RATE, CONVERSION RATE, CUMULATIVE PROFIT (unchanged from v1.11.7)
-// (Omitted here for brevity — copy from your working v1.11.7 version or previous messages)
+// AVG GROSS PROFIT PER CAR PER MONTH
 // ────────────────────────────────────────────────
+function renderProfitPerCarChart() {
+    const monthly = {};
+    months.forEach(m => monthly[m] = { sold: 0, income: 0, prod: 0, trans: 0 });
+
+    allData.forEach(row => {
+        const m = row['Solgt på_month'];
+        if (!m || !monthly[m]) return;
+        const bud = parseFloat(row['Bud'] || 0);
+        const avg = parseFloat(row['Avgift'] || 0);
+        monthly[m].sold++;
+        monthly[m].income += avg;
+        monthly[m].trans += 750;
+        monthly[m].prod += (bud < 25000 ? 2000 : 2500);
+    });
+
+    const labels = months
+        .filter(m => m.replace('-', '') < (now_year + now_month))
+        .filter(m => monthly[m]?.sold > 0)
+        .sort();
+
+    if (labels.length === 0) {
+        document.getElementById('profitPerCarChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const profitPerCar = labels.map(m => {
+        const d = monthly[m];
+        const marketing = 1000 * 30;
+        const totalCost = d.prod + d.trans + marketing;
+        const brutto = d.income - totalCost;
+        return Math.round(brutto / d.sold);
+    });
+
+    new Chart(document.getElementById('profitPerCarChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Gjennomsnittlig Gross Profit / bil',
+                data: profitPerCar,
+                backgroundColor: profitPerCar.map(v => v >= 0 ? 'rgba(0,66,37,0.75)' : 'rgba(192,57,43,0.75)'),
+                borderColor: profitPerCar.map(v => v >= 0 ? '#004225' : '#c0392b'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { title: { display: true, text: 'NOK' } } }
+        }
+    });
+}
 
 // ────────────────────────────────────────────────
-// MONTHLY METRICS (unchanged)
+// RETURN RATE % PER MONTH
+// ────────────────────────────────────────────────
+function renderReturnRateChart() {
+    const data = {};
+    months.forEach(m => data[m] = { solgt: 0, returnert: 0 });
+
+    allData.forEach(row => {
+        const sm = row['Solgt på_month'];
+        const rm = row['Returnert på_month'];
+        if (sm && data[sm]) data[sm].solgt++;
+        if (rm && data[rm]) data[rm].returnert++;
+    });
+
+    const labels = months
+        .filter(m => m.replace('-', '') < (now_year + now_month))
+        .filter(m => data[m].solgt > 0)
+        .sort();
+
+    if (labels.length === 0) {
+        document.getElementById('returnRateChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const rates = labels.map(m => {
+        const s = data[m].solgt;
+        return s > 0 ? Math.round((data[m].returnert / s) * 1000) / 10 : 0;
+    });
+
+    new Chart(document.getElementById('returnRateChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Return rate (%)',
+                data: rates,
+                backgroundColor: rates.map(r => r <= 5 ? 'rgba(39,174,96,0.6)' : r <= 15 ? 'rgba(241,196,15,0.7)' : 'rgba(192,57,43,0.75)'),
+                borderColor: '#c0392b',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'Prosent (%)' } } }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// CONVERSION RATE Sold / Priset
+// ────────────────────────────────────────────────
+function renderConversionRateChart() {
+    const data = {};
+    months.forEach(m => data[m] = { priset: 0, solgt: 0 });
+
+    allData.forEach(row => {
+        const pm = row['SD mottatt på_month'];
+        const sm = row['Solgt på_month'];
+        if (pm && data[pm]) data[pm].priset++;
+        if (sm && data[sm]) data[sm].solgt++;
+    });
+
+    const labels = months
+        .filter(m => m.replace('-', '') < (now_year + now_month))
+        .filter(m => data[m].priset > 0)
+        .sort();
+
+    if (labels.length === 0) {
+        document.getElementById('conversionRateChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const rates = labels.map(m => {
+        const p = data[m].priset;
+        return p > 0 ? Math.round((data[m].solgt / p) * 1000) / 10 : 0;
+    });
+
+    new Chart(document.getElementById('conversionRateChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Konvertering Solgt / Priset (%)',
+                data: rates,
+                backgroundColor: 'rgba(0, 66, 37, 0.65)',
+                borderColor: '#004225',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Prosent (%)' } } }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// CUMULATIVE GROSS PROFIT
+// ────────────────────────────────────────────────
+function renderCumulativeProfitChart() {
+    const monthly = {};
+    months.forEach(m => monthly[m] = { sold: 0, income: 0, prod: 0, trans: 0 });
+
+    allData.forEach(row => {
+        const m = row['Solgt på_month'];
+        if (!m || !monthly[m]) return;
+        const bud = parseFloat(row['Bud'] || 0);
+        const avg = parseFloat(row['Avgift'] || 0);
+        monthly[m].sold++;
+        monthly[m].income += avg;
+        monthly[m].trans += 750;
+        monthly[m].prod += (bud < 25000 ? 2000 : 2500);
+    });
+
+    const labels = months
+        .filter(m => m.replace('-', '') < (now_year + now_month))
+        .filter(m => monthly[m]?.sold > 0)
+        .sort();
+
+    if (labels.length < 2) {
+        document.getElementById('cumulativeProfitChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    let cumProfit = 0;
+    const cumData = labels.map(m => {
+        const d = monthly[m];
+        const marketing = 1000 * 30;
+        const totalCost = d.prod + d.trans + marketing;
+        const monthBrutto = d.income - totalCost;
+        cumProfit += monthBrutto;
+        return Math.round(cumProfit);
+    });
+
+    new Chart(document.getElementById('cumulativeProfitChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Kumulativ Gross Profit (NOK)',
+                data: cumData,
+                borderColor: cumData[cumData.length-1] >= 0 ? '#004225' : '#c0392b',
+                backgroundColor: cumData[cumData.length-1] >= 0 ? 'rgba(0,66,37,0.18)' : 'rgba(192,57,43,0.18)',
+                fill: true,
+                tension: 0.15,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: {
+                    title: { display: true, text: 'Akkumulert NOK' },
+                    ticks: { callback: v => v.toLocaleString('no-NO') }
+                }
+            }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// MONTHLY METRICS CALCULATION
 // ────────────────────────────────────────────────
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
@@ -396,7 +613,7 @@ function calculateMetrics(month) {
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    updateFunnelRatios();  // safe global call
+    updateFunnelRatios();
 
     document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
 
