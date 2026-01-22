@@ -200,6 +200,7 @@
             border-radius: 16px;
             border: 1px solid #ddd;
             box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            height: 400px; /* fixed height for better bar chart appearance */
         }
         .chart-title {
             text-align: center;
@@ -214,106 +215,106 @@
 
 <div class="container">
 
-<h1>Peasy Exec Rapport</h1>
-<div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
+    <h1>Peasy Exec Rapport</h1>
+    <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
-<div class="timestamp">
-    Generert: <span id="timestamp"></span> | Versjon: v1.11.1
-</div>
+    <div class="timestamp">
+        Generert: <span id="timestamp"></span> | Versjon: v1.11.2
+    </div>
 
-<div class="periode">
-    <label for="period-select">Periode: </label>
-    <select id="period-select">
-        {% for m in months %}
-            {% set year, month_num = m.split('-') %}
-            {% set ym = year ~ month_num | int %}
-            {% set now_ym = now_year ~ now_month | int %}
-            {% if ym < now_ym %}
-                <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
-                    {{ m | replace('-', ' ') | title }}
-                </option>
-            {% endif %}
-        {% endfor %}
-    </select>
-</div>
+    <div class="periode">
+        <label for="period-select">Periode: </label>
+        <select id="period-select">
+            {% for m in months %}
+                {% set year, month_num = m.split('-') %}
+                {% set ym = year ~ month_num | int %}
+                {% set now_ym = now_year ~ now_month | int %}
+                {% if ym < now_ym %}
+                    <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
+                        {{ m | replace('-', ' ') | title }}
+                    </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+    </div>
 
-<h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
-<div class="grid">
-    <div class="card">
-        <strong>Solgte biler</strong>
-        <div class="number" id="solgt_total">0</div>
-        <div class="sub-grid">
-            <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
-            <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
+    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
+    <div class="grid">
+        <div class="card">
+            <strong>Solgte biler</strong>
+            <div class="number" id="solgt_total">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <strong>Returnerte biler</strong>
+            <div class="number" id="total_returnert">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
+            </div>
         </div>
     </div>
-    <div class="card">
-        <strong>Returnerte biler</strong>
-        <div class="number" id="total_returnert">0</div>
-        <div class="sub-grid">
-            <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
-            <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
+
+    <div class="chart-container">
+        <div class="chart-title">Aktivitet per måned – Solgte, Returnerte og Prisete biler</div>
+        <canvas id="activityChart"></canvas>
+    </div>
+
+    <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
+    <div class="kost-grid">
+        <div class="line-card">
+            <strong>Produksjonskostnad</strong>
+            <div class="per" id="prod_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="prod_kost">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Gire kostnad</strong>
+            <div class="per" id="gire_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="gire_kost">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Markedsføring</strong>
+            <div class="per" id="markeds_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="markeds_kost">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Total kostnad</strong>
+            <div class="per" id="total_kost_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="totale_kostnader">0</span> NOK</div>
         </div>
     </div>
-</div>
 
-<div class="chart-container">
-    <div class="chart-title">Aktivitet per måned – Solgte, Returnerte og Prisete biler</div>
-    <canvas id="activityChart" height="120"></canvas>
-</div>
+    <h2 class="section-title">Inntekter per solgt bil og samlet</h2>
+    <div class="inntekt-grid">
+        <div class="line-card">
+            <strong>Inntekt (Avgift) per bil</strong>
+            <div class="per" id="inntekt_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="total_inntekt">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Omsetning (Bud) per bil</strong>
+            <div class="per" id="omsetning_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="total_omsetning">0</span> NOK</div>
+        </div>
+    </div>
 
-<h2 class="section-title">Kostnader per solgt bil og samlet</h2>
-<div class="kost-grid">
-    <div class="line-card">
-        <strong>Produksjonskostnad</strong>
-        <div class="per" id="prod_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="prod_kost">0</span> NOK</div>
+    <h2 class="section-title">Gross Profit og kommisjon</h2>
+    <div class="resultat-card">
+        <strong>Gross Profit per solgt bil</strong>
+        <div class="per" id="gross_profit_per_solgt" class="negative">–</div>
+        <div class="samlet">Samlet: <span id="brutto_fortjeneste" class="negative">0</span> NOK</div>
     </div>
-    <div class="line-card">
-        <strong>Gire kostnad</strong>
-        <div class="per" id="gire_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="gire_kost">0</span> NOK</div>
-    </div>
-    <div class="line-card">
-        <strong>Markedsføring</strong>
-        <div class="per" id="markeds_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="markeds_kost">0</span> NOK</div>
-    </div>
-    <div class="line-card">
-        <strong>Total kostnad</strong>
-        <div class="per" id="total_kost_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="totale_kostnader">0</span> NOK</div>
-    </div>
-</div>
 
-<h2 class="section-title">Inntekter per solgt bil og samlet</h2>
-<div class="inntekt-grid">
-    <div class="line-card">
-        <strong>Inntekt (Avgift) per bil</strong>
-        <div class="per" id="inntekt_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="total_inntekt">0</span> NOK</div>
+    <div class="commission">
+        Autoringen kommisjon (2.7% av total Omsetning): <strong>+<span id="kommisjon">0</span> NOK</strong>
     </div>
-    <div class="line-card">
-        <strong>Omsetning (Bud) per bil</strong>
-        <div class="per" id="omsetning_per_solgt">0</div>
-        <div class="samlet">Samlet: <span id="total_omsetning">0</span> NOK</div>
+
+    <div class="buttons">
+        <button onclick="window.print()">Skriv ut</button>
     </div>
-</div>
-
-<h2 class="section-title">Gross Profit og kommisjon</h2>
-<div class="resultat-card">
-    <strong>Gross Profit per solgt bil</strong>
-    <div class="per" id="gross_profit_per_solgt" class="negative">–</div>
-    <div class="samlet">Samlet: <span id="brutto_fortjeneste" class="negative">0</span> NOK</div>
-</div>
-
-<div class="commission">
-    Autoringen kommisjon (2.7% av total Omsetning): <strong>+<span id="kommisjon">0</span> NOK</strong>
-</div>
-
-<div class="buttons">
-    <button onclick="window.print()">Skriv ut</button>
-</div>
 
 </div>
 
@@ -321,12 +322,16 @@
 const allData = {{ data_json | safe }};
 const months = {{ months | tojson }};
 const defaultMonth = "{{ default_month }}";
+const now_year = "{{ now_year }}";
+const now_month = "{{ now_month }}";
 
 document.getElementById('timestamp').textContent = new Date().toLocaleString('no-NO', {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
 }) + ' CET';
 
-// Linjegraf – uavhengig av dropdown
+// ────────────────────────────────────────────────
+// ACTIVITY CHART – Grouped vertical bars – only completed months
+// ────────────────────────────────────────────────
 function renderActivityChart() {
     const monthlyData = {};
     months.forEach(m => {
@@ -334,85 +339,113 @@ function renderActivityChart() {
     });
 
     allData.forEach(row => {
-        const soldMonth = row['Solgt på_month'];
-        const retMonth = row['Returnert på_month'];
-        const prisetMonth = row['SD mottatt på_month']; // Prisete = SD mottatt på
+        const soldMonth   = row['Solgt på_month'];
+        const retMonth    = row['Returnert på_month'];
+        const prisetMonth = row['SD mottatt på_month'];
 
-        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
-        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
+        if (soldMonth   && monthlyData[soldMonth])   monthlyData[soldMonth].solgt++;
+        if (retMonth    && monthlyData[retMonth])    monthlyData[retMonth].returnert++;
         if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
     });
 
-    const labels = months.filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0);
-    const solgtData = labels.map(m => monthlyData[m].solgt);
+    // Only completed months (before current year-month)
+    const now_ym = now_year + now_month; // e.g. "202601"
+    const completedMonths = months.filter(m => {
+        const ym = m.replace('-', '');
+        return ym < now_ym;
+    });
+
+    // Only months with activity + sorted chronologically
+    const labels = completedMonths.filter(m =>
+        monthlyData[m].solgt > 0 ||
+        monthlyData[m].returnert > 0 ||
+        monthlyData[m].priset > 0
+    ).sort();
+
+    if (labels.length === 0) {
+        document.getElementById('activityChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const solgtData     = labels.map(m => monthlyData[m].solgt);
     const returnertData = labels.map(m => monthlyData[m].returnert);
-    const prisetData = labels.map(m => monthlyData[m].priset);
+    const prisetData    = labels.map(m => monthlyData[m].priset);
 
     const ctx = document.getElementById('activityChart').getContext('2d');
+
     new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [
                 {
                     label: 'Solgte biler',
                     data: solgtData,
+                    backgroundColor: 'rgba(0, 66, 37, 0.75)',
                     borderColor: '#004225',
-                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
+                    borderWidth: 1
                 },
                 {
                     label: 'Returnerte biler',
                     data: returnertData,
+                    backgroundColor: 'rgba(192, 57, 43, 0.75)',
                     borderColor: '#c0392b',
-                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
+                    borderWidth: 1
                 },
                 {
                     label: 'Prisete biler',
                     data: prisetData,
+                    backgroundColor: 'rgba(39, 174, 96, 0.75)',
                     borderColor: '#27ae60',
-                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
+                    borderWidth: 1
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'top',
                     labels: {
                         font: { size: 14, weight: '600' },
-                        color: '#004225'
+                        color: '#004225',
+                        padding: 16
                     }
-                },
-                title: {
-                    display: false
                 }
             },
             scales: {
+                x: {
+                    stacked: false,
+                    title: {
+                        display: true,
+                        text: 'Måned',
+                        color: '#004225',
+                        font: { size: 14 }
+                    },
+                    ticks: { color: '#004225' },
+                    grid: { display: false }
+                },
                 y: {
                     beginAtZero: true,
-                    title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } },
-                    ticks: { color: '#004225' }
-                },
-                x: {
-                    title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } },
-                    ticks: { color: '#004225' }
+                    stacked: false,
+                    title: {
+                        display: true,
+                        text: 'Antall biler',
+                        color: '#004225',
+                        font: { size: 14 }
+                    },
+                    ticks: { color: '#004225', stepSize: 10 },
+                    grid: { color: 'rgba(0,0,0,0.08)' }
                 }
             }
         }
     });
 }
 
-// Eksisterende calculateMetrics (uendret)
+// ────────────────────────────────────────────────
+// MONTHLY METRICS CALCULATION
+// ────────────────────────────────────────────────
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
     const monthStart = new Date(year, mon - 1, 1);
@@ -460,12 +493,12 @@ function calculateMetrics(month) {
     const commission = omsetning * 0.027;
 
     const grossProfitPerSold = totalSold > 0 ? Math.round(bruttoFortjeneste / totalSold) : 0;
-    const inntektPerSold = totalSold > 0 ? Math.round(income / totalSold) : 0;
-    const omsetningPerSold = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
-    const markedsPerSold = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
-    const totalKostPerSold = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
-    const prodPerSold = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
-    const girePerSold = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
+    const inntektPerSold     = totalSold > 0 ? Math.round(income / totalSold) : 0;
+    const omsetningPerSold   = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
+    const markedsPerSold     = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
+    const totalKostPerSold   = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
+    const prodPerSold        = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
+    const girePerSold        = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
 
     // Update DOM
     document.getElementById('solgt_total').textContent = totalSold;
@@ -501,106 +534,16 @@ function calculateMetrics(month) {
     bruttoEl.classList.toggle('negative', bruttoFortjeneste < 0);
 }
 
+// ────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
-
-    // Render linjegrafen (alltid, uavhengig av dropdown)
-    renderActivityChart();
-};
-
-function renderActivityChart() {
-    const monthlyData = {};
-    months.forEach(m => {
-        monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
+    document.getElementById('period-select').addEventListener('change', e => {
+        calculateMetrics(e.target.value);
     });
 
-    allData.forEach(row => {
-        const soldMonth = row['Solgt på_month'];
-        const retMonth = row['Returnert på_month'];
-        const prisetMonth = row['SD mottatt på_month']; // Prisete = SD mottatt på
-
-        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
-        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
-        if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
-    });
-
-    const labels = months.filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0);
-    const solgtData = labels.map(m => monthlyData[m].solgt);
-    const returnertData = labels.map(m => monthlyData[m].returnert);
-    const prisetData = labels.map(m => monthlyData[m].priset);
-
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels.map(m => m.replace('-', ' ')),
-            datasets: [
-                {
-                    label: 'Solgte biler',
-                    data: solgtData,
-                    borderColor: '#004225',
-                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
-                },
-                {
-                    label: 'Returnerte biler',
-                    data: returnertData,
-                    borderColor: '#c0392b',
-                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
-                },
-                {
-                    label: 'Prisete biler',
-                    data: prisetData,
-                    borderColor: '#27ae60',
-                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        font: { size: 14, weight: '600' },
-                        color: '#004225'
-                    }
-                },
-                title: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } },
-                    ticks: { color: '#004225' }
-                },
-                x: {
-                    title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } },
-                    ticks: { color: '#004225' }
-                }
-            }
-        }
-    });
-}
-
-window.onload = function() {
-    document.getElementById('period-select').value = defaultMonth;
-    calculateMetrics(defaultMonth);
-    document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
-
-    // Render grafen (alltid, uavhengig av dropdown)
     renderActivityChart();
 };
 </script>
