@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <title>Peasy Exec Rapport</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 40px 20px;
             background: #e0e9e5;
             color: #004225;
         }
         .container {
             max-width: 1200px;
-            margin: 40px auto;
+            margin: 0 auto;
             background: white;
             padding: 50px;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            display: none; /* Hidden until password correct */
         }
         h1 {
             text-align: center;
@@ -193,44 +193,24 @@
         .negative {
             color: #c0392b !important;
         }
-        #denied {
-            display: none;
+        .chart-container {
+            margin: 60px 0;
+            padding: 40px;
+            background: #f8faf9;
+            border-radius: 16px;
+            border: 1px solid #ddd;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        }
+        .chart-title {
             text-align: center;
-            margin-top: 200px;
-            font-size: 3rem;
-            color: red;
-            font-weight: bold;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #004225;
+            margin-bottom: 30px;
         }
     </style>
 </head>
 <body>
-
-<script>
-    const PASSWORD = 'easypeasy';
-    let attempts = 3;
-
-    // Start with container hidden
-    document.addEventListener('DOMContentLoaded', () => {
-        const container = document.querySelector('.container');
-        container.style.display = 'none';
-
-        while (attempts > 0) {
-            const pass = prompt(`Enter password to view Peasy Exec Rapport (${attempts} attempts left):`);
-            if (pass === PASSWORD) {
-                container.style.display = 'block';
-                break;
-            }
-            attempts--;
-            if (attempts === 0) {
-                alert('Too many failed attempts. Access denied.');
-                document.body.innerHTML = '<h1 id="denied">Access Denied</h1>';
-                break;
-            } else {
-                alert('Wrong password. Try again.');
-            }
-        }
-    });
-</script>
 
 <div class="container">
 
@@ -275,6 +255,11 @@
             <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
         </div>
     </div>
+</div>
+
+<div class="chart-container">
+    <div class="chart-title">Aktivitet per måned – Solgte, Returnerte og Prisete biler</div>
+    <canvas id="activityChart" height="120"></canvas>
 </div>
 
 <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
@@ -341,6 +326,94 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
 }) + ' CET';
 
+// --- Linjegraf for aktivitet (uavhengig av dropdown) ---
+function renderActivityChart() {
+    // Group data by month
+    const monthlyData = {};
+    months.forEach(m => {
+        monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
+    });
+
+    allData.forEach(row => {
+        const soldMonth = row['Solgt på_month'];
+        const retMonth = row['Returnert på_month'];
+        const prisetMonth = row['SD mottatt på_month'];
+
+        if (soldMonth) monthlyData[soldMonth].solgt++;
+        if (retMonth) monthlyData[retMonth].returnert++;
+        if (prisetMonth) monthlyData[prisetMonth].priset++;
+    });
+
+    const labels = months;
+    const solgtData = labels.map(m => monthlyData[m].solgt);
+    const returnertData = labels.map(m => monthlyData[m].returnert);
+    const prisetData = labels.map(m => monthlyData[m].priset);
+
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [
+                {
+                    label: 'Solgte biler',
+                    data: solgtData,
+                    borderColor: '#004225',
+                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Returnerte biler',
+                    data: returnertData,
+                    borderColor: '#c0392b',
+                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Prisete biler',
+                    data: prisetData,
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { size: 14, weight: '600' },
+                        color: '#004225'
+                    }
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } },
+                    ticks: { color: '#004225' }
+                },
+                x: {
+                    title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } },
+                    ticks: { color: '#004225' }
+                }
+            }
+        }
+    });
+}
+
+// Eksisterende calculateMetrics (uendret, ingen påvirkning fra grafen)
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
     const monthStart = new Date(year, mon - 1, 1);
@@ -423,7 +496,6 @@ function calculateMetrics(month) {
     document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
     document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
 
-    // Negative farge
     const profitEl = document.getElementById('gross_profit_per_solgt');
     const bruttoEl = document.getElementById('brutto_fortjeneste');
     profitEl.classList.toggle('negative', grossProfitPerSold < 0);
@@ -434,7 +506,95 @@ window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
     document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
+
+    // Render the independent activity chart
+    renderActivityChart();
 };
+
+function renderActivityChart() {
+    const monthlyData = {};
+    months.forEach(m => {
+        monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
+    });
+
+    allData.forEach(row => {
+        const soldMonth = row['Solgt på_month'];
+        const retMonth = row['Returnert på_month'];
+        const prisetMonth = row['SD mottatt på_month'];
+
+        if (soldMonth) monthlyData[soldMonth].solgt++;
+        if (retMonth) monthlyData[retMonth].returnert++;
+        if (prisetMonth) monthlyData[prisetMonth].priset++;
+    });
+
+    const labels = months;
+    const solgtData = labels.map(m => monthlyData[m].solgt);
+    const returnertData = labels.map(m => monthlyData[m].returnert);
+    const prisetData = labels.map(m => monthlyData[m].priset);
+
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [
+                {
+                    label: 'Solgte biler',
+                    data: solgtData,
+                    borderColor: '#004225',
+                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Returnerte biler',
+                    data: returnertData,
+                    borderColor: '#c0392b',
+                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Prisete biler',
+                    data: prisetData,
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { size: 14, weight: '600' },
+                        color: '#004225'
+                    }
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Antall biler', color: '#004225', font: { size: 14 } },
+                    ticks: { color: '#004225' }
+                },
+                x: {
+                    title: { display: true, text: 'Måned', color: '#004225', font: { size: 14 } },
+                    ticks: { color: '#004225' }
+                }
+            }
+        }
+    });
+}
 </script>
 
 </body>
