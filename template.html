@@ -200,7 +200,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.11.4
+        Generert: <span id="timestamp"></span> | Versjon: v1.11.7
     </div>
 
     <div class="periode">
@@ -250,8 +250,23 @@
     </div>
 
     <div class="chart-container">
-        <div class="chart-title">Gjennomsnittlig Gross Profit per solgt bil per måned</div>
+        <div class="chart-title">Gjennomsnittlig Gross Profit per solgt bil per måned (NOK)</div>
         <canvas id="profitPerCarChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Return rate per måned (% av solgte biler)</div>
+        <canvas id="returnRateChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Konverteringsrate: Solgte / Prisete biler (%)</div>
+        <canvas id="conversionRateChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Kumulativ Gross Profit over tid (NOK)</div>
+        <canvas id="cumulativeProfitChart"></canvas>
     </div>
 
     <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
@@ -321,26 +336,34 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// MONTHLY ACTIVITY BARS
+// HELPERS
+// ────────────────────────────────────────────────
+function getCompletedMonthsWithActivity() {
+    const now_ym = now_year + now_month;
+    return months
+        .filter(m => m.replace('-', '') < now_ym)
+        .sort();
+}
+
+// ────────────────────────────────────────────────
+// 1. Monthly Activity (bars)
 // ────────────────────────────────────────────────
 function renderActivityChart() {
-    const monthlyData = {};
-    months.forEach(m => monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 });
+    const data = {};
+    months.forEach(m => data[m] = { solgt: 0, returnert: 0, priset: 0 });
 
     allData.forEach(row => {
         const sm = row['Solgt på_month'];
         const rm = row['Returnert på_month'];
         const pm = row['SD mottatt på_month'];
-        if (sm && monthlyData[sm]) monthlyData[sm].solgt++;
-        if (rm && monthlyData[rm]) monthlyData[rm].returnert++;
-        if (pm && monthlyData[pm]) monthlyData[pm].priset++;
+        if (sm && data[sm]) data[sm].solgt++;
+        if (rm && data[rm]) data[rm].returnert++;
+        if (pm && data[pm]) data[pm].priset++;
     });
 
-    const now_ym = now_year + now_month;
-    const labels = months
-        .filter(m => m.replace('-', '') < now_ym)
-        .filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0)
-        .sort();
+    const labels = getCompletedMonthsWithActivity().filter(m =>
+        data[m].solgt > 0 || data[m].returnert > 0 || data[m].priset > 0
+    );
 
     if (labels.length === 0) {
         document.getElementById('activityChart').parentElement.style.display = 'none';
@@ -352,112 +375,92 @@ function renderActivityChart() {
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [
-                { label: 'Solgte biler',     data: labels.map(m => monthlyData[m].solgt),     backgroundColor: 'rgba(0, 66, 37, 0.75)', borderColor: '#004225', borderWidth: 1 },
-                { label: 'Returnerte biler', data: labels.map(m => monthlyData[m].returnert), backgroundColor: 'rgba(192, 57, 43, 0.75)', borderColor: '#c0392b', borderWidth: 1 },
-                { label: 'Prisete biler',    data: labels.map(m => monthlyData[m].priset),    backgroundColor: 'rgba(39, 174, 96, 0.75)', borderColor: '#27ae60', borderWidth: 1 }
+                { label: 'Solgte',     data: labels.map(m => data[m].solgt),     backgroundColor: 'rgba(0, 66, 37, 0.7)',  borderColor: '#004225', borderWidth: 1 },
+                { label: 'Returnerte', data: labels.map(m => data[m].returnert), backgroundColor: 'rgba(192, 57, 43, 0.7)', borderColor: '#c0392b', borderWidth: 1 },
+                { label: 'Prisete',    data: labels.map(m => data[m].priset),    backgroundColor: 'rgba(39, 174, 96, 0.7)',  borderColor: '#27ae60', borderWidth: 1 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { font: { size: 14, weight: '600' }, color: '#004225' } } },
-            scales: {
-                x: { stacked: false, title: { display: true, text: 'Måned' }, ticks: { color: '#004225' }, grid: { display: false } },
-                y: { beginAtZero: true, stacked: false, title: { display: true, text: 'Antall biler' }, ticks: { color: '#004225' } }
-            }
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: false }, y: { beginAtZero: true, stacked: false } }
         }
     });
 }
 
 // ────────────────────────────────────────────────
-// CUMULATIVE SOLD CARS
+// 2. Cumulative Sold
 // ────────────────────────────────────────────────
 function renderCumulativeChart() {
-    const monthlySold = {};
-    months.forEach(m => monthlySold[m] = 0);
-
+    const soldPerMonth = {};
+    months.forEach(m => soldPerMonth[m] = 0);
     allData.forEach(row => {
-        const sm = row['Solgt på_month'];
-        if (sm && monthlySold[sm] !== undefined) monthlySold[sm]++;
+        const m = row['Solgt på_month'];
+        if (m && soldPerMonth[m] !== undefined) soldPerMonth[m]++;
     });
 
-    const now_ym = now_year + now_month;
-    const labels = months.filter(m => m.replace('-', '') < now_ym).sort();
-
+    const labels = getCompletedMonthsWithActivity();
     if (labels.length < 2) {
         document.getElementById('cumulativeChart').parentElement.style.display = 'none';
         return;
     }
 
     let cum = 0;
-    const data = labels.map(m => cum += monthlySold[m]);
+    const data = labels.map(m => cum += soldPerMonth[m]);
 
     new Chart(document.getElementById('cumulativeChart'), {
         type: 'line',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [{
-                label: 'Kumulativt solgte biler',
+                label: 'Kumulativt solgte',
                 data: data,
                 borderColor: '#004225',
-                backgroundColor: 'rgba(0, 66, 37, 0.2)',
+                backgroundColor: 'rgba(0, 66, 37, 0.18)',
                 fill: true,
-                tension: 0.2,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointBackgroundColor: '#004225'
+                tension: 0.15,
+                borderWidth: 3
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { color: '#004225', font: { weight: '600' } } } },
-            scales: {
-                x: { title: { display: true, text: 'Måned' }, ticks: { color: '#004225' }, grid: { display: false } },
-                y: { beginAtZero: true, title: { display: true, text: 'Totalt antall solgte' }, ticks: { color: '#004225' } }
-            }
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
 
 // ────────────────────────────────────────────────
-// AVERAGE GROSS PROFIT PER CAR PER MONTH (v1.11.4)
+// 3. Avg Gross Profit per car per month
 // ────────────────────────────────────────────────
 function renderProfitPerCarChart() {
     const monthly = {};
-    months.forEach(m => {
-        monthly[m] = { sold: 0, income: 0, prodCost: 0, transCost: 0 };
-    });
+    months.forEach(m => monthly[m] = { sold: 0, income: 0, prod: 0, trans: 0 });
 
     allData.forEach(row => {
-        const sm = row['Solgt på_month'];
-        if (!sm || !monthly[sm]) return;
-
+        const m = row['Solgt på_month'];
+        if (!m || !monthly[m]) return;
         const bud = parseFloat(row['Bud'] || 0);
-        const avgift = parseFloat(row['Avgift'] || 0);
-
-        monthly[sm].sold++;
-        monthly[sm].income += avgift;
-        monthly[sm].transCost += 750;
-        monthly[sm].prodCost += (bud < 25000 ? 2000 : 2500);
+        const avg = parseFloat(row['Avgift'] || 0);
+        monthly[m].sold++;
+        monthly[m].income += avg;
+        monthly[m].trans += 750;
+        monthly[m].prod += (bud < 25000 ? 2000 : 2500);
     });
 
-    const now_ym = now_year + now_month;
-    const labels = months
-        .filter(m => m.replace('-', '') < now_ym)
-        .filter(m => monthly[m].sold > 0)
-        .sort();
+    const labels = getCompletedMonthsWithActivity().filter(m => monthly[m].sold > 0);
 
     if (labels.length === 0) {
         document.getElementById('profitPerCarChart').parentElement.style.display = 'none';
         return;
     }
 
-    const profitData = labels.map(m => {
+    const profitPerCar = labels.map(m => {
         const d = monthly[m];
-        const daysApprox = 30; // rough average – could be improved with real days
-        const marketing = 1000 * daysApprox;
-        const totalCost = d.prodCost + d.transCost + marketing;
+        const marketing = 1000 * 30; // approx
+        const totalCost = d.prod + d.trans + marketing;
         const brutto = d.income - totalCost;
         return Math.round(brutto / d.sold);
     });
@@ -467,25 +470,69 @@ function renderProfitPerCarChart() {
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [{
-                label: 'Gjennomsnittlig Gross Profit per bil',
-                data: profitData,
-                backgroundColor: profitData.map(v => v >= 0 ? 'rgba(0, 66, 37, 0.75)' : 'rgba(192, 57, 43, 0.75)'),
-                borderColor: profitData.map(v => v >= 0 ? '#004225' : '#c0392b'),
+                label: 'Gjennomsnittlig Gross Profit / bil',
+                data: profitPerCar,
+                backgroundColor: profitPerCar.map(v => v >= 0 ? 'rgba(0,66,37,0.75)' : 'rgba(192,57,43,0.75)'),
+                borderColor: profitPerCar.map(v => v >= 0 ? '#004225' : '#c0392b'),
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', labels: { color: '#004225', font: { weight: '600' } } }
-            },
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { title: { display: true, text: 'NOK' } } }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// 4. Return Rate % (v1.11.5)
+// ────────────────────────────────────────────────
+function renderReturnRateChart() {
+    const data = {};
+    months.forEach(m => data[m] = { solgt: 0, returnert: 0 });
+
+    allData.forEach(row => {
+        const sm = row['Solgt på_month'];
+        const rm = row['Returnert på_month'];
+        if (sm && data[sm]) data[sm].solgt++;
+        if (rm && data[rm]) data[rm].returnert++;
+    });
+
+    const labels = getCompletedMonthsWithActivity().filter(m => data[m].solgt > 0);
+
+    if (labels.length === 0) {
+        document.getElementById('returnRateChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const rates = labels.map(m => {
+        const s = data[m].solgt;
+        return s > 0 ? Math.round((data[m].returnert / s) * 1000) / 10 : 0; // 1 decimal
+    });
+
+    new Chart(document.getElementById('returnRateChart'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Return rate (%)',
+                data: rates,
+                backgroundColor: rates.map(r => r <= 5 ? 'rgba(39,174,96,0.6)' : r <= 15 ? 'rgba(241,196,15,0.7)' : 'rgba(192,57,43,0.75)'),
+                borderColor: '#c0392b',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
             scales: {
-                x: { title: { display: true, text: 'Måned' }, ticks: { color: '#004225' }, grid: { display: false } },
                 y: {
-                    title: { display: true, text: 'NOK per solgt bil' },
-                    ticks: { color: '#004225' },
-                    grid: { color: 'rgba(0,0,0,0.08)' }
+                    beginAtZero: true,
+                    max: Math.max(...rates, 20) + 10,
+                    title: { display: true, text: 'Prosent (%)' }
                 }
             }
         }
@@ -493,7 +540,123 @@ function renderProfitPerCarChart() {
 }
 
 // ────────────────────────────────────────────────
-// MONTHLY METRICS CALCULATION (unchanged)
+// 5. Conversion Rate Sold/Priset % (v1.11.6)
+// ────────────────────────────────────────────────
+function renderConversionRateChart() {
+    const data = {};
+    months.forEach(m => data[m] = { priset: 0, solgt: 0 });
+
+    allData.forEach(row => {
+        const pm = row['SD mottatt på_month'];
+        const sm = row['Solgt på_month'];
+        if (pm && data[pm]) data[pm].priset++;
+        if (sm && data[sm]) data[sm].solgt++;
+    });
+
+    const labels = getCompletedMonthsWithActivity().filter(m => data[m].priset > 0);
+
+    if (labels.length === 0) {
+        document.getElementById('conversionRateChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    const rates = labels.map(m => {
+        const p = data[m].priset;
+        return p > 0 ? Math.round((data[m].solgt / p) * 1000) / 10 : 0;
+    });
+
+    new Chart(document.getElementById('conversionRateChart'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Konvertering Solgt / Priset (%)',
+                data: rates,
+                backgroundColor: 'rgba(0, 66, 37, 0.65)',
+                borderColor: '#004225',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: { display: true, text: 'Prosent (%)' }
+                }
+            }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// 6. Cumulative Gross Profit (v1.11.7)
+// ────────────────────────────────────────────────
+function renderCumulativeProfitChart() {
+    const monthly = {};
+    months.forEach(m => monthly[m] = { sold: 0, income: 0, prod: 0, trans: 0 });
+
+    allData.forEach(row => {
+        const m = row['Solgt på_month'];
+        if (!m || !monthly[m]) return;
+        const bud = parseFloat(row['Bud'] || 0);
+        const avg = parseFloat(row['Avgift'] || 0);
+        monthly[m].sold++;
+        monthly[m].income += avg;
+        monthly[m].trans += 750;
+        monthly[m].prod += (bud < 25000 ? 2000 : 2500);
+    });
+
+    const labels = getCompletedMonthsWithActivity().filter(m => monthly[m].sold > 0);
+
+    if (labels.length < 2) {
+        document.getElementById('cumulativeProfitChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    let cumProfit = 0;
+    const cumData = labels.map(m => {
+        const d = monthly[m];
+        const marketing = 1000 * 30;
+        const totalCost = d.prod + d.trans + marketing;
+        const monthBrutto = d.income - totalCost;
+        cumProfit += monthBrutto;
+        return Math.round(cumProfit);
+    });
+
+    new Chart(document.getElementById('cumulativeProfitChart'), {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Kumulativ Gross Profit (NOK)',
+                data: cumData,
+                borderColor: cumData[cumData.length-1] >= 0 ? '#004225' : '#c0392b',
+                backgroundColor: cumData[cumData.length-1] >= 0 ? 'rgba(0,66,37,0.18)' : 'rgba(192,57,43,0.18)',
+                fill: true,
+                tension: 0.15,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: {
+                    title: { display: true, text: 'Akkumulert NOK' },
+                    ticks: { callback: v => v.toLocaleString('no-NO') }
+                }
+            }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// MONTHLY METRICS (unchanged)
 // ────────────────────────────────────────────────
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
@@ -562,8 +725,10 @@ function calculateMetrics(month) {
     document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
     document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
 
-    document.getElementById('gross_profit_per_solgt').classList.toggle('negative', grossProfitPerSold < 0);
-    document.getElementById('brutto_fortjeneste').classList.toggle('negative', bruttoFortjeneste < 0);
+    const profitEl = document.getElementById('gross_profit_per_solgt');
+    const bruttoEl = document.getElementById('brutto_fortjeneste');
+    profitEl.classList.toggle('negative', grossProfitPerSold < 0);
+    bruttoEl.classList.toggle('negative', bruttoFortjeneste < 0);
 }
 
 // ────────────────────────────────────────────────
@@ -577,6 +742,9 @@ window.onload = function() {
     renderActivityChart();
     renderCumulativeChart();
     renderProfitPerCarChart();
+    renderReturnRateChart();
+    renderConversionRateChart();
+    renderCumulativeProfitChart();
 };
 </script>
 
