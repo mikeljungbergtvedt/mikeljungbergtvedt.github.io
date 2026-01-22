@@ -200,7 +200,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.11.8
+        Generert: <span id="timestamp"></span> | Versjon: v1.11.9
     </div>
 
     <div class="periode">
@@ -221,7 +221,6 @@
 
     <h2 class="section-title">Overordnet – Solgte, returnerte + konverteringsrater</h2>
     <div class="grid">
-        <!-- Solgte biler -->
         <div class="card">
             <strong>Solgte biler</strong>
             <div class="number" id="solgt_total">0</div>
@@ -231,7 +230,6 @@
             </div>
         </div>
 
-        <!-- Returnerte biler -->
         <div class="card">
             <strong>Returnerte biler</strong>
             <div class="number" id="total_returnert">0</div>
@@ -241,7 +239,6 @@
             </div>
         </div>
 
-        <!-- Priset (SD mottatt) → Mottatt -->
         <div class="card">
             <strong>Priset → Mottatt</strong>
             <div class="number" id="priset_to_mottatt">– %</div>
@@ -251,7 +248,6 @@
             </div>
         </div>
 
-        <!-- Mottatt → Solgt -->
         <div class="card">
             <strong>Mottatt → Solgt</strong>
             <div class="number" id="mottatt_to_solgt">– %</div>
@@ -359,7 +355,7 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// GLOBAL FUNNEL RATIOS – Priset→Mottatt and Mottatt→Solgt
+// GLOBAL FUNNEL RATIOS – existence check on raw date columns
 // ────────────────────────────────────────────────
 function updateFunnelRatios() {
     let countPriset  = 0;
@@ -367,24 +363,32 @@ function updateFunnelRatios() {
     let countSolgt   = 0;
 
     allData.forEach(row => {
-        if (row['SD mottatt på_month']) countPriset++;
-        if (row['Mottatt på_month'])    countMottatt++;
-        if (row['Solgt på_month'])      countSolgt++;
+        // Priset
+        if (row['SD mottatt på'] && String(row['SD mottatt på']).trim() !== '') {
+            countPriset++;
+        }
+
+        // Mottatt (column Q)
+        if (row['Mottatt'] && String(row['Mottatt']).trim() !== '') {
+            countMottatt++;
+        }
+
+        // Solgt
+        if (row['Solgt på'] && String(row['Solgt på']).trim() !== '') {
+            countSolgt++;
+        }
     });
 
-    // Priset → Mottatt
     const r1 = countPriset > 0 ? Math.round((countMottatt / countPriset) * 100) : 0;
     document.getElementById('priset_to_mottatt').textContent = r1 + ' %';
     document.getElementById('count_priset').textContent = countPriset;
     document.getElementById('count_mottatt').textContent = countMottatt;
 
-    // Mottatt → Solgt
     const r2 = countMottatt > 0 ? Math.round((countSolgt / countMottatt) * 100) : 0;
     document.getElementById('mottatt_to_solgt').textContent = r2 + ' %';
     document.getElementById('count_mottatt_2').textContent = countMottatt;
     document.getElementById('count_solgt').textContent = countSolgt;
 
-    // Visual warning if low conversion
     if (r1 < 70) document.getElementById('priset_to_mottatt').classList.add('negative');
     if (r2 < 50) document.getElementById('mottatt_to_solgt').classList.add('negative');
 }
@@ -393,37 +397,40 @@ function updateFunnelRatios() {
 // ACTIVITY CHART
 // ────────────────────────────────────────────────
 function renderActivityChart() {
-    const data = {};
-    months.forEach(m => data[m] = { solgt: 0, returnert: 0, priset: 0 });
+    const monthlyData = {};
+    months.forEach(m => {
+        monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
+    });
 
     allData.forEach(row => {
-        const sm = row['Solgt på_month'];
-        const rm = row['Returnert på_month'];
-        const pm = row['SD mottatt på_month'];
-        if (sm && data[sm]) data[sm].solgt++;
-        if (rm && data[rm]) data[rm].returnert++;
-        if (pm && data[pm]) data[pm].priset++;
+        const soldMonth   = row['Solgt på_month'];
+        const retMonth    = row['Returnert på_month'];
+        const prisetMonth = row['SD mottatt på_month'];
+
+        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
+        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
+        if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
     });
 
     const now_ym = now_year + now_month;
-    const labels = months
-        .filter(m => m.replace('-', '') < now_ym)
-        .filter(m => data[m].solgt > 0 || data[m].returnert > 0 || data[m].priset > 0)
-        .sort();
+    const completedMonths = months.filter(m => m.replace('-', '') < now_ym);
+    const labels = completedMonths.filter(m =>
+        monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0
+    ).sort();
 
     if (labels.length === 0) {
         document.getElementById('activityChart').parentElement.style.display = 'none';
         return;
     }
 
-    new Chart(document.getElementById('activityChart'), {
+    new Chart(document.getElementById('activityChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [
-                { label: 'Solgte',     data: labels.map(m => data[m].solgt),     backgroundColor: 'rgba(0, 66, 37, 0.7)',  borderColor: '#004225', borderWidth: 1 },
-                { label: 'Returnerte', data: labels.map(m => data[m].returnert), backgroundColor: 'rgba(192, 57, 43, 0.7)', borderColor: '#c0392b', borderWidth: 1 },
-                { label: 'Prisete',    data: labels.map(m => data[m].priset),    backgroundColor: 'rgba(39, 174, 96, 0.7)',  borderColor: '#27ae60', borderWidth: 1 }
+                { label: 'Solgte biler', data: labels.map(m => monthlyData[m].solgt), backgroundColor: 'rgba(0, 66, 37, 0.75)', borderColor: '#004225', borderWidth: 1 },
+                { label: 'Returnerte biler', data: labels.map(m => monthlyData[m].returnert), backgroundColor: 'rgba(192, 57, 43, 0.75)', borderColor: '#c0392b', borderWidth: 1 },
+                { label: 'Prisete biler', data: labels.map(m => monthlyData[m].priset), backgroundColor: 'rgba(39, 174, 96, 0.75)', borderColor: '#27ae60', borderWidth: 1 }
             ]
         },
         options: {
@@ -436,31 +443,33 @@ function renderActivityChart() {
 }
 
 // ────────────────────────────────────────────────
-// CUMULATIVE SOLD
+// CUMULATIVE SOLD CARS
 // ────────────────────────────────────────────────
 function renderCumulativeChart() {
-    const soldPerMonth = {};
-    months.forEach(m => soldPerMonth[m] = 0);
+    const monthlySold = {};
+    months.forEach(m => monthlySold[m] = 0);
+
     allData.forEach(row => {
-        const m = row['Solgt på_month'];
-        if (m && soldPerMonth[m] !== undefined) soldPerMonth[m]++;
+        const sm = row['Solgt på_month'];
+        if (sm && monthlySold[sm] !== undefined) monthlySold[sm]++;
     });
 
     const labels = months.filter(m => m.replace('-', '') < (now_year + now_month)).sort();
+
     if (labels.length < 2) {
         document.getElementById('cumulativeChart').parentElement.style.display = 'none';
         return;
     }
 
     let cum = 0;
-    const data = labels.map(m => cum += soldPerMonth[m]);
+    const data = labels.map(m => cum += monthlySold[m]);
 
-    new Chart(document.getElementById('cumulativeChart'), {
+    new Chart(document.getElementById('cumulativeChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
             datasets: [{
-                label: 'Kumulativt solgte',
+                label: 'Kumulativt solgte biler',
                 data: data,
                 borderColor: '#004225',
                 backgroundColor: 'rgba(0, 66, 37, 0.18)',
@@ -479,7 +488,7 @@ function renderCumulativeChart() {
 }
 
 // ────────────────────────────────────────────────
-// AVG PROFIT PER CAR PER MONTH
+// AVERAGE GROSS PROFIT PER CAR PER MONTH
 // ────────────────────────────────────────────────
 function renderProfitPerCarChart() {
     const monthly = {};
@@ -514,7 +523,7 @@ function renderProfitPerCarChart() {
         return Math.round(brutto / d.sold);
     });
 
-    new Chart(document.getElementById('profitPerCarChart'), {
+    new Chart(document.getElementById('profitPerCarChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
@@ -536,7 +545,7 @@ function renderProfitPerCarChart() {
 }
 
 // ────────────────────────────────────────────────
-// RETURN RATE %
+// RETURN RATE % PER MONTH
 // ────────────────────────────────────────────────
 function renderReturnRateChart() {
     const data = {};
@@ -564,7 +573,7 @@ function renderReturnRateChart() {
         return s > 0 ? Math.round((data[m].returnert / s) * 1000) / 10 : 0;
     });
 
-    new Chart(document.getElementById('returnRateChart'), {
+    new Chart(document.getElementById('returnRateChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
@@ -586,7 +595,7 @@ function renderReturnRateChart() {
 }
 
 // ────────────────────────────────────────────────
-// CONVERSION RATE Sold/Priset
+// CONVERSION RATE Sold / Priset
 // ────────────────────────────────────────────────
 function renderConversionRateChart() {
     const data = {};
@@ -614,7 +623,7 @@ function renderConversionRateChart() {
         return p > 0 ? Math.round((data[m].solgt / p) * 1000) / 10 : 0;
     });
 
-    new Chart(document.getElementById('conversionRateChart'), {
+    new Chart(document.getElementById('conversionRateChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
@@ -673,7 +682,7 @@ function renderCumulativeProfitChart() {
         return Math.round(cumProfit);
     });
 
-    new Chart(document.getElementById('cumulativeProfitChart'), {
+    new Chart(document.getElementById('cumulativeProfitChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: labels.map(m => m.replace('-', ' ')),
@@ -781,7 +790,7 @@ function calculateMetrics(month) {
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    updateFunnelRatios();  // NEW: update the two new percentage cards
+    updateFunnelRatios();
 
     document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
 
