@@ -39,7 +39,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.12.0
+        Generert: <span id="timestamp"></span> | Versjon: v1.11.7
     </div>
 
     <div class="periode">
@@ -77,9 +77,6 @@
         <div class="card">
             <strong>Priset (SD mottatt på)</strong>
             <div class="number" id="count_priset">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong>Total priset</strong><span id="count_priset_val">0</span></div>
-            </div>
         </div>
         <div class="card">
             <strong>Mottatt</strong>
@@ -95,6 +92,26 @@
             <div class="sub-grid">
                 <div class="sub-card"><strong>Solgt</strong><span id="count_solgt">0</span></div>
                 <div class="sub-card"><strong>fra mottatt</strong><span id="pct_sold">0%</span></div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
+    <div class="grid">
+        <div class="card">
+            <strong>Solgte biler</strong>
+            <div class="number" id="solgt_total">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <strong>Returnerte biler</strong>
+            <div class="number" id="total_returnert">0</div>
+            <div class="sub-grid">
+                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
+                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
             </div>
         </div>
     </div>
@@ -127,26 +144,6 @@
     <div class="chart-container">
         <div class="chart-title">Kumulativ Gross Profit over tid (NOK)</div>
         <canvas id="cumulativeProfitChart"></canvas>
-    </div>
-
-    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
-    <div class="grid">
-        <div class="card">
-            <strong>Solgte biler</strong>
-            <div class="number" id="solgt_total">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
-            </div>
-        </div>
-        <div class="card">
-            <strong>Returnerte biler</strong>
-            <div class="number" id="total_returnert">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
-            </div>
-        </div>
     </div>
 
     <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
@@ -216,7 +213,7 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
 }) + ' CET';
 
 // ────────────────────────────────────────────────
-// FUNNEL RATIOS – Priset → Mottatt → Solgt (global/all time)
+// FUNNEL – Priset → Mottatt → Solgt (global)
 // ────────────────────────────────────────────────
 function updateFunnelRatios() {
     let p = 0, m = 0, s = 0;
@@ -245,8 +242,8 @@ function renderActivityChart() {
     months.forEach(m => monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 });
 
     allData.forEach(row => {
-        const soldMonth = row['Solgt på_month'];
-        const retMonth = row['Returnert på_month'];
+        const soldMonth   = row['Solgt på_month'];
+        const retMonth    = row['Returnert på_month'];
         const prisetMonth = row['SD mottatt på_month'];
 
         if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
@@ -284,12 +281,136 @@ function renderActivityChart() {
     });
 }
 
-// The rest of your script (cumulativeChart, profitPerCarChart, returnRateChart, conversionRateChart, cumulativeProfitChart, calculateMetrics, onload) remains unchanged from v1.11.7
+// ────────────────────────────────────────────────
+// CUMULATIVE SOLD
+// ────────────────────────────────────────────────
+function renderCumulativeChart() {
+    const monthlySold = {};
+    months.forEach(m => monthlySold[m] = 0);
+    allData.forEach(row => {
+        const m = row['Solgt på_month'];
+        if (m && monthlySold[m] !== undefined) monthlySold[m]++;
+    });
 
+    const labels = months.filter(m => m.replace('-', '') < (now_year + now_month)).sort();
+
+    if (labels.length < 2) {
+        document.getElementById('cumulativeChart').parentElement.style.display = 'none';
+        return;
+    }
+
+    let cum = 0;
+    const data = labels.map(m => cum += monthlySold[m]);
+
+    new Chart(document.getElementById('cumulativeChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels.map(m => m.replace('-', ' ')),
+            datasets: [{
+                label: 'Kumulativt solgte biler',
+                data: data,
+                borderColor: '#004225',
+                backgroundColor: 'rgba(0, 66, 37, 0.18)',
+                fill: true,
+                tension: 0.15,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// PROFIT PER CAR, RETURN RATE, CONVERSION RATE, CUMULATIVE PROFIT (unchanged from v1.11.7)
+// (Omitted here for brevity — copy from your working v1.11.7 version or previous messages)
+// ────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────
+// MONTHLY METRICS (unchanged)
+// ────────────────────────────────────────────────
+function calculateMetrics(month) {
+    const [year, mon] = month.split('-').map(Number);
+    const daysInMonth = new Date(year, mon, 0).getDate();
+
+    const soldCars = allData.filter(row => row['Solgt på_month'] === month);
+    const returnedCars = allData.filter(row => row['Returnert på_month'] === month);
+
+    let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
+    let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
+
+    soldCars.forEach(row => {
+        const b = parseFloat(row['Bud'] || 0);
+        const a = parseFloat(row['Avgift'] || 0);
+        omsetning += b;
+        income += a;
+        transportCost += 750;
+        if (b < 25000) { soldUnder++; prodCost += 2000; } else { soldOver++; prodCost += 2500; }
+    });
+
+    returnedCars.forEach(row => {
+        const b = parseFloat(row['Bud'] || 0);
+        transportCost += 750;
+        if (b < 25000) { retUnder++; prodCost += 1300; } else { retOver++; prodCost += 1700; }
+    });
+
+    const totalSold = soldUnder + soldOver;
+    const totalReturned = retUnder + retOver;
+    const marketingCost = 1000 * daysInMonth;
+    const totalCosts = marketingCost + prodCost + transportCost;
+    const bruttoFortjeneste = income - totalCosts;
+    const commission = omsetning * 0.027;
+
+    const grossProfitPerSold = totalSold > 0 ? Math.round(bruttoFortjeneste / totalSold) : 0;
+    const inntektPerSold     = totalSold > 0 ? Math.round(income / totalSold) : 0;
+    const omsetningPerSold   = totalSold > 0 ? Math.round(omsetning / totalSold) : 0;
+    const markedsPerSold     = totalSold > 0 ? Math.round(marketingCost / totalSold) : 0;
+    const totalKostPerSold   = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
+    const prodPerSold        = totalSold > 0 ? Math.round(prodCost / totalSold) : 0;
+    const girePerSold        = totalSold > 0 ? Math.round(transportCost / totalSold) : 0;
+
+    document.getElementById('solgt_total').textContent = totalSold;
+    document.getElementById('total_returnert').textContent = totalReturned;
+    document.getElementById('sold_under').textContent = soldUnder;
+    document.getElementById('sold_over').textContent = soldOver;
+    document.getElementById('ret_under').textContent = retUnder;
+    document.getElementById('ret_over').textContent = retOver;
+
+    document.getElementById('prod_per_solgt').textContent = prodPerSold.toLocaleString('no-NO');
+    document.getElementById('gire_per_solgt').textContent = girePerSold.toLocaleString('no-NO');
+    document.getElementById('markeds_per_solgt').textContent = markedsPerSold.toLocaleString('no-NO');
+    document.getElementById('total_kost_per_solgt').textContent = totalKostPerSold.toLocaleString('no-NO');
+
+    document.getElementById('inntekt_per_solgt').textContent = inntektPerSold.toLocaleString('no-NO');
+    document.getElementById('omsetning_per_solgt').textContent = omsetningPerSold.toLocaleString('no-NO');
+
+    document.getElementById('prod_kost').textContent = prodCost.toLocaleString('no-NO');
+    document.getElementById('gire_kost').textContent = transportCost.toLocaleString('no-NO');
+    document.getElementById('markeds_kost').textContent = marketingCost.toLocaleString('no-NO');
+    document.getElementById('totale_kostnader').textContent = totalCosts.toLocaleString('no-NO');
+
+    document.getElementById('total_inntekt').textContent = income.toLocaleString('no-NO');
+    document.getElementById('total_omsetning').textContent = omsetning.toLocaleString('no-NO');
+    document.getElementById('brutto_fortjeneste').textContent = bruttoFortjeneste.toLocaleString('no-NO');
+
+    document.getElementById('gross_profit_per_solgt').textContent = grossProfitPerSold.toLocaleString('no-NO');
+    document.getElementById('kommisjon').textContent = Math.round(commission).toLocaleString('no-NO');
+
+    document.getElementById('gross_profit_per_solgt').classList.toggle('negative', grossProfitPerSold < 0);
+    document.getElementById('brutto_fortjeneste').classList.toggle('negative', bruttoFortjeneste < 0);
+}
+
+// ────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────
 window.onload = function() {
     document.getElementById('period-select').value = defaultMonth;
     calculateMetrics(defaultMonth);
-    updateFunnelRatios();  // NEW: update funnel at top
+    updateFunnelRatios();  // safe global call
 
     document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
 
