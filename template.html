@@ -218,7 +218,7 @@
 <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
 <div class="timestamp">
-    Generert: <span id="timestamp"></span> | Versjon: v1.10
+    Generert: <span id="timestamp"></span> | Versjon: v1.11
 </div>
 
 <div class="periode">
@@ -326,9 +326,8 @@ document.getElementById('timestamp').textContent = new Date().toLocaleString('no
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
 }) + ' CET';
 
-// --- Linjegraf for aktivitet (uavhengig av dropdown) ---
+// Linjegraf (uavhengig av dropdown)
 function renderActivityChart() {
-    // Group data by month
     const monthlyData = {};
     months.forEach(m => {
         monthlyData[m] = { solgt: 0, returnert: 0, priset: 0 };
@@ -339,12 +338,12 @@ function renderActivityChart() {
         const retMonth = row['Returnert på_month'];
         const prisetMonth = row['SD mottatt på_month'];
 
-        if (soldMonth) monthlyData[soldMonth].solgt++;
-        if (retMonth) monthlyData[retMonth].returnert++;
-        if (prisetMonth) monthlyData[prisetMonth].priset++;
+        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
+        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
+        if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
     });
 
-    const labels = months;
+    const labels = months.filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0);
     const solgtData = labels.map(m => monthlyData[m].solgt);
     const returnertData = labels.map(m => monthlyData[m].returnert);
     const prisetData = labels.map(m => monthlyData[m].priset);
@@ -413,7 +412,7 @@ function renderActivityChart() {
     });
 }
 
-// Eksisterende calculateMetrics (uendret, ingen påvirkning fra grafen)
+// Eksisterende calculateMetrics (uendret)
 function calculateMetrics(month) {
     const [year, mon] = month.split('-').map(Number);
     const monthStart = new Date(year, mon - 1, 1);
@@ -507,7 +506,7 @@ window.onload = function() {
     calculateMetrics(defaultMonth);
     document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
 
-    // Render the independent activity chart
+    // Render linjegrafen (uavhengig av dropdown)
     renderActivityChart();
 };
 
@@ -522,12 +521,12 @@ function renderActivityChart() {
         const retMonth = row['Returnert på_month'];
         const prisetMonth = row['SD mottatt på_month'];
 
-        if (soldMonth) monthlyData[soldMonth].solgt++;
-        if (retMonth) monthlyData[retMonth].returnert++;
-        if (prisetMonth) monthlyData[prisetMonth].priset++;
+        if (soldMonth && monthlyData[soldMonth]) monthlyData[soldMonth].solgt++;
+        if (retMonth && monthlyData[retMonth]) monthlyData[retMonth].returnert++;
+        if (prisetMonth && monthlyData[prisetMonth]) monthlyData[prisetMonth].priset++;
     });
 
-    const labels = months;
+    const labels = months.filter(m => monthlyData[m].solgt > 0 || monthlyData[m].returnert > 0 || monthlyData[m].priset > 0);
     const solgtData = labels.map(m => monthlyData[m].solgt);
     const returnertData = labels.map(m => monthlyData[m].returnert);
     const prisetData = labels.map(m => monthlyData[m].priset);
@@ -595,6 +594,15 @@ function renderActivityChart() {
         }
     });
 }
+
+window.onload = function() {
+    document.getElementById('period-select').value = defaultMonth;
+    calculateMetrics(defaultMonth);
+    document.getElementById('period-select').addEventListener('change', e => calculateMetrics(e.target.value));
+
+    // Render grafen (alltid, uavhengig av dropdown)
+    renderActivityChart();
+};
 </script>
 
 </body>
