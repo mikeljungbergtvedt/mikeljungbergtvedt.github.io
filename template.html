@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -29,19 +31,36 @@
         .buttons { text-align: center; }
         button { padding: 18px 48px; font-size: 1.4rem; background: #ffcc33; color: #004225; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; }
         button:hover { background: #ffb300; }
-        .charts-section { margin-top: 100px; padding-top: 60px; border-top: 2px solid #ddd; }
     </style>
 </head>
 <body>
+
 <div class="container">
+
     <h1>Peasy Exec Rapport</h1>
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
+
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v1.13.0
+        Generert: <span id="timestamp"></span> | Versjon: v1.12.1
     </div>
 
-    <!-- 1. Funnel – global / all-time -->
-    <h2 class="section-title">Totalt / Historisk – Funnel: Priset → Mottatt → Solgt</h2>
+    <div class="periode">
+        <label for="period-select">Periode: </label>
+        <select id="period-select">
+            {% for m in months %}
+                {% set year, month_num = m.split('-') %}
+                {% set ym = year ~ month_num | int %}
+                {% set now_ym = now_year ~ now_month | int %}
+                {% if ym < now_ym %}
+                    <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
+                        {{ m | replace('-', ' ') | title }}
+                    </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+
+    <h2 class="section-title">Overordnet – Funnel: Priset → Mottatt → Solgt</h2>
     <div class="grid">
         <div class="card">
             <strong>Priset (SD mottatt på)</strong>
@@ -63,24 +82,37 @@
         </div>
     </div>
 
-    <!-- 2. Period selector + month-specific sections -->
-    <div class="periode">
-        <label for="period-select">Periode: </label>
-        <select id="period-select">
-            {% for m in months %}
-                {% set year, month_num = m.split('-') %}
-                {% set ym = year ~ month_num | int %}
-                {% set now_ym = now_year ~ now_month | int %}
-                {% if ym < now_ym %}
-                    <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
-                        {{ m | replace('-', ' ') | title }}
-                    </option>
-                {% endif %}
-            {% endfor %}
-        </select>
+    <div class="chart-container">
+        <div class="chart-title">Aktivitet per måned – Solgte, Returnerte og Prisete biler</div>
+        <canvas id="activityChart"></canvas>
     </div>
 
-    <h2 class="section-title">Overordnet – Solgte og returnerte biler (valgt periode)</h2>
+    <div class="chart-container">
+        <div class="chart-title">Kumulativt antall solgte biler over tid</div>
+        <canvas id="cumulativeChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Gjennomsnittlig Gross Profit per solgt bil per måned (NOK)</div>
+        <canvas id="profitPerCarChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Return rate per måned (% av solgte biler)</div>
+        <canvas id="returnRateChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Konverteringsrate: Solgte / Prisete biler (%)</div>
+        <canvas id="conversionRateChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">Kumulativ Gross Profit over tid (NOK)</div>
+        <canvas id="cumulativeProfitChart"></canvas>
+    </div>
+
+    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
     <div class="grid">
         <div class="card">
             <strong>Solgte biler</strong>
@@ -100,23 +132,59 @@
         </div>
     </div>
 
-    <h2 class="section-title">Kostnader per solgt bil og samlet (valgt periode)</h2>
-    <div class="kost-grid">  <!-- note: you may need to add this class in <style> if it's missing -->
+    <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
+    <div class="kost-grid">
         <div class="line-card">
             <strong>Produksjonskostnad</strong>
             <div class="per" id="prod_per_solgt">0</div>
             <div class="samlet">Samlet: <span id="prod_kost">0</span> NOK</div>
         </div>
-        <!-- ... the other three line-cards for Gire, Markedsføring, Total kostnad ... -->
+        <div class="line-card">
+            <strong>Gire kostnad</strong>
+            <div class="per" id="gire_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="gire_kost">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Markedsføring</strong>
+            <div class="per" id="markeds_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="markeds_kost">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Total kostnad</strong>
+            <div class="per" id="total_kost_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="totale_kostnader">0</span> NOK</div>
+        </div>
     </div>
 
-    <!-- Inntekter, Gross Profit, Commission sections here – copy them from your old file -->
+    <h2 class="section-title">Inntekter per solgt bil og samlet</h2>
+    <div class="inntekt-grid">
+        <div class="line-card">
+            <strong>Inntekt (Avgift) per bil</strong>
+            <div class="per" id="inntekt_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="total_inntekt">0</span> NOK</div>
+        </div>
+        <div class="line-card">
+            <strong>Omsetning (Bud) per bil</strong>
+            <div class="per" id="omsetning_per_solgt">0</div>
+            <div class="samlet">Samlet: <span id="total_omsetning">0</span> NOK</div>
+        </div>
+    </div>
 
-    <!-- All 6 chart containers at the bottom – copy from old file or use the ones I showed earlier -->
+    <h2 class="section-title">Gross Profit og kommisjon</h2>
+    <div class="resultat-card">
+        <strong>Gross Profit per solgt bil</strong>
+        <div class="per" id="gross_profit_per_solgt" class="negative">–</div>
+        <div class="samlet">Samlet: <span id="brutto_fortjeneste" class="negative">0</span> NOK</div>
+    </div>
+
+    <div class="commission">
+        Autoringen kommisjon (2.7% av total Omsetning): <strong>+<span id="kommisjon">0</span> NOK</strong>
+    </div>
 
     <div class="buttons">
         <button onclick="window.print()">Skriv ut</button>
     </div>
+
 </div>
 
 <script>
