@@ -187,7 +187,6 @@
         Generert: <span id="timestamp"></span> | Versjon: v2.1.1
     </div>
 
-    <!-- Period selection -->
     <div class="periode-controls">
         <div class="period-type-labels">
             Vis periode:
@@ -317,9 +316,18 @@
 
 <script>
     const allDataRaw = {{ data_json | tojson | safe }};
-    const allData = typeof allDataRaw === 'string' ? JSON.parse(allDataRaw) : (Array.isArray(allDataRaw) ? allDataRaw : []);
 
-    console.log('allData loaded:', allData.length, 'items');
+    let allData = [];
+    try {
+        const fixedJson = typeof allDataRaw === 'string' ? allDataRaw.replace(/\bNaN\b/g, 'null') : allDataRaw;
+        allData = JSON.parse(fixedJson);
+        if (!Array.isArray(allData)) allData = [];
+    } catch (e) {
+        console.error('Failed to parse data:', e);
+        allData = [];
+    }
+
+    console.log('allData loaded:', allData.length, 'rows');
 
     const months = {{ months | tojson | safe }};
     const defaultMonth = "{{ default_month }}";
@@ -475,7 +483,6 @@
         const sortedMonths = Object.keys(byMonth).sort();
         const labels = sortedMonths.map(m => m.replace('-',' '));
 
-        // Activity
         destroyIfExists(charts.activity);
         charts.activity = new Chart(document.getElementById('activityChart'), {
             type: 'bar',
@@ -490,7 +497,6 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
 
-        // Cumulative sold
         let cumSold = 0;
         destroyIfExists(charts.cumulative);
         charts.cumulative = new Chart(document.getElementById('cumulativeChart'), {
@@ -506,7 +512,6 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
 
-        // Gross Profit per sold car (example - adapt others similarly)
         destroyIfExists(charts.profitPerCar);
         charts.profitPerCar = new Chart(document.getElementById('profitPerCarChart'), {
             type: 'bar',
@@ -526,8 +531,6 @@
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
-
-        // TODO: add similar blocks for returnRateChart, conversionRateChart, cumulativeProfitChart
     }
 
     function refreshReport() {
