@@ -184,7 +184,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.1
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.4
     </div>
 
     <div class="periode-controls">
@@ -483,6 +483,7 @@
         const sortedMonths = Object.keys(byMonth).sort();
         const labels = sortedMonths.map(m => m.replace('-',' '));
 
+        // Aktivitet – Solgte, Returnerte, Prisete
         destroyIfExists(charts.activity);
         charts.activity = new Chart(document.getElementById('activityChart'), {
             type: 'bar',
@@ -497,6 +498,7 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
 
+        // Kumulativt antall solgte biler
         let cumSold = 0;
         destroyIfExists(charts.cumulative);
         charts.cumulative = new Chart(document.getElementById('cumulativeChart'), {
@@ -512,6 +514,7 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
 
+        // Gjennomsnittlig Gross Profit per solgt bil
         destroyIfExists(charts.profitPerCar);
         charts.profitPerCar = new Chart(document.getElementById('profitPerCarChart'), {
             type: 'bar',
@@ -530,6 +533,92 @@
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Return rate (% av solgte)
+        destroyIfExists(charts.returnRate);
+        charts.returnRate = new Chart(document.getElementById('returnRateChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Return rate (%)',
+                    data: sortedMonths.map(m => {
+                        const d = byMonth[m] || {};
+                        const sold = d.solgt || 0;
+                        return sold > 0 ? Math.round((d.returnert / sold) * 100) : 0;
+                    }),
+                    borderColor: '#c0392b',
+                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '%' } } },
+                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' } } }
+            }
+        });
+
+        // Konverteringsrate: Solgte / Prisete (%)
+        destroyIfExists(charts.conversionRate);
+        charts.conversionRate = new Chart(document.getElementById('conversionRateChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Konverteringsrate (%)',
+                    data: sortedMonths.map(m => {
+                        const d = byMonth[m] || {};
+                        const priset = d.priset || 0;
+                        return priset > 0 ? Math.round((d.solgt / priset) * 100) : 0;
+                    }),
+                    borderColor: '#004225',
+                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } } },
+                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' } } }
+            }
+        });
+
+        // Kumulativ Gross Profit (NOK)
+        let cumProfit = 0;
+        destroyIfExists(charts.cumulativeProfit);
+        charts.cumulativeProfit = new Chart(document.getElementById('cumulativeProfitChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Kumulativ Gross Profit',
+                    data: sortedMonths.map(m => {
+                        const d = byMonth[m] || {};
+                        const sold = d.solgt || 0;
+                        if (!sold) return cumProfit;
+                        const costs = d.prod + d.trans + (1000 * 30);
+                        const profit = d.income - costs;
+                        cumProfit += profit;
+                        return Math.round(cumProfit);
+                    }),
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: false, title: { display: true, text: 'NOK' } } },
+                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString('no-NO') + ' NOK' } } }
+            }
         });
     }
 
