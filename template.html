@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.8 - Fixed event listeners + strict counting
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.8 - Fixed typo in updatePeriodDisplay
     </div>
 
     <div class="periode-controls">
@@ -194,18 +194,18 @@
     let currentPeriod = { type: 'month', value: defaultMonth };
     let charts = {};
 
-    function refreshReport() {
-        console.log('refreshReport called with:', currentPeriod);
+    function updatePeriodDisplay() {
+        let txt = currentPeriod.type === 'month'
+            ? currentPeriod.value.replace('-', ' ').replace(/(\d{4})(\d{2})/, '$2 $1')
+            : `${currentPeriod.start.replace('-',' ')} – ${currentPeriod.end.replace('-',' ')}`;
+        document.getElementById('current-period-text').textContent = txt;
+    }
 
-        updatePeriodDisplay();
-
-        // Strict counts - independent per event
+    function updateFunnel() {
         const priset = allData.filter(r => r['SD mottatt på_month'] === currentPeriod.value).length;
         const mottatt = allData.filter(r => r['Mottatt_month'] === currentPeriod.value).length;
         const solgt = allData.filter(r => r['Solgt på_month'] === currentPeriod.value).length;
         const returnert = allData.filter(r => r['Returnert på_month'] === currentPeriod.value).length;
-
-        console.log('Direct counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt, 'Returnert:', returnert);
 
         const p2m = priset > 0 ? Math.round((mottatt / priset) * 100) : 0;
         const m2s = mottatt > 0 ? Math.round((solgt / mottatt) * 100) : 0;
@@ -216,7 +216,10 @@
         document.getElementById('priset_to_mottatt_pct').textContent = p2m + ' %';
         document.getElementById('mottatt_to_solgt_pct').textContent = m2s + ' %';
 
-        // Sold/returned cards
+        console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt, 'Returnert:', returnert);
+    }
+
+    function calculateAndUpdateCards() {
         const soldCars = allData.filter(r => r['Solgt på_month'] === currentPeriod.value);
         const returnedCars = allData.filter(r => r['Returnert på_month'] === currentPeriod.value);
 
@@ -288,7 +291,6 @@
     function renderAllCharts() {
         const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
 
-        // Only show selected month(s)
         let visibleMonths = [];
         if (currentPeriod.type === 'month') {
             visibleMonths = [currentPeriod.value];
