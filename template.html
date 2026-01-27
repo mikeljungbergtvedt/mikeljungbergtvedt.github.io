@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Counting fix + debug
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Strict period counting
     </div>
 
     <div class="periode-controls">
@@ -204,10 +204,10 @@
                 const mottattM = r['Mottatt_month'];
                 const solgtM = r['Solgt på_month'];
                 const retM = r['Returnert på_month'];
-                return (prisetM && prisetM === m) ||
-                       (mottattM && mottattM === m) ||
-                       (solgtM && solgtM === m) ||
-                       (retM && retM === m);
+                return (prisetM === m) ||
+                       (mottattM === m) ||
+                       (solgtM === m) ||
+                       (retM === m);
             });
         } else {
             const s = currentPeriod.start;
@@ -330,12 +330,36 @@
     function renderAllCharts(filtered) {
         const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
 
+        // Only show months in the selected period
+        let visibleMonths = [];
+        if (currentPeriod.type === 'month') {
+            visibleMonths = [currentPeriod.value];
+        } else {
+            const s = currentPeriod.start;
+            const e = currentPeriod.end;
+            let current = new Date(s + '-01');
+            const end = new Date(e + '-01');
+            end.setMonth(end.getMonth() + 1);
+            end.setDate(0);
+            while (current <= end) {
+                const y = current.getFullYear();
+                const m = String(current.getMonth() + 1).padStart(2, '0');
+                visibleMonths.push(`${y}-${m}`);
+                current.setMonth(current.getMonth() + 1);
+            }
+        }
+
+        console.log('Visible months for charts:', visibleMonths);
+
         const byMonth = {};
+        visibleMonths.forEach(m => {
+            byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
+        });
+
         filtered.forEach(r => {
             ['SD mottatt på_month', 'Mottatt_month', 'Solgt på_month', 'Returnert på_month'].forEach(key => {
                 const m = r[key];
-                if (m) {
-                    if (!byMonth[m]) byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
+                if (m && visibleMonths.includes(m)) {
                     if (key === 'SD mottatt på_month') byMonth[m].priset++;
                     if (key === 'Mottatt_month') byMonth[m].mottatt++;
                     if (key === 'Solgt på_month') {
@@ -357,7 +381,7 @@
             });
         });
 
-        const sortedMonths = Object.keys(byMonth).sort();
+        const sortedMonths = visibleMonths;
         const labels = sortedMonths.map(m => m.replace('-',' '));
 
         console.log('Rendering charts for months:', sortedMonths);
