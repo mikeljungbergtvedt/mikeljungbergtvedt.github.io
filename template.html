@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Strict period counting
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Strict event counting
     </div>
 
     <div class="periode-controls">
@@ -194,58 +194,67 @@
     let currentPeriod = { type: 'month', value: defaultMonth };
     let charts = {};
 
-    function getFilteredRows() {
-        console.log('Filtering for:', currentPeriod);
-        let filtered = [];
-        if (currentPeriod.type === 'month') {
-            const m = currentPeriod.value;
-            filtered = allData.filter(r => {
-                const prisetM = r['SD mottatt på_month'];
-                const mottattM = r['Mottatt_month'];
-                const solgtM = r['Solgt på_month'];
-                const retM = r['Returnert på_month'];
-                return (prisetM === m) ||
-                       (mottattM === m) ||
-                       (solgtM === m) ||
-                       (retM === m);
-            });
+    function getPrisetCount(period) {
+        if (period.type === 'month') {
+            const m = period.value;
+            return allData.filter(r => r['SD mottatt på_month'] === m).length;
         } else {
-            const s = currentPeriod.start;
-            const e = currentPeriod.end;
-            filtered = allData.filter(r => {
-                const prisetM = r['SD mottatt på_month'];
-                const mottattM = r['Mottatt_month'];
-                const solgtM = r['Solgt på_month'];
-                const retM = r['Returnert på_month'];
-                return (prisetM && prisetM >= s && prisetM <= e) ||
-                       (mottattM && mottattM >= s && mottattM <= e) ||
-                       (solgtM && solgtM >= s && solgtM <= e) ||
-                       (retM && retM >= s && retM <= e);
-            });
+            const s = period.start;
+            const e = period.end;
+            return allData.filter(r => {
+                const m = r['SD mottatt på_month'];
+                return m && m >= s && m <= e;
+            }).length;
         }
-        console.log('Filtered rows:', filtered.length);
-        if (filtered.length > 0) {
-            console.log('First filtered row sample:', filtered[0]);
-        } else {
-            console.log('No rows matched the period');
-        }
-        return filtered;
     }
 
-    function updatePeriodDisplay() {
-        let txt = currentPeriod.type === 'month'
-            ? currentPeriod.value.replace('-', ' ').replace(/(\d{4})(\d{2})/, '$2 $1')
-            : `${currentPeriod.start.replace('-',' ')} – ${currentPeriod.end.replace('-',' ')}`;
-        document.getElementById('current-period-text').textContent = txt;
+    function getMottattCount(period) {
+        if (period.type === 'month') {
+            const m = period.value;
+            return allData.filter(r => r['Mottatt_month'] === m).length;
+        } else {
+            const s = period.start;
+            const e = period.end;
+            return allData.filter(r => {
+                const m = r['Mottatt_month'];
+                return m && m >= s && m <= e;
+            }).length;
+        }
     }
 
-    function updateFunnel(filtered) {
-        let priset = 0, mottatt = 0, solgt = 0;
-        filtered.forEach(r => {
-            if (r['SD mottatt på_month']) priset++;
-            if (r['Mottatt_month']) mottatt++;
-            if (r['Solgt på_month']) solgt++;
-        });
+    function getSolgtCount(period) {
+        if (period.type === 'month') {
+            const m = period.value;
+            return allData.filter(r => r['Solgt på_month'] === m).length;
+        } else {
+            const s = period.start;
+            const e = period.end;
+            return allData.filter(r => {
+                const m = r['Solgt på_month'];
+                return m && m >= s && m <= e;
+            }).length;
+        }
+    }
+
+    function getReturnertCount(period) {
+        if (period.type === 'month') {
+            const m = period.value;
+            return allData.filter(r => r['Returnert på_month'] === m).length;
+        } else {
+            const s = period.start;
+            const e = period.end;
+            return allData.filter(r => {
+                const m = r['Returnert på_month'];
+                return m && m >= s && m <= e;
+            }).length;
+        }
+    }
+
+    function updateFunnel() {
+        const priset = getPrisetCount(currentPeriod);
+        const mottatt = getMottattCount(currentPeriod);
+        const solgt = getSolgtCount(currentPeriod);
+
         const p2m = priset > 0 ? Math.round((mottatt / priset) * 100) : 0;
         const m2s = mottatt > 0 ? Math.round((solgt / mottatt) * 100) : 0;
 
@@ -258,12 +267,27 @@
         console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt);
     }
 
-    function calculateAndUpdateCards(filtered) {
+    function calculateAndUpdateCards() {
+        const soldCars = allData.filter(r => {
+            const m = r['Solgt på_month'];
+            if (currentPeriod.type === 'month') {
+                return m === currentPeriod.value;
+            } else {
+                return m && m >= currentPeriod.start && m <= currentPeriod.end;
+            }
+        });
+
+        const returnedCars = allData.filter(r => {
+            const m = r['Returnert på_month'];
+            if (currentPeriod.type === 'month') {
+                return m === currentPeriod.value;
+            } else {
+                return m && m >= currentPeriod.start && m <= currentPeriod.end;
+            }
+        });
+
         let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
         let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
-
-        const soldCars = filtered.filter(r => r['Solgt på_month']);
-        const returnedCars = filtered.filter(r => r['Returnert på_month']);
 
         soldCars.forEach(r => {
             const b = parseFloat(r['Bud'] || 0);
@@ -327,10 +351,10 @@
         document.getElementById('gross_profit_per_solgt').classList.toggle('negative', gpPerSold < 0);
     }
 
-    function renderAllCharts(filtered) {
+    function renderAllCharts() {
         const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
 
-        // Only show months in the selected period
+        // Determine visible months
         let visibleMonths = [];
         if (currentPeriod.type === 'month') {
             visibleMonths = [currentPeriod.value];
@@ -356,7 +380,7 @@
             byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
         });
 
-        filtered.forEach(r => {
+        allData.forEach(r => {
             ['SD mottatt på_month', 'Mottatt_month', 'Solgt på_month', 'Returnert på_month'].forEach(key => {
                 const m = r[key];
                 if (m && visibleMonths.includes(m)) {
@@ -521,18 +545,17 @@
 
     function refreshReport() {
         updatePeriodDisplay();
-        const filtered = getFilteredRows();
+        updateFunnel();
+        calculateAndUpdateCards();
+        renderAllCharts();
 
         // DEBUG LOGS - REMOVE LATER IF WORKING
         console.log('=== PERIOD CHANGE DEBUG ===');
         console.log('Selected period:', currentPeriod);
-        console.log('Filtered rows count:', filtered.length);
-        console.log('Unique months in filtered data:', [...new Set(filtered.map(r => r['Solgt på_month'] || r['Returnert på_month'] || 'none').filter(Boolean))]);
-        console.log('First filtered row (sample):', filtered[0] ? filtered[0] : 'no rows');
-
-        updateFunnel(filtered);
-        calculateAndUpdateCards(filtered);
-        renderAllCharts(filtered);
+        console.log('Priset count:', getPrisetCount(currentPeriod));
+        console.log('Mottatt count:', getMottattCount(currentPeriod));
+        console.log('Solgt count:', getSolgtCount(currentPeriod));
+        console.log('Returnert count:', getReturnertCount(currentPeriod));
     }
 
     window.onload = function() {
