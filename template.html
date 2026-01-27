@@ -11,524 +11,152 @@
         h1 { text-align: center; font-size: 3rem; font-weight: 800; color: #004225; margin-bottom: 10px; }
         .subtitle { text-align: center; font-size: 1.5rem; font-weight: 500; color: #004225; margin-bottom: 30px; }
         .timestamp { text-align: center; font-size: 1rem; color: #555; margin-bottom: 20px; }
-        .section-title { font-size: 2.2rem; font-weight: 700; color: #004225; margin: 60px 0 30px; border-bottom: 4px solid #ffcc33; padding-bottom: 12px; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px; margin-bottom: 60px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px; margin: 40px 0; }
         .card { background: #f8faf9; padding: 32px; border-radius: 16px; border: 1px solid #ddd; box-shadow: 0 6px 20px rgba(0,0,0,0.06); text-align: center; }
         .card strong { font-size: 1.5rem; font-weight: 700; display: block; margin-bottom: 16px; color: #004225; }
         .card .number { font-size: 3.8rem; font-weight: 800; color: #004225; margin-bottom: 24px; }
-        .sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
-        .sub-card { background: #e0e9e5; padding: 20px; border-radius: 12px; text-align: center; }
-        .sub-card strong { font-size: 1.3rem; font-weight: 600; display: block; margin-bottom: 10px; }
-        .sub-card .number { font-size: 2.4rem; font-weight: 700; color: #004225; }
-        .negative { color: #c0392b !important; font-weight: 800; }
-        .chart-container { margin: 50px 0; padding: 32px; background: #f8faf9; border-radius: 16px; border: 1px solid #ddd; box-shadow: 0 6px 20px rgba(0,0,0,0.06); height: 380px; }
-        .chart-title { text-align: center; font-size: 1.7rem; font-weight: 700; color: #004225; margin-bottom: 24px; }
-        .periode-controls { position: sticky; top: 0; z-index: 20; background: white; padding: 16px 0 24px; margin: 0 auto 40px; max-width: 1200px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-bottom: 1px solid #e5e7eb; text-align: center; }
-        .period-type-labels { margin-bottom: 16px; font-size: 1.25rem; font-weight: 600; }
-        .period-type-labels label { margin: 0 20px; cursor: pointer; }
-        #month-selector select, #range-selector input[type="month"] { padding: 12px 20px; font-size: 1.25rem; border: 2px solid #004225; border-radius: 10px; margin: 8px; }
-        #apply-range { padding: 12px 28px; font-size: 1.2rem; background: #004225; color: white; border: none; border-radius: 10px; cursor: pointer; }
-        #apply-range:hover { background: #065f46; }
-        .current-period { margin-top: 16px; font-size: 1.3rem; font-weight: 500; color: #065f46; }
-        @media (max-width: 768px) { .periode-controls { padding: 12px; } #range-selector label { display: block; margin: 12px 0; } }
+        .funnel-arrow { font-size: 3rem; color: #004225; align-self: center; }
+        .chart-container { margin: 60px 0; padding: 32px; background: #f8faf9; border-radius: 16px; border: 1px solid #ddd; height: 400px; }
+        .periode-controls { text-align: center; margin-bottom: 40px; }
+        .periode-controls label { margin: 0 20px; font-size: 1.2rem; cursor: pointer; }
+        #month-selector select { padding: 10px 20px; font-size: 1.2rem; margin: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-
     <h1>Peasy Exec Rapport</h1>
-    <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
-
-    <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.9 - Fixed typo in updatePeriodDisplay call
-    </div>
+    <div class="subtitle">Funnel: Priced → Received → Sold / Returned</div>
+    <div class="timestamp">Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span></div>
 
     <div class="periode-controls">
-        <div class="period-type-labels">
-            Vis periode:
-            <label><input type="radio" name="period-type" value="month" checked> En måned</label>
-            <label><input type="radio" name="period-type" value="range"> Egendefinert</label>
-        </div>
-
+        <label><input type="radio" name="period-type" value="month" checked> En måned</label>
+        <label><input type="radio" name="period-type" value="range"> Egendefinert</label>
         <div id="month-selector">
             <select id="period-select">
                 {% for m in months %}
-                    {% set year, month_num = m.split('-') %}
-                    {% set ym = year ~ month_num | int %}
-                    {% set now_ym = now_year ~ now_month | int %}
-                    {% if ym < now_ym %}
-                        <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>
-                            {{ m | replace('-', ' ') | title }}
-                        </option>
-                    {% endif %}
+                    <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
             </select>
         </div>
-
-        <div id="range-selector" style="display:none;">
-            <label>Fra: <input type="month" id="range-start"></label>
-            <label>Til: <input type="month" id="range-end"></label>
-            <button id="apply-range">Bruk periode</button>
-        </div>
-
-        <div class="current-period">
-            Viser: <strong id="current-period-text">{{ default_month | replace('-', ' ') | title }}</strong>
-        </div>
     </div>
 
-    <h2 class="section-title">Overordnet – Funnel: Priset → Mottatt → Solgt</h2>
-    <div class="grid">
+    <div class="grid" id="funnel-grid">
         <div class="card">
-            <strong>Priset (SD mottatt på)</strong>
-            <div class="number" id="count_priset">0</div>
+            <strong>Priced<br>(SD mottatt)</strong>
+            <div class="number" id="priset-count">0</div>
         </div>
+        <div class="funnel-arrow">→</div>
         <div class="card">
-            <strong>Mottatt</strong>
-            <div class="number" id="priset_to_mottatt_pct">– %</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong>Mottatt</strong><span id="count_mottatt">0</span></div>
-            </div>
+            <strong>Received<br>(Mottatt)</strong>
+            <div class="number" id="mottatt-count">0</div>
         </div>
+        <div class="funnel-arrow">→</div>
         <div class="card">
-            <strong>Solgt</strong>
-            <div class="number" id="mottatt_to_solgt_pct">– %</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong>Solgt</strong><span id="count_solgt">0</span></div>
-            </div>
+            <strong>Sold<br>(Solgt på)</strong>
+            <div class="number" id="solgt-count">0</div>
         </div>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Aktivitet – Solgte, Returnerte, Prisete</div>
-        <canvas id="activityChart"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Kumulativt antall solgte biler</div>
-        <canvas id="cumulativeChart"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Gjennomsnittlig Gross Profit per solgt bil</div>
-        <canvas id="profitPerCarChart"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Return rate (% av solgte)</div>
-        <canvas id="returnRateChart"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Konverteringsrate: Solgte / Prisete (%)</div>
-        <canvas id="conversionRateChart"></canvas>
-    </div>
-
-    <div class="chart-container">
-        <div class="chart-title">Kumulativ Gross Profit (NOK)</div>
-        <canvas id="cumulativeProfitChart"></canvas>
-    </div>
-
-    <h2 class="section-title">Overordnet – Solgte og returnerte biler</h2>
-    <div class="grid">
+        <div class="funnel-arrow">↳</div>
         <div class="card">
-            <strong>Solgte biler</strong>
-            <div class="number" id="solgt_total">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="sold_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="sold_over">0</span></div>
-            </div>
-        </div>
-        <div class="card">
-            <strong>Returnerte biler</strong>
-            <div class="number" id="total_returnert">0</div>
-            <div class="sub-grid">
-                <div class="sub-card"><strong><25k</strong><span id="ret_under">0</span></div>
-                <div class="sub-card"><strong>>25k</strong><span id="ret_over">0</span></div>
-            </div>
+            <strong>Returned<br>(Returnert)</strong>
+            <div class="number" id="returnert-count">0</div>
         </div>
     </div>
 
-    <h2 class="section-title">Kostnader per solgt bil og samlet</h2>
-    <div class="grid">
-        <div class="card"><strong>Produksjonskostnad</strong><div class="number" id="prod_per_solgt">0</div><div>Samlet: <span id="prod_kost">0</span> NOK</div></div>
-        <div class="card"><strong>Gire kostnad</strong><div class="number" id="gire_per_solgt">0</div><div>Samlet: <span id="gire_kost">0</span> NOK</div></div>
-        <div class="card"><strong>Markedsføring</strong><div class="number" id="markeds_per_solgt">0</div><div>Samlet: <span id="markeds_kost">0</span> NOK</div></div>
-        <div class="card"><strong>Total kostnad</strong><div class="number" id="total_kost_per_solgt">0</div><div>Samlet: <span id="totale_kostnader">0</span> NOK</div></div>
+    <div class="chart-container">
+        <canvas id="funnelChart"></canvas>
     </div>
-
-    <h2 class="section-title">Inntekter per solgt bil og samlet</h2>
-    <div class="grid">
-        <div class="card"><strong>Inntekt (Avgift) per bil</strong><div class="number" id="inntekt_per_solgt">0</div><div>Samlet: <span id="total_inntekt">0</span> NOK</div></div>
-        <div class="card"><strong>Omsetning (Bud) per bil</strong><div class="number" id="omsetning_per_solgt">0</div><div>Samlet: <span id="total_omsetning">0</span> NOK</div></div>
-    </div>
-
-    <h2 class="section-title">Gross Profit og kommisjon</h2>
-    <div class="grid">
-        <div class="card"><strong>Gross Profit per solgt bil</strong><div class="number" id="gross_profit_per_solgt">0</div></div>
-        <div class="card commission"><strong>Estimert kommisjon</strong><div class="number" id="kommisjon">0</div> NOK</div>
-    </div>
-
 </div>
 
 <script>
-    const allDataRaw = {{ data_json | tojson | safe }};
+    const dataAll       = {{ data_all_json | tojson | safe }};
+    const dataCompleted = {{ data_completed_json | tojson | safe }};
 
-    let allData = [];
-    try {
-        const fixedJson = typeof allDataRaw === 'string' ? allDataRaw.replace(/\bNaN\b/g, 'null') : allDataRaw;
-        allData = JSON.parse(fixedJson);
-        if (!Array.isArray(allData)) allData = [];
-        console.log('allData loaded:', allData.length, 'rows');
-        if (allData.length > 0) {
-            console.log('First row keys:', Object.keys(allData[0]));
+    let currentPeriod = { type: 'month', value: '{{ default_month }}' };
+
+    function isInPeriod(dateStr, period) {
+        if (!dateStr) return false;
+        const [year, month] = dateStr.split('-');
+        const dateYM = `${year}-${month}`;
+        if (period.type === 'month') {
+            return dateYM === period.value;
+        } else if (period.type === 'range') {
+            return dateYM >= period.start && dateYM <= period.end;
         }
-    } catch (e) {
-        console.error('Failed to parse data:', e.message);
-        allData = [];
+        return false;
     }
 
-    const months = {{ months | tojson | safe }};
-    const defaultMonth = "{{ default_month }}";
-
-    let currentPeriod = { type: 'month', value: defaultMonth };
-    let charts = {};
-
-    function updatePeriodDisplay() {
-        let txt = currentPeriod.type === 'month'
-            ? currentPeriod.value.replace('-', ' ').replace(/(\d{4})(\d{2})/, '$2 $1')
-            : `${currentPeriod.start.replace('-',' ')} – ${currentPeriod.end.replace('-',' ')}`;
-        document.getElementById('current-period-text').textContent = txt;
+    function getPrisetCount(period) {
+        return dataAll.filter(d => d['SD mottatt på'] && isInPeriod(d['SD mottatt på_month'], period)).length;
     }
 
-    function updateFunnel() {
-        const priset = allData.filter(r => r['SD mottatt på_month'] === currentPeriod.value).length;
-        const mottatt = allData.filter(r => r['Mottatt_month'] === currentPeriod.value).length;
-        const solgt = allData.filter(r => r['Solgt på_month'] === currentPeriod.value).length;
-        const returnert = allData.filter(r => r['Returnert på_month'] === currentPeriod.value).length;
-
-        const p2m = priset > 0 ? Math.round((mottatt / priset) * 100) : 0;
-        const m2s = mottatt > 0 ? Math.round((solgt / mottatt) * 100) : 0;
-
-        document.getElementById('count_priset').textContent = priset;
-        document.getElementById('count_mottatt').textContent = mottatt;
-        document.getElementById('count_solgt').textContent = solgt;
-        document.getElementById('priset_to_mottatt_pct').textContent = p2m + ' %';
-        document.getElementById('mottatt_to_solgt_pct').textContent = m2s + ' %';
-
-        console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt, 'Returnert:', returnert);
+    function getMottattCount(period) {
+        return dataCompleted.filter(d => d['Mottatt'] && isInPeriod(d['Mottatt_month'], period)).length;
     }
 
-    function calculateAndUpdateCards() {
-        const soldCars = allData.filter(r => r['Solgt på_month'] === currentPeriod.value);
-        const returnedCars = allData.filter(r => r['Returnert på_month'] === currentPeriod.value);
-
-        let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
-        let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
-
-        soldCars.forEach(r => {
-            const b = parseFloat(r['Bud'] || 0);
-            const a = parseFloat(r['Avgift'] || 0);
-            omsetning += b;
-            income += a;
-            transportCost += 750;
-            prodCost += (b < 25000 ? 2000 : 2500);
-            if (b < 25000) soldUnder++; else soldOver++;
-        });
-
-        returnedCars.forEach(r => {
-            const b = parseFloat(r['Bud'] || 0);
-            transportCost += 750;
-            prodCost += (b < 25000 ? 1300 : 1700);
-            if (b < 25000) retUnder++; else retOver++;
-        });
-
-        const totalSold = soldUnder + soldOver;
-        const totalReturned = retUnder + retOver;
-
-        let days = 30;
-        if (currentPeriod.type === 'month') {
-            const [y, m] = currentPeriod.value.split('-').map(Number);
-            days = new Date(y, m, 0).getDate();
-        }
-
-        const marketingCost = 1000 * days;
-        const totalCosts = marketingCost + prodCost + transportCost;
-        const bruttoFortjeneste = income - totalCosts;
-        const commission = Math.round(omsetning * 0.027);
-
-        const gpPerSold = totalSold > 0 ? Math.round(bruttoFortjeneste / totalSold) : 0;
-
-        document.getElementById('solgt_total').textContent = totalSold;
-        document.getElementById('total_returnert').textContent = totalReturned;
-        document.getElementById('sold_under').textContent = soldUnder;
-        document.getElementById('sold_over').textContent = soldOver;
-        document.getElementById('ret_under').textContent = retUnder;
-        document.getElementById('ret_over').textContent = retOver;
-
-        document.getElementById('prod_per_solgt').textContent = totalSold ? Math.round(prodCost / totalSold).toLocaleString('no-NO') : '0';
-        document.getElementById('gire_per_solgt').textContent = totalSold ? Math.round(transportCost / totalSold).toLocaleString('no-NO') : '0';
-        document.getElementById('markeds_per_solgt').textContent = totalSold ? Math.round(marketingCost / totalSold).toLocaleString('no-NO') : '0';
-        document.getElementById('total_kost_per_solgt').textContent = totalSold ? Math.round(totalCosts / totalSold).toLocaleString('no-NO') : '0';
-
-        document.getElementById('inntekt_per_solgt').textContent = totalSold ? Math.round(income / totalSold).toLocaleString('no-NO') : '0';
-        document.getElementById('omsetning_per_solgt').textContent = totalSold ? Math.round(omsetning / totalSold).toLocaleString('no-NO') : '0';
-
-        document.getElementById('prod_kost').textContent = prodCost.toLocaleString('no-NO');
-        document.getElementById('gire_kost').textContent = transportCost.toLocaleString('no-NO');
-        document.getElementById('markeds_kost').textContent = marketingCost.toLocaleString('no-NO');
-        document.getElementById('totale_kostnader').textContent = totalCosts.toLocaleString('no-NO');
-
-        document.getElementById('total_inntekt').textContent = income.toLocaleString('no-NO');
-        document.getElementById('total_omsetning').textContent = omsetning.toLocaleString('no-NO');
-
-        document.getElementById('gross_profit_per_solgt').textContent = gpPerSold.toLocaleString('no-NO');
-        document.getElementById('kommisjon').textContent = commission.toLocaleString('no-NO');
-
-        document.getElementById('gross_profit_per_solgt').classList.toggle('negative', gpPerSold < 0);
+    function getSolgtCount(period) {
+        return dataCompleted.filter(d => d['Solgt på'] && isInPeriod(d['Solgt på_month'], period)).length;
     }
 
-    function renderAllCharts() {
-        const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
+    function getReturnertCount(period) {
+        return dataCompleted.filter(d => d['Returnert på'] && isInPeriod(d['Returnert på_month'], period)).length;
+    }
 
-        let visibleMonths = [];
-        if (currentPeriod.type === 'month') {
-            visibleMonths = [currentPeriod.value];
-        } else {
-            const s = currentPeriod.start;
-            const e = currentPeriod.end;
-            let current = new Date(s + '-01');
-            const end = new Date(e + '-01');
-            end.setMonth(end.getMonth() + 1);
-            end.setDate(0);
-            while (current <= end) {
-                const y = current.getFullYear();
-                const m = String(current.getMonth() + 1).padStart(2, '0');
-                visibleMonths.push(`${y}-${m}`);
-                current.setMonth(current.getMonth() + 1);
-            }
-        }
+    function updateCards() {
+        document.getElementById('priset-count').textContent   = getPrisetCount(currentPeriod);
+        document.getElementById('mottatt-count').textContent  = getMottattCount(currentPeriod);
+        document.getElementById('solgt-count').textContent    = getSolgtCount(currentPeriod);
+        document.getElementById('returnert-count').textContent = getReturnertCount(currentPeriod);
 
-        console.log('Visible months for charts:', visibleMonths);
+        updateFunnelChart();
+    }
 
-        const byMonth = {};
-        visibleMonths.forEach(m => {
-            byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
-        });
-
-        allData.forEach(r => {
-            ['SD mottatt på_month', 'Mottatt_month', 'Solgt på_month', 'Returnert på_month'].forEach(key => {
-                const m = r[key];
-                if (m && visibleMonths.includes(m)) {
-                    if (key === 'SD mottatt på_month') byMonth[m].priset++;
-                    if (key === 'Mottatt_month') byMonth[m].mottatt++;
-                    if (key === 'Solgt på_month') {
-                        byMonth[m].solgt++;
-                        const b = parseFloat(r['Bud']||0);
-                        const a = parseFloat(r['Avgift']||0);
-                        byMonth[m].omsetning += b;
-                        byMonth[m].income += a;
-                        byMonth[m].trans += 750;
-                        byMonth[m].prod += (b < 25000 ? 2000 : 2500);
-                    }
-                    if (key === 'Returnert på_month') {
-                        byMonth[m].returnert++;
-                        const b = parseFloat(r['Bud']||0);
-                        byMonth[m].trans += 750;
-                        byMonth[m].prod += (b < 25000 ? 1300 : 1700);
-                    }
-                }
-            });
-        });
-
-        const sortedMonths = visibleMonths;
-        const labels = sortedMonths.map(m => m.replace('-',' '));
-
-        console.log('Rendering charts for months:', sortedMonths);
-
-        destroyIfExists(charts.activity);
-        charts.activity = new Chart(document.getElementById('activityChart'), {
+    function updateFunnelChart() {
+        const ctx = document.getElementById('funnelChart').getContext('2d');
+        new Chart(ctx, {
             type: 'bar',
             data: {
-                labels,
-                datasets: [
-                    { label: 'Prisete', data: sortedMonths.map(m => byMonth[m]?.priset || 0), backgroundColor: 'rgba(0,66,37,0.4)' },
-                    { label: 'Solgte', data: sortedMonths.map(m => byMonth[m]?.solgt  || 0), backgroundColor: '#004225' },
-                    { label: 'Returnerte', data: sortedMonths.map(m => byMonth[m]?.returnert || 0), backgroundColor: '#c0392b' }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
-
-        let cumSold = 0;
-        destroyIfExists(charts.cumulative);
-        charts.cumulative = new Chart(document.getElementById('cumulativeChart'), {
-            type: 'line',
-            data: {
-                labels,
+                labels: ['Priced', 'Received', 'Sold', 'Returned'],
                 datasets: [{
-                    label: 'Kumulativ solgte',
-                    data: sortedMonths.map(m => cumSold += (byMonth[m]?.solgt || 0)),
-                    borderColor: '#004225', fill: true, tension: 0.2
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
-
-        destroyIfExists(charts.profitPerCar);
-        charts.profitPerCar = new Chart(document.getElementById('profitPerCarChart'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Gross Profit / solgt bil',
-                    data: sortedMonths.map(m => {
-                        const d = byMonth[m] || {};
-                        const sold = d.solgt || 0;
-                        if (!sold) return 0;
-                        const costs = d.prod + d.trans + (1000 * 30);
-                        return Math.round((d.income - costs) / sold);
-                    }),
-                    backgroundColor: '#004225'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        destroyIfExists(charts.returnRate);
-        charts.returnRate = new Chart(document.getElementById('returnRateChart'), {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Return rate (%)',
-                    data: sortedMonths.map(m => {
-                        const d = byMonth[m] || {};
-                        const sold = d.solgt || 0;
-                        return sold > 0 ? Math.round((d.returnert / sold) * 100) : 0;
-                    }),
-                    borderColor: '#c0392b',
-                    backgroundColor: 'rgba(192, 57, 43, 0.2)',
-                    fill: true,
-                    tension: 0.2
+                    label: 'Antall biler',
+                    data: [
+                        getPrisetCount(currentPeriod),
+                        getMottattCount(currentPeriod),
+                        getSolgtCount(currentPeriod),
+                        getReturnertCount(currentPeriod)
+                    ],
+                    backgroundColor: ['#ffcc33', '#27ae60', '#004225', '#c0392b'],
+                    borderWidth: 1
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, title: { display: true, text: '%' } } },
-                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' } } }
-            }
-        });
-
-        destroyIfExists(charts.conversionRate);
-        charts.conversionRate = new Chart(document.getElementById('conversionRateChart'), {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Konverteringsrate (%)',
-                    data: sortedMonths.map(m => {
-                        const d = byMonth[m] || {};
-                        const priset = d.priset || 0;
-                        return priset > 0 ? Math.round((d.solgt / priset) * 100) : 0;
-                    }),
-                    borderColor: '#004225',
-                    backgroundColor: 'rgba(0, 66, 37, 0.2)',
-                    fill: true,
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } } },
-                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' } } }
-            }
-        });
-
-        let cumProfit = 0;
-        destroyIfExists(charts.cumulativeProfit);
-        charts.cumulativeProfit = new Chart(document.getElementById('cumulativeProfitChart'), {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Kumulativ Gross Profit',
-                    data: sortedMonths.map(m => {
-                        const d = byMonth[m] || {};
-                        const sold = d.solgt || 0;
-                        if (!sold) return cumProfit;
-                        const costs = d.prod + d.trans + (1000 * 30);
-                        const profit = d.income - costs;
-                        cumProfit += profit;
-                        return Math.round(cumProfit);
-                    }),
-                    borderColor: '#27ae60',
-                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
-                    fill: true,
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: false, title: { display: true, text: 'NOK' } } },
-                plugins: { tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString('no-NO') + ' NOK' } } }
+                scales: { x: { beginAtZero: true } }
             }
         });
     }
 
-    function refreshReport() {
-        updatePeriodDisplay();
-        updateFunnel();
-        calculateAndUpdateCards();
-        renderAllCharts();
-
-        // DEBUG LOGS - REMOVE LATER IF WORKING
-        console.log('=== PERIOD CHANGE DEBUG ===');
-        console.log('Selected period:', currentPeriod);
-        console.log('Priset count:', getPrisetCount(currentPeriod));
-        console.log('Mottatt count:', getMottattCount(currentPeriod));
-        console.log('Solgt count:', getSolgtCount(currentPeriod));
-        console.log('Returnert count:', getReturnertCount(currentPeriod));
-    }
-
-    window.onload = function() {
-        refreshReport();
-
-        document.querySelectorAll('input[name="period-type"]').forEach(r => {
-            r.addEventListener('change', e => {
-                console.log('Radio changed to:', e.target.value);
-                document.getElementById('month-selector').style.display = e.target.value === 'month' ? '' : 'none';
-                document.getElementById('range-selector').style.display = e.target.value === 'range' ? '' : 'none';
-                if (e.target.value === 'month') {
-                    currentPeriod = { type: 'month', value: document.getElementById('period-select').value };
-                    refreshReport();
-                }
-            });
-        });
-
-        document.getElementById('period-select').addEventListener('change', e => {
-            console.log('Month dropdown changed to:', e.target.value);
-            if (document.querySelector('[name="period-type"]:checked').value === 'month') {
-                currentPeriod = { type: 'month', value: e.target.value };
-                refreshReport();
+    // Event listeners
+    document.querySelectorAll('input[name="period-type"]').forEach(r => {
+        r.addEventListener('change', e => {
+            if (e.target.value === 'month') {
+                currentPeriod = { type: 'month', value: document.getElementById('period-select').value };
             }
+            updateCards();
         });
+    });
 
-        document.getElementById('apply-range').addEventListener('click', () => {
-            const s = document.getElementById('range-start').value;
-            const e = document.getElementById('range-end').value;
-            console.log('Apply range clicked - start:', s, 'end:', e);
-            if (s && e && s <= e) {
-                currentPeriod = { type: 'range', start: s, end: e };
-                refreshReport();
-            } else {
-                alert('Velg gyldig periode');
-            }
-        });
-    };
+    document.getElementById('period-select').addEventListener('change', e => {
+        if (document.querySelector('[name="period-type"]:checked').value === 'month') {
+            currentPeriod = { type: 'month', value: e.target.value };
+            updateCards();
+        }
+    });
+
+    // Initial render
+    updateCards();
 </script>
 
 </body>
