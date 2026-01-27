@@ -62,23 +62,18 @@
         <button onclick="loadDashboard()">Refresh</button>
     </div>
     <p style="margin-top:8px; font-size:0.9rem; opacity:0.8;">
-        Last updated: <span id="lastUpdate">—</span> • 
+        Last updated: <span id="lastUpdate">—</span> •
         <span class="config-hint" onclick="showConfigPrompt()">Valuation ≈ <span id="valTimeDisplay">2</span> min/car • Working day <span id="workDayDisplay">7.5</span> h</span>
     </p>
     <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
-
-    <div class="version">Version 1.10 – Marketing cost 1000 kr/day from 1.11.2025</div>
-
+    <div class="version">Version 1.11 – Marketing 1000 kr/day every day from 1.11.2025</div>
     <div id="funnelContainer" style="display:none;">
         <div class="funnel" id="funnelArea"></div>
     </div>
-
     <div id="shortPeriodNote" class="short-period-note" style="display:none;">
         Funnel hidden for short periods (due to process delay)
     </div>
-
     <div class="kpi-grid" id="kpiArea"></div>
-
     <div class="chart-container">
         <h2>Valuations per day (Customer Service Load)</h2>
         <canvas id="workloadChart" height="320"></canvas>
@@ -189,17 +184,16 @@ localStorage.setItem('peasyConfig', JSON.stringify({
             const ws = wb.Sheets[wb.SheetNames[0]];
             const range = XLSX.utils.decode_range(ws['!ref']);
 
-            const COL_O = 14;
-            const COL_P = 15;
-            const COL_Q = 16;
-            const COL_R = 17;
-            const COL_S = 18;
-            const COL_T = 19;
-            const COL_U = 20;
+            const COL_O = 14;  // Valued date?
+            const COL_P = 15;  // Received indicator?
+            const COL_Q = 16;  // Received date?
+            const COL_R = 17;  // Sold date?
+            const COL_S = 18;  // Bud
+            const COL_T = 19;  // Avgift
+            const COL_U = 20;  // Returned date?
 
             const today = new Date();
             const periodDays = document.getElementById('periodSelect').value;
-
             let startDate;
             if (periodDays === 'today') {
                 startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
@@ -210,10 +204,11 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                 startDate.setDate(today.getDate() - parseInt(periodDays));
             }
 
-            // Marketing cost start date
             const marketingStartDate = new Date(config.marketingStart);
-            let marketingDays = 0;
 
+            // ────────────────────────────────────────────────
+            // Data collection
+            // ────────────────────────────────────────────────
             const mapO = new Map();
             const mapQ = new Map();
             const mapR = new Map();
@@ -238,58 +233,36 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                                  (dQ && dQ >= startDate) ||
                                  (dR && dR >= startDate) ||
                                  (dU && dU >= startDate);
-
                 if (!inPeriod) continue;
-
-                // Count marketing days (only once per calendar day)
-                let currentDate;
-                if (dO) currentDate = dO;
-                else if (dQ) currentDate = dQ;
-                else if (dR) currentDate = dR;
-                else if (dU) currentDate = dU;
-
-                if (currentDate && currentDate >= marketingStartDate) {
-                    const ymd = dateToYMD(currentDate);
-                    if (!mapO.has(ymd) && !mapQ.has(ymd) && !mapR.has(ymd) && !mapO.has(ymd)) { // rough dedup
-                        marketingDays++;
-                    }
-                }
 
                 if (dO && dO >= startDate) {
                     mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
                     totalO++;
                 }
-
                 if (dQ && dQ >= startDate) {
                     mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
                     totalQ++;
-
                     const pCell = ws[XLSX.utils.encode_cell({r:row, c:COL_P})];
                     const pVal = pCell && pCell.v != null ? String(pCell.v).trim() : '';
                     if (pVal !== '') {
                         transportSum += config.transportCost;
                     }
                 }
-
                 const pCellGire = ws[XLSX.utils.encode_cell({r:row, c:COL_P})];
                 const pValGire = pCellGire && pCellGire.v != null ? String(pCellGire.v).trim() : '';
                 if (pValGire !== '') {
                     gireOrdered++;
                 }
-
                 if (dR && dR >= startDate) {
                     mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
                     totalR++;
-
                     const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
                     sumS += bud;
                     countS++;
-
                     const avgiftCell = ws[XLSX.utils.encode_cell({r:row, c:COL_T})];
                     const avgift = avgiftCell && avgiftCell.v != null ? parseFloat(avgiftCell.v) : 0;
                     sumT += avgift;
                     if (avgift !== 0) countT++;
-
                     if (bud < 25000) {
                         soldUnder25k++;
                         prodSoldSum += config.prodSoldUnder;
@@ -298,7 +271,6 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                         prodSoldSum += config.prodSoldOver;
                     }
                 }
-
                 if (dU && dU >= startDate) {
                     totalU++;
                     const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
@@ -315,13 +287,32 @@ localStorage.setItem('peasyConfig', JSON.stringify({
             const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
             const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
 
-            const marketingTotal = marketingDays * config.marketingDaily;
+            // ────────────────────────────────────────────────
+            // FIXED MARKETING CALCULATION – every day from start date
+            // ────────────────────────────────────────────────
+            const periodEnd = new Date(today);
+            periodEnd.setHours(23, 59, 59, 999);
+
+            let marketingDays = 0;
+            let marketingTotal = 0;
+
+            if (marketingStartDate <= periodEnd) {
+                const effectiveStart = new Date(Math.max(startDate, marketingStartDate));
+                if (effectiveStart <= periodEnd) {
+                    const diffTime = periodEnd - effectiveStart;
+                    marketingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    marketingTotal = marketingDays * config.marketingDaily;
+                }
+            }
+
             const marketingPerSold = totalR > 0 ? Math.round(marketingTotal / totalR) : 0;
 
+            // ────────────────────────────────────────────────
+            // Other calculations (workload, conversions, etc.)
+            // ────────────────────────────────────────────────
             const isAllTime = periodDays === 'all';
-            const daysInPeriod = isAllTime ? 30 : (periodDays === 'today' ? 1 : periodDays);
+            const daysInPeriod = isAllTime ? 30 : (periodDays === 'today' ? 1 : parseInt(periodDays));
             const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
-
             const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
             const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
             const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
@@ -347,7 +338,7 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                     </div>
                     <div class="funnel-row">
                         <div class="funnel-title"></div>
-                        <div class="arrow">↓ <span class="arrow-ratio ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">${((totalQ/totalO)*100||0).toFixed(0)}%</span></div>
+                        <div class="arrow">↓ <span class="arrow-ratio ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">${convVR}%</span></div>
                     </div>
                     <div class="funnel-row">
                         <div class="funnel-title">Received</div>
@@ -440,7 +431,7 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-value">${marketingPerSold.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-sub">Total: ${marketingTotal.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Total: ${marketingTotal.toLocaleString('nb-NO')} NOK (${marketingDays} dager)</div>
                     <div class="kpi-label">Marketing cost per sold</div>
                 </div>
                 <div class="kpi-card">
@@ -452,10 +443,9 @@ localStorage.setItem('peasyConfig', JSON.stringify({
 
             document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
 
-            // Chart 1 with trendline
+            // Chart 1 - Valuations per day
             const datesO = [...mapO.keys()].sort();
             const dataO = datesO.map(k => mapO.get(k));
-
             if (workloadChart) workloadChart.destroy();
             workloadChart = new Chart(document.getElementById('workloadChart'), {
                 type: 'line',
@@ -480,21 +470,20 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                 }
             });
 
-            // Chart 2 with trendlines
+            // Chart 2 - Received vs Sold
             const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
             const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
             const dataR_chart = allDates.map(d => mapR.get(d) || 0);
-
             if (receivedSoldChart) receivedSoldChart.destroy();
             receivedSoldChart = new Chart(document.getElementById('receivedSoldChart'), {
                 type: 'line',
                 data: {
                     labels: allDates,
                     datasets: [
-                        { 
-                            label: 'Received', 
-                            data: dataQ_chart, 
-                            borderColor: '#82BFD2', 
+                        {
+                            label: 'Received',
+                            data: dataQ_chart,
+                            borderColor: '#82BFD2',
                             tension: 0.2,
                             trendlineLinear: {
                                 style: '#82BFD288',
@@ -502,10 +491,10 @@ localStorage.setItem('peasyConfig', JSON.stringify({
                                 width: 2
                             }
                         },
-                        { 
-                            label: 'Sold', 
-                            data: dataR_chart, 
-                            borderColor: '#FFCC33', 
+                        {
+                            label: 'Sold',
+                            data: dataR_chart,
+                            borderColor: '#FFCC33',
                             tension: 0.2,
                             trendlineLinear: {
                                 style: '#FFCC3388',
