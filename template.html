@@ -1,408 +1,505 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Peasy Dashboard – Updated</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #F2F7F9; color: #004225; }
-        .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
-        h1 { font-weight: 700; font-size: 1.8rem; margin-bottom: 16px; color: #004225; }
-        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-        select, button, input { padding: 10px 16px; font-size: 1rem; border-radius: 6px; border: 1px solid #82BFD2; background: white; }
-        button { background: #004225; color: white; border: none; cursor: pointer; }
-        .funnel { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
-        .funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; font-size: 1.2rem; }
-        .funnel-title { font-weight: 600; width: 120px; text-align: left; color: #004225; }
-        .funnel-number { font-weight: 800; font-size: 2.4rem; color: #004225; width: 120px; text-align: center; }
-        .arrow { font-size: 2.4rem; color: #82BFD2; margin: 0 12px; }
-        .arrow-ratio { font-weight: 800; color: #FFCC33; }
-        .arrow-ratio.alert { color: #d32f2f; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
-        .kpi-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); text-align: center; }
-        .kpi-card.highlight { background: #F2F7F9; border: 2px solid #004225; }
-        .kpi-card.alert { background: #ffebee; border: 2px solid #d32f2f; color: #b71c1c; }
-        .kpi-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; }
-        .kpi-sub { font-size: 1rem; color: #555; margin-top: -4px; }
-        .kpi-label { font-size: 0.95rem; color: #004225; opacity: 0.8; }
-        .kpi-target { font-size: 0.85rem; color: #777; margin-top: 6px; font-style: italic; }
-        .sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
-        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
-        .version { font-size: 0.9rem; color: #555; text-align: right; margin-bottom: 8px; opacity: 0.8; }
-        #settingsModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-content label { display: block; margin: 12px 0 4px; font-weight: 500; }
-        .modal-content input { width: 100%; box-sizing: border-box; }
-        .modal-buttons { margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Peasy Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
+<style>
+body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #F2F7F9; color: #004225; }
+.container { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
+h1 { font-weight: 700; font-size: 1.8rem; margin-bottom: 16px; color: #004225; }
+.controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+select, button { padding: 10px 16px; font-size: 1rem; border-radius: 6px; border: 1px solid #82BFD2; background: white; cursor: pointer; }
+button { background: #004225; color: white; border: none; }
+.funnel { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
+.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; font-size: 1.2rem; }
+.funnel-title { font-weight: 600; width: 120px; text-align: left; color: #004225; }
+.funnel-number { font-weight: 800; font-size: 2.4rem; color: #004225; width: 120px; text-align: center; }
+.arrow { font-size: 2.4rem; color: #82BFD2; margin: 0 12px; }
+.arrow-ratio { font-weight: 800; color: #FFCC33; }
+.arrow-ratio.alert { color: #d32f2f; }
+.arrow-ratio.good { color: #2e7d32; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); text-align: center; }
+.kpi-card.highlight { background: #F2F7F9; border: 2px solid #004225; }
+.kpi-card.alert { background: #ffebee; border: 2px solid #d32f2f; color: #b71c1c; }
+.kpi-card.good { background: #e8f5e9; border: 2px solid #2e7d32; color: #1b5e20; }
+.kpi-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; }
+.kpi-sub { font-size: 1rem; color: #555; margin-top: -4px; }
+.kpi-label { font-size: 0.95rem; color: #004225; opacity: 0.8; }
+.kpi-target { font-size: 0.85rem; color: #777; margin-top: 6px; font-style: italic; }
+.sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
+.chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
+.version { font-size: 0.9rem; color: #555; text-align: right; margin-bottom: 8px; opacity: 0.8; }
+.config-line { font-size: 0.9rem; opacity: 0.8; }
+.config-trigger { cursor: pointer; text-decoration: underline dotted; color: #004225; }
+.config-trigger:hover { background: rgba(130,191,210,0.1); border-radius: 3px; padding: 1px 3px; }
+.config-details { display: none; font-size: 0.85rem; margin-top: 8px; line-height: 1.6; color: #444; }
+.config-details .editable { cursor: pointer; text-decoration: underline dotted; color: #004225; }
+.config-details .editable:hover { background: rgba(130,191,210,0.15); border-radius: 3px; padding: 1px 4px; }
+.editable-input { width: 80px; padding: 3px 6px; font-size: 0.9rem; border: 1px solid #82BFD2; border-radius: 4px; text-align: center; background: white; }
+#configPrompt { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 9999; }
+.prompt-box { background: white; padding: 24px; border-radius: 12px; width: 420px; max-height: 85vh; overflow-y: auto; text-align: left; }
+.prompt-box h3 { margin-top: 0; }
+.prompt-box pre { background:#f5f5f5; padding:12px; border-radius:6px; overflow:auto; font-size:0.85rem; }
+.prompt-box ul { font-size:0.9rem; line-height:1.5; }
+.prompt-box button { margin-top: 16px; padding: 10px 20px; }
+.short-period-note { font-size: 0.95rem; color: #555; margin: 16px 0; font-style: italic; text-align: center; }
+</style>
 </head>
 <body>
 <div class="container">
-    <h1>Peasy – Key Metrics Overview</h1>
-    <div class="controls">
-        <label for="periodSelect">Period:</label>
-        <select id="periodSelect">
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="all">All time</option>
-        </select>
-        <button onclick="loadDashboard()">Refresh</button>
-        <button onclick="openSettings()">Settings</button>
-    </div>
-    <p style="margin-top:8px; font-size:0.9rem; opacity:0.8;">
-        Last updated: <span id="lastUpdate">—</span> • Valuation ≈ <span id="valTimeDisplay">2</span> min/car • Working day <span id="workDayDisplay">7.5</span> h
-    </p>
-    <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
-
-    <div class="version">Version 1.5 – Editable params + transport only if col P non-empty</div>
-    <div class="funnel" id="funnelArea"></div>
-
-    <div class="kpi-grid" id="kpiArea"></div>
-
-    <div class="chart-container">
-        <h2>Valuations per day (Customer Service Load)</h2>
-        <canvas id="workloadChart" height="320"></canvas>
-    </div>
-    <div class="chart-container">
-        <h2>Received vs Sold</h2>
-        <canvas id="receivedSoldChart" height="320"></canvas>
-    </div>
+<h1>Peasy – Key Metrics Overview</h1>
+<div class="controls">
+<label for="periodSelect">Period:</label>
+<select id="periodSelect">
+<option value="today">Today</option>
+<option value="7">Last 7 days</option>
+<option value="14">Last 14 days</option>
+<option value="30" selected>Last 30 days</option>
+<option value="90">Last 90 days</option>
+<option value="all">All time</option>
+</select>
+<button onclick="loadDashboard()">Refresh</button>
 </div>
-
-<!-- Settings Modal -->
-<div id="settingsModal">
-    <div class="modal-content">
-        <h2>Dashboard Settings</h2>
-        <p>Enter password to edit parameters (default: peasy2025)</p>
-        <input type="password" id="settingsPassword" placeholder="Password">
-        <div id="settingsForm" style="display:none;">
-            <label>Valuation time per car (minutes):</label>
-            <input type="number" id="valTime" step="0.5" min="0.5" value="2">
-
-            <label>Working day length (hours):</label>
-            <input type="number" id="workDay" step="0.1" min="1" value="7.5">
-
-            <label>Transport cost per received car with P non-empty (NOK):</label>
-            <input type="number" id="transportCost" step="10" min="0" value="750">
-
-            <label>AR Income % of Total Bud:</label>
-            <input type="number" id="arPercent" step="0.1" min="0" value="2.7">
-
-            <label>Prod cost Sold <25k (NOK):</label>
-            <input type="number" id="prodSoldUnder" step="100" value="2000">
-
-            <label>Prod cost Sold ≥25k (NOK):</label>
-            <input type="number" id="prodSoldOver" step="100" value="2500">
-
-            <label>Prod cost Returned <25k (NOK):</label>
-            <input type="number" id="prodRetUnder" step="100" value="1300">
-
-            <label>Prod cost Returned ≥25k (NOK):</label>
-            <input type="number" id="prodRetOver" step="100" value="1700">
-
-            <div class="modal-buttons">
-                <button onclick="saveSettings()">Save</button>
-                <button onclick="closeSettings()">Cancel</button>
-            </div>
-        </div>
-    </div>
+<p class="config-line">
+Last updated: <span id="lastUpdate">—</span> •
+Valuation ≈ <span id="valTimeDisplay" class="config-trigger" onclick="toggleConfigDetails()">2</span> min/car •
+Working day <span id="workDayDisplay">7.5</span> h
+</p>
+<div id="configDetails" class="config-details">
+<div>
+Valuation time: <span id="valTimeDisplayDet" class="editable" onclick="makeEditable(this, 'valTime', 'number', 0.1)">2</span> min<br>
+Working day: <span id="workDayDisplayDet" class="editable" onclick="makeEditable(this, 'workDay', 'number', 0.5)">7.5</span> h<br>
+Transport cost: <span id="transportDisplay" class="editable" onclick="makeEditable(this, 'transportCost', 'number', 10)">750</span> NOK<br>
+AR %: <span id="arDisplay" class="editable" onclick="makeEditable(this, 'arPercent', 'number', 0.1)">2.7</span>%<br>
+Prod sold <25k: <span id="psuDisplay" class="editable" onclick="makeEditable(this, 'prodSoldUnder', 'number', 100)">2000</span> NOK<br>
+Prod sold ≥25k: <span id="psoDisplay" class="editable" onclick="makeEditable(this, 'prodSoldOver', 'number', 100)">2500</span> NOK<br>
+Prod ret <25k: <span id="pruDisplay" class="editable" onclick="makeEditable(this, 'prodRetUnder', 'number', 100)">1300</span> NOK<br>
+Prod ret ≥25k: <span id="proDisplay" class="editable" onclick="makeEditable(this, 'prodRetOver', 'number', 100)">1700</span> NOK<br>
+Marketing daily: <span id="marketingDailyDisplay" class="editable" onclick="makeEditable(this, 'marketingDaily', 'number', 100)">1000</span> NOK/day from
+<span id="marketingStartDisplay" class="editable" onclick="makeEditable(this, 'marketingStart', 'text')">2025-11-01</span>
 </div>
-
+<div style="margin-top:12px; font-size:0.8rem; opacity:0.7;">
+Click any value to edit • Changes saved automatically • Click "2 min/car" again to hide
+</div>
+</div>
+<div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
+<div class="version">Version 1.18 – GP % main, NOK sub</div>
+<div id="funnelContainer" style="display:none;">
+<div class="funnel" id="funnelArea"></div>
+</div>
+<div id="shortPeriodNote" class="short-period-note" style="display:none;">
+Funnel hidden for short periods (due to process delay)
+</div>
+<div class="kpi-grid" id="kpiArea"></div>
+<div class="chart-container">
+<h2>Valuations per day (Customer Service Load)</h2>
+<canvas id="workloadChart" height="320"></canvas>
+</div>
+<div class="chart-container">
+<h2>Received vs Sold</h2>
+<canvas id="receivedSoldChart" height="320"></canvas>
+</div>
+</div>
+<div id="configPrompt">
+<div class="prompt-box">
+<h3>Advanced Configuration</h3>
+<p>Click "2 min/car" to edit most values.</p>
+<pre>
+localStorage.setItem('peasyConfig', JSON.stringify({
+valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7,
+prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700,
+marketingDaily: 1000, marketingStart: "2025-11-01"
+}));
+</pre>
+<p>Current:</p>
+<ul>
+<li>Valuation: <strong id="curValTime"></strong> min</li>
+<li>Work day: <strong id="curWorkDay"></strong> h</li>
+<li>Transport: <strong id="curTransport"></strong> NOK</li>
+<li>AR: <strong id="curAr"></strong>%</li>
+<li>Prod sold <25k: <strong id="curPSU"></strong> NOK</li>
+<li>≥25k: <strong id="curPSO"></strong> NOK</li>
+<li>Prod ret <25k: <strong id="curPRU"></strong> NOK</li>
+<li>≥25k: <strong id="curPRO"></strong> NOK</li>
+<li>Marketing daily: <strong id="curMarketingDaily"></strong> NOK</li>
+<li>Start: <strong id="curMarketingStart"></strong></li>
+</ul>
+<button onclick="hideConfigPrompt()">Close</button>
+</div>
+</div>
 <script>
-    const PASSWORD = "peasy2025"; // ← change this to your preferred password
-
-    // Load saved settings or use defaults
-    function loadSettings() {
-        const defaults = {
-            valTime: 2,
-            workDay: 7.5,
-            transportCost: 750,
-            arPercent: 2.7,
-            prodSoldUnder: 2000,
-            prodSoldOver: 2500,
-            prodRetUnder: 1300,
-            prodRetOver: 1700
-        };
-        const saved = JSON.parse(localStorage.getItem('peasySettings') || '{}');
-        return { ...defaults, ...saved };
-    }
-
-    let settings = loadSettings();
-
-    function openSettings() {
-        document.getElementById('settingsModal').style.display = 'flex';
-        document.getElementById('settingsPassword').value = '';
-        document.getElementById('settingsForm').style.display = 'none';
-    }
-
-    function closeSettings() {
-        document.getElementById('settingsModal').style.display = 'none';
-    }
-
-    function checkPassword() {
-        const pw = document.getElementById('settingsPassword').value;
-        if (pw === PASSWORD) {
-            document.getElementById('settingsForm').style.display = 'block';
-            // Fill current values
-            document.getElementById('valTime').value = settings.valTime;
-            document.getElementById('workDay').value = settings.workDay;
-            document.getElementById('transportCost').value = settings.transportCost;
-            document.getElementById('arPercent').value = settings.arPercent;
-            document.getElementById('prodSoldUnder').value = settings.prodSoldUnder;
-            document.getElementById('prodSoldOver').value = settings.prodSoldOver;
-            document.getElementById('prodRetUnder').value = settings.prodRetUnder;
-            document.getElementById('prodRetOver').value = settings.prodRetOver;
-        } else {
-            alert('Wrong password');
-        }
-    }
-
-    document.getElementById('settingsPassword').addEventListener('keypress', e => {
-        if (e.key === 'Enter') checkPassword();
-    });
-
-    function saveSettings() {
-        settings = {
-            valTime: parseFloat(document.getElementById('valTime').value) || 2,
-            workDay: parseFloat(document.getElementById('workDay').value) || 7.5,
-            transportCost: parseFloat(document.getElementById('transportCost').value) || 750,
-            arPercent: parseFloat(document.getElementById('arPercent').value) || 2.7,
-            prodSoldUnder: parseFloat(document.getElementById('prodSoldUnder').value) || 2000,
-            prodSoldOver: parseFloat(document.getElementById('prodSoldOver').value) || 2500,
-            prodRetUnder: parseFloat(document.getElementById('prodRetUnder').value) || 1300,
-            prodRetOver: parseFloat(document.getElementById('prodRetOver').value) || 1700
-        };
-        localStorage.setItem('peasySettings', JSON.stringify(settings));
-        updateDisplays();
-        closeSettings();
-        loadDashboard(); // Refresh dashboard with new params
-    }
-
-    function updateDisplays() {
-        document.getElementById('valTimeDisplay').textContent = settings.valTime;
-        document.getElementById('workDayDisplay').textContent = settings.workDay;
-    }
-
-    updateDisplays();
-
-    let workloadChart = null;
-    let receivedSoldChart = null;
-
-    async function loadDashboard() {
-        const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-        document.getElementById('loading').textContent = 'Loading...';
-        document.getElementById('funnelArea').innerHTML = '';
-        document.getElementById('kpiArea').innerHTML = '';
-
-        try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const ab = await res.arrayBuffer();
-            const wb = XLSX.read(ab, {type:'array'});
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const range = XLSX.utils.decode_range(ws['!ref']);
-
-            const COL_O = 14; // Valued
-            const COL_P = 15; // ← NEW: transport flag / condition
-            const COL_Q = 16; // Received
-            const COL_R = 17; // Sold
-            const COL_S = 18; // Bud
-            const COL_T = 19; // Avgift
-            const COL_U = 20; // Returned
-
-            const today = new Date();
-            const periodDays = document.getElementById('periodSelect').value;
-            const startDate = periodDays === 'all' ? new Date(2000,0,1) : new Date(today);
-            if (periodDays !== 'all') startDate.setDate(today.getDate() - periodDays);
-
-            const mapO = new Map();
-            const mapQ = new Map();
-            const mapR = new Map();
-
-            let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
-            let sumS = 0, countS = 0;
-            let sumT = 0, countT = 0;
-            let soldUnder25k = 0, soldOver25k = 0;
-            let returnedUnder25k = 0, returnedOver25k = 0;
-            let transportSum = 0;
-            let prodSoldSum = 0;
-            let prodReturnedSum = 0;
-
-            for (let row = range.s.r + 1; row <= range.e.r; row++) {
-                const dO = getDate(ws, row, COL_O);
-                const dQ = getDate(ws, row, COL_Q);
-                const dR = getDate(ws, row, COL_R);
-                const dU = getDate(ws, row, COL_U);
-
-                if (dO && dO >= startDate) {
-                    mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
-                    totalO++;
-                }
-
-                if (dQ && dQ >= startDate) {
-                    mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
-                    totalQ++;
-
-                    // NEW: only add transport if column P is non-empty
-                    const pCell = ws[XLSX.utils.encode_cell({r:row, c:COL_P})];
-                    const hasTransport = pCell && pCell.v != null && String(pCell.v).trim() !== '';
-                    if (hasTransport) {
-                        transportSum += settings.transportCost;
-                    }
-                }
-
-                if (dR && dR >= startDate) {
-                    mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
-                    totalR++;
-
-                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
-                    sumS += bud;
-                    countS++;
-
-                    const avgiftCell = ws[XLSX.utils.encode_cell({r:row, c:COL_T})];
-                    const avgift = avgiftCell && avgiftCell.v != null ? parseFloat(avgiftCell.v) : 0;
-                    sumT += avgift;
-                    if (avgift !== 0) countT++;
-
-                    if (bud < 25000) {
-                        soldUnder25k++;
-                        prodSoldSum += settings.prodSoldUnder;
-                    } else {
-                        soldOver25k++;
-                        prodSoldSum += settings.prodSoldOver;
-                    }
-                }
-
-                if (dU && dU >= startDate) {
-                    totalU++;
-                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
-                    if (bud < 25000) {
-                        returnedUnder25k++;
-                        prodReturnedSum += settings.prodRetUnder;
-                    } else {
-                        returnedOver25k++;
-                        prodReturnedSum += settings.prodRetOver;
-                    }
-                }
-            }
-
-            const avgS = countS > 0 ? (sumS / countS).toFixed(0) : 0;
-            const avgT = countT > 0 ? (sumT / countT).toFixed(0) : 0;
-
-            const isAllTime = periodDays === 'all';
-            const daysInPeriod = isAllTime ? 30 : periodDays;
-            const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
-
-            const minPerDay = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * settings.valTime).toFixed(2);
-            const hoursPerDay = isAllTime ? 'N/A' : (parseFloat(minPerDay) / 60).toFixed(2);
-            const fteNeeded = isAllTime ? 'N/A' : (parseFloat(minPerDay) / (settings.workDay * 60)).toFixed(2);
-
-            const convOR = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
-            const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
-            const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
-            const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
-
-            const arIncomeTotal = sumS * (settings.arPercent / 100);
-            const arIncomeAvg = countS > 0 ? (arIncomeTotal / countS).toFixed(0) : 0;
-
-            // Funnel...
-            document.getElementById('funnelArea').innerHTML = `
-                <div class="funnel-row">
-                    <div class="funnel-title">Valued</div>
-                    <div class="funnel-number">${totalO}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title"></div>
-                    <div class="arrow">↓ <span class="arrow-ratio ${convVR < 10 ? 'alert' : ''}">${((totalQ/totalO)*100||0).toFixed(0)}%</span></div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Received</div>
-                    <div class="funnel-number big">${totalQ}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title"></div>
-                    <div class="arrow">↓ <span class="arrow-ratio ${convQR < 70 ? 'alert' : ''}">${convQR}%</span></div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Sold</div>
-                    <div class="funnel-number">${totalR}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Returned</div>
-                    <div class="funnel-number">${totalU}</div>
-                    <div style="margin-left:16px;">(${convQU}%)</div>
-                </div>
-            `;
-
-            // KPI tiles...
-            document.getElementById('kpiArea').innerHTML = `
-                <div class="kpi-card ${convVR < 10 ? 'alert' : ''}">
-                    <div class="kpi-value">${convVR}%</div>
-                    <div class="kpi-label">Valued → Received</div>
-                    <div class="kpi-target">Target: ≥10%</div>
-                </div>
-                <div class="kpi-card ${convQR < 70 ? 'alert' : 'highlight'}">
-                    <div class="kpi-value">${convQR}%</div>
-                    <div class="kpi-label">Received → Sold</div>
-                    <div class="kpi-target">Target: ≥70%</div>
-                </div>
-                <div class="kpi-card ${convOR < 10 ? 'alert' : ''}">
-                    <div class="kpi-value">${convOR}%</div>
-                    <div class="kpi-label">Valued → Sold</div>
-                    <div class="kpi-target">Target: ≥10%</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value">${totalO}</div>
-                    <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
-                    <div class="kpi-label">Valuations ${isAllTime ? '(all time total)' : ''}</div>
-                </div>
-                <!-- ... rest of the tiles remain the same, just using settings where needed ... -->
-                <div class="kpi-card">
-                    <div class="kpi-value">${avgS.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-sub">Total: ${sumS.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-label">Avg Bud (per sold)</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value">${arIncomeAvg.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-sub">Total est.: ${arIncomeTotal.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-label">AR Income (${settings.arPercent}% of Bud)</div>
-                </div>
-                <!-- Transport now uses dynamic total -->
-                <div class="kpi-card">
-                    <div class="kpi-value">${(transportSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-sub">Total: ${transportSum.toLocaleString('nb-NO')} NOK</div>
-                    <div class="kpi-label">Transport Cost per sold</div>
-                </div>
-                <!-- Prod costs use settings values already applied in loop -->
-                <!-- ... remaining tiles ... -->
-                <div class="kpi-card">
-                    <div class="kpi-value">${hoursPerDay} h / ${fteNeeded} FTE</div>
-                    <div class="kpi-sub">Based on ${settings.valTime} min/car</div>
-                    <div class="kpi-label">Pricing Time / Load per day</div>
-                </div>
-            `;
-
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
-
-            // Charts (unchanged)
-            // ... (keep the chart code from previous version)
-
-        } catch (err) {
-            document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Open XLSX manually</a>`;
-        } finally {
-            document.getElementById('loading').textContent = '';
-        }
-    }
-
-    // ... keep getDate, dateToYMD functions ...
-
-    window.onload = loadDashboard;
+const DEFAULTS = {
+valTime: 2,
+workDay: 7.5,
+transportCost: 750,
+arPercent: 2.7,
+prodSoldUnder: 2000,
+prodSoldOver: 2500,
+prodRetUnder: 1300,
+prodRetOver: 1700,
+marketingDaily: 1000,
+marketingStart: "2025-11-01"
+};
+let config = (() => {
+const saved = localStorage.getItem('peasyConfig');
+return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS };
+})();
+function saveConfig(key, value) {
+if (key === 'marketingStart') {
+if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+alert("Use YYYY-MM-DD format for date");
+return false;
+}
+config[key] = value;
+} else {
+let num = parseFloat(value);
+if (isNaN(num) || num < 0) num = DEFAULTS[key];
+config[key] = num;
+}
+localStorage.setItem('peasyConfig', JSON.stringify(config));
+updateDisplays();
+loadDashboard();
+return true;
+}
+function updateDisplays() {
+document.getElementById('valTimeDisplay').textContent = config.valTime;
+document.getElementById('workDayDisplay').textContent = config.workDay;
+document.getElementById('valTimeDisplayDet').textContent = config.valTime;
+document.getElementById('workDayDisplayDet').textContent = config.workDay;
+document.getElementById('transportDisplay').textContent = config.transportCost;
+document.getElementById('arDisplay').textContent = config.arPercent;
+document.getElementById('psuDisplay').textContent = config.prodSoldUnder;
+document.getElementById('psoDisplay').textContent = config.prodSoldOver;
+document.getElementById('pruDisplay').textContent = config.prodRetUnder;
+document.getElementById('proDisplay').textContent = config.prodRetOver;
+document.getElementById('marketingDailyDisplay').textContent = config.marketingDaily;
+document.getElementById('marketingStartDisplay').textContent = config.marketingStart;
+document.getElementById('curValTime').textContent = config.valTime;
+document.getElementById('curWorkDay').textContent = config.workDay;
+document.getElementById('curTransport').textContent = config.transportCost;
+document.getElementById('curAr').textContent = config.arPercent;
+document.getElementById('curPSU').textContent = config.prodSoldUnder;
+document.getElementById('curPSO').textContent = config.prodSoldOver;
+document.getElementById('curPRU').textContent = config.prodRetUnder;
+document.getElementById('curPRO').textContent = config.prodRetOver;
+document.getElementById('curMarketingDaily').textContent = config.marketingDaily;
+document.getElementById('curMarketingStart').textContent = config.marketingStart;
+}
+updateDisplays();
+function toggleConfigDetails() {
+const el = document.getElementById('configDetails');
+el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+function makeEditable(span, key, type = 'number', step = 1) {
+const current = span.textContent;
+const input = document.createElement('input');
+input.type = type;
+if (type === 'number') { input.step = step; input.min = 0; }
+input.value = current;
+input.className = 'editable-input';
+const saveAndReplace = () => {
+const success = saveConfig(key, input.value);
+span.textContent = success ? config[key] : current;
+input.remove();
+span.style.display = 'inline';
+};
+input.onblur = saveAndReplace;
+input.onkeydown = (e) => {
+if (e.key === 'Enter') saveAndReplace();
+if (e.key === 'Escape') {
+span.textContent = current;
+input.remove();
+span.style.display = 'inline';
+}
+};
+span.style.display = 'none';
+span.parentNode.insertBefore(input, span);
+input.focus();
+input.select();
+}
+function showConfigPrompt() { document.getElementById('configPrompt').style.display = 'flex'; }
+function hideConfigPrompt() { document.getElementById('configPrompt').style.display = 'none'; }
+let workloadChart = null;
+let receivedSoldChart = null;
+async function loadDashboard() {
+const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+const loading = document.getElementById('loading');
+loading.textContent = 'Loading...';
+document.getElementById('funnelArea').innerHTML = '';
+document.getElementById('kpiArea').innerHTML = '';
+document.getElementById('funnelContainer').style.display = 'none';
+document.getElementById('shortPeriodNote').style.display = 'none';
+try {
+const res = await fetch(url);
+if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const ab = await res.arrayBuffer();
+const wb = XLSX.read(ab, {type:'array'});
+const ws = wb.Sheets[wb.SheetNames[0]];
+const range = XLSX.utils.decode_range(ws['!ref']);
+const COL_O = 14, COL_P = 15, COL_Q = 16, COL_R = 17;
+const COL_S = 18, COL_T = 19, COL_U = 20;
+const today = new Date();
+const periodDays = document.getElementById('periodSelect').value;
+let startDate;
+if (periodDays === 'today') {
+startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+} else if (periodDays === 'all') {
+startDate = new Date(2000, 0, 1);
+} else {
+startDate = new Date(today);
+startDate.setDate(today.getDate() - parseInt(periodDays));
+}
+const marketingStartDate = new Date(config.marketingStart);
+const mapO = new Map(), mapQ = new Map(), mapR = new Map();
+let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
+let gireOrdered = 0;
+let sumS = 0, countS = 0;
+let sumT = 0, countT = 0;
+let soldUnder25k = 0, soldOver25k = 0;
+let returnedUnder25k = 0, returnedOver25k = 0;
+let transportSum = 0;
+let prodSoldSum = 0;
+let prodReturnedSum = 0;
+for (let row = range.s.r + 1; row <= range.e.r; row++) {
+const dO = getDate(ws, row, COL_O);
+const dQ = getDate(ws, row, COL_Q);
+const dR = getDate(ws, row, COL_R);
+const dU = getDate(ws, row, COL_U);
+const inPeriod = (dO && dO >= startDate) ||
+(dQ && dQ >= startDate) ||
+(dR && dR >= startDate) ||
+(dU && dU >= startDate);
+if (!inPeriod) continue;
+if (dO && dO >= startDate) { mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); totalO++; }
+if (dQ && dQ >= startDate) {
+mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); totalQ++;
+const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
+if (pVal !== '') transportSum += config.transportCost;
+}
+if (String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim() !== '') gireOrdered++;
+if (dR && dR >= startDate) {
+mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); totalR++;
+const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+sumS += bud; countS++;
+const avgift = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_T})]?.v || 0);
+sumT += avgift; if (avgift !== 0) countT++;
+if (bud < 25000) { soldUnder25k++; prodSoldSum += config.prodSoldUnder; }
+else { soldOver25k++; prodSoldSum += config.prodSoldOver; }
+}
+if (dU && dU >= startDate) {
+totalU++;
+const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+if (bud < 25000) { returnedUnder25k++; prodReturnedSum += config.prodRetUnder; }
+else { returnedOver25k++; prodReturnedSum += config.prodRetOver; }
+}
+}
+const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
+const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
+const periodEnd = new Date(today); periodEnd.setHours(23,59,59,999);
+let marketingDays = 0, marketingTotal = 0;
+if (marketingStartDate <= periodEnd) {
+const effStart = new Date(Math.max(startDate, marketingStartDate));
+if (effStart <= periodEnd) {
+const diff = periodEnd - effStart;
+marketingDays = Math.floor(diff / 86400000) + 1;
+marketingTotal = marketingDays * config.marketingDaily;
+}
+}
+const marketingPerSold = totalR > 0 ? Math.round(marketingTotal / totalR) : 0;
+// ────────────────────────────────────────────────
+// GROSS PROFIT PER SOLD UNIT
+// ────────────────────────────────────────────────
+const totalCosts = transportSum + prodSoldSum + prodReturnedSum + marketingTotal;
+const costPerSold = totalR > 0 ? totalCosts / totalR : 0;
+const incomePerSold = avgT;  // ← ONLY avgift counts as income here
+const gpNok = totalR > 0
+? Math.round(incomePerSold - costPerSold)
+: 0;
+const gpPct = incomePerSold > 0
+? (gpNok / incomePerSold) * 100
+: 0;
+const profitClass = gpNok >= 0 ? 'good' : 'alert';
+// ────────────────────────────────────────────────
+// Rest unchanged
+// ────────────────────────────────────────────────
+const isAllTime = periodDays === 'all';
+const daysInPeriod = isAllTime ? 30 : (periodDays === 'today' ? 1 : parseInt(periodDays));
+const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
+const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
+const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
+const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
+const fteNeeded = isAllTime ? 'N/A' : (minPerDayRaw / (config.workDay * 60)).toFixed(2);
+const convOR = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
+const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
+const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
+const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
+const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
+const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
+const shortPeriod = periodDays === 'today' || periodDays === '7';
+document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
+document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
+if (!shortPeriod) {
+document.getElementById('funnelArea').innerHTML = `
+<div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
+<div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio $$   {convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">   $${convVR}%</span></div></div>
+<div class="funnel-row"><div class="funnel-title">Received</div><div class="funnel-number big">${totalQ}</div></div>
+<div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio $$   {convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : '')}">   $${convQR}%</span></div></div>
+<div class="funnel-row"><div class="funnel-title">Sold</div><div class="funnel-number">${totalR}</div></div>
+<div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number">$$   {totalU}</div><div style="margin-left:16px;">(   $${convQU}%)</div></div>
+`;
+}
+document.getElementById('kpiArea').innerHTML = `
+<div class="kpi-card ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">
+<div class="kpi-value">${convVR}%</div>
+<div class="kpi-label">Valued → Received</div>
+<div class="kpi-target">Target: ≥10%</div>
+</div>
+<div class="kpi-card ${convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : 'highlight')}">
+<div class="kpi-value">${convQR}%</div>
+<div class="kpi-label">Received → Sold</div>
+<div class="kpi-target">Target: ≥70%</div>
+</div>
+<div class="kpi-card ${convOR >= 10 ? 'good' : (convOR < 10 ? 'alert' : '')}">
+<div class="kpi-value">${convOR}%</div>
+<div class="kpi-label">Valued → Sold</div>
+<div class="kpi-target">Target: ≥10%</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${totalO}</div>
+<div class="kpi-sub">Avg/day: ${avgDailyO}</div>
+<div class="kpi-label">Valuations ${isAllTime ? '(all time total)' : ''}</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${totalQ}</div>
+<div class="kpi-label">Received</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${gireOrdered}</div>
+<div class="kpi-label">Gire ordered</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${totalR}</div>
+<div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
+<div class="kpi-label">Sold</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${totalU}</div>
+<div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
+<div class="kpi-label">Returned</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${avgS.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: ${sumS.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Avg Bud (per sold)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${arIncomeAvg.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total est.: ${arIncomeTotal.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">AR Income (${config.arPercent}% of Bud)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${avgT.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: ${sumT.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Avg Avgift (per sold)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${(transportSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: ${transportSum.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Transport Cost per sold</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${Math.round(prodSoldSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: ${prodSoldSum.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Prod Cost – Sold per car</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${Math.round(prodReturnedSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: ${prodReturnedSum.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Prod Cost – Returned per sold</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${marketingPerSold.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-sub">Total: $$   {marketingTotal.toLocaleString('nb-NO')} NOK (   $${marketingDays} dager)</div>
+<div class="kpi-label">Marketing cost per sold</div>
+</div>
+<!-- GP TILE WITH % MAIN, NOK SUB -->
+<div class="kpi-card ${profitClass}">
+<div class="kpi-value">${gpPct.toFixed(1)} %</div>
+<div class="kpi-sub">${gpNok.toLocaleString('nb-NO')} NOK</div>
+<div class="kpi-label">Gross profit per sold unit (avgift basis)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-value">${hoursPerDay} h / ${fteNeeded} FTE</div>
+<div class="kpi-sub">Based on ${config.valTime} min/car</div>
+<div class="kpi-label">Pricing Time / Load per day</div>
+</div>
+`;
+document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
+const datesO = [...mapO.keys()].sort();
+const dataO = datesO.map(k => mapO.get(k));
+if (workloadChart) workloadChart.destroy();
+workloadChart = new Chart(document.getElementById('workloadChart'), {
+type: 'line',
+data: {
+labels: datesO,
+datasets: [{
+label: 'Valuations per day',
+data: dataO,
+borderColor: '#004225',
+backgroundColor: 'rgba(0, 66, 37, 0.08)',
+tension: 0.2,
+fill: true,
+trendlineLinear: { style: '#00422588', lineStyle: 'dashed', width: 2 }
+}]
+},
+options: { scales: { y: { beginAtZero: true } } }
+});
+const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
+const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
+const dataR_chart = allDates.map(d => mapR.get(d) || 0);
+if (receivedSoldChart) receivedSoldChart.destroy();
+receivedSoldChart = new Chart(document.getElementById('receivedSoldChart'), {
+type: 'line',
+data: {
+labels: allDates,
+datasets: [
+{ label: 'Received', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2,
+trendlineLinear: { style: '#82BFD288', lineStyle: 'dashed', width: 2 } },
+{ label: 'Sold', data: dataR_chart, borderColor: '#FFCC33', tension: 0.2,
+trendlineLinear: { style: '#FFCC3388', lineStyle: 'dashed', width: 2 } }
+]
+},
+options: { scales: { y: { beginAtZero: true } } }
+});
+} catch (err) {
+document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Open XLSX manually</a>`;
+} finally {
+document.getElementById('loading').textContent = '';
+}
+}
+function getDate(ws, row, col) {
+const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+if (!cell || !cell.v) return null;
+if (typeof cell.v === 'number') {
+const d = XLSX.SSF.parse_date_code(cell.v);
+return new Date(d.y, d.m-1, d.d);
+}
+if (typeof cell.v === 'string') {
+const m = cell.v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+if (m) return new Date(+m[3], m[2]-1, +m[1]);
+}
+return null;
+}
+function dateToYMD(d) {
+return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+window.onload = loadDashboard;
 </script>
 </body>
 </html>
