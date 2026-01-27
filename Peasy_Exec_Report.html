@@ -26,6 +26,7 @@
         .kpi-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); text-align: center; }
         .kpi-card.highlight { background: #F2F7F9; border: 2px solid #004225; }
         .kpi-card.alert { background: #ffebee; border: 2px solid #d32f2f; color: #b71c1c; }
+        .kpi-card.good { background: #e8f5e9; border: 2px solid #2e7d32; color: #1b5e20; }
         .kpi-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; }
         .kpi-sub { font-size: 1rem; color: #555; margin-top: -4px; }
         .kpi-label { font-size: 0.95rem; color: #004225; opacity: 0.8; }
@@ -59,7 +60,7 @@
     </p>
     <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
 
-    <div class="version">Version 1.5 – transport on P non-empty + hidden config</div>
+    <div class="version">Version 1.6 – green above targets + weekend color split</div>
     <div class="funnel" id="funnelArea"></div>
 
     <div class="kpi-grid" id="kpiArea"></div>
@@ -94,8 +95,8 @@
 
     // Default values (used if nothing saved)
     const DEFAULTS = {
-        valTime: 2,              // minutes per valuation
-        workDay: 7.5,            // hours
+        valTime: 2,
+        workDay: 7.5,
         transportCost: 750,
         arPercent: 2.7,
         prodSoldUnder: 2000,
@@ -142,10 +143,9 @@
                 `Prod ret <25k: ${config.prodRetUnder}\n` +
                 `Prod ret ≥25k: ${config.prodRetOver}\n\n` +
                 "To change values, edit localStorage manually in dev tools:\n" +
-                'localStorage.setItem("peasyConfig", JSON.stringify({valTime:3, workDay:8, ...}))\n' +
+                'localStorage.setItem("peasyConfig", JSON.stringify({valTime:3, workDay:8, transportCost:800, arPercent:3, ...}))\n' +
                 "Then refresh the page."
             );
-            // You can extend this with a full form later if needed
         } else {
             alert("Wrong password");
         }
@@ -169,13 +169,13 @@
             const ws = wb.Sheets[wb.SheetNames[0]];
             const range = XLSX.utils.decode_range(ws['!ref']);
 
-            const COL_O = 14; // Valued
-            const COL_P = 15; // Transport flag
-            const COL_Q = 16; // Received
-            const COL_R = 17; // Sold
-            const COL_S = 18; // Bud
-            const COL_T = 19; // Avgift
-            const COL_U = 20; // Returned
+            const COL_O = 14;
+            const COL_P = 15;
+            const COL_Q = 16;
+            const COL_R = 17;
+            const COL_S = 18;
+            const COL_T = 19;
+            const COL_U = 20;
 
             const today = new Date();
             const periodDays = document.getElementById('periodSelect').value;
@@ -301,19 +301,19 @@
                 </div>
             `;
 
-            // KPI tiles
+            // KPI tiles with green when above target
             document.getElementById('kpiArea').innerHTML = `
-                <div class="kpi-card ${convVR < 10 ? 'alert' : ''}">
+                <div class="kpi-card ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">
                     <div class="kpi-value">${convVR}%</div>
                     <div class="kpi-label">Valued → Received</div>
                     <div class="kpi-target">Target: ≥10%</div>
                 </div>
-                <div class="kpi-card ${convQR < 70 ? 'alert' : 'highlight'}">
+                <div class="kpi-card ${convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : 'highlight')}">
                     <div class="kpi-value">${convQR}%</div>
                     <div class="kpi-label">Received → Sold</div>
                     <div class="kpi-target">Target: ≥70%</div>
                 </div>
-                <div class="kpi-card ${convOR < 10 ? 'alert' : ''}">
+                <div class="kpi-card ${convOR >= 10 ? 'good' : (convOR < 10 ? 'alert' : '')}">
                     <div class="kpi-value">${convOR}%</div>
                     <div class="kpi-label">Valued → Sold</div>
                     <div class="kpi-target">Target: ≥10%</div>
@@ -376,20 +376,24 @@
 
             document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
 
-            // Chart 1 – Valuations per day
+            // Chart 1 – Valuations per day with subtle Sat/Sun colors
             const datesO = [...mapO.keys()].sort();
             const dataO = datesO.map(k => mapO.get(k));
+
             const weekendAnnotations = datesO.map((dateStr, idx) => {
                 const d = new Date(dateStr);
                 const day = d.getDay();
                 if (day === 0 || day === 6) {
+                    let color;
+                    if (day === 6) color = 'rgba(76, 175, 80, 0.06)';   // Saturday – light green
+                    else           color = 'rgba(255, 152, 0, 0.05)';   // Sunday – light orange/amber
                     return {
                         type: 'box',
                         xMin: idx - 0.5,
                         xMax: idx + 0.5,
                         yMin: 0,
                         yMax: Math.max(...dataO, 10) * 1.2,
-                        backgroundColor: 'rgba(130, 191, 210, 0.08)',
+                        backgroundColor: color,
                         borderWidth: 0
                     };
                 }
@@ -415,7 +419,7 @@
                 }
             });
 
-            // Chart 2 – Received vs Sold
+            // Chart 2 unchanged
             const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
             const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
             const dataR_chart = allDates.map(d => mapR.get(d) || 0);
