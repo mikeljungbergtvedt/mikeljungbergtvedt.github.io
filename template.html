@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.6 - Charts period fix
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Counting fix + debug
     </div>
 
     <div class="periode-controls">
@@ -179,12 +179,14 @@
         const fixedJson = typeof allDataRaw === 'string' ? allDataRaw.replace(/\bNaN\b/g, 'null') : allDataRaw;
         allData = JSON.parse(fixedJson);
         if (!Array.isArray(allData)) allData = [];
+        console.log('allData loaded:', allData.length, 'rows');
+        if (allData.length > 0) {
+            console.log('First row keys:', Object.keys(allData[0]));
+        }
     } catch (e) {
-        console.error('Failed to parse data:', e);
+        console.error('Failed to parse data:', e.message);
         allData = [];
     }
-
-    console.log('allData loaded:', allData.length, 'rows');
 
     const months = {{ months | tojson | safe }};
     const defaultMonth = "{{ default_month }}";
@@ -202,7 +204,10 @@
                 const mottattM = r['Mottatt_month'];
                 const solgtM = r['Solgt på_month'];
                 const retM = r['Returnert på_month'];
-                return prisetM === m || mottattM === m || solgtM === m || retM === m;
+                return (prisetM && prisetM === m) ||
+                       (mottattM && mottattM === m) ||
+                       (solgtM && solgtM === m) ||
+                       (retM && retM === m);
             });
         } else {
             const s = currentPeriod.start;
@@ -249,6 +254,8 @@
         document.getElementById('count_solgt').textContent = solgt;
         document.getElementById('priset_to_mottatt_pct').textContent = p2m + ' %';
         document.getElementById('mottatt_to_solgt_pct').textContent = m2s + ' %';
+
+        console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt);
     }
 
     function calculateAndUpdateCards(filtered) {
@@ -323,33 +330,11 @@
     function renderAllCharts(filtered) {
         const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
 
-        // Determine visible months: only those in the selected period
-        let visibleMonths = [];
-        if (currentPeriod.type === 'month') {
-            visibleMonths = [currentPeriod.value];
-        } else {
-            const s = currentPeriod.start;
-            const e = currentPeriod.end;
-            const startDate = new Date(s + '-01');
-            const endDate = new Date(e + '-01');
-            endDate.setMonth(endDate.getMonth() + 1);
-            endDate.setDate(0);
-            let current = new Date(startDate);
-            while (current <= endDate) {
-                const y = current.getFullYear();
-                const m = String(current.getMonth() + 1).padStart(2, '0');
-                visibleMonths.push(`${y}-${m}`);
-                current.setMonth(current.getMonth() + 1);
-            }
-        }
-
-        console.log('Visible months for charts:', visibleMonths);
-
         const byMonth = {};
         filtered.forEach(r => {
             ['SD mottatt på_month', 'Mottatt_month', 'Solgt på_month', 'Returnert på_month'].forEach(key => {
                 const m = r[key];
-                if (m && visibleMonths.includes(m)) {
+                if (m) {
                     if (!byMonth[m]) byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
                     if (key === 'SD mottatt på_month') byMonth[m].priset++;
                     if (key === 'Mottatt_month') byMonth[m].mottatt++;
@@ -372,7 +357,7 @@
             });
         });
 
-        const sortedMonths = visibleMonths;  // Force only selected months
+        const sortedMonths = Object.keys(byMonth).sort();
         const labels = sortedMonths.map(m => m.replace('-',' '));
 
         console.log('Rendering charts for months:', sortedMonths);
@@ -384,7 +369,7 @@
                 labels,
                 datasets: [
                     { label: 'Prisete', data: sortedMonths.map(m => byMonth[m]?.priset || 0), backgroundColor: 'rgba(0,66,37,0.4)' },
-                    { label: 'Solgte', data: sortedMonths.map(m => byMonth[m]?.solgt || 0), backgroundColor: '#004225' },
+                    { label: 'Solgte', data: sortedMonths.map(m => byMonth[m]?.solgt  || 0), backgroundColor: '#004225' },
                     { label: 'Returnerte', data: sortedMonths.map(m => byMonth[m]?.returnert || 0), backgroundColor: '#c0392b' }
                 ]
             },
