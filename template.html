@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.5
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.6 - SD Mottatt fix
     </div>
 
     <div class="periode-controls">
@@ -179,14 +179,12 @@
         const fixedJson = typeof allDataRaw === 'string' ? allDataRaw.replace(/\bNaN\b/g, 'null') : allDataRaw;
         allData = JSON.parse(fixedJson);
         if (!Array.isArray(allData)) allData = [];
-        console.log('allData loaded:', allData.length, 'rows');
-        if (allData.length > 0) {
-            console.log('First row keys:', Object.keys(allData[0]));
-        }
     } catch (e) {
-        console.error('Failed to parse data:', e.message);
+        console.error('Failed to parse data:', e);
         allData = [];
     }
+
+    console.log('allData loaded:', allData.length, 'rows');
 
     const months = {{ months | tojson | safe }};
     const defaultMonth = "{{ default_month }}";
@@ -200,17 +198,24 @@
         if (currentPeriod.type === 'month') {
             const m = currentPeriod.value;
             filtered = allData.filter(r => {
-                const sold = r['Solgt på_month'];
-                const ret = r['Returnert på_month'];
-                return sold === m || ret === m;
+                const prisetM = r['SD mottatt på_month'];
+                const mottattM = r['Mottatt_month'];
+                const solgtM = r['Solgt på_month'];
+                const retM = r['Returnert på_month'];
+                return prisetM === m || mottattM === m || solgtM === m || retM === m;
             });
         } else {
             const s = currentPeriod.start;
             const e = currentPeriod.end;
             filtered = allData.filter(r => {
-                const sold = r['Solgt på_month'];
-                const ret = r['Returnert på_month'];
-                return (sold && sold >= s && sold <= e) || (ret && ret >= s && ret <= e);
+                const prisetM = r['SD mottatt på_month'];
+                const mottattM = r['Mottatt_month'];
+                const solgtM = r['Solgt på_month'];
+                const retM = r['Returnert på_month'];
+                return (prisetM && prisetM >= s && prisetM <= e) ||
+                       (mottattM && mottattM >= s && mottattM <= e) ||
+                       (solgtM && solgtM >= s && solgtM <= e) ||
+                       (retM && retM >= s && retM <= e);
             });
         }
         console.log('Filtered rows:', filtered.length);
@@ -244,6 +249,8 @@
         document.getElementById('count_solgt').textContent = solgt;
         document.getElementById('priset_to_mottatt_pct').textContent = p2m + ' %';
         document.getElementById('mottatt_to_solgt_pct').textContent = m2s + ' %';
+
+        console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt);
     }
 
     function calculateAndUpdateCards(filtered) {
@@ -320,26 +327,29 @@
 
         const byMonth = {};
         filtered.forEach(r => {
-            const soldM = r['Solgt på_month'];
-            const retM = r['Returnert på_month'];
-
-            if (soldM) {
-                if (!byMonth[soldM]) byMonth[soldM] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
-                byMonth[soldM].solgt++;
-                const b = parseFloat(r['Bud']||0);
-                const a = parseFloat(r['Avgift']||0);
-                byMonth[soldM].omsetning += b;
-                byMonth[soldM].income += a;
-                byMonth[soldM].trans += 750;
-                byMonth[soldM].prod += (b < 25000 ? 2000 : 2500);
-            }
-            if (retM) {
-                if (!byMonth[retM]) byMonth[retM] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
-                byMonth[retM].returnert++;
-                const b = parseFloat(r['Bud']||0);
-                byMonth[retM].trans += 750;
-                byMonth[retM].prod += (b < 25000 ? 1300 : 1700);
-            }
+            ['SD mottatt på_month', 'Mottatt_month', 'Solgt på_month', 'Returnert på_month'].forEach(key => {
+                const m = r[key];
+                if (m) {
+                    if (!byMonth[m]) byMonth[m] = { priset:0, mottatt:0, solgt:0, returnert:0, income:0, omsetning:0, prod:0, trans:0 };
+                    if (key === 'SD mottatt på_month') byMonth[m].priset++;
+                    if (key === 'Mottatt_month') byMonth[m].mottatt++;
+                    if (key === 'Solgt på_month') {
+                        byMonth[m].solgt++;
+                        const b = parseFloat(r['Bud']||0);
+                        const a = parseFloat(r['Avgift']||0);
+                        byMonth[m].omsetning += b;
+                        byMonth[m].income += a;
+                        byMonth[m].trans += 750;
+                        byMonth[m].prod += (b < 25000 ? 2000 : 2500);
+                    }
+                    if (key === 'Returnert på_month') {
+                        byMonth[m].returnert++;
+                        const b = parseFloat(r['Bud']||0);
+                        byMonth[m].trans += 750;
+                        byMonth[m].prod += (b < 25000 ? 1300 : 1700);
+                    }
+                }
+            });
         });
 
         const sortedMonths = Object.keys(byMonth).sort();
@@ -354,7 +364,7 @@
                 labels,
                 datasets: [
                     { label: 'Prisete', data: sortedMonths.map(m => byMonth[m]?.priset || 0), backgroundColor: 'rgba(0,66,37,0.4)' },
-                    { label: 'Solgte', data: sortedMonths.map(m => byMonth[m]?.solgt || 0), backgroundColor: '#004225' },
+                    { label: 'Solgte', data: sortedMonths.map(m => byMonth[m]?.solgt  || 0), backgroundColor: '#004225' },
                     { label: 'Returnerte', data: sortedMonths.map(m => byMonth[m]?.returnert || 0), backgroundColor: '#c0392b' }
                 ]
             },
