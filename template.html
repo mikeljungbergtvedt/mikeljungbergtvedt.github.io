@@ -11,15 +11,16 @@
         h1 { text-align: center; font-size: 3rem; font-weight: 800; color: #004225; margin-bottom: 10px; }
         .subtitle { text-align: center; font-size: 1.5rem; font-weight: 500; color: #004225; margin-bottom: 30px; }
         .timestamp { text-align: center; font-size: 1rem; color: #555; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px; margin: 40px 0; }
-        .card { background: #f8faf9; padding: 32px; border-radius: 16px; border: 1px solid #ddd; box-shadow: 0 6px 20px rgba(0,0,0,0.06); text-align: center; }
-        .card strong { font-size: 1.5rem; font-weight: 700; display: block; margin-bottom: 16px; color: #004225; }
-        .card .number { font-size: 3.8rem; font-weight: 800; color: #004225; margin-bottom: 24px; }
-        .funnel-arrow { font-size: 3rem; color: #004225; align-self: center; }
-        .chart-container { margin: 60px 0; padding: 32px; background: #f8faf9; border-radius: 16px; border: 1px solid #ddd; height: 400px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px 40px; margin: 40px 0; align-items: center; justify-items: center; }
+        .card { background: #f8faf9; padding: 32px; border-radius: 16px; border: 1px solid #ddd; box-shadow: 0 6px 20px rgba(0,0,0,0.06); text-align: center; width: 240px; }
+        .card strong { font-size: 1.4rem; font-weight: 700; display: block; margin-bottom: 12px; color: #004225; }
+        .card .number { font-size: 3.5rem; font-weight: 800; color: #004225; margin-bottom: 16px; }
+        .funnel-arrow { font-size: 3.5rem; color: #004225; font-weight: bold; }
+        .chart-container { margin: 60px 0; padding: 32px; background: #f8faf9; border-radius: 16px; border: 1px solid #ddd; height: 420px; }
         .periode-controls { text-align: center; margin-bottom: 40px; }
         .periode-controls label { margin: 0 20px; font-size: 1.2rem; cursor: pointer; }
-        #month-selector select { padding: 10px 20px; font-size: 1.2rem; margin: 10px; }
+        #month-selector select { padding: 10px 20px; font-size: 1.2rem; margin: 10px; border: 2px solid #004225; border-radius: 8px; }
+        .no-data { color: #c0392b; font-style: italic; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -27,7 +28,10 @@
 <div class="container">
     <h1>Peasy Exec Rapport</h1>
     <div class="subtitle">Funnel: Priced → Received → Sold / Returned</div>
-    <div class="timestamp">Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span> | Versjon: v1.1 - Fixed JSON parsing & data cleaning</div>
+    <div class="timestamp">
+        Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span> | 
+        Versjon: v1.2 - Robust key lookup + more debug logs (handles å/encoding)
+    </div>
 
     <div class="periode-controls">
         <label><input type="radio" name="period-type" value="month" checked> En måned</label>
@@ -45,21 +49,25 @@
         <div class="card">
             <strong>Priced<br>(SD mottatt)</strong>
             <div class="number" id="priset-count">0</div>
+            <div id="priset-note" class="no-data"></div>
         </div>
         <div class="funnel-arrow">→</div>
         <div class="card">
             <strong>Received<br>(Mottatt)</strong>
             <div class="number" id="mottatt-count">0</div>
+            <div id="mottatt-note" class="no-data"></div>
         </div>
         <div class="funnel-arrow">→</div>
         <div class="card">
             <strong>Sold<br>(Solgt på)</strong>
             <div class="number" id="solgt-count">0</div>
+            <div id="solgt-note" class="no-data"></div>
         </div>
         <div class="funnel-arrow">↳</div>
         <div class="card">
             <strong>Returned<br>(Returnert)</strong>
             <div class="number" id="returnert-count">0</div>
+            <div id="returnert-note" class="no-data"></div>
         </div>
     </div>
 
@@ -69,46 +77,90 @@
 </div>
 
 <script>
-    // Parse safely and ensure we have arrays
+    // Safe parsing + force arrays
     let dataAllRaw = {{ data_all_json | tojson | safe }};
     let dataCompletedRaw = {{ data_completed_json | tojson | safe }};
 
     const dataAll = Array.isArray(dataAllRaw) ? dataAllRaw : Object.values(dataAllRaw || {});
     const dataCompleted = Array.isArray(dataCompletedRaw) ? dataCompletedRaw : Object.values(dataCompletedRaw || {});
 
-    console.log('dataAll type:', typeof dataAll, 'length:', dataAll.length);
-    console.log('dataCompleted type:', typeof dataCompleted, 'length:', dataCompleted.length);
-    console.log('First all item:', dataAll[0]);
-    console.log('First completed item:', dataCompleted[0]);
+    console.log('dataAll length:', dataAll.length);
+    console.log('dataCompleted length:', dataCompleted.length);
+
+    // Debug: show actual keys
+    if (dataAll.length > 0) {
+        console.log('Actual keys in first all row:', Object.keys(dataAll[0]));
+    }
+    if (dataCompleted.length > 0) {
+        console.log('Actual keys in first completed row:', Object.keys(dataCompleted[0]));
+    }
 
     let currentPeriod = { type: 'month', value: '{{ default_month }}' };
 
+    // Robust key finder (handles å, spaces, encoding variations)
+    function findKey(obj, search) {
+        if (!obj) return null;
+        const lowerSearch = search.toLowerCase().replace(/å/g, '[åa]').replace(/Å/g, '[ÅA]');
+        return Object.keys(obj).find(k => {
+            const lowerK = k.toLowerCase().trim();
+            return lowerK.includes(search.toLowerCase().trim()) || lowerK.replace(/å/g, 'a').includes(search.toLowerCase().trim());
+        }) || search;
+    }
+
     function isInPeriod(dateStr, period) {
-        if (!dateStr) return false;
-        const [year, month] = dateStr.split('-');
+        if (!dateStr || typeof dateStr !== 'string') return false;
+        const cleaned = dateStr.trim();
+        if (!cleaned.includes('-')) return false;
+        const parts = cleaned.split('-');
+        if (parts.length < 2) return false;
+        const year = parts[0].trim();
+        const month = parts[1].trim().slice(0,2); // handle extra chars
         const dateYM = `${year}-${month}`;
         if (period.type === 'month') {
             return dateYM === period.value;
-        } else if (period.type === 'range') {
-            return dateYM >= period.start && dateYM <= period.end;
         }
+        // range logic can be added later
         return false;
     }
 
     function getPrisetCount(period) {
-        return dataAll.filter(d => d['SD mottatt på'] && isInPeriod(d['SD mottatt på_month'], period)).length;
+        if (dataAll.length === 0) return 0;
+        const keyDate = findKey(dataAll[0], 'SD mottatt på');
+        const keyMonth = findKey(dataAll[0], 'SD mottatt på_month');
+        console.log('Priced using date key:', keyDate, '| month key:', keyMonth);
+
+        const count = dataAll.filter(d => {
+            const dateVal = d[keyDate];
+            const monthVal = d[keyMonth];
+            return dateVal && isInPeriod(monthVal, period);
+        }).length;
+
+        document.getElementById('priset-note').textContent = count === 0 ? '(sjekk konsoll for nøkkelnavn)' : '';
+        return count;
     }
 
     function getMottattCount(period) {
-        return dataCompleted.filter(d => d['Mottatt'] && isInPeriod(d['Mottatt_month'], period)).length;
+        if (dataCompleted.length === 0) return 0;
+        const keyDate = findKey(dataCompleted[0], 'Mottatt');
+        const keyMonth = findKey(dataCompleted[0], 'Mottatt_month');
+        console.log('Mottatt using date key:', keyDate, '| month key:', keyMonth);
+        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
     }
 
     function getSolgtCount(period) {
-        return dataCompleted.filter(d => d['Solgt på'] && isInPeriod(d['Solgt på_month'], period)).length;
+        if (dataCompleted.length === 0) return 0;
+        const keyDate = findKey(dataCompleted[0], 'Solgt på');
+        const keyMonth = findKey(dataCompleted[0], 'Solgt på_month');
+        console.log('Solgt using date key:', keyDate, '| month key:', keyMonth);
+        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
     }
 
     function getReturnertCount(period) {
-        return dataCompleted.filter(d => d['Returnert på'] && isInPeriod(d['Returnert på_month'], period)).length;
+        if (dataCompleted.length === 0) return 0;
+        const keyDate = findKey(dataCompleted[0], 'Returnert på');
+        const keyMonth = findKey(dataCompleted[0], 'Returnert på_month');
+        console.log('Returnert using date key:', keyDate, '| month key:', keyMonth);
+        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
     }
 
     function updateCards() {
@@ -122,7 +174,8 @@
 
     function updateFunnelChart() {
         const ctx = document.getElementById('funnelChart').getContext('2d');
-        new Chart(ctx, {
+        if (window.myFunnelChart) window.myFunnelChart.destroy(); // avoid duplicate charts
+        window.myFunnelChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Priced', 'Received', 'Sold', 'Returned'],
@@ -142,7 +195,8 @@
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } }
+                scales: { x: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
             }
         });
     }
