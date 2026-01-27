@@ -41,7 +41,7 @@
     <div class="subtitle">Overordnet – Kostnader – Inntekter – Gross Profit</div>
 
     <div class="timestamp">
-        Generert: <span id="timestamp"></span> | Versjon: v2.1.7 - Strict event counting
+        Generert: <span id="timestamp"></span> | Versjon: v2.1.8 - Fixed event listeners + strict counting
     </div>
 
     <div class="periode-controls">
@@ -226,66 +226,18 @@
     let currentPeriod = { type: 'month', value: defaultMonth };
     let charts = {};
 
-    function getPrisetCount(period) {
-        if (period.type === 'month') {
-            const m = period.value;
-            return allData.filter(r => r['SD mottatt på_month'] === m).length;
-        } else {
-            const s = period.start;
-            const e = period.end;
-            return allData.filter(r => {
-                const m = r['SD mottatt på_month'];
-                return m && m >= s && m <= e;
-            }).length;
-        }
-    }
+    function refreshReport() {
+        console.log('refreshReport called with:', currentPeriod);
 
-    function getMottattCount(period) {
-        if (period.type === 'month') {
-            const m = period.value;
-            return allData.filter(r => r['Mottatt_month'] === m).length;
-        } else {
-            const s = period.start;
-            const e = period.end;
-            return allData.filter(r => {
-                const m = r['Mottatt_month'];
-                return m && m >= s && m <= e;
-            }).length;
-        }
-    }
+        updatePeriodDisplay();
 
-    function getSolgtCount(period) {
-        if (period.type === 'month') {
-            const m = period.value;
-            return allData.filter(r => r['Solgt på_month'] === m).length;
-        } else {
-            const s = period.start;
-            const e = period.end;
-            return allData.filter(r => {
-                const m = r['Solgt på_month'];
-                return m && m >= s && m <= e;
-            }).length;
-        }
-    }
+        // Strict counts - independent per event
+        const priset = allData.filter(r => r['SD mottatt på_month'] === currentPeriod.value).length;
+        const mottatt = allData.filter(r => r['Mottatt_month'] === currentPeriod.value).length;
+        const solgt = allData.filter(r => r['Solgt på_month'] === currentPeriod.value).length;
+        const returnert = allData.filter(r => r['Returnert på_month'] === currentPeriod.value).length;
 
-    function getReturnertCount(period) {
-        if (period.type === 'month') {
-            const m = period.value;
-            return allData.filter(r => r['Returnert på_month'] === m).length;
-        } else {
-            const s = period.start;
-            const e = period.end;
-            return allData.filter(r => {
-                const m = r['Returnert på_month'];
-                return m && m >= s && m <= e;
-            }).length;
-        }
-    }
-
-    function updateFunnel() {
-        const priset = getPrisetCount(currentPeriod);
-        const mottatt = getMottattCount(currentPeriod);
-        const solgt = getSolgtCount(currentPeriod);
+        console.log('Direct counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt, 'Returnert:', returnert);
 
         const p2m = priset > 0 ? Math.round((mottatt / priset) * 100) : 0;
         const m2s = mottatt > 0 ? Math.round((solgt / mottatt) * 100) : 0;
@@ -296,27 +248,9 @@
         document.getElementById('priset_to_mottatt_pct').textContent = p2m + ' %';
         document.getElementById('mottatt_to_solgt_pct').textContent = m2s + ' %';
 
-        console.log('Funnel counts - Priset:', priset, 'Mottatt:', mottatt, 'Solgt:', solgt);
-    }
-
-    function calculateAndUpdateCards() {
-        const soldCars = allData.filter(r => {
-            const m = r['Solgt på_month'];
-            if (currentPeriod.type === 'month') {
-                return m === currentPeriod.value;
-            } else {
-                return m && m >= currentPeriod.start && m <= currentPeriod.end;
-            }
-        });
-
-        const returnedCars = allData.filter(r => {
-            const m = r['Returnert på_month'];
-            if (currentPeriod.type === 'month') {
-                return m === currentPeriod.value;
-            } else {
-                return m && m >= currentPeriod.start && m <= currentPeriod.end;
-            }
-        });
+        // Sold/returned cards
+        const soldCars = allData.filter(r => r['Solgt på_month'] === currentPeriod.value);
+        const returnedCars = allData.filter(r => r['Returnert på_month'] === currentPeriod.value);
 
         let soldUnder = 0, soldOver = 0, retUnder = 0, retOver = 0;
         let income = 0, omsetning = 0, prodCost = 0, transportCost = 0;
@@ -386,7 +320,7 @@
     function renderAllCharts() {
         const destroyIfExists = (chart) => { if (chart) chart.destroy(); };
 
-        // Determine visible months
+        // Only show selected month(s)
         let visibleMonths = [];
         if (currentPeriod.type === 'month') {
             visibleMonths = [currentPeriod.value];
@@ -595,6 +529,7 @@
 
         document.querySelectorAll('input[name="period-type"]').forEach(r => {
             r.addEventListener('change', e => {
+                console.log('Radio changed to:', e.target.value);
                 document.getElementById('month-selector').style.display = e.target.value === 'month' ? '' : 'none';
                 document.getElementById('range-selector').style.display = e.target.value === 'range' ? '' : 'none';
                 if (e.target.value === 'month') {
@@ -605,6 +540,7 @@
         });
 
         document.getElementById('period-select').addEventListener('change', e => {
+            console.log('Month dropdown changed to:', e.target.value);
             if (document.querySelector('[name="period-type"]:checked').value === 'month') {
                 currentPeriod = { type: 'month', value: e.target.value };
                 refreshReport();
@@ -614,6 +550,7 @@
         document.getElementById('apply-range').addEventListener('click', () => {
             const s = document.getElementById('range-start').value;
             const e = document.getElementById('range-end').value;
+            console.log('Apply range clicked - start:', s, 'end:', e);
             if (s && e && s <= e) {
                 currentPeriod = { type: 'range', start: s, end: e };
                 refreshReport();
