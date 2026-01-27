@@ -8,6 +8,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 from dateutil.relativedelta import relativedelta
 
+# Load config
 with open("config.yaml", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
@@ -27,28 +28,47 @@ response.raise_for_status()
 
 df = pd.read_excel(io.BytesIO(response.content), sheet_name=SHEET_NAME)
 
+# Parse dates - take first 10 chars to handle timestamps
 for col in [COL_MOTTATT, COL_PRISET, COL_SOLGT, COL_RETURNERT]:
-    df[col] = pd.to_datetime(df[col].astype(str).str.strip().str[:10], format="%d.%m.%Y", errors="coerce")
+    df[col] = pd.to_datetime(
+        df[col].astype(str).str.strip().str[:10],
+        format="%d.%m.%Y",
+        errors="coerce"
+    )
 
-df[COL_BUD] = pd.to_numeric(df[COL_BUD], errors="coerce").fillna(0)
+df[COL_BUD]    = pd.to_numeric(df[COL_BUD],    errors="coerce").fillna(0)
 df[COL_AVGIFT] = pd.to_numeric(df[COL_AVGIFT], errors="coerce").fillna(0)
 
 MIN_DATE = pd.to_datetime("2025-11-01")
-df = df[
+
+# 1. All cars for priset count (no completed filter)
+df_all = df[
     (df[COL_PRISET] >= MIN_DATE) |
     (df[COL_MOTTATT] >= MIN_DATE) |
-    (df[COL_SOLGT] >= MIN_DATE) |
-    (df[COL_RETURNERT] >= MIN_DATE)
+    (df[COL_SOLGT]    >= MIN_DATE) |
+    (df[COL_RETURNERT]>= MIN_DATE)
 ].copy()
 
-for col in [COL_PRISET, COL_MOTTATT, COL_SOLGT, COL_RETURNERT]:
-    df[f'{col}_month'] = df[col].dt.strftime('%Y-%m')
+# 2. Only completed cars (have solgt or returnert date)
+df_completed = df[df[COL_SOLGT].notna() | df[COL_RETURNERT].notna()].copy()
+df_completed = df_completed[
+    (df_completed[COL_PRISET]    >= MIN_DATE) |
+    (df_completed[COL_MOTTATT]   >= MIN_DATE) |
+    (df_completed[COL_SOLGT]     >= MIN_DATE) |
+    (df_completed[COL_RETURNERT] >= MIN_DATE)
+].copy()
 
+# Add month columns
+for col, df_subset in [(COL_PRISET, df_all), (COL_MOTTATT, df_completed),
+                       (COL_SOLGT, df_completed), (COL_RETURNERT, df_completed)]:
+    df_subset[f'{col}_month'] = df_subset[col].dt.strftime('%Y-%m')
+
+# Unique months from all relevant dates
 all_months = pd.concat([
-    df[f'{COL_PRISET}_month'],
-    df[f'{COL_MOTTATT}_month'],
-    df[f'{COL_SOLGT}_month'],
-    df[f'{COL_RETURNERT}_month']
+    df_all[f'{COL_PRISET}_month'],
+    df_completed[f'{COL_MOTTATT}_month'],
+    df_completed[f'{COL_SOLGT}_month'],
+    df_completed[f'{COL_RETURNERT}_month']
 ]).dropna().unique()
 all_months = sorted(set(all_months))
 
@@ -59,20 +79,15 @@ default_month = default_dt.strftime('%Y-%m')
 if default_month not in all_months and all_months:
     default_month = all_months[-1]
 
-data_rows = df.to_dict(orient='records')
-
-# FIX: Add current year and month for template to filter complete months
-now = datetime.now()
-now_year = now.strftime('%Y')
-now_month = now.strftime('%m')
-
+# Prepare data for template
 context = {
-    "data_json": json.dumps(data_rows, default=str),
-    "months": all_months,
-    "default_month": default_month,
-    "min_date_str": "November 2025",
-    "now_year": now_year,
-    "now_month": now_month
+    "data_all_json":        json.dumps(df_all.to_dict(orient='records'), default=str),
+    "data_completed_json":  json.dumps(df_completed.to_dict(orient='records'), default=str),
+    "months":               all_months,
+    "default_month":        default_month,
+    "min_date_str":         "November 2025",
+    "now_year":             today.strftime('%Y'),
+    "now_month":            today.strftime('%m')
 }
 
 env = Environment(loader=FileSystemLoader("."))
