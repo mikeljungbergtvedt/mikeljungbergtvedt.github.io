@@ -58,6 +58,14 @@ df_completed = df_completed[
     (df_completed[COL_RETURNERT] >= MIN_DATE)
 ].copy()
 
+# Debug prints for accuracy
+print("Total rows after download:", len(df))
+print("Priced non-null count (all):", df_all[COL_PRISET].notna().sum())
+print("Completed rows:", len(df_completed))
+print("Mottatt non-null in completed:", df_completed[COL_MOTTATT].notna().sum())
+print("Solgt non-null in completed:", df_completed[COL_SOLGT].notna().sum())
+print("Returnert non-null in completed:", df_completed[COL_RETURNERT].notna().sum())
+
 # Add month columns
 for col, df_subset in [(COL_PRISET, df_all), (COL_MOTTATT, df_completed),
                        (COL_SOLGT, df_completed), (COL_RETURNERT, df_completed)]:
@@ -79,10 +87,19 @@ default_month = default_dt.strftime('%Y-%m')
 if default_month not in all_months and all_months:
     default_month = all_months[-1]
 
+# Convert to list of dicts and clean NaN/NaT for safe JSON
+data_all_list = df_all.to_dict(orient='records')
+data_completed_list = df_completed.to_dict(orient='records')
+
+for row in data_all_list + data_completed_list:
+    for k, v in row.items():
+        if pd.isna(v):
+            row[k] = None
+
 # Prepare data for template
 context = {
-    "data_all_json":        json.dumps(df_all.to_dict(orient='records'), default=str),
-    "data_completed_json":  json.dumps(df_completed.to_dict(orient='records'), default=str),
+    "data_all_json":        json.dumps(data_all_list, default=str),
+    "data_completed_json":  json.dumps(data_completed_list, default=str),
     "months":               all_months,
     "default_month":        default_month,
     "min_date_str":         "November 2025",
