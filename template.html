@@ -1,226 +1,349 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Peasy Exec Rapport</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Peasy Dashboard – Updated</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 40px 20px; background: #e0e9e5; color: #004225; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 50px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        h1 { text-align: center; font-size: 3rem; font-weight: 800; color: #004225; margin-bottom: 10px; }
-        .subtitle { text-align: center; font-size: 1.5rem; font-weight: 500; color: #004225; margin-bottom: 30px; }
-        .timestamp { text-align: center; font-size: 1rem; color: #555; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px 40px; margin: 40px 0; align-items: center; justify-items: center; }
-        .card { background: #f8faf9; padding: 32px; border-radius: 16px; border: 1px solid #ddd; box-shadow: 0 6px 20px rgba(0,0,0,0.06); text-align: center; width: 240px; }
-        .card strong { font-size: 1.4rem; font-weight: 700; display: block; margin-bottom: 12px; color: #004225; }
-        .card .number { font-size: 3.5rem; font-weight: 800; color: #004225; margin-bottom: 16px; }
-        .funnel-arrow { font-size: 3.5rem; color: #004225; font-weight: bold; }
-        .chart-container { margin: 60px 0; padding: 32px; background: #f8faf9; border-radius: 16px; border: 1px solid #ddd; height: 420px; }
-        .periode-controls { text-align: center; margin-bottom: 40px; }
-        .periode-controls label { margin: 0 20px; font-size: 1.2rem; cursor: pointer; }
-        #month-selector select { padding: 10px 20px; font-size: 1.2rem; margin: 10px; border: 2px solid #004225; border-radius: 8px; }
-        .no-data { color: #c0392b; font-style: italic; margin-top: 10px; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #F2F7F9; color: #004225; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
+        h1 { font-weight: 700; font-size: 1.8rem; margin-bottom: 16px; color: #004225; }
+        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        select, button { padding: 10px 16px; font-size: 1rem; border-radius: 6px; border: 1px solid #82BFD2; background: white; cursor: pointer; }
+        button { background: #004225; color: white; border: none; }
+        .funnel { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
+        .funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; font-size: 1.2rem; }
+        .funnel-title { font-weight: 600; width: 120px; text-align: left; color: #004225; }
+        .funnel-number { font-weight: 800; font-size: 2.4rem; color: #004225; width: 120px; text-align: center; }
+        .funnel-ratio { font-weight: 800; font-size: 2.4rem; color: #FFCC33; }
+        .arrow { font-size: 2.4rem; color: #82BFD2; margin: 0 12px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .kpi-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); text-align: center; }
+        .kpi-card.highlight { background: #F2F7F9; border: 2px solid #004225; }
+        .kpi-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; }
+        .kpi-sub { font-size: 1rem; color: #555; margin-top: -4px; }
+        .kpi-label { font-size: 0.95rem; color: #004225; opacity: 0.8; }
+        .sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
+        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <h1>Peasy Exec Rapport</h1>
-    <div class="subtitle">Funnel: Priced → Received → Sold / Returned</div>
-    <div class="timestamp">
-        Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span> | 
-        Versjon: v1.2 - Robust key lookup + more debug logs (handles å/encoding)
+    <h1>Peasy – Key Metrics Overview</h1>
+
+    <div class="controls">
+        <label for="periodSelect">Period:</label>
+        <select id="periodSelect">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="all">All time</option>
+        </select>
+        <button onclick="loadDashboard()">Refresh</button>
     </div>
 
-    <div class="periode-controls">
-        <label><input type="radio" name="period-type" value="month" checked> En måned</label>
-        <label><input type="radio" name="period-type" value="range"> Egendefinert</label>
-        <div id="month-selector">
-            <select id="period-select">
-                {% for m in months %}
-                    <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>{{ m }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
+    <p style="margin-top:8px; font-size:0.9rem; opacity:0.8;">
+        Last updated: <span id="lastUpdate">—</span>  •  Valuation ≈ 2 min/car • Working day 7.5 h
+    </p>
 
-    <div class="grid" id="funnel-grid">
-        <div class="card">
-            <strong>Priced<br>(SD mottatt)</strong>
-            <div class="number" id="priset-count">0</div>
-            <div id="priset-note" class="no-data"></div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="card">
-            <strong>Received<br>(Mottatt)</strong>
-            <div class="number" id="mottatt-count">0</div>
-            <div id="mottatt-note" class="no-data"></div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="card">
-            <strong>Sold<br>(Solgt på)</strong>
-            <div class="number" id="solgt-count">0</div>
-            <div id="solgt-note" class="no-data"></div>
-        </div>
-        <div class="funnel-arrow">↳</div>
-        <div class="card">
-            <strong>Returned<br>(Returnert)</strong>
-            <div class="number" id="returnert-count">0</div>
-            <div id="returnert-note" class="no-data"></div>
-        </div>
+    <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
+
+    <!-- Funnel with titles -->
+    <div class="funnel" id="funnelArea"></div>
+
+    <!-- KPI tiles -->
+    <div class="kpi-grid" id="kpiArea"></div>
+
+    <!-- Charts -->
+    <div class="chart-container">
+        <h2>Valuations per day (Customer Service Load)</h2>
+        <canvas id="workloadChart" height="320"></canvas>
     </div>
 
     <div class="chart-container">
-        <canvas id="funnelChart"></canvas>
+        <h2>Received vs Sold</h2>
+        <canvas id="receivedSoldChart" height="320"></canvas>
     </div>
+
 </div>
 
 <script>
-    // Safe parsing + force arrays
-    let dataAllRaw = {{ data_all_json | tojson | safe }};
-    let dataCompletedRaw = {{ data_completed_json | tojson | safe }};
+    let workloadChart = null;
+    let receivedSoldChart = null;
 
-    const dataAll = Array.isArray(dataAllRaw) ? dataAllRaw : Object.values(dataAllRaw || {});
-    const dataCompleted = Array.isArray(dataCompletedRaw) ? dataCompletedRaw : Object.values(dataCompletedRaw || {});
+    async function loadDashboard() {
+        const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+        document.getElementById('loading').textContent = 'Loading...';
+        document.getElementById('funnelArea').innerHTML = '';
+        document.getElementById('kpiArea').innerHTML = '';
 
-    console.log('dataAll length:', dataAll.length);
-    console.log('dataCompleted length:', dataCompleted.length);
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const ab = await res.arrayBuffer();
+            const wb = XLSX.read(ab, {type:'array'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
 
-    // Debug: show actual keys
-    if (dataAll.length > 0) {
-        console.log('Actual keys in first all row:', Object.keys(dataAll[0]));
-    }
-    if (dataCompleted.length > 0) {
-        console.log('Actual keys in first completed row:', Object.keys(dataCompleted[0]));
-    }
+            const range = XLSX.utils.decode_range(ws['!ref']);
 
-    let currentPeriod = { type: 'month', value: '{{ default_month }}' };
+            const COL_O = 14;   // Valued / Priced
+            const COL_Q = 16;   // Received
+            const COL_R = 17;   // Sold
+            const COL_S = 18;   // Bud
+            const COL_T = 19;   // Avgift
+            const COL_U = 20;   // Returned
 
-    // Robust key finder (handles å, spaces, encoding variations)
-    function findKey(obj, search) {
-        if (!obj) return null;
-        const lowerSearch = search.toLowerCase().replace(/å/g, '[åa]').replace(/Å/g, '[ÅA]');
-        return Object.keys(obj).find(k => {
-            const lowerK = k.toLowerCase().trim();
-            return lowerK.includes(search.toLowerCase().trim()) || lowerK.replace(/å/g, 'a').includes(search.toLowerCase().trim());
-        }) || search;
-    }
+            const today = new Date();
+            const periodDays = document.getElementById('periodSelect').value;
+            const startDate = periodDays === 'all' ? new Date(2000,0,1) : new Date(today);
+            if (periodDays !== 'all') startDate.setDate(today.getDate() - periodDays);
 
-    function isInPeriod(dateStr, period) {
-        if (!dateStr || typeof dateStr !== 'string') return false;
-        const cleaned = dateStr.trim();
-        if (!cleaned.includes('-')) return false;
-        const parts = cleaned.split('-');
-        if (parts.length < 2) return false;
-        const year = parts[0].trim();
-        const month = parts[1].trim().slice(0,2); // handle extra chars
-        const dateYM = `${year}-${month}`;
-        if (period.type === 'month') {
-            return dateYM === period.value;
-        }
-        // range logic can be added later
-        return false;
-    }
+            const mapO = new Map();
+            const mapQ = new Map();
+            const mapR = new Map();
 
-    function getPrisetCount(period) {
-        if (dataAll.length === 0) return 0;
-        const keyDate = findKey(dataAll[0], 'SD mottatt på');
-        const keyMonth = findKey(dataAll[0], 'SD mottatt på_month');
-        console.log('Priced using date key:', keyDate, '| month key:', keyMonth);
+            let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
+            let sumS = 0, countS = 0;
+            let sumT = 0, countT = 0;
+            let soldUnder25k = 0, soldOver25k = 0;
+            let returnedUnder25k = 0, returnedOver25k = 0;
 
-        const count = dataAll.filter(d => {
-            const dateVal = d[keyDate];
-            const monthVal = d[keyMonth];
-            return dateVal && isInPeriod(monthVal, period);
-        }).length;
+            let transportSum = 0;
+            let prodSoldSum = 0;
+            let prodReturnedSum = 0;
 
-        document.getElementById('priset-note').textContent = count === 0 ? '(sjekk konsoll for nøkkelnavn)' : '';
-        return count;
-    }
+            for (let row = range.s.r + 1; row <= range.e.r; row++) {
+                const dO = getDate(ws, row, COL_O);
+                const dQ = getDate(ws, row, COL_Q);
+                const dR = getDate(ws, row, COL_R);
+                const dU = getDate(ws, row, COL_U);
 
-    function getMottattCount(period) {
-        if (dataCompleted.length === 0) return 0;
-        const keyDate = findKey(dataCompleted[0], 'Mottatt');
-        const keyMonth = findKey(dataCompleted[0], 'Mottatt_month');
-        console.log('Mottatt using date key:', keyDate, '| month key:', keyMonth);
-        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
-    }
-
-    function getSolgtCount(period) {
-        if (dataCompleted.length === 0) return 0;
-        const keyDate = findKey(dataCompleted[0], 'Solgt på');
-        const keyMonth = findKey(dataCompleted[0], 'Solgt på_month');
-        console.log('Solgt using date key:', keyDate, '| month key:', keyMonth);
-        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
-    }
-
-    function getReturnertCount(period) {
-        if (dataCompleted.length === 0) return 0;
-        const keyDate = findKey(dataCompleted[0], 'Returnert på');
-        const keyMonth = findKey(dataCompleted[0], 'Returnert på_month');
-        console.log('Returnert using date key:', keyDate, '| month key:', keyMonth);
-        return dataCompleted.filter(d => d[keyDate] && isInPeriod(d[keyMonth], period)).length;
-    }
-
-    function updateCards() {
-        document.getElementById('priset-count').textContent   = getPrisetCount(currentPeriod);
-        document.getElementById('mottatt-count').textContent  = getMottattCount(currentPeriod);
-        document.getElementById('solgt-count').textContent    = getSolgtCount(currentPeriod);
-        document.getElementById('returnert-count').textContent = getReturnertCount(currentPeriod);
-
-        updateFunnelChart();
-    }
-
-    function updateFunnelChart() {
-        const ctx = document.getElementById('funnelChart').getContext('2d');
-        if (window.myFunnelChart) window.myFunnelChart.destroy(); // avoid duplicate charts
-        window.myFunnelChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Priced', 'Received', 'Sold', 'Returned'],
-                datasets: [{
-                    label: 'Antall biler',
-                    data: [
-                        getPrisetCount(currentPeriod),
-                        getMottattCount(currentPeriod),
-                        getSolgtCount(currentPeriod),
-                        getReturnertCount(currentPeriod)
-                    ],
-                    backgroundColor: ['#ffcc33', '#27ae60', '#004225', '#c0392b'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
+                if (dO && dO >= startDate) { mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); totalO++; }
+                if (dQ && dQ >= startDate) { mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); totalQ++; transportSum += 750; }
+                if (dR && dR >= startDate) { 
+                    mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); 
+                    totalR++; 
+                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+                    sumS += bud;
+                    countS++;
+                    if (bud < 25000) {
+                        soldUnder25k++;
+                        prodSoldSum += 2000;
+                    } else {
+                        soldOver25k++;
+                        prodSoldSum += 2500;
+                    }
+                }
+                if (dU && dU >= startDate) {
+                    totalU++;
+                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+                    if (bud < 25000) {
+                        returnedUnder25k++;
+                        prodReturnedSum += 1300;
+                    } else {
+                        returnedOver25k++;
+                        prodReturnedSum += 1700;
+                    }
+                }
             }
-        });
+
+            const avgS = countS > 0 ? (sumS / countS).toFixed(0) : 0;
+            const avgT = countT > 0 ? (sumT / countT).toFixed(0) : 0;
+
+            const daysInPeriod = periodDays === 'all' ? 30 : periodDays;
+            const avgDailyO = (totalO / daysInPeriod).toFixed(0);
+            const avgDailyU = (totalU / daysInPeriod).toFixed(1);
+            const minPerDay = avgDailyO * 2;
+            const hoursPerDay = (minPerDay / 60).toFixed(1);
+            const fteNeeded = (minPerDay / (7.5 * 60)).toFixed(1);
+
+            const convOR = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
+            const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
+            const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
+
+            // Funnel
+            document.getElementById('funnelArea').innerHTML = `
+                <div class="funnel-row">
+                    <div class="funnel-title">Valued</div>
+                    <div class="funnel-number">${totalO}</div>
+                </div>
+                <div class="funnel-row">
+                    <div class="funnel-title"></div>
+                    <div class="arrow">↓ ${((totalQ/totalO)*100||0).toFixed(0)}%</div>
+                </div>
+                <div class="funnel-row">
+                    <div class="funnel-title">Received</div>
+                    <div class="funnel-number big">${totalQ}</div>
+                </div>
+                <div class="funnel-row">
+                    <div class="funnel-title"></div>
+                    <div class="arrow">↓ <span class="ratio">${convQR}%</span></div>
+                </div>
+                <div class="funnel-row">
+                    <div class="funnel-title">Sold</div>
+                    <div class="funnel-number">${totalR}</div>
+                </div>
+                <div class="funnel-row">
+                    <div class="funnel-title">Returned</div>
+                    <div class="funnel-number">${totalU}</div>
+                    <div style="margin-left:16px;">(${convQU}%)</div>
+                </div>
+            `;
+
+            // KPI tiles – clean labels, Valuation & Returned with sum/avg, Sold with split
+            document.getElementById('kpiArea').innerHTML = `
+                <div class="kpi-card highlight">
+                    <div class="kpi-value">${convQR}%</div>
+                    <div class="kpi-label">Received → Sold</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${convOR}%</div>
+                    <div class="kpi-label">Valued → Sold</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${totalO}</div>
+                    <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
+                    <div class="kpi-label">Valuations</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${totalQ}</div>
+                    <div class="kpi-label">Received</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${totalR}</div>
+                    <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
+                    <div class="kpi-label">Sold</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${totalU}</div>
+                    <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
+                    <div class="kpi-label">Returned</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">${sumS.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Avg: ${avgS.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Total Bud</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${sumT.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Avg: ${avgT.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Total Avgift</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">${transportSum.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Avg/sold: ${(transportSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Transport Cost</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${prodSoldSum.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Avg/sold: ${(prodSoldSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Prod Cost – Sold</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${prodReturnedSum.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Avg/sold: ${(prodReturnedSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Prod Cost – Returned</div>
+                </div>
+            `;
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
+
+            // Chart 1: Valuations – line with weekend background
+            const datesO = [...mapO.keys()].sort();
+            const dataO = datesO.map(k => mapO.get(k));
+
+            const weekendAnnotations = datesO.map((dateStr, idx) => {
+                const d = new Date(dateStr);
+                const day = d.getDay();
+                if (day === 0 || day === 6) {
+                    return {
+                        type: 'box',
+                        xMin: idx - 0.5,
+                        xMax: idx + 0.5,
+                        yMin: 0,
+                        yMax: Math.max(...dataO, 10) * 1.2,
+                        backgroundColor: 'rgba(130, 191, 210, 0.12)',
+                        borderWidth: 0
+                    };
+                }
+            }).filter(Boolean);
+
+            if (workloadChart) workloadChart.destroy();
+            workloadChart = new Chart(document.getElementById('workloadChart'), {
+                type: 'line',
+                data: {
+                    labels: datesO,
+                    datasets: [{
+                        label: 'Valuations per day',
+                        data: dataO,
+                        borderColor: '#004225',
+                        backgroundColor: 'rgba(0, 66, 37, 0.08)',
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { annotation: { annotations: weekendAnnotations } }
+                }
+            });
+
+            // Chart 2: Received + Sold – line
+            const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
+            const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
+            const dataR_chart = allDates.map(d => mapR.get(d) || 0);
+
+            if (receivedSoldChart) receivedSoldChart.destroy();
+            receivedSoldChart = new Chart(document.getElementById('receivedSoldChart'), {
+                type: 'line',
+                data: {
+                    labels: allDates,
+                    datasets: [
+                        { label: 'Received', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2 },
+                        { label: 'Sold',     data: dataR_chart, borderColor: '#FFCC33', tension: 0.2 }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+        } catch (err) {
+            document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Open XLSX manually</a>`;
+        } finally {
+            document.getElementById('loading').textContent = '';
+        }
     }
 
-    // Event listeners
-    document.querySelectorAll('input[name="period-type"]').forEach(r => {
-        r.addEventListener('change', e => {
-            if (e.target.value === 'month') {
-                currentPeriod = { type: 'month', value: document.getElementById('period-select').value };
-            }
-            updateCards();
-        });
-    });
-
-    document.getElementById('period-select').addEventListener('change', e => {
-        if (document.querySelector('[name="period-type"]:checked').value === 'month') {
-            currentPeriod = { type: 'month', value: e.target.value };
-            updateCards();
+    function getDate(ws, row, col) {
+        const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+        if (!cell || !cell.v) return null;
+        if (typeof cell.v === 'number') {
+            const d = XLSX.SSF.parse_date_code(cell.v);
+            return new Date(d.y, d.m-1, d.d);
         }
-    });
+        if (typeof cell.v === 'string') {
+            const m = cell.v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+            if (m) return new Date(+m[3], m[2]-1, +m[1]);
+        }
+        return null;
+    }
 
-    // Initial render
-    updateCards();
+    function dateToYMD(d) {
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function hasValue(ws, row, col) {
+        const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+        return cell && cell.v != null && String(cell.v).trim() !== '';
+    }
+
+    window.onload = loadDashboard;
 </script>
-
 </body>
 </html>
