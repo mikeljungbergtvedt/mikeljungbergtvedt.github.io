@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Peasy Dashboard – Updated</title>
+    <title>Peasy Dashboard – Final</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -53,10 +53,10 @@
 
     <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
 
-    <!-- Funnel with titles -->
+    <!-- Funnel with left-aligned titles -->
     <div class="funnel" id="funnelArea"></div>
 
-    <!-- KPI tiles -->
+    <!-- KPI tiles – Priced→Received and Priced→Sold first -->
     <div class="kpi-grid" id="kpiArea"></div>
 
     <!-- Charts -->
@@ -91,7 +91,7 @@
 
             const range = XLSX.utils.decode_range(ws['!ref']);
 
-            const COL_O = 14;   // Valued / Priced
+            const COL_O = 14;   // Priced / Valued
             const COL_Q = 16;   // Received
             const COL_R = 17;   // Sold
             const COL_S = 18;   // Bud
@@ -111,7 +111,6 @@
             let sumS = 0, countS = 0;
             let sumT = 0, countT = 0;
             let soldUnder25k = 0, soldOver25k = 0;
-            let returnedUnder25k = 0, returnedOver25k = 0;
 
             let transportSum = 0;
             let prodSoldSum = 0;
@@ -128,7 +127,7 @@
                 if (dR && dR >= startDate) { 
                     mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); 
                     totalR++; 
-                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+                    const bud = Number(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
                     sumS += bud;
                     countS++;
                     if (bud < 25000) {
@@ -138,35 +137,36 @@
                         soldOver25k++;
                         prodSoldSum += 2500;
                     }
+                    const avgift = Number(ws[XLSX.utils.encode_cell({r:row, c:COL_T})]?.v || 0);
+                    sumT += avgift;
+                    countT++;
                 }
                 if (dU && dU >= startDate) {
                     totalU++;
-                    const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+                    const bud = Number(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
                     if (bud < 25000) {
-                        returnedUnder25k++;
                         prodReturnedSum += 1300;
                     } else {
-                        returnedOver25k++;
                         prodReturnedSum += 1700;
                     }
                 }
             }
 
-            const avgS = countS > 0 ? (sumS / countS).toFixed(0) : 0;
-            const avgT = countT > 0 ? (sumT / countT).toFixed(0) : 0;
+            const avgS = countS > 0 ? sumS / countS : 0;
+            const avgT = countT > 0 ? sumT / countT : 0;
 
             const daysInPeriod = periodDays === 'all' ? 30 : periodDays;
             const avgDailyO = (totalO / daysInPeriod).toFixed(0);
-            const avgDailyU = (totalU / daysInPeriod).toFixed(1);
             const minPerDay = avgDailyO * 2;
             const hoursPerDay = (minPerDay / 60).toFixed(1);
-            const fteNeeded = (minPerDay / (7.5 * 60)).toFixed(1);
+            const fteNeeded = hoursPerDay > 0 ? (minPerDay / (7.5 * 60)).toFixed(1) : '0.0';
 
-            const convOR = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
+            const convPR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
+            const convPS = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
             const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
             const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
 
-            // Funnel
+            // Funnel with left-aligned titles
             document.getElementById('funnelArea').innerHTML = `
                 <div class="funnel-row">
                     <div class="funnel-title">Valued</div>
@@ -174,7 +174,7 @@
                 </div>
                 <div class="funnel-row">
                     <div class="funnel-title"></div>
-                    <div class="arrow">↓ ${((totalQ/totalO)*100||0).toFixed(0)}%</div>
+                    <div class="arrow">↓ ${convPR}%</div>
                 </div>
                 <div class="funnel-row">
                     <div class="funnel-title">Received</div>
@@ -182,7 +182,7 @@
                 </div>
                 <div class="funnel-row">
                     <div class="funnel-title"></div>
-                    <div class="arrow">↓ <span class="ratio">${convQR}%</span></div>
+                    <div class="arrow">↓ ${convQR}%</div>
                 </div>
                 <div class="funnel-row">
                     <div class="funnel-title">Sold</div>
@@ -195,15 +195,15 @@
                 </div>
             `;
 
-            // KPI tiles – clean labels, Valuation & Returned with sum/avg, Sold with split
+            // KPI tiles – Priced→Received and Priced→Sold first, clean labels
             document.getElementById('kpiArea').innerHTML = `
                 <div class="kpi-card highlight">
-                    <div class="kpi-value">${convQR}%</div>
-                    <div class="kpi-label">Received → Sold</div>
+                    <div class="kpi-value">${convPR}%</div>
+                    <div class="kpi-label">Priced → Received</div>
                 </div>
-                <div class="kpi-card">
-                    <div class="kpi-value">${convOR}%</div>
-                    <div class="kpi-label">Valued → Sold</div>
+                <div class="kpi-card highlight">
+                    <div class="kpi-value">${convPS}%</div>
+                    <div class="kpi-label">Priced → Sold</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-value">${totalO}</div>
@@ -221,7 +221,7 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-value">${totalU}</div>
-                    <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
+                    <div class="kpi-sub">Avg/day: ${avgDailyU}</div>
                     <div class="kpi-label">Returned</div>
                 </div>
 
