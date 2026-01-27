@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
     <style>
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #F2F7F9; color: #004225; }
         .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
@@ -22,6 +23,7 @@
         .arrow { font-size: 2.4rem; color: #82BFD2; margin: 0 12px; }
         .arrow-ratio { font-weight: 800; color: #FFCC33; }
         .arrow-ratio.alert { color: #d32f2f; }
+        .arrow-ratio.good { color: #2e7d32; }
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
         .kpi-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); text-align: center; }
         .kpi-card.highlight { background: #F2F7F9; border: 2px solid #004225; }
@@ -34,10 +36,14 @@
         .sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
         .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,66,37,0.1); margin-bottom: 32px; }
         .version { font-size: 0.9rem; color: #555; text-align: right; margin-bottom: 8px; opacity: 0.8; }
-        .config-hint { cursor: pointer; font-size: 0.9rem; opacity: 0.7; }
+        .config-hint { cursor: pointer; font-size: 0.9rem; opacity: 0.7; text-decoration: underline; }
         #configPrompt { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 9999; }
-        .prompt-box { background: white; padding: 24px; border-radius: 12px; width: 360px; text-align: center; }
-        .prompt-box input { width: 100%; padding: 10px; margin: 12px 0; font-size: 1rem; }
+        .prompt-box { background: white; padding: 24px; border-radius: 12px; width: 400px; max-height: 80vh; overflow-y: auto; text-align: left; }
+        .prompt-box h3 { margin-top: 0; }
+        .prompt-box label { display: block; margin: 12px 0 4px; font-weight: 500; }
+        .prompt-box input { width: 100%; padding: 8px; box-sizing: border-box; font-size: 1rem; }
+        .prompt-box button { margin-top: 16px; padding: 10px 20px; }
+        .short-period-note { font-size: 0.95rem; color: #555; margin: 16px 0; font-style: italic; text-align: center; }
     </style>
 </head>
 <body>
@@ -46,6 +52,7 @@
     <div class="controls">
         <label for="periodSelect">Period:</label>
         <select id="periodSelect">
+            <option value="today">Today</option>
             <option value="7">Last 7 days</option>
             <option value="14">Last 14 days</option>
             <option value="30" selected>Last 30 days</option>
@@ -60,8 +67,15 @@
     </p>
     <div id="loading" style="margin:20px 0; font-style:italic; opacity:0.6;"></div>
 
-    <div class="version">Version 1.6 – green above targets + weekend color split</div>
-    <div class="funnel" id="funnelArea"></div>
+    <div class="version">Version 1.10 – Marketing cost 1000 kr/day from 1.11.2025</div>
+
+    <div id="funnelContainer" style="display:none;">
+        <div class="funnel" id="funnelArea"></div>
+    </div>
+
+    <div id="shortPeriodNote" class="short-period-note" style="display:none;">
+        Funnel hidden for short periods (due to process delay)
+    </div>
 
     <div class="kpi-grid" id="kpiArea"></div>
 
@@ -75,25 +89,43 @@
     </div>
 </div>
 
-<!-- Hidden config prompt -->
+<!-- Config modal (no password) -->
 <div id="configPrompt">
     <div class="prompt-box">
-        <h3>Configure parameters</h3>
-        <p>Password:</p>
-        <input type="password" id="configPw" placeholder="Enter password">
-        <br><br>
-        <button onclick="checkConfigPassword()">Unlock</button>
-        <button onclick="hideConfigPrompt()">Cancel</button>
+        <h3>Dashboard Configuration</h3>
+        <p>Edit values directly in dev tools or update localStorage:</p>
+        <pre style="background:#f5f5f5; padding:12px; border-radius:6px; overflow:auto;">
+localStorage.setItem('peasyConfig', JSON.stringify({
+  valTime: 2,
+  workDay: 7.5,
+  transportCost: 750,
+  arPercent: 2.7,
+  prodSoldUnder: 2000,
+  prodSoldOver: 2500,
+  prodRetUnder: 1300,
+  prodRetOver: 1700,
+  marketingDaily: 1000,
+  marketingStart: "2025-11-01"
+}));
+        </pre>
+        <p>Current values:</p>
+        <ul>
+            <li>Valuation time: <strong id="curValTime"></strong> min</li>
+            <li>Working day: <strong id="curWorkDay"></strong> h</li>
+            <li>Transport cost: <strong id="curTransport"></strong> NOK</li>
+            <li>AR %: <strong id="curAr"></strong>%</li>
+            <li>Prod sold <25k: <strong id="curPSU"></strong> NOK</li>
+            <li>Prod sold ≥25k: <strong id="curPSO"></strong> NOK</li>
+            <li>Prod ret <25k: <strong id="curPRU"></strong> NOK</li>
+            <li>Prod ret ≥25k: <strong id="curPRO"></strong> NOK</li>
+            <li>Marketing daily: <strong id="curMarketingDaily"></strong> NOK</li>
+            <li>Marketing start: <strong id="curMarketingStart"></strong></li>
+        </ul>
+        <button onclick="hideConfigPrompt()">Close</button>
     </div>
 </div>
 
 <script>
-    // ──────────────────────────────────────────────
-    //  CONFIG – change password here if desired
-    // ──────────────────────────────────────────────
-    const CONFIG_PASSWORD = "peasy2025";
-
-    // Default values (used if nothing saved)
     const DEFAULTS = {
         valTime: 2,
         workDay: 7.5,
@@ -102,10 +134,11 @@
         prodSoldUnder: 2000,
         prodSoldOver: 2500,
         prodRetUnder: 1300,
-        prodRetOver: 1700
+        prodRetOver: 1700,
+        marketingDaily: 1000,
+        marketingStart: "2025-11-01"
     };
 
-    // Load saved config or defaults
     let config = (() => {
         const saved = localStorage.getItem('peasyConfig');
         return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS };
@@ -114,41 +147,26 @@
     function updateConfigDisplay() {
         document.getElementById('valTimeDisplay').textContent = config.valTime;
         document.getElementById('workDayDisplay').textContent = config.workDay;
+        document.getElementById('curValTime').textContent = config.valTime;
+        document.getElementById('curWorkDay').textContent = config.workDay;
+        document.getElementById('curTransport').textContent = config.transportCost;
+        document.getElementById('curAr').textContent = config.arPercent;
+        document.getElementById('curPSU').textContent = config.prodSoldUnder;
+        document.getElementById('curPSO').textContent = config.prodSoldOver;
+        document.getElementById('curPRU').textContent = config.prodRetUnder;
+        document.getElementById('curPRO').textContent = config.prodRetOver;
+        document.getElementById('curMarketingDaily').textContent = config.marketingDaily;
+        document.getElementById('curMarketingStart').textContent = config.marketingStart;
     }
     updateConfigDisplay();
 
     function showConfigPrompt() {
+        updateConfigDisplay();
         document.getElementById('configPrompt').style.display = 'flex';
-        document.getElementById('configPw').value = '';
-        document.getElementById('configPw').focus();
     }
 
     function hideConfigPrompt() {
         document.getElementById('configPrompt').style.display = 'none';
-    }
-
-    function checkConfigPassword() {
-        const pw = document.getElementById('configPw').value;
-        if (pw === CONFIG_PASSWORD) {
-            hideConfigPrompt();
-            alert(
-                "Config unlocked!\n\n" +
-                "Current values:\n" +
-                `Valuation time: ${config.valTime} min\n` +
-                `Working day: ${config.workDay} h\n` +
-                `Transport: ${config.transportCost} NOK\n` +
-                `AR %: ${config.arPercent}%\n` +
-                `Prod sold <25k: ${config.prodSoldUnder}\n` +
-                `Prod sold ≥25k: ${config.prodSoldOver}\n` +
-                `Prod ret <25k: ${config.prodRetUnder}\n` +
-                `Prod ret ≥25k: ${config.prodRetOver}\n\n` +
-                "To change values, edit localStorage manually in dev tools:\n" +
-                'localStorage.setItem("peasyConfig", JSON.stringify({valTime:3, workDay:8, transportCost:800, arPercent:3, ...}))\n' +
-                "Then refresh the page."
-            );
-        } else {
-            alert("Wrong password");
-        }
     }
 
     let workloadChart = null;
@@ -160,6 +178,8 @@
         loading.textContent = 'Loading...';
         document.getElementById('funnelArea').innerHTML = '';
         document.getElementById('kpiArea').innerHTML = '';
+        document.getElementById('funnelContainer').style.display = 'none';
+        document.getElementById('shortPeriodNote').style.display = 'none';
 
         try {
             const res = await fetch(url);
@@ -179,14 +199,27 @@
 
             const today = new Date();
             const periodDays = document.getElementById('periodSelect').value;
-            const startDate = periodDays === 'all' ? new Date(2000,0,1) : new Date(today);
-            if (periodDays !== 'all') startDate.setDate(today.getDate() - periodDays);
+
+            let startDate;
+            if (periodDays === 'today') {
+                startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+            } else if (periodDays === 'all') {
+                startDate = new Date(2000, 0, 1);
+            } else {
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - parseInt(periodDays));
+            }
+
+            // Marketing cost start date
+            const marketingStartDate = new Date(config.marketingStart);
+            let marketingDays = 0;
 
             const mapO = new Map();
             const mapQ = new Map();
             const mapR = new Map();
 
             let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
+            let gireOrdered = 0;
             let sumS = 0, countS = 0;
             let sumT = 0, countT = 0;
             let soldUnder25k = 0, soldOver25k = 0;
@@ -200,6 +233,27 @@
                 const dQ = getDate(ws, row, COL_Q);
                 const dR = getDate(ws, row, COL_R);
                 const dU = getDate(ws, row, COL_U);
+
+                const inPeriod = (dO && dO >= startDate) ||
+                                 (dQ && dQ >= startDate) ||
+                                 (dR && dR >= startDate) ||
+                                 (dU && dU >= startDate);
+
+                if (!inPeriod) continue;
+
+                // Count marketing days (only once per calendar day)
+                let currentDate;
+                if (dO) currentDate = dO;
+                else if (dQ) currentDate = dQ;
+                else if (dR) currentDate = dR;
+                else if (dU) currentDate = dU;
+
+                if (currentDate && currentDate >= marketingStartDate) {
+                    const ymd = dateToYMD(currentDate);
+                    if (!mapO.has(ymd) && !mapQ.has(ymd) && !mapR.has(ymd) && !mapO.has(ymd)) { // rough dedup
+                        marketingDays++;
+                    }
+                }
 
                 if (dO && dO >= startDate) {
                     mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
@@ -215,6 +269,12 @@
                     if (pVal !== '') {
                         transportSum += config.transportCost;
                     }
+                }
+
+                const pCellGire = ws[XLSX.utils.encode_cell({r:row, c:COL_P})];
+                const pValGire = pCellGire && pCellGire.v != null ? String(pCellGire.v).trim() : '';
+                if (pValGire !== '') {
+                    gireOrdered++;
                 }
 
                 if (dR && dR >= startDate) {
@@ -252,11 +312,14 @@
                 }
             }
 
-            const avgS = countS > 0 ? (sumS / countS).toFixed(0) : 0;
-            const avgT = countT > 0 ? (sumT / countT).toFixed(0) : 0;
+            const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
+            const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
+
+            const marketingTotal = marketingDays * config.marketingDaily;
+            const marketingPerSold = totalR > 0 ? Math.round(marketingTotal / totalR) : 0;
 
             const isAllTime = periodDays === 'all';
-            const daysInPeriod = isAllTime ? 30 : periodDays;
+            const daysInPeriod = isAllTime ? 30 : (periodDays === 'today' ? 1 : periodDays);
             const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
 
             const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
@@ -269,39 +332,43 @@
             const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
             const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
 
-            const arIncomeTotal = sumS * (config.arPercent / 100);
-            const arIncomeAvg = countS > 0 ? (arIncomeTotal / countS).toFixed(0) : 0;
+            const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
+            const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
 
-            // Funnel
-            document.getElementById('funnelArea').innerHTML = `
-                <div class="funnel-row">
-                    <div class="funnel-title">Valued</div>
-                    <div class="funnel-number">${totalO}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title"></div>
-                    <div class="arrow">↓ <span class="arrow-ratio ${convVR < 10 ? 'alert' : ''}">${((totalQ/totalO)*100||0).toFixed(0)}%</span></div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Received</div>
-                    <div class="funnel-number big">${totalQ}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title"></div>
-                    <div class="arrow">↓ <span class="arrow-ratio ${convQR < 70 ? 'alert' : ''}">${convQR}%</span></div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Sold</div>
-                    <div class="funnel-number">${totalR}</div>
-                </div>
-                <div class="funnel-row">
-                    <div class="funnel-title">Returned</div>
-                    <div class="funnel-number">${totalU}</div>
-                    <div style="margin-left:16px;">(${convQU}%)</div>
-                </div>
-            `;
+            const shortPeriod = periodDays === 'today' || periodDays === '7';
+            document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
+            document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
 
-            // KPI tiles with green when above target
+            if (!shortPeriod) {
+                document.getElementById('funnelArea').innerHTML = `
+                    <div class="funnel-row">
+                        <div class="funnel-title">Valued</div>
+                        <div class="funnel-number">${totalO}</div>
+                    </div>
+                    <div class="funnel-row">
+                        <div class="funnel-title"></div>
+                        <div class="arrow">↓ <span class="arrow-ratio ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">${((totalQ/totalO)*100||0).toFixed(0)}%</span></div>
+                    </div>
+                    <div class="funnel-row">
+                        <div class="funnel-title">Received</div>
+                        <div class="funnel-number big">${totalQ}</div>
+                    </div>
+                    <div class="funnel-row">
+                        <div class="funnel-title"></div>
+                        <div class="arrow">↓ <span class="arrow-ratio ${convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : '')}">${convQR}%</span></div>
+                    </div>
+                    <div class="funnel-row">
+                        <div class="funnel-title">Sold</div>
+                        <div class="funnel-number">${totalR}</div>
+                    </div>
+                    <div class="funnel-row">
+                        <div class="funnel-title">Returned</div>
+                        <div class="funnel-number">${totalU}</div>
+                        <div style="margin-left:16px;">(${convQU}%)</div>
+                    </div>
+                `;
+            }
+
             document.getElementById('kpiArea').innerHTML = `
                 <div class="kpi-card ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">
                     <div class="kpi-value">${convVR}%</div>
@@ -326,6 +393,10 @@
                 <div class="kpi-card">
                     <div class="kpi-value">${totalQ}</div>
                     <div class="kpi-label">Received</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${gireOrdered}</div>
+                    <div class="kpi-label">Gire ordered</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-value">${totalR}</div>
@@ -353,19 +424,24 @@
                     <div class="kpi-label">Avg Avgift (per sold)</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-value">${(transportSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-value">${(transportSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-sub">Total: ${transportSum.toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-label">Transport Cost per sold</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-value">${(prodSoldSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-value">${Math.round(prodSoldSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-sub">Total: ${prodSoldSum.toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-label">Prod Cost – Sold per car</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-value">${(prodReturnedSum / (totalR || 1)).toFixed(0).toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-value">${Math.round(prodReturnedSum / (totalR || 1)).toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-sub">Total: ${prodReturnedSum.toLocaleString('nb-NO')} NOK</div>
                     <div class="kpi-label">Prod Cost – Returned per sold</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value">${marketingPerSold.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-sub">Total: ${marketingTotal.toLocaleString('nb-NO')} NOK</div>
+                    <div class="kpi-label">Marketing cost per sold</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-value">${hoursPerDay} h / ${fteNeeded} FTE</div>
@@ -376,28 +452,9 @@
 
             document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
 
-            // Chart 1 – Valuations per day with subtle Sat/Sun colors
+            // Chart 1 with trendline
             const datesO = [...mapO.keys()].sort();
             const dataO = datesO.map(k => mapO.get(k));
-
-            const weekendAnnotations = datesO.map((dateStr, idx) => {
-                const d = new Date(dateStr);
-                const day = d.getDay();
-                if (day === 0 || day === 6) {
-                    let color;
-                    if (day === 6) color = 'rgba(76, 175, 80, 0.06)';   // Saturday – light green
-                    else           color = 'rgba(255, 152, 0, 0.05)';   // Sunday – light orange/amber
-                    return {
-                        type: 'box',
-                        xMin: idx - 0.5,
-                        xMax: idx + 0.5,
-                        yMin: 0,
-                        yMax: Math.max(...dataO, 10) * 1.2,
-                        backgroundColor: color,
-                        borderWidth: 0
-                    };
-                }
-            }).filter(Boolean);
 
             if (workloadChart) workloadChart.destroy();
             workloadChart = new Chart(document.getElementById('workloadChart'), {
@@ -410,16 +467,20 @@
                         borderColor: '#004225',
                         backgroundColor: 'rgba(0, 66, 37, 0.08)',
                         tension: 0.2,
-                        fill: true
+                        fill: true,
+                        trendlineLinear: {
+                            style: '#00422588',
+                            lineStyle: 'dashed',
+                            width: 2
+                        }
                     }]
                 },
                 options: {
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { annotation: { annotations: weekendAnnotations } }
+                    scales: { y: { beginAtZero: true } }
                 }
             });
 
-            // Chart 2 unchanged
+            // Chart 2 with trendlines
             const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
             const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
             const dataR_chart = allDates.map(d => mapR.get(d) || 0);
@@ -430,8 +491,28 @@
                 data: {
                     labels: allDates,
                     datasets: [
-                        { label: 'Received', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2 },
-                        { label: 'Sold', data: dataR_chart, borderColor: '#FFCC33', tension: 0.2 }
+                        { 
+                            label: 'Received', 
+                            data: dataQ_chart, 
+                            borderColor: '#82BFD2', 
+                            tension: 0.2,
+                            trendlineLinear: {
+                                style: '#82BFD288',
+                                lineStyle: 'dashed',
+                                width: 2
+                            }
+                        },
+                        { 
+                            label: 'Sold', 
+                            data: dataR_chart, 
+                            borderColor: '#FFCC33', 
+                            tension: 0.2,
+                            trendlineLinear: {
+                                style: '#FFCC3388',
+                                lineStyle: 'dashed',
+                                width: 2
+                            }
+                        }
                     ]
                 },
                 options: { scales: { y: { beginAtZero: true } } }
