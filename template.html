@@ -27,7 +27,7 @@
 <div class="container">
     <h1>Peasy Exec Rapport</h1>
     <div class="subtitle">Funnel: Priced → Received → Sold / Returned</div>
-    <div class="timestamp">Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span></div>
+    <div class="timestamp">Generert: <span id="timestamp">{{ now_year }}-{{ now_month }}</span> | Versjon: v1.1 - Fixed JSON parsing & data cleaning</div>
 
     <div class="periode-controls">
         <label><input type="radio" name="period-type" value="month" checked> En måned</label>
@@ -69,8 +69,17 @@
 </div>
 
 <script>
-    const dataAll       = {{ data_all_json | tojson | safe }};
-    const dataCompleted = {{ data_completed_json | tojson | safe }};
+    // Parse safely and ensure we have arrays
+    let dataAllRaw = {{ data_all_json | tojson | safe }};
+    let dataCompletedRaw = {{ data_completed_json | tojson | safe }};
+
+    const dataAll = Array.isArray(dataAllRaw) ? dataAllRaw : Object.values(dataAllRaw || {});
+    const dataCompleted = Array.isArray(dataCompletedRaw) ? dataCompletedRaw : Object.values(dataCompletedRaw || {});
+
+    console.log('dataAll type:', typeof dataAll, 'length:', dataAll.length);
+    console.log('dataCompleted type:', typeof dataCompleted, 'length:', dataCompleted.length);
+    console.log('First all item:', dataAll[0]);
+    console.log('First completed item:', dataCompleted[0]);
 
     let currentPeriod = { type: 'month', value: '{{ default_month }}' };
 
