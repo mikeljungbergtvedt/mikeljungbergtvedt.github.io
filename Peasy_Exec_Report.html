@@ -39,7 +39,7 @@
       flex-wrap: wrap;
       margin-bottom: 24px;
     }
-    select {
+    select, input[type="date"] {
       padding: 10px 16px;
       font-size: 0.95rem;
       font-weight: 600;
@@ -48,10 +48,8 @@
       background: white;
       box-shadow: 0 1px 4px rgba(0,66,37,0.06);
       transition: all 0.2s ease;
-      cursor: pointer;
-      min-width: 170px;
     }
-    select:hover {
+    select:hover, input[type="date"]:hover {
       box-shadow: 0 3px 10px rgba(0,66,37,0.1);
     }
     .funnel, .kpi-card, .chart-container {
@@ -250,14 +248,22 @@
   <h1>Peasy – Key Metrics Overview</h1>
   <div class="controls">
     <label for="periodSelect">Period:</label>
-    <select id="periodSelect" onchange="loadDashboard()">
+    <select id="periodSelect" onchange="toggleCustomDates(); loadDashboard()">
       <option value="today">Today</option>
       <option value="7">Last 7 days</option>
       <option value="14">Last 14 days</option>
       <option value="30" selected>Last 30 days</option>
       <option value="90">Last 90 days</option>
       <option value="all">All time</option>
+      <option value="custom">Custom period</option>
     </select>
+
+    <div id="customDates" style="display:none; align-items:center; gap:12px; flex-wrap:wrap;">
+      <label for="customStart">From:</label>
+      <input type="date" id="customStart" onchange="loadDashboard()">
+      <label for="customEnd">To:</label>
+      <input type="date" id="customEnd" onchange="loadDashboard()">
+    </div>
   </div>
   <p class="config-line">
     Last updated: <span id="lastUpdate">—</span> •
@@ -282,7 +288,7 @@
     </div>
   </div>
   <div id="loading"></div>
-  <div class="version">Version 1.18 – GP % main, NOK sub</div>
+  <div class="version">Version 1.19 – Custom period + Avg days Valuation→Sold</div>
   <div id="funnelContainer" style="display:none;">
     <div class="funnel" id="funnelArea"></div>
   </div>
@@ -425,6 +431,23 @@ function showConfigPrompt() { document.getElementById('configPrompt').style.disp
 function hideConfigPrompt() { document.getElementById('configPrompt').style.display = 'none'; }
 
 // ────────────────────────────────────────────────
+// CUSTOM PERIOD TOGGLE
+// ────────────────────────────────────────────────
+function toggleCustomDates() {
+  const select = document.getElementById('periodSelect');
+  const customDiv = document.getElementById('customDates');
+  customDiv.style.display = select.value === 'custom' ? 'flex' : 'none';
+
+  if (select.value === 'custom') {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - 30);
+    document.getElementById('customStart').value = start.toISOString().split('T')[0];
+    document.getElementById('customEnd').value = today.toISOString().split('T')[0];
+  }
+}
+
+// ────────────────────────────────────────────────
 // DASHBOARD LOGIC
 // ────────────────────────────────────────────────
 let workloadChart = null;
@@ -451,15 +474,31 @@ async function loadDashboard() {
     const COL_S = 18, COL_T = 19, COL_U = 20;
 
     const today = new Date();
-    const periodDays = document.getElementById('periodSelect').value;
-    let startDate;
-    if (periodDays === 'today') {
+    let startDate = new Date(today);
+    let endDate = new Date(today);
+    endDate.setHours(23,59,59,999);
+
+    const periodValue = document.getElementById('periodSelect').value;
+
+    if (periodValue === 'custom') {
+      const startInput = document.getElementById('customStart').value;
+      const endInput = document.getElementById('customEnd').value;
+
+      if (startInput) {
+        startDate = new Date(startInput + 'T00:00:00');
+      } else {
+        startDate = new Date(2000, 0, 1);
+      }
+
+      if (endInput) {
+        endDate = new Date(endInput + 'T23:59:59.999');
+      }
+    } else if (periodValue === 'today') {
       startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    } else if (periodDays === 'all') {
+    } else if (periodValue === 'all') {
       startDate = new Date(2000, 0, 1);
     } else {
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() - parseInt(periodDays));
+      startDate.setDate(today.getDate() - parseInt(periodValue));
     }
 
     const marketingStartDate = new Date(config.marketingStart);
@@ -474,8 +513,6 @@ async function loadDashboard() {
     let transportSum = 0;
     let prodSoldSum = 0;
     let prodReturnedSum = 0;
-
-    // NEW: for average days valuation → sold
     let sumDaysToSell = 0;
     let countDaysToSell = 0;
 
@@ -485,18 +522,27 @@ async function loadDashboard() {
       const dR = getDate(ws, row, COL_R);
       const dU = getDate(ws, row, COL_U);
 
-      const inPeriod = (dO && dO >= startDate) ||
-                       (dQ && dQ >= startDate) ||
-                       (dR && dR >= startDate) ||
-                       (dU && dU >= startDate);
+      const inPeriod = 
+        (dO && dO >= startDate && dO <= endDate) ||
+        (dQ && dQ >= startDate && dQ <= endDate) ||
+        (dR && dR >= startDate && dR <= endDate) ||
+        (dU && dU >= startDate && dU <= endDate);
+
       if (!inPeriod) continue;
 
-      if (dO && dO >= startDate) { mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); totalO++; }
-      if (dQ && dQ >= startDate) { mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); totalQ++; }
+      if (dO && dO >= startDate && dO <= endDate) { 
+        mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); 
+        totalO++; 
+      }
+      if (dQ && dQ >= startDate && dQ <= endDate) { 
+        mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); 
+        totalQ++; 
+      }
       if (String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim() !== '') gireOrdered++;
 
-      if (dR && dR >= startDate) {
-        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); totalR++;
+      if (dR && dR >= startDate && dR <= endDate) {
+        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); 
+        totalR++;
         const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
         sumS += bud; countS++;
         const avgift = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_T})]?.v || 0);
@@ -505,7 +551,6 @@ async function loadDashboard() {
         if (bud < 25000) { soldUnder25k++; prodSoldSum += config.prodSoldUnder; }
         else { soldOver25k++; prodSoldSum += config.prodSoldOver; }
 
-        // NEW: calculate days if both valuation and sold date exist
         if (dO && dR && dR >= dO) {
           const days = Math.floor((dR - dO) / (1000 * 60 * 60 * 24));
           if (days >= 0) {
@@ -515,7 +560,7 @@ async function loadDashboard() {
         }
       }
 
-      if (dU && dU >= startDate) {
+      if (dU && dU >= startDate && dU <= endDate) {
         totalU++;
         const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
         if (bud < 25000) { returnedUnder25k++; prodReturnedSum += config.prodRetUnder; }
@@ -523,15 +568,13 @@ async function loadDashboard() {
       }
 
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
-      if (pVal !== '' && ((dR && dR >= startDate) || (dU && dU >= startDate))) {
+      if (pVal !== '' && ((dR && dR >= startDate && dR <= endDate) || (dU && dU >= startDate && dU <= endDate))) {
         transportSum += config.transportCost;
       }
     }
 
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
-
-    // NEW: average days
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
     const daysCountLabel = countDaysToSell > 0 ? `(${countDaysToSell} sales)` : '(no completed sales)';
 
@@ -554,8 +597,8 @@ async function loadDashboard() {
     const gpPct = incomePerSold > 0 ? (gpNok / incomePerSold) * 100 : 0;
     const profitClass = gpNok >= 0 ? 'good' : 'alert';
 
-    const isAllTime = periodDays === 'all';
-    const daysInPeriod = isAllTime ? 30 : (periodDays === 'today' ? 1 : parseInt(periodDays));
+    const isAllTime = periodValue === 'all';
+    const daysInPeriod = isAllTime ? 30 : (periodValue === 'today' ? 1 : (periodValue === 'custom' ? Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1) : parseInt(periodValue)));
     const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
     const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
     const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
@@ -570,9 +613,14 @@ async function loadDashboard() {
     const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
     const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
 
-    const shortPeriod = periodDays === 'today' || periodDays === '7';
+    const shortPeriod = periodValue === 'today' || periodValue === '7';
     document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
     document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
+
+    let displayRange = '';
+    if (periodValue === 'custom') {
+      displayRange = ` (${document.getElementById('customStart').value} – ${document.getElementById('customEnd').value})`;
+    }
 
     if (!shortPeriod) {
       document.getElementById('funnelArea').innerHTML = `
@@ -618,14 +666,11 @@ async function loadDashboard() {
           <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
           <div class="kpi-label">Sold</div>
         </div>
-
-        <!-- NEW TILE: Average days from valuation (O) to sold (R) -->
         <div class="kpi-card ${avgDaysToSell <= 30 ? 'good' : (avgDaysToSell > 60 ? 'alert' : '')}">
           <div class="kpi-value">${avgDaysToSell} dager</div>
           <div class="kpi-sub">${daysCountLabel}</div>
           <div class="kpi-label">Avg Valuation → Sold</div>
         </div>
-
         <div class="kpi-card">
           <div class="kpi-value">${totalU}</div>
           <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
@@ -705,7 +750,7 @@ async function loadDashboard() {
       `;
     }
 
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
 
     const datesO = [...mapO.keys()].sort();
     const dataO = datesO.map(k => mapO.get(k));
@@ -772,7 +817,10 @@ function dateToYMD(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-window.onload = loadDashboard;
+window.onload = function() {
+  toggleCustomDates();
+  loadDashboard();
+};
 </script>
 </body>
 </html>
