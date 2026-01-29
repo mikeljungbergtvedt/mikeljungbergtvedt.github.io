@@ -89,7 +89,6 @@
     Valuation ≈ <span id="valTimeDisplay" class="config-trigger" onclick="toggleConfigDetails()">2</span> min/car •
     Working day <span id="workDayDisplay">7.5</span> h
   </p>
-  <!-- Rest of your HTML remains exactly the same -->
   <div id="configDetails" class="config-details">
     <div>
       Valuation time: <span id="valTimeDisplayDet" class="editable" onclick="makeEditable(this, 'valTime', 'number', 0.1)">2</span> min<br>
@@ -109,19 +108,19 @@
   </div>
   <div id="loading"></div>
   <div class="version">
-    Version 1.37 – 6 tiles in row 2 optimized •
+    Version 1.39 – Gire ordered: improved parsing + independent count •
     <span class="config-trigger" onclick="toggleLogicNotes()">calculation logic</span>
   </div>
   <div id="logicnotes" class="config-details" style="display:none; margin-top:8px; padding:16px; background:rgba(255,255,255,0.7); border-radius:10px; border:1px solid rgba(130,191,210,0.15);">
     <h3 style="margin:0 0 12px 0; font-size:1.1rem;">How Metrics Are Calculated</h3>
-    <p style="margin-bottom:12px; font-size:0.92rem;">All numbers come from the XLSX report. Rows are filtered to only those with at least one relevant date (columns O, Q, R, U) in the selected period.</p>
+    <p style="margin-bottom:12px; font-size:0.92rem;">All numbers come from the XLSX report. Rows are filtered to only those with at least one relevant date (columns O, Q, R, U) in the selected period — except for Gire ordered which now uses column P date independently and handles time suffixes.</p>
     <ul style="margin:0; padding-left:20px; line-height:1.7; font-size:0.92rem;">
       <li><strong>Valuations (totalO)</strong>: Count of rows where column O (Valued date) is in the period. Avg/day = totalO / days in period (except all time).</li>
       <li><strong>Received (totalQ)</strong>: Count of rows where column Q is in the period.</li>
       <li><strong>Sold (totalR)</strong>: Count of rows where column R (Sold date) is in the period. Split <25k / ≥25k from column S (bud price).</li>
       <li><strong>In Production</strong>: Cars received (Q) but not yet sold (R) or returned (U) as of now.</li>
       <li><strong>Returned (totalU)</strong>: Count of rows where column U is in the period. Split <25k / ≥25k from column S.</li>
-      <li><strong>Gire ordered</strong>: Count of rows where column P is non-empty **and the parsed date in column P** is within the selected period.</li>
+      <li><strong>Gire ordered</strong>: Count of rows where column P is non-empty and the parsed date (ignoring time) is within the selected period — independent of O/Q/R/U dates.</li>
       <li><strong>Avg Bud (per sold)</strong>: Average of column S for sold cars (rows with R in period). Red if <125 000 NOK, green otherwise.</li>
       <li><strong>AR Income</strong>: Avg Bud × AR % (config value). Total est. = sum of Bud × AR % for sold cars.</li>
       <li><strong>Avg Avgift (per sold)</strong>: Average of column T for sold cars.</li>
@@ -182,11 +181,7 @@ localStorage.setItem('peasyConfig', JSON.stringify({
 </div>
 
 <script>
-// ────────────────────────────────────────────────
-// Your original script remains 100% unchanged below
-// Only added: <button onclick="loadDashboard()">Refresh</button>
-// ────────────────────────────────────────────────
-
+// CONFIG & STORAGE
 const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
 let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
 function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
@@ -242,8 +237,47 @@ function toggleCustomDates() {
     document.getElementById('customEnd').value = today.toISOString().split('T')[0];
   }
 }
+
+// IMPROVED getDate – now handles "dd.mm.yyyy hh:mm" in column P
+function getDate(ws, row, col) {
+  const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+  if (!cell || !cell.v) return null;
+
+  let value = cell.v;
+
+  // Excel serial number
+  if (typeof value === 'number') {
+    const d = XLSX.SSF.parse_date_code(value);
+    return new Date(d.y, d.m-1, d.d);
+  }
+
+  // String format (Norwegian dd.mm.yyyy or with time)
+  if (typeof value === 'string') {
+    value = value.trim();
+    // Remove time part if present (e.g. "29.01.2026 10:19" → "29.01.2026")
+    value = value.split(/\s+/)[0];
+
+    const m = value.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10);
+      const year = parseInt(m[3], 10);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000) {
+        return new Date(year, month - 1, day);
+      }
+    }
+  }
+
+  return null;
+}
+
+function dateToYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 let workloadChart = null;
 let receivedSoldChart = null;
+
 async function loadDashboard() {
   const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
   const loading = document.getElementById('loading');
@@ -300,6 +334,7 @@ async function loadDashboard() {
       const dR = getDate(ws, row, COL_R);
       const dU = getDate(ws, row, COL_U);
       const dP = getDate(ws, row, COL_P);
+      const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
       const inPeriod =
         (dO && dO >= startDate && dO <= endDate) ||
         (dQ && dQ >= startDate && dQ <= endDate) ||
@@ -308,8 +343,8 @@ async function loadDashboard() {
       if (!inPeriod) continue;
       if (dO && dO >= startDate && dO <= endDate) { mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); totalO++; }
       if (dQ && dQ >= startDate && dQ <= endDate) { mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); totalQ++; }
-      const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
-      if (dP && dP >= startDate && dP <= endDate && pVal !== '') {
+      // Gire ordered: count if P has valid date in the period — independent of O/Q/R/U
+      if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
         gireOrdered++;
       }
       if (pVal !== '') {
@@ -546,22 +581,6 @@ async function loadDashboard() {
   } finally {
     document.getElementById('loading').textContent = '';
   }
-}
-function getDate(ws, row, col) {
-  const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
-  if (!cell || !cell.v) return null;
-  if (typeof cell.v === 'number') {
-    const d = XLSX.SSF.parse_date_code(cell.v);
-    return new Date(d.y, d.m-1, d.d);
-  }
-  if (typeof cell.v === 'string') {
-    const m = cell.v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-    if (m) return new Date(+m[3], m[2]-1, +m[1]);
-  }
-  return null;
-}
-function dateToYMD(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 window.onload = function() {
   toggleCustomDates();
