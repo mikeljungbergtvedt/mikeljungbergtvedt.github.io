@@ -13,7 +13,7 @@
         .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
         button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
         button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
+        button:disabled { background: #888; cursor: not-allowed; transform: none; box-shadow: none; }
         button#edit-btn { background: #006644; }
         .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
@@ -41,7 +41,7 @@
         <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
         </select>
-        <button onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
+        <button id="generate-btn" onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
         <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
         <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
         <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
@@ -66,10 +66,20 @@
 </div>
 
 <script>
-// LocalStorage key for saved reports
 const STORAGE_KEY = 'peasy_mandagsrapporter';
+let currentReport = null;
+let currentCreatedTime = '';
 
-// Load historical weeks into dropdown on page open
+function cleanNum(str) {
+    if (!str) return 0;
+    let cleaned = (str + '')
+        .replace(/\s/g, '')
+        .replace(/\u00A0/g, '')
+        .replace(/\u2212/g, '-')
+        .replace(/[^0-9.-]/g, '');
+    return parseFloat(cleaned) || 0;
+}
+
 window.onload = () => {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const select = document.getElementById('weekSelect');
@@ -83,47 +93,64 @@ window.onload = () => {
         select.value = saved[saved.length - 1].id;
         loadSavedReport();
     }
+    updateGenerateButton();
 };
 
-// Load a saved report from localStorage
+function updateGenerateButton() {
+    const btn = document.getElementById('generate-btn');
+    const today = new Date();
+    const day = today.getDay(); // 1 = Monday
+    const selectedId = document.getElementById('weekSelect').value;
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const isLocked = saved.some(r => r.id === selectedId);
+
+    if (day !== 1 || isLocked) {
+        btn.disabled = true;
+        btn.textContent = day === 1 ? 'Uken er allerede låst' : 'Vent til mandag for ny rapport';
+    } else {
+        btn.disabled = false;
+        btn.textContent = 'Generer ny rapport (siste uke)';
+    }
+}
+
 function loadSavedReport() {
     const selectedId = document.getElementById('weekSelect').value;
-    if (!selectedId) return;
-   
+    if (!selectedId) {
+        document.getElementById('report-content').style.display = 'none';
+        document.getElementById('edit-btn').style.display = 'none';
+        document.getElementById('lock-btn').style.display = 'none';
+        return;
+    }
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const report = saved.find(r => r.id === selectedId);
     if (!report) return;
+
+    currentReport = report;
+    currentCreatedTime = report.created;
+
     document.getElementById('report-content').style.display = 'block';
     document.getElementById('edit-btn').style.display = 'block';
     document.getElementById('lock-btn').style.display = 'none';
     document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. Sist endret: ${report.edited || report.created}`;
+    
+    const editedText = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
+    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${editedText}`;
     document.getElementById('commentary').innerHTML = report.commentary;
     document.getElementById('sold-table').innerHTML = report.soldTable;
     document.getElementById('returned-table').innerHTML = report.returnedTable;
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
+    
+    updateGenerateButton();
 }
 
-// Helper to safely parse Norwegian formatted numbers (handles spaces, nbsp, Unicode minus, etc.)
-function cleanNum(str) {
-    if (!str) return 0;
-    let cleaned = (str + '')
-        .replace(/\s/g, '')
-        .replace(/\u00A0/g, '')
-        .replace(/\u2212/g, '-')           // Fix: replace Unicode minus with ASCII minus
-        .replace(/[^0-9.-]/g, '');
-    return parseFloat(cleaned) || 0;
-}
-
-// Generate new report for last week (Mon-Sun)
 async function generateNewReport() {
+    if (document.getElementById('generate-btn').disabled) return;
+
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     document.getElementById('loading').textContent = 'Genererer ny rapport...';
     document.getElementById('loading').style.display = 'block';
     document.getElementById('report-content').style.display = 'none';
-    document.getElementById('edit-btn').style.display = 'none';
-    document.getElementById('save-edits').style.display = 'none';
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -132,7 +159,6 @@ async function generateNewReport() {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
 
-        // Column indices
         const headers = data[0].map(h => (h || '').trim());
         const col = {
             Merke: headers.indexOf('Merke'),
@@ -144,18 +170,18 @@ async function generateNewReport() {
             Returnert: headers.findIndex(h => h.includes('Returnert'))
         };
 
-        // Last week: previous Monday to Sunday
         const today = new Date();
-        const dayOfWeek = today.getDay() || 7; // Sunday = 0 → 7
+        const dayOfWeek = today.getDay() || 7;
         const startDate = new Date(today);
-        startDate.setDate(today.getDate() - dayOfWeek - 6); // Back to last Monday
+        startDate.setDate(today.getDate() - dayOfWeek - 6);
         startDate.setHours(0,0,0,0);
         const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 7); // To next Monday (exclude)
+        endDate.setDate(startDate.getDate() + 7);
         endDate.setHours(0,0,0,0);
 
         const weekNum = Math.ceil((startDate - new Date(startDate.getFullYear(),0,1)) / (86400000 * 7));
         const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+        const nowStr = new Date().toLocaleString('nb-NO');
 
         const soldCars = [];
         const returnedCars = [];
@@ -168,13 +194,11 @@ async function generateNewReport() {
                 if (!match) return null;
                 return new Date(match[3], match[2]-1, match[1]);
             };
-
             const soldDate = parseDate(row[col['Solgt på']]);
             const retDate = parseDate(row[col.Returnert]);
 
             const arRange = row[col['Endelig AR verdi']] || '';
             let arLowest = 0;
-
             if (arRange.includes('-')) {
                 const [low, high] = arRange.split('-').map(n => parseFloat(n.trim()) || 0);
                 arLowest = low;
@@ -200,42 +224,25 @@ async function generateNewReport() {
             if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
-        // Facts with robust parsing
-        const facts = (cars, type) => {
+        const facts = (cars) => {
             const n = cars.length;
-            if (n === 0) {
-                return { n: 0, under: 0, over: 0, on: 0, avgNok: '0', avgPct: '0.0' };
-            }
-
-            let under = 0;
-            let over = 0;
-            let on = 0;
-            let diffNokSum = 0;
-            let diffPctSum = 0;
-
+            if (n === 0) return { n: 0, under: 0, over: 0, on: 0, avgNok: '0', avgPct: '0.0' };
+            let under = 0, over = 0, on = 0, diffNokSum = 0, diffPctSum = 0;
             cars.forEach(c => {
                 const nok = cleanNum(c['Diff NOK']);
                 if (nok < 0) under++;
                 else if (nok > 0) over++;
                 else on++;
-
                 diffNokSum += nok;
-
-                const pct = cleanNum(c['Diff %']);
-                diffPctSum += pct;
+                diffPctSum += cleanNum(c['Diff %']);
             });
-
-            const avgNokRaw = diffNokSum / n;
-            const avgNok = Math.round(avgNokRaw).toLocaleString('nb-NO');
-
-            const avgPctRaw = diffPctSum / n;
-            const avgPct = avgPctRaw.toFixed(1);
-
+            const avgNok = Math.round(diffNokSum / n).toLocaleString('nb-NO');
+            const avgPct = (diffPctSum / n).toFixed(1);
             return { n, under, over, on, avgNok, avgPct };
         };
 
-        const soldF = facts(soldCars, 'solgt');
-        const retF = facts(returnedCars, 'returnert');
+        const soldF = facts(soldCars);
+        const retF = facts(returnedCars);
 
         const commentary = `
             <h3>Fakta – siste uke (man-søn)</h3>
@@ -250,15 +257,13 @@ async function generateNewReport() {
             </ul>
         `;
 
-        // Render tables
-        const render = (id, cars, title) => {
+        const render = (id, cars) => {
             const table = document.getElementById(id);
             table.innerHTML = '';
             if (cars.length === 0) {
                 table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
                 return;
             }
-
             const thead = document.createElement('thead');
             const tr = document.createElement('tr');
             ['Merke', 'Modell', 'År', 'AR laveste estimat', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
@@ -291,23 +296,21 @@ async function generateNewReport() {
             ftd.colSpan = 3;
             ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
             ftr.appendChild(ftd);
-
-            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%' : '0.0%';
-
+            const avgAR = Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO');
+            const avgBud = Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO');
+            const avgDiffN = Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO');
+            const avgDiffP = (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%';
             [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
                 const td = document.createElement('td');
                 td.textContent = v;
                 ftr.appendChild(td);
             });
-
             tfoot.appendChild(ftr);
             table.appendChild(tfoot);
         };
 
-        document.getElementById('timestamp').textContent = `Opprettet: ${new Date().toLocaleString('nb-NO')}. Sist endret: -`;
+        document.getElementById('timestamp').textContent = `Opprettet: ${nowStr}. Sist endret: -`;
+        currentCreatedTime = nowStr;
         document.getElementById('commentary').innerHTML = commentary;
         render('sold-table', soldCars);
         render('returned-table', returnedCars);
@@ -322,9 +325,13 @@ async function generateNewReport() {
             commentary,
             soldTable: document.getElementById('sold-table').outerHTML,
             returnedTable: document.getElementById('returned-table').outerHTML,
-            created: new Date().toLocaleString('nb-NO'),
+            created: nowStr,
             title
         };
+
+        const select = document.getElementById('weekSelect');
+        select.value = '';
+        updateGenerateButton();
 
     } catch (err) {
         document.getElementById('loading').textContent = 'Feil: ' + err.message;
@@ -333,9 +340,6 @@ async function generateNewReport() {
     }
 }
 
-let currentReport = null;
-
-// Edit mode
 function editReport() {
     const commentary = document.getElementById('commentary');
     const textarea = document.createElement('textarea');
@@ -346,26 +350,32 @@ function editReport() {
     document.getElementById('save-edits').style.display = 'block';
 }
 
-// Save edits
 function saveEdits() {
     const textarea = document.querySelector('textarea');
-    document.getElementById('commentary').innerHTML = textarea.value;
+    const newCommentary = textarea.value;
+    document.getElementById('commentary').innerHTML = newCommentary;
     document.getElementById('edit-btn').style.display = 'block';
     document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('timestamp').textContent += ` (endret: ${new Date().toLocaleString('nb-NO')})`;
+
+    const nowStr = new Date().toLocaleString('nb-NO');
+    document.getElementById('timestamp').textContent = `Opprettet: ${currentCreatedTime}. Sist endret: ${nowStr}`;
+
+    currentReport.commentary = newCommentary;
+    currentReport.edited = nowStr;
 }
 
-// Lock/save to history
 function lockReport() {
     if (!currentReport) return alert('Generer rapport først');
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     currentReport.id = 'uke' + (saved.length + 1);
-    currentReport.edited = new Date().toLocaleString('nb-NO');
+    currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO');
     saved.push(currentReport);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     alert('Rapport låst inn!');
-    location.reload(); // Reload to update dropdown
+    location.reload();
 }
+
+document.getElementById('weekSelect').addEventListener('change', updateGenerateButton);
 </script>
 </body>
 </html>
