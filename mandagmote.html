@@ -3,207 +3,329 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsmøte – Peasy</title>
+    <title>Mandagsrapport – Peasy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
-        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .controls { margin-bottom: 32px; }
-        select { padding: 12px 20px; font-size: 1.05rem; font-weight: 600; border-radius: 10px; border: none; background: white; box-shadow: 0 1px 4px rgba(0,66,37,0.06); min-width: 260px; }
-        .content { display: none; opacity: 0; transition: opacity 0.4s ease; }
-        .content.active { display: block; opacity: 1; }
-        .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
-        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 24px; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
+        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+        button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button#edit-btn { background: #006644; }
+        .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210, 0.10); }
         th { background: rgba(130,191,210,0.05); font-weight: 700; }
         tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
         .highlight-negative { color: #d32f2f; font-weight: 600; }
         .highlight-positive { color: #2e7d32; font-weight: 600; }
         .highlight-zero { color: #555; font-weight: 600; }
+        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
         .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
+        #report-content { display: none; }
+        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
+        .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
+        #save-edits { margin-top: 12px; background: #2e7d32; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <h1>Mandagsmøte – Peasy</h1>
-
+    <h1>Mandagsrapport – Peasy</h1>
+    <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter fra forrige uke. Oppdateres hver mandag for siste uke (man-søn).</p>
+    
     <div class="controls">
-        <label for="weekSelect">Velg uke:</label>
-        <select id="weekSelect" onchange="showWeek()">
+        <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
         </select>
+        <button onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
+        <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
+        <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
+        <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
     </div>
-
-    <!-- Content injected by JS -->
-</div>
-
-<script>
-// ─────────────────────────────────────────────────────────────
-// Weeks – add new block each Monday right before the closing ]
-// ─────────────────────────────────────────────────────────────
-const meetings = [
-    {
-        id: "uke5",
-        title: "Mandag 2. februar 2026 – uke 5",
-        html: `
-            <h2>Mandag 2. februar 2026 – uke 5</h2>
-            <div class="commentary">
-                <h3>Fakta – Differanse Bud vs AR-verdi (midtpunkt)</h3>
-                <ul>
-                    <li>10 biler solgt i perioden</li>
-                    <li>7 biler solgt under AR-verdi midtpunkt</li>
-                    <li>1 bil solgt over AR-verdi midtpunkt</li>
-                    <li>2 biler solgt nøyaktig på AR-verdi midtpunkt</li>
-                    <li>Gjennomsnittlig differanse solgt: <span class="highlight-negative">-12 300 NOK</span> per bil (<span class="highlight-negative">-9.0%</span>)</li>
-                    <li>[Returnert data mangler i denne oppdateringen – legg til neste gang]</li>
-                </ul>
-            </div>
-
-            <div class="section-title">Solgte biler</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>BMW</td><td>318d xDRIVE</td><td>2013</td><td>140 000</td><td>102 500</td><td class="highlight-negative">-37 500</td><td class="highlight-negative">-26.8%</td></tr>
-                    <tr><td>VOLVO</td><td>XC60 T8 Twin Engine</td><td>2018</td><td>275 000</td><td>238 500</td><td class="highlight-negative">-36 500</td><td class="highlight-negative">-13.3%</td></tr>
-                    <tr><td>TOYOTA</td><td>AURIS</td><td>2012</td><td>75 000</td><td>65 000</td><td class="highlight-negative">-10 000</td><td class="highlight-negative">-13.3%</td></tr>
-                    <tr><td>AUDI</td><td>A6</td><td>2012</td><td>60 000</td><td>55 500</td><td class="highlight-negative">-4 500</td><td class="highlight-negative">-7.5%</td></tr>
-                    <tr><td>VOLVO</td><td>V70</td><td>2012</td><td>23 000</td><td>23 000</td><td class="highlight-zero">0</td><td class="highlight-zero">0.0%</td></tr>
-                    <tr><td>TOYOTA</td><td>YARIS HYBRID</td><td>2015</td><td>80 000</td><td>69 500</td><td class="highlight-negative">-10 500</td><td class="highlight-negative">-13.1%</td></tr>
-                    <tr><td>SKODA</td><td>OCTAVIA</td><td>2018</td><td>162 500</td><td>139 500</td><td class="highlight-negative">-23 000</td><td class="highlight-negative">-14.2%</td></tr>
-                    <tr><td>VOLVO</td><td>V70</td><td>2012</td><td>31 000</td><td>33 000</td><td class="highlight-positive">+2 000</td><td class="highlight-positive">+6.5%</td></tr>
-                    <tr><td>AUDI</td><td>A3</td><td>2011</td><td>37 500</td><td>34 500</td><td class="highlight-negative">-3 000</td><td class="highlight-negative">-8.0%</td></tr>
-                    <tr><td>VOLVO</td><td>V60</td><td>2019</td><td>155 000</td><td>155 000</td><td class="highlight-zero">0</td><td class="highlight-zero">0.0%</td></tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Gjennomsnitt (10 biler)</strong></td>
-                        <td>103 900</td><td>91 600</td><td class="highlight-negative">-12 300</td><td class="highlight-negative">-9.0%</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <div class="section-title">Returnerte biler</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Ingen returer i uke 5-data – fylles med ekte data neste gang -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Gjennomsnitt (0 biler)</strong></td>
-                        <td>0</td><td>0</td><td>0</td><td>0.0%</td>
-                    </tr>
-                </tfoot>
-            </table>
-        `
-    },
-    // ─────────────────────────────────────────────────────────────
-    // Placeholder for NEXT week (uke 6) – replace this entire block each Monday
-    // ─────────────────────────────────────────────────────────────
-    {
-        id: "uke6",
-        title: "Mandag 9. februar 2026 – uke 6",
-        html: `
-            <h2>Mandag 9. februar 2026 – uke 6</h2>
-            <div class="commentary">
-                <h3>Fakta – Differanse Bud vs AR-verdi (midtpunkt)</h3>
-                <ul>
-                    <li>0 biler solgt i perioden</li>
-                    <li>0 biler solgt under AR-verdi midtpunkt</li>
-                    <li>0 biler solgt over AR-verdi midtpunkt</li>
-                    <li>0 biler solgt nøyaktig på AR-verdi midtpunkt</li>
-                    <li>Gjennomsnittlig differanse solgt: 0 NOK per bil (0.0%)</li>
-                    <li>0 biler returnert i perioden</li>
-                    <li>Gjennomsnittlig differanse returnert: 0 NOK per bil (0.0%)</li>
-                </ul>
-            </div>
-
-            <div class="section-title">Solgte biler</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Empty – waiting for real data -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Gjennomsnitt (0 biler)</strong></td>
-                        <td>0</td><td>0</td><td>0</td><td>0.0%</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <div class="section-title">Returnerte biler</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Empty – waiting for real data -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Gjennomsnitt (0 biler)</strong></td>
-                        <td>0</td><td>0</td><td>0</td><td>0.0%</td>
-                    </tr>
-                </tfoot>
-            </table>
-        `
-    }
-    // ─────────────────────────────────────────────────────────────
-    // OPTIMAL PROMPT – copy-paste this to Grok every Monday
-    // "Current date is [insert today's date]. Generate the JavaScript object block for mandagmote.html for next week: [insert date and week number, e.g. Mandag 9. februar 2026 – uke 6]. Use the exact same table structure every week: Sold cars table + Returned cars table, both with columns Merke | Modell | År | AR midtpunkt | Bud | Diff NOK | Diff %. Include section titles 'Solgte biler' and 'Returnerte biler'. Facts section with bullet list for sold and returned (count total, under/over/on midpoint, average diff NOK and % for each group). Facts must be objective. Use highlight-negative/positive/zero classes. Here is my data: Sold cars: [paste sold rows as text/table]. Returned cars: [paste returned rows]. Averages sold: AR snitt [x], Bud snitt [y], Diff snitt NOK [z], Diff % [w]. Averages returned: same. Output only the block starting with ,{ id: \"ukeX\", ..."
-    // ─────────────────────────────────────────────────────────────
-];
-
-// Populate dropdown
-const select = document.getElementById("weekSelect");
-meetings.forEach(m => {
-    const option = document.createElement("option");
-    option.value = m.id;
-    option.textContent = m.title;
-    select.appendChild(option);
-});
-
-// Show selected week
-function showWeek() {
-    const selectedId = select.value;
-    document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
     
-    if (selectedId) {
-        let contentDiv = document.getElementById(selectedId);
-        if (!contentDiv) {
-            contentDiv = document.createElement('div');
-            contentDiv.id = selectedId;
-            contentDiv.className = 'content';
-            document.querySelector('.container').appendChild(contentDiv);
+    <div id="loading" style="display: none;">Laster...</div>
+    
+    <div id="report-content">
+        <div id="timestamp" class="timestamp"></div>
+        <div id="commentary" class="commentary"></div>
+        
+        <div id="sold-section">
+            <div class="section-title">Solgte biler</div>
+            <table id="sold-table"></table>
+        </div>
+        
+        <div id="returned-section">
+            <div class="section-title">Returnerte biler</div>
+            <table id="returned-table"></table>
+        </div>
+    </div>
+</body>
+<script>
+// LocalStorage key for saved reports
+const STORAGE_KEY = 'peasy_mandagsrapporter';
+
+// Load historical weeks into dropdown on page open
+window.onload = () => {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const select = document.getElementById('weekSelect');
+    saved.forEach(report => {
+        const opt = document.createElement('option');
+        opt.value = report.id;
+        opt.textContent = report.title;
+        select.appendChild(opt);
+    });
+    if (saved.length > 0) {
+        select.value = saved[saved.length - 1].id;
+        loadSavedReport();
+    }
+};
+
+// Load a saved report from localStorage
+function loadSavedReport() {
+    const selectedId = document.getElementById('weekSelect').value;
+    if (!selectedId) return;
+    
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const report = saved.find(r => r.id === selectedId);
+    if (!report) return;
+
+    document.getElementById('report-content').style.display = 'block';
+    document.getElementById('edit-btn').style.display = 'block';
+    document.getElementById('lock-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'none';
+
+    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. Sist endret: ${report.edited || report.created}`;
+
+    document.getElementById('commentary').innerHTML = report.commentary;
+    document.getElementById('sold-table').innerHTML = report.soldTable;
+    document.getElementById('returned-table').innerHTML = report.returnedTable;
+
+    document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
+    document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
+}
+
+// Generate new report for last week (Mon-Sun)
+async function generateNewReport() {
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    document.getElementById('loading').textContent = 'Genererer ny rapport...';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('report-content').style.display = 'none';
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'none';
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ab = await res.arrayBuffer();
+        const wb = XLSX.read(ab, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+
+        // Column indices
+        const headers = data[0].map(h => (h || '').trim());
+        const col = {
+            Merke: headers.indexOf('Merke'),
+            Modell: headers.indexOf('Modell'),
+            År: headers.indexOf('År'),
+            'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
+            Bud: headers.indexOf('Bud'),
+            'Solgt på': headers.indexOf('Solgt på'),
+            Returnert: headers.findIndex(h => h.includes('Returnert'))
+        };
+
+        // Last week: previous Monday to Sunday
+        const today = new Date();
+        const dayOfWeek = today.getDay() || 7; // Sunday = 0 → 7
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - dayOfWeek - 6); // Back to last Monday
+        startDate.setHours(0,0,0,0);
+
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 7); // To next Monday (exclude)
+        endDate.setHours(0,0,0,0);
+
+        const weekNum = Math.ceil((startDate - new Date(startDate.getFullYear(),0,1)) / (86400000 * 7));
+        const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+
+        const soldCars = [];
+        const returnedCars = [];
+
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const parseDate = (str) => {
+                if (!str) return null;
+                const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+                if (!match) return null;
+                return new Date(match[3], match[2]-1, match[1]);
+            };
+
+            const soldDate = parseDate(row[col['Solgt på']]);
+            const retDate = parseDate(row[col.Returnert]);
+
+            const arRange = row[col['Endelig AR verdi']] || '';
+            let arMid = 0;
+            if (arRange.includes('-')) {
+                const [low, high] = arRange.split('-').map(n => parseFloat(n.trim()) || 0);
+                arMid = (low + high) / 2;
+            }
+
+            const bud = parseFloat(row[col.Bud] || 0);
+            const diffNok = bud - arMid;
+            const diffPct = arMid ? ((diffNok / arMid) * 100).toFixed(1) : '0.0';
+
+            const car = {
+                Merke: row[col.Merke] || '-',
+                Modell: row[col.Modell] || '-',
+                År: row[col.År] || '-',
+                'AR midtpunkt': arMid.toLocaleString('nb-NO'),
+                Bud: bud.toLocaleString('nb-NO'),
+                'Diff NOK': diffNok.toLocaleString('nb-NO'),
+                'Diff %': diffPct + '%'
+            };
+
+            if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+            if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
-        contentDiv.innerHTML = meetings.find(m => m.id === selectedId).html;
-        div.classList.add('active');
+
+        // Facts
+        const facts = (cars, type) => {
+            const n = cars.length;
+            const under = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) < 0).length;
+            const over = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) > 0).length;
+            const on = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) === 0).length;
+            const avgNok = n ? Math.round(cars.reduce((s, c) => s + parseFloat(c['Diff NOK'].replace(/\s/g, '')), 0) / n).toLocaleString('nb-NO') : '0';
+            const avgPct = n ? (cars.reduce((s, c) => s + parseFloat(c['Diff %'].replace('%', '')), 0) / n).toFixed(1) : '0.0';
+            return { n, under, over, on, avgNok, avgPct };
+        };
+
+        const soldF = facts(soldCars, 'solgt');
+        const retF = facts(returnedCars, 'returnert');
+
+        const commentary = `
+            <h3>Fakta – siste uke (man-søn)</h3>
+            <ul>
+                <li><strong>Solgt:</strong> ${soldF.n} biler</li>
+                <li>Under midtpunkt: ${soldF.under}</li>
+                <li>Over midtpunkt: ${soldF.over}</li>
+                <li>På midtpunkt: ${soldF.on}</li>
+                <li>Gj.sn. diff: ${soldF.avgNok} NOK (${soldF.avgPct}%)</li>
+                <li><strong>Returnert:</strong> ${retF.n} biler</li>
+                <li>Gj.sn. diff returnert: ${retF.avgNok} NOK (${retF.avgPct}%)</li>
+            </ul>
+        `;
+
+        // Render tables
+        const render = (id, cars, title) => {
+            const table = document.getElementById(id);
+            table.innerHTML = '';
+            if (cars.length === 0) {
+                table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
+                return;
+            }
+            const thead = document.createElement('thead');
+            const tr = document.createElement('tr');
+            ['Merke', 'Modell', 'År', 'AR midtpunkt', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            cars.forEach(car => {
+                const row = document.createElement('tr');
+                Object.keys(car).forEach(key => {
+                    const td = document.createElement('td');
+                    td.textContent = car[key];
+                    if (key === 'Diff NOK' || key === 'Diff %') {
+                        const val = parseFloat(key === 'Diff %' ? car[key].replace('%', '') : car[key].replace(/\s/g, ''));
+                        td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
+                    }
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+
+            const tfoot = document.createElement('tfoot');
+            const ftr = document.createElement('tr');
+            const ftd = document.createElement('td');
+            ftd.colSpan = 3;
+            ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
+            ftr.appendChild(ftd);
+
+            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR midtpunkt'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')), 0) / cars.length).toFixed(1) + '%' : '0.0%';
+
+            [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                ftr.appendChild(td);
+            });
+            tfoot.appendChild(ftr);
+            table.appendChild(tfoot);
+        };
+
+        document.getElementById('timestamp').textContent = `Opprettet: ${new Date().toLocaleString('nb-NO')}. Sist endret: -`;
+        document.getElementById('commentary').innerHTML = commentary;
+        render('sold-table', soldCars);
+        render('returned-table', returnedCars);
+        document.getElementById('report-content').style.display = 'block';
+        document.getElementById('edit-btn').style.display = 'block';
+        document.getElementById('lock-btn').style.display = 'block';
+        document.getElementById('sold-section').style.display = soldCars.length > 0 ? 'block' : 'none';
+        document.getElementById('returned-section').style.display = returnedCars.length > 0 ? 'block' : 'none';
+
+        currentReport = { commentary, soldTable: document.getElementById('sold-table').outerHTML, returnedTable: document.getElementById('returned-table').outerHTML, created: new Date().toLocaleString('nb-NO'), title };
+    } catch (err) {
+        document.getElementById('loading').textContent = 'Feil: ' + err.message;
+    } finally {
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
-// Auto-show latest week
-if (meetings.length > 0) {
-    select.value = meetings[meetings.length - 1].id;
-    showWeek();
-}
-</script>
+let currentReport = null;
 
+// Edit mode
+function editReport() {
+    const commentary = document.getElementById('commentary');
+    const textarea = document.createElement('textarea');
+    textarea.value = commentary.innerHTML.trim();
+    commentary.innerHTML = '';
+    commentary.appendChild(textarea);
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'block';
+}
+
+// Save edits
+function saveEdits() {
+    const textarea = document.querySelector('textarea');
+    document.getElementById('commentary').innerHTML = textarea.value;
+    document.getElementById('edit-btn').style.display = 'block';
+    document.getElementById('save-edits').style.display = 'none';
+    document.getElementById('timestamp').textContent += ` (endret: ${new Date().toLocaleString('nb-NO')})`;
+}
+
+// Lock/save to history
+function lockReport() {
+    if (!currentReport) return alert('Generer rapport først');
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    currentReport.id = 'uke' + (saved.length + 1);
+    currentReport.edited = new Date().toLocaleString('nb-NO');
+    saved.push(currentReport);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    alert('Rapport låst inn!');
+    location.reload();  // Reload to update dropdown
+}
+
+window.onload = loadReport;  // Auto-run on open
+</script>
 </body>
 </html>
