@@ -105,15 +105,15 @@ function loadSavedReport() {
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
 }
 
-// Helper to safely parse Norwegian formatted numbers (handles spaces, non-breaking spaces, etc.)
+// Helper to safely parse Norwegian formatted numbers (handles spaces, nbsp, Unicode minus, etc.)
 function cleanNum(str) {
     if (!str) return 0;
-    return parseFloat(
-        (str + '')
-            .replace(/\s/g, '')
-            .replace(/\u00A0/g, '')
-            .replace(/[^0-9.-]/g, '')
-    ) || 0;
+    let cleaned = (str + '')
+        .replace(/\s/g, '')
+        .replace(/\u00A0/g, '')
+        .replace(/\u2212/g, '-')           // Fix: replace Unicode minus with ASCII minus
+        .replace(/[^0-9.-]/g, '');
+    return parseFloat(cleaned) || 0;
 }
 
 // Generate new report for last week (Mon-Sun)
@@ -200,7 +200,7 @@ async function generateNewReport() {
             if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
-        // Fixed facts function with robust number parsing
+        // Facts with robust parsing
         const facts = (cars, type) => {
             const n = cars.length;
             if (n === 0) {
