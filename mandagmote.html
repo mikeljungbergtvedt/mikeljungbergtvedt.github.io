@@ -23,7 +23,6 @@
         .highlight-zero { color: #555; font-weight: 600; }
         #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
         .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
-        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
     </style>
 </head>
@@ -33,10 +32,10 @@
     <p style="opacity: 0.8; margin-bottom: 32px;">Forrige full uke (man–søn). Kun biler med ikke-tomme datoer i kolonne O (verdi) eller U (retur).</p>
     
     <div class="controls">
-        <button onclick="loadReport()">Oppdater nå (forrige uke)</button>
+        <button onclick="loadReport()">Oppdater nå</button>
     </div>
     
-    <div id="loading">Laster data fra rapporten...</div>
+    <div id="loading">Laster data...</div>
     
     <div id="commentary" class="commentary" style="display: none;"></div>
     
@@ -54,7 +53,7 @@
 <script>
 async function loadReport() {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    document.getElementById('loading').textContent = 'Laster og behandler rapport...';
+    document.getElementById('loading').textContent = 'Laster og behandler...';
     document.getElementById('loading').style.display = 'block';
     document.getElementById('commentary').style.display = 'none';
     document.getElementById('sold-section').style.display = 'none';
@@ -75,15 +74,16 @@ async function loadReport() {
             År: headers.indexOf('År'),
             'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
             Bud: headers.indexOf('Bud'),
-            O: headers.findIndex(h => h.includes('Registrert') || h.toLowerCase().includes('o')), // column O
-            U: headers.findIndex(h => h.includes('Returnert') || h.toLowerCase().includes('u'))     // column U
+            O: headers.findIndex(h => h.toLowerCase().includes('registrert') || h.includes('O')),
+            U: headers.findIndex(h => h.toLowerCase().includes('returnert') || h.includes('U'))
         };
 
-        // Previous full week (Mon-Sun)
+        // Previous full week: Mon-Sun before current week
         const today = new Date();
-        const dayOfWeek = today.getDay() || 7; // Sunday = 0 → 7
+        const dayOfWeek = today.getDay() || 7;
+        const daysToLastSunday = dayOfWeek;
         const lastSunday = new Date(today);
-        lastSunday.setDate(today.getDate() - dayOfWeek);
+        lastSunday.setDate(today.getDate() - daysToLastSunday);
         lastSunday.setHours(23,59,59,999);
 
         const lastMonday = new Date(lastSunday);
@@ -93,26 +93,34 @@ async function loadReport() {
         const soldCars = [];
         const returnedCars = [];
 
-        const parseDate = (str) => {
-            if (!str || typeof str !== 'string' || str.trim() === '') return null;
-            const datePart = str.split(/\s+/)[0].trim();
+        const parseDate = (val) => {
+            if (!val) return null;
+            let str = val.toString().trim();
+            if (str === '') return null;
+            // Take first date part
+            const datePart = str.split(/\s+/)[0];
             const match = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-            if (!match) return null;
-            const [_, d, m, y] = match;
-            const date = new Date(Number(y), Number(m)-1, Number(d));
-            return isNaN(date.getTime()) ? null : date;
+            if (match) {
+                const [_, d, m, y] = match;
+                const date = new Date(Number(y), Number(m)-1, Number(d));
+                return isNaN(date.getTime()) ? null : date;
+            }
+            return null;
         };
 
         const arMidpoint = (range) => {
-            if (!range || !range.includes('-')) return 0;
+            if (!range || typeof range !== 'string' || !range.includes('-')) return 0;
             const [low, high] = range.split('-').map(n => parseFloat(n.trim()) || 0);
             return (low + high) / 2;
         };
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-            const oDate = parseDate(row[col.O]);
-            const uDate = parseDate(row[col.U]);
+            const oVal = row[col.O];
+            const uVal = row[col.U];
+
+            const oDate = parseDate(oVal);
+            const uDate = parseDate(uVal);
 
             const arMid = arMidpoint(row[col['Endelig AR verdi']]);
             const bud = parseFloat((row[col.Bud] || '0').toString().replace(/\s/g, '')) || 0;
@@ -129,18 +137,12 @@ async function loadReport() {
                 'Diff %': diffPct + '%'
             };
 
-            // Strict: only if non-empty O date in week → sold
-            if (oDate && row[col.O] && row[col.O].toString().trim() !== '') {
-                if (oDate >= lastMonday && oDate <= lastSunday) {
-                    soldCars.push(car);
-                }
+            // Only if cell is non-empty string and date parsed and in week
+            if (typeof oVal === 'string' && oVal.trim() !== '' && oDate && oDate >= lastMonday && oDate <= lastSunday) {
+                soldCars.push(car);
             }
-
-            // Strict: only if non-empty U date in week → returned
-            if (uDate && row[col.U] && row[col.U].toString().trim() !== '') {
-                if (uDate >= lastMonday && uDate <= lastSunday) {
-                    returnedCars.push(car);
-                }
+            if (typeof uVal === 'string' && uVal.trim() !== '' && uDate && uDate >= lastMonday && uDate <= lastSunday) {
+                returnedCars.push(car);
             }
         }
 
@@ -157,14 +159,14 @@ async function loadReport() {
         };
 
         const soldF = facts(soldCars);
-        const retF  = facts(returnedCars);
+        const retF = facts(returnedCars);
 
         const total = soldF.n + retF.n;
         const returAndel = total > 0 ? Math.round((retF.n / total) * 100) : 0;
 
         const diffUnder = retF.underPct - soldF.underPct;
         const diffNokRaw = parseFloat(retF.avgUndersalgNok.replace(/\s/g,'')) - parseFloat(soldF.avgUndersalgNok.replace(/\s/g,''));
-        const diffNok = Math.round(diffNokRaw).toLocaleString('nb-NO');
+        const diffNok = diffNokRaw.toLocaleString('nb-NO');
 
         const commentaryHtml = `
             <h3>Mandagsrapport – uke ${getWeekNumber(lastMonday)}</h3>
@@ -184,7 +186,7 @@ async function loadReport() {
             <h4>Sammenstilling solgt vs returnert</h4>
             <ul>
                 <li>Total returandel: ${returAndel}% (${retF.n} av ${total})</li>
-                <li>Forskjell i andel under midtpunkt: ${diffUnder >= 0 ? '+' : ''}${diffUnder} pp (returnerte høyere)</li>
+                <li>Forskjell i andel under midtpunkt: ${diffUnder >= 0 ? '+' : ''}${diffUnder} pp</li>
                 <li>Forskjell i gj.sn. undersalg: ${diffNokRaw < 0 ? '' : '+'}${diffNok} NOK (returnerte har ${diffNokRaw < 0 ? 'mindre' : 'større'} undersalg)</li>
             </ul>
         `;
@@ -259,15 +261,6 @@ async function loadReport() {
 }
 
 window.onload = loadReport;
-
-// Helper: get week number
-function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = (d.getDay() + 6) % 7;
-    d.setDate(d.getDate() - dayNum + 3);
-    const firstThursday = new Date(d.getFullYear(), 0, 4);
-    return 1 + Math.round(((d - firstThursday) / 86400000 - 3 + (firstThursday.getDay() + 6) % 7) / 7);
-}
 </script>
 </body>
 </html>
