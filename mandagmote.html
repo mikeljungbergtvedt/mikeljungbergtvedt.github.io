@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v6</title>
+    <title>Mandagsrapport – Peasy v7</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -35,7 +35,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v6</span></h1>
+    <h1>Mandagsrapport – Peasy<span class="version">v7</span></h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres hver mandag for forrige uke (man–søn).</p>
    
     <div class="controls">
@@ -81,12 +81,24 @@ function cleanNum(str) {
     return parseFloat(cleaned) || 0;
 }
 
+// Correct ISO week (ISO 8601: week starts Monday, week 1 has Jan 4)
 function getISOWeek(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    // Thursday in current week
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const yearStart = new Date(d.getFullYear(), 0, 1);
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    const days = Math.floor((d - yearStart) / 86400000);
+    return Math.ceil((days + 1) / 7);
+}
+
+function getCurrentReportWeekNum() {
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7;
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - dayOfWeek - 6);
+    startDate.setHours(0,0,0,0);
+    return getISOWeek(startDate);
 }
 
 window.onload = () => {
@@ -116,11 +128,17 @@ function updateGenerateButton() {
     const dayOfWeek = today.getDay() || 7;
     const selectedId = document.getElementById('weekSelect').value;
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const isLocked = saved.some(r => r.id === selectedId);
+    const isSelectedLocked = saved.some(r => r.id === selectedId && r.locked);
 
-    if (isLocked) {
+    const thisWeekNum = getCurrentReportWeekNum();
+    const weekAlreadyExists = saved.some(r => r.title.includes(`uke ${thisWeekNum}`) && r.locked);
+
+    if (weekAlreadyExists) {
         btn.disabled = true;
-        btn.textContent = 'Uken er allerede låst';
+        btn.textContent = `Uke ${thisWeekNum} allerede generert og låst`;
+    } else if (isSelectedLocked) {
+        btn.disabled = true;
+        btn.textContent = 'Valgt uke er låst';
     } else if (dayOfWeek !== 1) {
         btn.disabled = true;
         btn.textContent = 'Vent til mandag etter uken er ferdig';
@@ -137,6 +155,7 @@ function loadSavedReport() {
         document.getElementById('edit-btn').style.display = 'none';
         document.getElementById('lock-btn').style.display = 'none';
         document.getElementById('save-edits').style.display = 'none';
+        updateGenerateButton();
         return;
     }
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -198,6 +217,13 @@ async function generateNewReport() {
         const weekNum = getISOWeek(startDate);
         const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
         const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+
+        // Double-check no duplicate
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        if (saved.some(r => r.title === title)) {
+            alert('Rapport for denne uken finnes allerede!');
+            return;
+        }
 
         const soldCars = [];
         const returnedCars = [];
