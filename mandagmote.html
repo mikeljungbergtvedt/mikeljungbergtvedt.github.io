@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy</title>
+    <title>Mandagsrapport – Peasy v1.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -11,7 +11,11 @@
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; color: white; }
+        button.generate { background: #004225; }
+        button.edit { background: #006644; }
+        button.save { background: #2e7d32; }
+        button.lock { background: #1565c0; }
         button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
         .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
@@ -21,44 +25,85 @@
         .highlight-negative { color: #d32f2f; font-weight: 600; }
         .highlight-positive { color: #2e7d32; font-weight: 600; }
         .highlight-zero { color: #555; font-weight: 600; }
-        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
-        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
+        #loading, #error-msg { font-style: italic; text-align: center; font-size: 1rem; margin: 24px 0; }
+        #error-msg { color: #d32f2f; font-weight: 600; }
+        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        textarea { width: 100%; min-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy</h1>
+    <h1>Mandagsrapport – Peasy v1.0</h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Forrige full uke (man–søn). Kun biler med ikke-tomme datoer i kolonne O (verdi) eller U (retur).</p>
 
     <div class="controls">
-        <button onclick="loadReport()">Oppdater nå</button>
+        <select id="weekSelect" onchange="loadSaved()">
+            <option value="">Velg lagret uke...</option>
+        </select>
+        <button class="generate" onclick="generateReport()">Generer ny (forrige uke)</button>
+        <button class="edit" id="editBtn" style="display:none;" onclick="editCommentary()">Rediger kommentar</button>
+        <button class="save" id="saveBtn" style="display:none;" onclick="saveEdits()">Lagre endringer</button>
+        <button class="lock" id="lockBtn" style="display:none;" onclick="lockReport()">Lås inn</button>
     </div>
 
-    <div id="loading">Laster data...</div>
+    <div id="loading" style="display:none;">Laster...</div>
+    <div id="error-msg" style="display:none;"></div>
 
-    <div id="commentary" class="commentary" style="display:none;"></div>
+    <div id="report" style="display:none;">
+        <div id="timestamp" class="timestamp"></div>
+        <div id="commentary" class="commentary"></div>
 
-    <div id="sold-section" style="display:none;">
-        <div class="section-title">Solgte biler (ikke-tom O-dato i uken)</div>
-        <table id="sold-table"></table>
-    </div>
+        <div id="soldSection">
+            <div class="section-title">Solgte biler (ikke-tom O-dato i uken)</div>
+            <table id="soldTable"></table>
+        </div>
 
-    <div id="returned-section" style="display:none;">
-        <div class="section-title">Returnerte biler (ikke-tom U-dato i uken)</div>
-        <table id="returned-table"></table>
+        <div id="returnedSection">
+            <div class="section-title">Returnerte biler (ikke-tom U-dato i uken)</div>
+            <table id="returnedTable"></table>
+        </div>
     </div>
 </div>
 
 <script>
-async function loadReport() {
-    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    document.getElementById('loading').textContent = 'Laster og behandler...';
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('commentary').style.display = 'none';
-    document.getElementById('sold-section').style.display = 'none';
-    document.getElementById('returned-section').style.display = 'none';
+const STORAGE_KEY = 'peasy_mandagsrapport_v1';
 
+async function generateReport() {
+    document.getElementById('loading').textContent = 'Laster rapport...';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('error-msg').style.display = 'none';
+    document.getElementById('report').style.display = 'none';
+
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // 1=Mon, 7=Sun
+    if (dayOfWeek < 1) { // Sunday
+        showError('Uken er ikke komplett. Vent til mandag.');
+        document.getElementById('loading').style.display = 'none';
+        return;
+    }
+
+    // Previous full week Mon-Sun
+    const lastSunday = new Date(today);
+    lastSunday.setDate(today.getDate() - dayOfWeek);
+    lastSunday.setHours(23,59,59,999);
+
+    const lastMonday = new Date(lastSunday);
+    lastMonday.setDate(lastSunday.getDate() - 6);
+    lastMonday.setHours(0,0,0,0);
+
+    const weekNum = getWeekNumber(lastMonday);
+    const weekTitle = `Mandagsrapport – uke ${weekNum} (${lastMonday.toLocaleDateString('nb-NO')} – ${lastSunday.toLocaleDateString('nb-NO')})`;
+
+    // Check if already exists
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (saved.some(r => r.title === weekTitle)) {
+        showError('Uke finnes allerede.');
+        document.getElementById('loading').style.display = 'none';
+        return;
+    }
+
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -78,23 +123,13 @@ async function loadReport() {
             U: headers.findIndex(h => h.includes('Returnert') || h.includes('U'))
         };
 
-        // Previous full week: Mon–Sun before current week
-        const today = new Date();
-        const dayOfWeek = today.getDay() || 7;
-        const lastSunday = new Date(today);
-        lastSunday.setDate(today.getDate() - dayOfWeek);
-        lastSunday.setHours(23,59,59,999);
-
-        const lastMonday = new Date(lastSunday);
-        lastMonday.setDate(lastSunday.getDate() - 6);
-        lastMonday.setHours(0,0,0,0);
-
         const soldCars = [];
         const returnedCars = [];
 
         const parseDate = (val) => {
-            if (!val || (typeof val === 'string' && val.trim() === '')) return null;
+            if (!val) return null;
             let str = val.toString().trim();
+            if (str === '') return null;
             const datePart = str.split(/\s+/)[0];
             const match = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
             if (match) {
@@ -133,7 +168,6 @@ async function loadReport() {
                 'Diff %': diffPct + '%'
             };
 
-            // Only if cell is non-empty and date parsed and in week
             if (oVal && oVal.toString().trim() !== '' && oDate && oDate >= lastMonday && oDate <= lastSunday) {
                 soldCars.push(car);
             }
@@ -142,7 +176,6 @@ async function loadReport() {
             }
         }
 
-        // Facts
         const facts = (cars) => {
             const n = cars.length;
             if (n === 0) return { n: 0, underPct: 0, avgUndersalgNok: '0', avgUndersalgPct: '0.0' };
@@ -245,18 +278,120 @@ async function loadReport() {
             table.appendChild(tfoot);
         };
 
-        renderTable('sold-table', soldCars);
-        document.getElementById('sold-section').style.display = 'block';
-        renderTable('returned-table', returnedCars);
-        document.getElementById('returned-section').style.display = 'block';
+        renderTable('soldTable', soldCars);
+        renderTable('returnedTable', returnedCars);
 
+        document.getElementById('report').style.display = 'block';
         document.getElementById('loading').style.display = 'none';
+
+        window.currentReport = {
+            title: weekTitle,
+            commentary: commentaryHtml,
+            soldTable: document.getElementById('soldTable').outerHTML,
+            returnedTable: document.getElementById('returnedTable').outerHTML,
+            created: new Date().toLocaleString('nb-NO')
+        };
     } catch (err) {
         document.getElementById('loading').textContent = 'Feil: ' + err.message;
     }
 }
 
-window.onload = loadReport;
+// Edit commentary
+function editCommentary() {
+    const commentary = document.getElementById('commentary');
+    const textarea = document.createElement('textarea');
+    textarea.value = commentary.innerHTML.trim();
+    commentary.innerHTML = '';
+    commentary.appendChild(textarea);
+    document.getElementById('editBtn').style.display = 'none';
+    document.getElementById('saveBtn').style.display = 'inline-block';
+}
+
+// Save edits
+function saveEdits() {
+    const textarea = document.querySelector('#commentary textarea');
+    if (textarea) {
+        document.getElementById('commentary').innerHTML = textarea.value;
+        document.getElementById('editBtn').style.display = 'inline-block';
+        document.getElementById('saveBtn').style.display = 'none';
+        document.getElementById('timestamp').textContent += ` (endret: ${new Date().toLocaleString('nb-NO')})`;
+        if (window.currentReport) window.currentReport.commentary = textarea.value;
+    }
+}
+
+// Lock report
+function lockReport() {
+    if (!window.currentReport) return alert('Generer først');
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const id = 'mandag_' + Date.now();
+    window.currentReport.id = id;
+    window.currentReport.edited = new Date().toLocaleString('nb-NO');
+    saved.push(window.currentReport);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    alert('Rapport låst inn!');
+    loadSavedReportsToDropdown();
+    document.getElementById('lockBtn').style.display = 'none';
+}
+
+// Load saved reports to dropdown
+function loadSavedReportsToDropdown() {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const select = document.getElementById('weekSelect');
+    saved.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.title;
+        select.appendChild(opt);
+    });
+}
+
+// Load selected saved report
+function loadSaved() {
+    const id = document.getElementById('weekSelect').value;
+    if (!id) return;
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const report = saved.find(r => r.id === id);
+    if (!report) return;
+
+    showReport(report);
+    document.getElementById('editBtn').style.display = 'inline-block';
+    document.getElementById('saveBtn').style.display = 'none';
+    document.getElementById('lockBtn').style.display = 'none';
+}
+
+// Show report
+function showReport(report) {
+    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. Sist endret: ${report.edited || report.created}`;
+    document.getElementById('commentary').innerHTML = report.commentary;
+    document.getElementById('soldTable').innerHTML = report.soldTable;
+    document.getElementById('returnedTable').innerHTML = report.returnedTable;
+
+    document.getElementById('soldSection').style.display = report.soldTable ? 'block' : 'none';
+    document.getElementById('returnedSection').style.display = report.returnedTable ? 'block' : 'none';
+    document.getElementById('report').style.display = 'block';
+}
+
+// Helper
+function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - dayNum + 3);
+    const firstThursday = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - firstThursday) / 86400000 - 3 + (firstThursday.getDay() + 6) % 7) / 7);
+}
+
+function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 5000);
+}
+
+window.onload = () => {
+    loadSavedReportsToDropdown();
+    generateReport(); // auto-run on load
+};
 </script>
 </body>
 </html>
