@@ -15,8 +15,6 @@
         button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
         button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
         button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
-        button.danger { background: #c62828; }
-        button.danger:hover { background: #b71c1c; }
         button#edit-btn { background: #006644; }
         .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
@@ -33,9 +31,6 @@
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
         textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
         #save-edits { margin-top: 12px; background: #2e7d32; }
-        #password-prompt { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); z-index: 1000; text-align: center; min-width: 340px; }
-        #password-prompt input { padding: 12px 16px; font-size: 1.1rem; width: 220px; margin: 20px 0; border: 1px solid #ccc; border-radius: 6px; }
-        #password-prompt button { padding: 12px 24px; margin: 8px; }
     </style>
 </head>
 <body>
@@ -51,9 +46,6 @@
         <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
         <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
         <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
-        <button id="unlock-edit-btn" onclick="promptPassword('edit')" style="display: none; background: #1976d2;">Rediger låst</button>
-        <button id="delete-btn" onclick="promptPassword('delete')" style="display: none; background: #c62828;">Slett rapport</button>
-        <button id="clear-all-btn" onclick="promptPassword('clearall')" style="background: #7b1fa2;">Slett alle rapporter</button>
     </div>
    
     <div id="loading" style="display: none;">Laster...</div>
@@ -72,23 +64,12 @@
             <table id="returned-table"></table>
         </div>
     </div>
-
-    <!-- Password modal -->
-    <div id="password-prompt">
-        <h3>Passord kreves</h3>
-        <input type="password" id="password-input" placeholder="Passord">
-        <br>
-        <button onclick="checkPassword()">Bekreft</button>
-        <button onclick="closePasswordPrompt()" style="background: #757575;">Avbryt</button>
-    </div>
 </div>
 
 <script>
 const STORAGE_KEY = 'peasy_mandagsrapporter';
-const PASSWORD = 'peasy';
 let currentReport = null;
 let currentCreatedTime = '';
-let pendingAction = null;
 
 function cleanNum(str) {
     if (!str) return 0;
@@ -152,7 +133,10 @@ function updateGenerateButton() {
 function loadSavedReport() {
     const selectedId = document.getElementById('weekSelect').value;
     if (!selectedId) {
-        hideAllControls();
+        document.getElementById('report-content').style.display = 'none';
+        document.getElementById('edit-btn').style.display = 'none';
+        document.getElementById('lock-btn').style.display = 'none';
+        document.getElementById('save-edits').style.display = 'none';
         return;
     }
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -165,8 +149,6 @@ function loadSavedReport() {
     document.getElementById('edit-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('lock-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('unlock-edit-btn').style.display = isLocked ? 'inline-block' : 'none';
-    document.getElementById('delete-btn').style.display = isLocked ? 'inline-block' : 'none';
     const editedText = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${editedText}`;
     document.getElementById('commentary').innerHTML = report.commentary;
@@ -175,15 +157,6 @@ function loadSavedReport() {
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
     updateGenerateButton();
-}
-
-function hideAllControls() {
-    document.getElementById('report-content').style.display = 'none';
-    document.getElementById('edit-btn').style.display = 'none';
-    document.getElementById('lock-btn').style.display = 'none';
-    document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('unlock-edit-btn').style.display = 'none';
-    document.getElementById('delete-btn').style.display = 'none';
 }
 
 async function generateNewReport() {
@@ -340,10 +313,10 @@ async function generateNewReport() {
             ftr.appendChild(ftd);
 
             const avgs = [
-                Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO'),
-                Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO'),
-                Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO'),
-                (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%'
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%' : '0.0%'
             ];
             avgs.forEach(v => {
                 const td = document.createElement('td');
@@ -417,45 +390,6 @@ function lockReport() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     alert('Rapport låst inn som ' + currentReport.id);
     loadReportsToSelect();
-}
-
-function promptPassword(action) {
-    pendingAction = action;
-    document.getElementById('password-prompt').style.display = 'block';
-    document.getElementById('password-input').value = '';
-    document.getElementById('password-input').focus();
-}
-
-function closePasswordPrompt() {
-    document.getElementById('password-prompt').style.display = 'none';
-    pendingAction = null;
-}
-
-function checkPassword() {
-    if (document.getElementById('password-input').value === PASSWORD) {
-        closePasswordPrompt();
-        if (pendingAction === 'edit') {
-            editReport();
-        } else if (pendingAction === 'delete') {
-            if (confirm('Slette denne rapporten permanent?')) {
-                let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                saved = saved.filter(r => r.id !== currentReport.id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-                alert('Rapport slettet.');
-                loadReportsToSelect();
-                hideAllControls();
-            }
-        } else if (pendingAction === 'clearall') {
-            if (confirm('Slette ALLE rapporter permanent? Dette kan ikke angres.')) {
-                localStorage.removeItem(STORAGE_KEY);
-                alert('Alle rapporter er slettet.');
-                loadReportsToSelect();
-                hideAllControls();
-            }
-        }
-    } else {
-        alert('Feil passord.');
-    }
 }
 
 document.getElementById('weekSelect').addEventListener('change', updateGenerateButton);
