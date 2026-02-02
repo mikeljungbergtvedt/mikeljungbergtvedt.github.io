@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v5</title>
+    <title>Mandagsrapport – Peasy v6</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -40,7 +40,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v5</span></h1>
+    <h1>Mandagsrapport – Peasy<span class="version">v6</span></h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres hver mandag for forrige uke (man–søn).</p>
    
     <div class="controls">
@@ -53,6 +53,7 @@
         <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
         <button id="unlock-edit-btn" onclick="promptPassword('edit')" style="display: none; background: #1976d2;">Rediger låst</button>
         <button id="delete-btn" onclick="promptPassword('delete')" style="display: none; background: #c62828;">Slett rapport</button>
+        <button id="clear-all-btn" onclick="promptPassword('clearall')" style="background: #7b1fa2;">Slett alle rapporter</button>
     </div>
    
     <div id="loading" style="display: none;">Laster...</div>
@@ -131,7 +132,7 @@ function loadReportsToSelect() {
 function updateGenerateButton() {
     const btn = document.getElementById('generate-btn');
     const today = new Date();
-    const dayOfWeek = today.getDay() || 7; // 1=Mon ... 7=Sun
+    const dayOfWeek = today.getDay() || 7;
     const selectedId = document.getElementById('weekSelect').value;
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const isLocked = saved.some(r => r.id === selectedId);
@@ -154,23 +155,18 @@ function loadSavedReport() {
         hideAllControls();
         return;
     }
-
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const report = saved.find(r => r.id === selectedId);
     if (!report) return;
-
     currentReport = report;
     currentCreatedTime = report.created;
-
     document.getElementById('report-content').style.display = 'block';
     const isLocked = report.locked === true;
-
     document.getElementById('edit-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('lock-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('save-edits').style.display = 'none';
     document.getElementById('unlock-edit-btn').style.display = isLocked ? 'inline-block' : 'none';
     document.getElementById('delete-btn').style.display = isLocked ? 'inline-block' : 'none';
-
     const editedText = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${editedText}`;
     document.getElementById('commentary').innerHTML = report.commentary;
@@ -178,7 +174,6 @@ function loadSavedReport() {
     document.getElementById('returned-table').innerHTML = report.returnedTable || '';
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
-
     updateGenerateButton();
 }
 
@@ -242,7 +237,7 @@ async function generateNewReport() {
                 return m ? new Date(m[3], m[2]-1, m[1]) : null;
             };
             const soldDate = parseDate(row[col['Solgt på']]);
-            const retDate  = parseDate(row[col.Returnert]);
+            const retDate = parseDate(row[col.Returnert]);
 
             const arRange = row[col['Endelig AR verdi']] || '';
             let arLowest = 0;
@@ -268,7 +263,7 @@ async function generateNewReport() {
             };
 
             if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
-            if (retDate  && retDate  >= startDate && retDate  < endDate) returnedCars.push(car);
+            if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
         const facts = cars => {
@@ -327,7 +322,7 @@ async function generateNewReport() {
                 Object.values(car).forEach((val, i) => {
                     const td = document.createElement('td');
                     td.textContent = val;
-                    if (i >= 5) { // Diff NOK & Diff %
+                    if (i >= 5) {
                         const num = cleanNum(val);
                         td.className = num < 0 ? 'highlight-negative' : num > 0 ? 'highlight-positive' : 'highlight-zero';
                     }
@@ -447,6 +442,13 @@ function checkPassword() {
                 saved = saved.filter(r => r.id !== currentReport.id);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
                 alert('Rapport slettet.');
+                loadReportsToSelect();
+                hideAllControls();
+            }
+        } else if (pendingAction === 'clearall') {
+            if (confirm('Slette ALLE rapporter permanent? Dette kan ikke angres.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                alert('Alle rapporter er slettet.');
                 loadReportsToSelect();
                 hideAllControls();
             }
