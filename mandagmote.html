@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Mandagsmøte – Peasy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
+        .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
+        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { margin-bottom: 32px; }
+        select { padding: 12px 20px; font-size: 1.05rem; font-weight: 600; border-radius: 10px; border: none; background: white; box-shadow: 0 1px 4px rgba(0,66,37,0.06); min-width: 260px; }
+        .content { display: none; opacity: 0; transition: opacity 0.4s ease; }
+        .content.active { display: block; opacity: 1; }
+        .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 24px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
+        th { background: rgba(130,191,210,0.05); font-weight: 700; }
+        tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
+        .highlight-negative { color: #d32f2f; font-weight: 600; }
+        .highlight-positive { color: #2e7d32; font-weight: 600; }
+        .highlight-zero { color: #555; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Mandagsmøte – Peasy</h1>
+
+    <div class="controls">
+        <label for="weekSelect">Velg uke:</label>
+        <select id="weekSelect" onchange="showWeek()">
+            <option value="">Velg uke...</option>
+        </select>
+    </div>
+
+    <!-- Her kommer alle uke-div'ene -->
+    <div id="uke1" class="content">
+        <!-- Denne fylles av JS første gang – ikke endre manuelt -->
+    </div>
+
+    <!-- Flere uker legges til som <div id="uke2" class="content">...</div> osv. -->
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// Legg NYE uker her inne i arrayet – kopier malen under
+// ─────────────────────────────────────────────────────────────
+const meetings = [
+    {
+        id: "uke1",
+        title: "Mandag 2. februar 2026 – uke 5",
+        html: `
+            <h2>Mandag 2. februar 2026 – uke 5</h2>
+            <div class="commentary">
+                <h3>Fakta – Differanse Bud vs AR-verdi (midtpunkt)</h3>
+                <ul>
+                    <li>10 biler solgt i perioden</li>
+                    <li>7 biler solgt under AR-verdi midtpunkt</li>
+                    <li>1 bil solgt over AR-verdi midtpunkt</li>
+                    <li>2 biler solgt nøyaktig på AR-verdi midtpunkt</li>
+                    <li>Gjennomsnittlig differanse: <span class="highlight-negative">-12 300 NOK</span> per bil</li>
+                    <li>Gjennomsnittlig differanse i prosent: <span class="highlight-negative">-9.0%</span></li>
+                </ul>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dine 10 rader her – lim inn som før -->
+                    <tr><td>BMW</td><td>318d xDRIVE</td><td>2013</td><td>140 000</td><td>102 500</td><td class="highlight-negative">-37 500</td><td class="highlight-negative">-26.8%</td></tr>
+                    <!-- ... resten av radene ... -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3"><strong>Gjennomsnitt (10 biler)</strong></td>
+                        <td>103 900</td><td>91 600</td><td class="highlight-negative">-12 300</td><td class="highlight-negative">-9.0%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `
+    }
+    // Neste mandag: lim inn ny blokk her med id: "uke2", title: "Mandag 9. februar...", html: `...`
+];
+
+// Fyll dropdown
+const select = document.getElementById("weekSelect");
+meetings.forEach((m, index) => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.title;
+    select.appendChild(opt);
+});
+
+// Vis valgt uke
+function showWeek() {
+    const selected = select.value;
+    document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+    if (selected) {
+        const div = document.getElementById(selected);
+        if (div) {
+            div.innerHTML = meetings.find(m => m.id === selected).html;
+            div.classList.add('active');
+        }
+    }
+}
+
+// Valgfritt: vis siste uke automatisk ved lasting
+select.value = meetings[meetings.length - 1].id;
+showWeek();
+</script>
+
+</body>
+</html>
