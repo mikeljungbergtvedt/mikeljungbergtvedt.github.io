@@ -105,6 +105,17 @@ function loadSavedReport() {
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
 }
 
+// Helper to safely parse Norwegian formatted numbers (handles spaces, non-breaking spaces, etc.)
+function cleanNum(str) {
+    if (!str) return 0;
+    return parseFloat(
+        (str + '')
+            .replace(/\s/g, '')
+            .replace(/\u00A0/g, '')
+            .replace(/[^0-9.-]/g, '')
+    ) || 0;
+}
+
 // Generate new report for last week (Mon-Sun)
 async function generateNewReport() {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -189,14 +200,37 @@ async function generateNewReport() {
             if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
-        // Facts
+        // Fixed facts function with robust number parsing
         const facts = (cars, type) => {
             const n = cars.length;
-            const under = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) < 0).length;
-            const over = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) > 0).length;
-            const on = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) === 0).length;
-            const avgNok = n ? Math.round(cars.reduce((s, c) => s + parseFloat(c['Diff NOK'].replace(/\s/g, '')), 0) / n).toLocaleString('nb-NO') : '0';
-            const avgPct = n ? (cars.reduce((s, c) => s + parseFloat(c['Diff %'].replace('%', '')), 0) / n).toFixed(1) : '0.0';
+            if (n === 0) {
+                return { n: 0, under: 0, over: 0, on: 0, avgNok: '0', avgPct: '0.0' };
+            }
+
+            let under = 0;
+            let over = 0;
+            let on = 0;
+            let diffNokSum = 0;
+            let diffPctSum = 0;
+
+            cars.forEach(c => {
+                const nok = cleanNum(c['Diff NOK']);
+                if (nok < 0) under++;
+                else if (nok > 0) over++;
+                else on++;
+
+                diffNokSum += nok;
+
+                const pct = cleanNum(c['Diff %']);
+                diffPctSum += pct;
+            });
+
+            const avgNokRaw = diffNokSum / n;
+            const avgNok = Math.round(avgNokRaw).toLocaleString('nb-NO');
+
+            const avgPctRaw = diffPctSum / n;
+            const avgPct = avgPctRaw.toFixed(1);
+
             return { n, under, over, on, avgNok, avgPct };
         };
 
@@ -242,7 +276,7 @@ async function generateNewReport() {
                     const td = document.createElement('td');
                     td.textContent = car[key];
                     if (key === 'Diff NOK' || key === 'Diff %') {
-                        const val = parseFloat(key === 'Diff %' ? car[key].replace('%', '') : car[key].replace(/\s/g, ''));
+                        const val = cleanNum(car[key]);
                         td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
                     }
                     row.appendChild(td);
@@ -258,10 +292,10 @@ async function generateNewReport() {
             ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
             ftr.appendChild(ftd);
 
-            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR laveste estimat'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')), 0) / cars.length).toFixed(1) + '%' : '0.0%';
+            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%' : '0.0%';
 
             [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
                 const td = document.createElement('td');
