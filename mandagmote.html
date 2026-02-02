@@ -3,393 +3,372 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Mandagsrapport v1.0</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.min.js"></script>
+    <title>Mandagsrapport v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-green: #2ecc71;
-            --dark-bg: #0f172a;
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --red: #ff4757;
-            --gray: #718093;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--dark-bg);
-            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
-            color: var(--text-main);
+            background: linear-gradient(to bottom right, #00ff00, #008000);
+            color: #333;
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
         }
-
         .container {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-
-        h1, h2 { color: var(--primary-green); margin-top: 0; }
-        .version { font-size: 0.8rem; color: var(--text-dim); }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 20px;
+        h1, h2 {
+            color: #fff;
         }
-
         button {
-            padding: 10px 20px;
-            border-radius: 8px;
+            background: #4caf50;
+            color: white;
             border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            font-weight: 600;
-            transition: 0.2s;
+            margin-right: 10px;
+            font-family: 'Inter', sans-serif;
         }
-
-        .btn-primary { background: var(--primary-green); color: #000; }
-        .btn-secondary { background: var(--glass-border); color: white; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-
+        button:hover {
+            background: #388e3c;
+        }
         select {
             padding: 10px;
-            border-radius: 8px;
-            background: #1e293b;
-            color: white;
-            border: 1px solid var(--glass-border);
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 0.9rem;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.2);
         }
-
-        th { text-align: left; color: var(--text-dim); padding: 12px; border-bottom: 1px solid var(--glass-border); }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-
-        .diff-pos { color: var(--primary-green); }
-        .diff-neg { color: var(--red); }
-        .diff-zero { color: var(--gray); }
-
-        .avg-row { font-weight: bold; background: rgba(46, 204, 113, 0.1); }
-
-        #commentary-box {
-            width: 100%;
-            height: 120px;
-            background: rgba(0,0,0,0.2);
+        th {
+            background: #4caf50;
             color: white;
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
-            font-family: inherit;
+            padding: 10px;
+            text-align: left;
         }
-
-        #status-msg { margin: 10px 0; font-weight: bold; }
-        .error { color: var(--red); }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .red {
+            color: #ff0000;
+        }
+        .green {
+            color: #00ff00;
+        }
+        .gray {
+            color: #808080;
+        }
+        #message {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-family: 'Inter', sans-serif;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-
-<div class="container">
-    <div class="glass-card">
-        <h1>Peasy Mandagsrapport <span class="version">v1.0</span></h1>
-        
-        <div class="controls">
-            <button id="btn-generate" class="btn-primary" onclick="handleManualGenerate()">Generer ny rapport</button>
-            <select id="saved-reports" onchange="loadSavedReport()">
-                <option value="">-- Se lagrede rapporter --</option>
-            </select>
-            <button id="btn-lock" class="btn-secondary" onclick="saveToLocalStorage()" style="display:none">Lås inn rapport</button>
-        </div>
-        <div id="status-msg"></div>
+    <div class="container">
+        <h1>Mandagsrapport v1.0</h1>
+        <select id="report-select">
+            <option value="">Velg rapport</option>
+        </select>
+        <button id="generate-btn">Generer ny rapport</button>
+        <button id="lock-btn" style="display: none;">Lås inn rapport</button>
+        <button id="edit-btn" style="display: none;">Rediger kommentar</button>
+        <button id="save-edit" style="display: none;">Lagre endringer</button>
+        <div id="report-content"></div>
+        <textarea id="commentary-edit" style="display: none;"></textarea>
+        <div id="message"></div>
     </div>
+    <script>
+        const reportKey = 'peasy_mandagsrapport';
+        const xlsxUrl = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
 
-    <div id="report-content" style="display:none">
-        <div class="glass-card">
-            <h2>Kommentar</h2>
-            <textarea id="commentary-box"></textarea>
-            <button id="btn-save-edit" class="btn-secondary" style="margin-top:10px" onclick="updateCommentary()">Lagre endring</button>
-            <p id="timestamp-info" class="version"></p>
-        </div>
-
-        <div class="glass-card">
-            <h2 id="sold-title">Solgte biler</h2>
-            <div class="table-container">
-                <table id="sold-table">
-                    <thead>
-                        <tr>
-                            <th>Merke</th><th>Modell</th><th>År</th><th>AR Lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="glass-card">
-            <h2 id="returned-title">Returnerte biler</h2>
-            <div class="table-container">
-                <table id="returned-table">
-                    <thead>
-                        <tr>
-                            <th>Merke</th><th>Modell</th><th>År</th><th>AR Lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    const DATA_URL = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    let currentReportData = null;
-    let currentWeekLabel = "";
-
-    // Initialization
-    window.onload = () => {
-        updateSavedDropdown();
-        const weekInfo = getPreviousWeekRange();
-        currentWeekLabel = `Uke ${weekInfo.weekNum}`;
-        
-        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
-        
-        if (new Date().getDay() === 0) {
-            showStatus("Rapporten kan først genereres på mandager for foregående uke.", "error");
-        } else if (saved[currentWeekLabel]) {
-            showStatus(`${currentWeekLabel} er allerede lagret. Velg fra menyen over.`);
-        } else {
-            generateReport(); // Auto-run
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
-    };
 
-    function getPreviousWeekRange() {
-        const now = new Date();
-        const day = now.getDay() || 7; 
-        const lastSunday = new Date(now);
-        lastSunday.setDate(now.getDate() - day);
-        lastSunday.setHours(23, 59, 59, 999);
-
-        const lastMonday = new Date(lastSunday);
-        lastMonday.setDate(lastSunday.getDate() - 6);
-        lastMonday.setHours(0, 0, 0, 0);
-
-        // Get Week Number
-        const d = new Date(Date.UTC(lastMonday.getFullYear(), lastMonday.getMonth(), lastMonday.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-
-        return { start: lastMonday, end: lastSunday, weekNum };
-    }
-
-    async function generateReport() {
-        showStatus("Henter data...");
-        try {
-            const response = await fetch(DATA_URL);
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer);
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(sheet);
-
-            processData(data);
-        } catch (err) {
-            showStatus("Feil ved henting av data: " + err.message, "error");
+        function parseDate(str) {
+            if (!str) return null;
+            const parts = str.toString().trim().match(/(\d{2})\.(\d{2})\.(\d{4})/);
+            if (parts) {
+                return new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
+            }
+            return null;
         }
-    }
 
-    function parseDate(val) {
-        if (!val) return null;
-        let d;
-        if (typeof val === 'number') {
-            d = XLSX.utils.format_cell({ v: val, t: 'd' }); // Handle Excel serial
-            d = new Date(d);
-        } else {
-            const parts = val.split('.');
-            if (parts.length < 3) return null;
-            d = new Date(parts[2].substring(0,4), parts[1]-1, parts[0]);
+        function getARlav(str) {
+            if (!str) return null;
+            const match = str.toString().trim().match(/(\d+)/);
+            return match ? parseInt(match[1]) : null;
         }
-        return isNaN(d.getTime()) ? null : d;
-    }
 
-    function processData(rows) {
-        const week = getPreviousWeekRange();
-        const sold = [];
-        const returned = [];
+        function getPreviousWeek() {
+            const today = new Date();
+            let day = today.getDay();
+            if (day === 0) {
+                throw new Error('Rapporten kan kun genereres på mandag eller senere.');
+            }
+            const lastSunday = new Date(today);
+            lastSunday.setDate(lastSunday.getDate() - day);
+            const monday = new Date(lastSunday);
+            monday.setDate(monday.getDate() - 6);
+            const weekNum = getWeekNumber(monday);
+            return {
+                monday,
+                sunday: lastSunday,
+                title: `Uke ${weekNum}`
+            };
+        }
 
-        rows.forEach(row => {
-            const dateO = parseDate(row['O']); // Order date logic
-            const dateU = parseDate(row['U']); // Return date logic
-            
-            const processRow = (r) => {
-                const arString = String(r['Endelig AR verdi'] || "");
-                const arLav = parseInt(arString.split('-')[0].replace(/\D/g, '')) || 0;
-                const bud = parseInt(r['Bud']) || 0;
-                const diffNok = bud - arLav;
-                const diffPct = arLav > 0 ? (diffNok / arLav) * 100 : 0;
+        function loadReports() {
+            return JSON.parse(localStorage.getItem(reportKey)) || {};
+        }
 
-                return {
-                    merke: r['Merke'] || '-',
-                    modell: r['Modell'] || '-',
-                    aar: r['År'] || '-',
-                    arLav, bud, diffNok, diffPct
+        function saveReport(weekTitle, report) {
+            const reports = loadReports();
+            reports[weekTitle] = report;
+            localStorage.setItem(reportKey, JSON.stringify(reports));
+        }
+
+        function populateDropdown(currentWeekTitle) {
+            const select = document.getElementById('report-select');
+            select.innerHTML = '<option value="">Velg rapport</option>';
+            const reports = loadReports();
+            Object.keys(reports).sort().forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.text = key;
+                select.appendChild(option);
+            });
+            if (reports[currentWeekTitle]) {
+                select.value = currentWeekTitle;
+                renderReport(reports[currentWeekTitle], currentWeekTitle);
+            }
+        }
+
+        function showMessage(msg, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.style.color = isError ? '#ff0000' : '#fff';
+        }
+
+        function renderTable(cars, title) {
+            if (cars.length === 0) return `<h2>${title}</h2><p>Ingen biler.</p>`;
+            let totalAR = 0, totalBud = 0, totalDiffNOK = 0, totalDiffPct = 0;
+            let countUnder = 0, sumUnder = 0;
+            let html = `<h2>${title}</h2><table><thead><tr><th>Merke</th><th>Modell</th><th>År</th><th>AR lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th></tr></thead><tbody>`;
+            cars.forEach(car => {
+                const diffNOK = car.bud - car.arLav;
+                const diffPct = ((diffNOK / car.arLav) * 100).toFixed(1);
+                let diffClass = diffNOK > 0 ? 'green' : diffNOK < 0 ? 'red' : 'gray';
+                html += `<tr><td>${car.merke}</td><td>${car.modell}</td><td>${car.ar}</td><td>${car.arLav}</td><td>${car.bud}</td><td class="${diffClass}">${diffNOK}</td><td class="${diffClass}">${diffPct}%</td></tr>`;
+                totalAR += car.arLav;
+                totalBud += car.bud;
+                totalDiffNOK += diffNOK;
+                totalDiffPct += parseFloat(diffPct);
+                if (diffNOK < 0) {
+                    countUnder++;
+                    sumUnder += -diffNOK; // undersalg
+                }
+            });
+            const avgAR = (totalAR / cars.length).toFixed(0);
+            const avgBud = (totalBud / cars.length).toFixed(0);
+            const avgDiffNOK = (totalDiffNOK / cars.length).toFixed(0);
+            const avgDiffPct = (totalDiffPct / cars.length).toFixed(1);
+            html += `<tr><td colspan="3">Gjennomsnitt</td><td>${avgAR}</td><td>${avgBud}</td><td>${avgDiffNOK}</td><td>${avgDiffPct}%</td></tr></tbody></table>`;
+            return {html, percentUnder: (countUnder / cars.length) * 100, avgUndersalg: countUnder > 0 ? (sumUnder / countUnder) : 0};
+        }
+
+        function generateCommentary(soldStats, returnedStats) {
+            const ppDiff = (returnedStats.percentUnder - soldStats.percentUnder).toFixed(1);
+            const nokDiff = (returnedStats.avgUndersalg - soldStats.avgUndersalg).toFixed(0);
+            const ppSign = ppDiff >= 0 ? '+' : '';
+            const nokSign = nokDiff >= 0 ? '+' : '';
+            return `Returnerte har ${ppSign}${ppDiff} pp høyere andel under + ${nokSign}${nokDiff} NOK større undersalg.`;
+        }
+
+        function renderReport(report, weekTitle) {
+            const contentDiv = document.getElementById('report-content');
+            const sold = renderTable(report.sold, 'Solgt');
+            const returned = renderTable(report.returned, 'Returnert');
+            const commentary = generateCommentary({percentUnder: sold.percentUnder, avgUndersalg: sold.avgUndersalg}, {percentUnder: returned.percentUnder, avgUndersalg: returned.avgUndersalg});
+            contentDiv.innerHTML = `
+                <h2>${weekTitle}</h2>
+                ${sold.html}
+                ${returned.html}
+                <h2>Kommentar</h2>
+                <p id="commentary">${report.commentary || commentary}</p>
+                <p>Opprettet: ${report.created}</p>
+                <p>${report.edited ? 'Redigert: ' + report.edited : ''}</p>
+            `;
+            document.getElementById('lock-btn').style.display = report.isNew ? 'inline-block' : 'none';
+            document.getElementById('edit-btn').style.display = !report.isNew ? 'inline-block' : 'none';
+            document.getElementById('generate-btn').style.display = report.isNew ? 'none' : 'inline-block';
+        }
+
+        async function generateReport() {
+            showMessage('Laster...', false);
+            try {
+                const week = getPreviousWeek();
+                const reports = loadReports();
+                if (reports[week.title]) {
+                    throw new Error('Rapporten er allerede generert for denne uken.');
+                }
+                const res = await fetch(xlsxUrl);
+                if (!res.ok) throw new Error('Feil ved henting av data.');
+                const ab = await res.arrayBuffer();
+                const wb = XLSX.read(ab, {type: 'array'});
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(ws, {header: 1, blankrows: false});
+                if (data.length < 2) throw new Error('Ingen data i rapporten.');
+
+                const headers = data[0].map(h => h ? h.toString().trim() : '');
+                const colMerke = headers.indexOf('Merke');
+                const colModell = headers.indexOf('Modell');
+                const colAr = headers.indexOf('År');
+                const colAR = headers.indexOf('Endelig AR verdi');
+                const colBud = headers.indexOf('Bud');
+                const colO = 14; // O
+                const colU = 20; // U
+
+                if (colMerke === -1 || colModell === -1 || colAr === -1 || colAR === -1 || colBud === -1) {
+                    throw new Error('Manglende kolonner i dataen.');
+                }
+
+                const sold = [];
+                const returned = [];
+                for (let i = 1; i < data.length; i++) {
+                    const row = data[i];
+                    const dateO = parseDate(row[colO]);
+                    const dateU = parseDate(row[colU]);
+                    const arLav = getARlav(row[colAR]);
+                    const bud = parseInt(row[colBud]) || 0;
+                    if (!arLav || isNaN(bud)) continue;
+
+                    const car = {
+                        merke: row[colMerke] || '',
+                        modell: row[colModell] || '',
+                        ar: row[colAr] || '',
+                        arLav,
+                        bud
+                    };
+
+                    if (dateO && dateO >= week.monday && dateO <= week.sunday) {
+                        sold.push(car);
+                    }
+                    if (dateU && dateU >= week.monday && dateU <= week.sunday) {
+                        returned.push(car);
+                    }
+                }
+
+                const soldStats = renderTable(sold, 'Solgt');
+                const returnedStats = renderTable(returned, 'Returnert');
+                const commentary = generateCommentary({percentUnder: soldStats.percentUnder, avgUndersalg: soldStats.avgUndersalg}, {percentUnder: returnedStats.percentUnder, avgUndersalg: returnedStats.avgUndersalg});
+
+                const report = {
+                    sold,
+                    returned,
+                    commentary,
+                    created: new Date().toLocaleString(),
+                    edited: null,
+                    isNew: true
                 };
+                renderReport(report, week.title);
+                document.getElementById('lock-btn').style.display = 'inline-block';
+                document.getElementById('generate-btn').style.display = 'none';
+                showMessage('Rapport generert.', false);
+
+                document.getElementById('lock-btn').onclick = () => {
+                    report.isNew = false;
+                    saveReport(week.title, report);
+                    populateDropdown(week.title);
+                    document.getElementById('lock-btn').style.display = 'none';
+                    document.getElementById('edit-btn').style.display = 'inline-block';
+                    showMessage('Rapport lagret.', false);
+                };
+            } catch (err) {
+                showMessage(err.message, true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let week;
+            try {
+                week = getPreviousWeek();
+                const reports = loadReports();
+                populateDropdown(week.title);
+                if (!reports[week.title]) {
+                    generateReport();
+                }
+            } catch (err) {
+                showMessage(err.message, true);
+            }
+
+            document.getElementById('generate-btn').onclick = generateReport;
+
+            document.getElementById('report-select').onchange = (e) => {
+                const key = e.target.value;
+                if (key) {
+                    const reports = loadReports();
+                    renderReport(reports[key], key);
+                } else {
+                    document.getElementById('report-content').innerHTML = '';
+                    document.getElementById('lock-btn').style.display = 'none';
+                    document.getElementById('edit-btn').style.display = 'none';
+                    document.getElementById('save-edit').style.display = 'none';
+                    document.getElementById('commentary-edit').style.display = 'none';
+                }
             };
 
-            if (dateO && dateO >= week.start && dateO <= week.end) sold.push(processRow(row));
-            if (dateU && dateU >= week.start && dateU <= week.end) returned.push(processRow(row));
+            document.getElementById('edit-btn').onclick = () => {
+                const select = document.getElementById('report-select');
+                const key = select.value;
+                if (!key) return;
+                const reports = loadReports();
+                const report = reports[key];
+                const commentaryP = document.getElementById('commentary');
+                document.getElementById('commentary-edit').value = commentaryP.textContent;
+                document.getElementById('commentary-edit').style.display = 'block';
+                document.getElementById('save-edit').style.display = 'inline-block';
+                document.getElementById('edit-btn').style.display = 'none';
+
+                document.getElementById('save-edit').onclick = () => {
+                    const newCommentary = document.getElementById('commentary-edit').value;
+                    report.commentary = newCommentary;
+                    report.edited = new Date().toLocaleString();
+                    saveReport(key, report);
+                    renderReport(report, key);
+                    document.getElementById('commentary-edit').style.display = 'none';
+                    document.getElementById('save-edit').style.display = 'none';
+                    document.getElementById('edit-btn').style.display = 'inline-block';
+                    showMessage('Endringer lagret.', false);
+                };
+            };
         });
-
-        renderTables(sold, returned);
-        generateAutoCommentary(sold, returned);
-        
-        currentReportData = { week: currentWeekLabel, sold, returned };
-        document.getElementById('report-content').style.display = 'block';
-        document.getElementById('btn-lock').style.display = 'inline-block';
-        showStatus(`Rapport generert for ${currentWeekLabel}`);
-    }
-
-    function renderTables(sold, returned) {
-        const fill = (id, list) => {
-            const tbody = document.querySelector(`#${id} tbody`);
-            tbody.innerHTML = "";
-            let sumDiffNok = 0, sumPct = 0;
-
-            list.forEach(item => {
-                sumDiffNok += item.diffNok;
-                sumPct += item.diffPct;
-                const cls = item.diffNok > 0 ? 'diff-pos' : (item.diffNok < 0 ? 'diff-neg' : 'diff-zero');
-                tbody.innerHTML += `<tr>
-                    <td>${item.merke}</td><td>${item.modell}</td><td>${item.aar}</td>
-                    <td>${item.arLav.toLocaleString()}</td><td>${item.bud.toLocaleString()}</td>
-                    <td class="${cls}">${item.diffNok.toLocaleString()}</td>
-                    <td class="${cls}">${item.diffPct.toFixed(1)}%</td>
-                </tr>`;
-            });
-
-            if(list.length > 0) {
-                tbody.innerHTML += `<tr class="avg-row">
-                    <td colspan="5">Gjennomsnitt (${list.length} biler)</td>
-                    <td>${Math.round(sumDiffNok/list.length).toLocaleString()}</td>
-                    <td>${(sumPct/list.length).toFixed(1)}%</td>
-                </tr>`;
-            }
-        };
-        fill('sold-table', sold);
-        fill('returned-table', returned);
-    }
-
-    function generateAutoCommentary(sold, returned) {
-        const getStats = (list) => {
-            const under = list.filter(i => i.diffNok < 0);
-            const avgUnder = under.length ? under.reduce((a,b) => a + b.diffNok, 0) / under.length : 0;
-            const pctUnder = (under.length / list.length) * 100 || 0;
-            return { avgUnder, pctUnder };
-        };
-
-        const s = getStats(sold);
-        const r = getStats(returned);
-        
-        const ppDiff = (r.pctUnder - s.pctUnder).toFixed(1);
-        const nokDiff = Math.abs(Math.round(r.avgUnder - s.avgUnder));
-        
-        document.getElementById('commentary-box').value = 
-            `Rapport for ${currentWeekLabel}.\n` +
-            `Returnerte biler har ${ppDiff} prosentpoeng ${ppDiff > 0 ? 'høyere' : 'lavere'} andel under AR lav, ` +
-            `og et undersalg som er ${nokDiff.toLocaleString()} NOK ${r.avgUnder < s.avgUnder ? 'større' : 'mindre'} enn solgte biler i snitt.`;
-    }
-
-    function saveToLocalStorage() {
-        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
-        const timestamp = new Date().toLocaleString('no-NO');
-        
-        saved[currentWeekLabel] = {
-            ...currentReportData,
-            commentary: document.getElementById('commentary-box').value,
-            created: timestamp,
-            edited: timestamp
-        };
-        
-        localStorage.setItem('peasy_mandagsrapport', JSON.stringify(saved));
-        updateSavedDropdown();
-        showStatus("Rapport låst og lagret!");
-    }
-
-    function updateCommentary() {
-        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
-        if (saved[currentWeekLabel]) {
-            saved[currentWeekLabel].commentary = document.getElementById('commentary-box').value;
-            saved[currentWeekLabel].edited = new Date().toLocaleString('no-NO');
-            localStorage.setItem('peasy_mandagsrapport', JSON.stringify(saved));
-            loadSavedReport(); 
-            showStatus("Kommentar oppdatert.");
-        }
-    }
-
-    function loadSavedReport() {
-        const val = document.getElementById('saved-reports').value;
-        if (!val) return;
-        
-        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
-        const report = saved[val];
-        
-        currentWeekLabel = val;
-        currentReportData = report;
-        
-        renderTables(report.sold, report.returned);
-        document.getElementById('commentary-box').value = report.commentary;
-        document.getElementById('timestamp-info').innerText = `Opprettet: ${report.created} | Sist endret: ${report.edited}`;
-        document.getElementById('report-content').style.display = 'block';
-        document.getElementById('btn-lock').style.display = 'none';
-        showStatus(`Viser lagret rapport for ${val}`);
-    }
-
-    function updateSavedDropdown() {
-        const dropdown = document.getElementById('saved-reports');
-        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
-        dropdown.innerHTML = '<option value="">-- Se lagrede rapporter --</option>';
-        Object.keys(saved).forEach(key => {
-            dropdown.innerHTML += `<option value="${key}">${key}</option>`;
-        });
-    }
-
-    function handleManualGenerate() {
-        if (new Date().getDay() === 0) {
-            alert("Det er søndag. Vent til mandag for å generere rapport for uken som gikk.");
-            return;
-        }
-        generateReport();
-    }
-
-    function showStatus(msg, type="") {
-        const el = document.getElementById('status-msg');
-        el.innerText = msg;
-        el.className = type === "error" ? "error" : "";
-    }
-</script>
-
+    </script>
 </body>
 </html>
