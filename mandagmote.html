@@ -35,22 +35,16 @@
         </select>
     </div>
 
-    <!-- Her kommer alle uke-div'ene -->
-    <div id="uke1" class="content">
-        <!-- Denne fylles av JS første gang – ikke endre manuelt -->
-    </div>
-
-    <!-- Flere uker legges til som <div id="uke2" class="content">...</div> osv. -->
-
+    <!-- Content divs will be populated by JS -->
 </div>
 
 <script>
 // ─────────────────────────────────────────────────────────────
-// Legg NYE uker her inne i arrayet – kopier malen under
+// All weeks are stored here – add new ones each Monday
 // ─────────────────────────────────────────────────────────────
 const meetings = [
     {
-        id: "uke1",
+        id: "uke5",
         title: "Mandag 2. februar 2026 – uke 5",
         html: `
             <h2>Mandag 2. februar 2026 – uke 5</h2>
@@ -68,29 +62,45 @@ const meetings = [
             <table>
                 <thead>
                     <tr>
-                        <th>Merke</th><th>Modell</th><th>År</th><th>AR midtpunkt</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+                        <th>Merke</th>
+                        <th>Modell</th>
+                        <th>År</th>
+                        <th>AR-verdi (midtpunkt)</th>
+                        <th>Bud</th>
+                        <th>Differanse (NOK)</th>
+                        <th>Differanse (%)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dine 10 rader her – lim inn som før -->
                     <tr><td>BMW</td><td>318d xDRIVE</td><td>2013</td><td>140 000</td><td>102 500</td><td class="highlight-negative">-37 500</td><td class="highlight-negative">-26.8%</td></tr>
-                    <!-- ... resten av radene ... -->
+                    <tr><td>VOLVO</td><td>XC60 T8 Twin Engine</td><td>2018</td><td>275 000</td><td>238 500</td><td class="highlight-negative">-36 500</td><td class="highlight-negative">-13.3%</td></tr>
+                    <tr><td>TOYOTA</td><td>AURIS</td><td>2012</td><td>75 000</td><td>65 000</td><td class="highlight-negative">-10 000</td><td class="highlight-negative">-13.3%</td></tr>
+                    <tr><td>AUDI</td><td>A6</td><td>2012</td><td>60 000</td><td>55 500</td><td class="highlight-negative">-4 500</td><td class="highlight-negative">-7.5%</td></tr>
+                    <tr><td>VOLVO</td><td>V70</td><td>2012</td><td>23 000</td><td>23 000</td><td class="highlight-zero">0</td><td class="highlight-zero">0.0%</td></tr>
+                    <tr><td>TOYOTA</td><td>YARIS HYBRID</td><td>2015</td><td>80 000</td><td>69 500</td><td class="highlight-negative">-10 500</td><td class="highlight-negative">-13.1%</td></tr>
+                    <tr><td>SKODA</td><td>OCTAVIA</td><td>2018</td><td>162 500</td><td>139 500</td><td class="highlight-negative">-23 000</td><td class="highlight-negative">-14.2%</td></tr>
+                    <tr><td>VOLVO</td><td>V70</td><td>2012</td><td>31 000</td><td>33 000</td><td class="highlight-positive">+2 000</td><td class="highlight-positive">+6.5%</td></tr>
+                    <tr><td>AUDI</td><td>A3</td><td>2011</td><td>37 500</td><td>34 500</td><td class="highlight-negative">-3 000</td><td class="highlight-negative">-8.0%</td></tr>
+                    <tr><td>VOLVO</td><td>V60</td><td>2019</td><td>155 000</td><td>155 000</td><td class="highlight-zero">0</td><td class="highlight-zero">0.0%</td></tr>
                 </tbody>
                 <tfoot>
                     <tr>
                         <td colspan="3"><strong>Gjennomsnitt (10 biler)</strong></td>
-                        <td>103 900</td><td>91 600</td><td class="highlight-negative">-12 300</td><td class="highlight-negative">-9.0%</td>
+                        <td>103 900</td>
+                        <td>91 600</td>
+                        <td class="highlight-negative">-12 300</td>
+                        <td class="highlight-negative">-9.0%</td>
                     </tr>
                 </tfoot>
             </table>
         `
     }
-    // Neste mandag: lim inn ny blokk her med id: "uke2", title: "Mandag 9. februar...", html: `...`
+    // ← Neste mandag: lim inn ny blokk her (uke6, ny tittel, ny tabell)
 ];
 
 // Fyll dropdown
 const select = document.getElementById("weekSelect");
-meetings.forEach((m, index) => {
+meetings.forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.id;
     opt.textContent = m.title;
@@ -102,17 +112,23 @@ function showWeek() {
     const selected = select.value;
     document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
     if (selected) {
-        const div = document.getElementById(selected);
-        if (div) {
-            div.innerHTML = meetings.find(m => m.id === selected).html;
-            div.classList.add('active');
+        let div = document.getElementById(selected);
+        if (!div) {
+            div = document.createElement("div");
+            div.id = selected;
+            div.className = "content";
+            document.querySelector(".container").appendChild(div);
         }
+        div.innerHTML = meetings.find(m => m.id === selected).html;
+        div.classList.add('active');
     }
 }
 
-// Valgfritt: vis siste uke automatisk ved lasting
-select.value = meetings[meetings.length - 1].id;
-showWeek();
+// Vis siste (nyeste) uke automatisk ved lasting
+if (meetings.length > 0) {
+    select.value = meetings[meetings.length - 1].id;
+    showWeek();
+}
 </script>
 
 </body>
