@@ -1,271 +1,395 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v1.1</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peasy Mandagsrapport v1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.min.js"></script>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
-        .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
-        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
-        button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
-        .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
-        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
-        th { background: rgba(130,191,210,0.05); font-weight: 700; }
-        tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
-        .highlight-negative { color: #d32f2f; font-weight: 600; }
-        .highlight-positive { color: #2e7d32; font-weight: 600; }
-        .highlight-zero { color: #555; font-weight: 600; }
-        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
-        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
-        .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        :root {
+            --primary-green: #2ecc71;
+            --dark-bg: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --red: #ff4757;
+            --gray: #718093;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h1, h2 { color: var(--primary-green); margin-top: 0; }
+        .version { font-size: 0.8rem; color: var(--text-dim); }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-primary { background: var(--primary-green); color: #000; }
+        .btn-secondary { background: var(--glass-border); color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: white;
+            border: 1px solid var(--glass-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        th { text-align: left; color: var(--text-dim); padding: 12px; border-bottom: 1px solid var(--glass-border); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+        .diff-pos { color: var(--primary-green); }
+        .diff-neg { color: var(--red); }
+        .diff-zero { color: var(--gray); }
+
+        .avg-row { font-weight: bold; background: rgba(46, 204, 113, 0.1); }
+
+        #commentary-box {
+            width: 100%;
+            height: 120px;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: inherit;
+        }
+
+        #status-msg { margin: 10px 0; font-weight: bold; }
+        .error { color: var(--red); }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <h1>Mandagsrapport – Peasy v1.1</h1>
-    <p style="opacity: 0.8; margin-bottom: 32px;">Forrige full uke (man–søn). Kun biler med ikke-tomme datoer i kolonne O eller U.</p>
-
-    <div class="controls">
-        <button onclick="loadReport()">Oppdater nå</button>
+    <div class="glass-card">
+        <h1>Peasy Mandagsrapport <span class="version">v1.0</span></h1>
+        
+        <div class="controls">
+            <button id="btn-generate" class="btn-primary" onclick="handleManualGenerate()">Generer ny rapport</button>
+            <select id="saved-reports" onchange="loadSavedReport()">
+                <option value="">-- Se lagrede rapporter --</option>
+            </select>
+            <button id="btn-lock" class="btn-secondary" onclick="saveToLocalStorage()" style="display:none">Lås inn rapport</button>
+        </div>
+        <div id="status-msg"></div>
     </div>
 
-    <div id="loading">Laster data...</div>
+    <div id="report-content" style="display:none">
+        <div class="glass-card">
+            <h2>Kommentar</h2>
+            <textarea id="commentary-box"></textarea>
+            <button id="btn-save-edit" class="btn-secondary" style="margin-top:10px" onclick="updateCommentary()">Lagre endring</button>
+            <p id="timestamp-info" class="version"></p>
+        </div>
 
-    <div id="commentary" class="commentary" style="display:none;"></div>
+        <div class="glass-card">
+            <h2 id="sold-title">Solgte biler</h2>
+            <div class="table-container">
+                <table id="sold-table">
+                    <thead>
+                        <tr>
+                            <th>Merke</th><th>Modell</th><th>År</th><th>AR Lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
 
-    <div id="sold-section" style="display:none;">
-        <div class="section-title">Solgte biler (ikke-tom O i uken)</div>
-        <table id="sold-table"></table>
-    </div>
-
-    <div id="returned-section" style="display:none;">
-        <div class="section-title">Returnerte biler (ikke-tom U i uken)</div>
-        <table id="returned-table"></table>
+        <div class="glass-card">
+            <h2 id="returned-title">Returnerte biler</h2>
+            <div class="table-container">
+                <table id="returned-table">
+                    <thead>
+                        <tr>
+                            <th>Merke</th><th>Modell</th><th>År</th><th>AR Lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-async function loadReport() {
-    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    document.getElementById('loading').textContent = 'Laster data...';
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('commentary').style.display = 'none';
-    document.getElementById('sold-section').style.display = 'none';
-    document.getElementById('returned-section').style.display = 'none';
+    const DATA_URL = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    let currentReportData = null;
+    let currentWeekLabel = "";
 
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const ab = await res.arrayBuffer();
-        const wb = XLSX.read(ab, {type: 'array'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+    // Initialization
+    window.onload = () => {
+        updateSavedDropdown();
+        const weekInfo = getPreviousWeekRange();
+        currentWeekLabel = `Uke ${weekInfo.weekNum}`;
+        
+        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
+        
+        if (new Date().getDay() === 0) {
+            showStatus("Rapporten kan først genereres på mandager for foregående uke.", "error");
+        } else if (saved[currentWeekLabel]) {
+            showStatus(`${currentWeekLabel} er allerede lagret. Velg fra menyen over.`);
+        } else {
+            generateReport(); // Auto-run
+        }
+    };
 
-        const headers = data[0].map(h => (h || '').trim());
-        const col = {
-            Merke: headers.indexOf('Merke'),
-            Modell: headers.indexOf('Modell'),
-            År: headers.indexOf('År'),
-            'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
-            Bud: headers.indexOf('Bud'),
-            O: headers.findIndex(h => h.includes('Registrert') || h.includes('O')),
-            U: headers.findIndex(h => h.includes('Returnert') || h.includes('U'))
-        };
-
-        const today = new Date();
-        const dayOfWeek = today.getDay() || 7;
-        const lastSunday = new Date(today);
-        lastSunday.setDate(today.getDate() - dayOfWeek);
-        lastSunday.setHours(23,59,59,999);
+    function getPreviousWeekRange() {
+        const now = new Date();
+        const day = now.getDay() || 7; 
+        const lastSunday = new Date(now);
+        lastSunday.setDate(now.getDate() - day);
+        lastSunday.setHours(23, 59, 59, 999);
 
         const lastMonday = new Date(lastSunday);
         lastMonday.setDate(lastSunday.getDate() - 6);
-        lastMonday.setHours(0,0,0,0);
+        lastMonday.setHours(0, 0, 0, 0);
 
-        const soldCars = [];
-        const returnedCars = [];
+        // Get Week Number
+        const d = new Date(Date.UTC(lastMonday.getFullYear(), lastMonday.getMonth(), lastMonday.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 
-        const parseDate = (val) => {
-            if (!val) return null;
-            let str = val.toString().trim();
-            if (str === '') return null;
-            const datePart = str.split(/\s+/)[0];
-            const match = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-            if (match) {
-                const date = new Date(Number(match[3]), Number(match[2])-1, Number(match[1]));
-                return isNaN(date.getTime()) ? null : date;
-            }
-            return null;
-        };
+        return { start: lastMonday, end: lastSunday, weekNum };
+    }
 
-        const arLow = (range) => {
-            if (!range || typeof range !== 'string' || !range.includes('-')) return 0;
-            const low = parseFloat(range.split('-')[0].trim()) || 0;
-            return low;
-        };
+    async function generateReport() {
+        showStatus("Henter data...");
+        try {
+            const response = await fetch(DATA_URL);
+            const arrayBuffer = await response.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(sheet);
 
-        for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            const oVal = row[col.O];
-            const uVal = row[col.U];
+            processData(data);
+        } catch (err) {
+            showStatus("Feil ved henting av data: " + err.message, "error");
+        }
+    }
 
-            const oStr = oVal ? oVal.toString().trim() : '';
-            const uStr = uVal ? uVal.toString().trim() : '';
+    function parseDate(val) {
+        if (!val) return null;
+        let d;
+        if (typeof val === 'number') {
+            d = XLSX.utils.format_cell({ v: val, t: 'd' }); // Handle Excel serial
+            d = new Date(d);
+        } else {
+            const parts = val.split('.');
+            if (parts.length < 3) return null;
+            d = new Date(parts[2].substring(0,4), parts[1]-1, parts[0]);
+        }
+        return isNaN(d.getTime()) ? null : d;
+    }
 
-            const oDate = parseDate(oStr);
-            const uDate = parseDate(uStr);
+    function processData(rows) {
+        const week = getPreviousWeekRange();
+        const sold = [];
+        const returned = [];
 
-            const ar = arLow(row[col['Endelig AR verdi']]);
-            const bud = parseFloat((row[col.Bud] || '0').toString().replace(/\s/g, '')) || 0;
-            const diffNok = bud - ar;
-            const diffPct = ar ? ((diffNok / ar) * 100).toFixed(1) : '0.0';
+        rows.forEach(row => {
+            const dateO = parseDate(row['O']); // Order date logic
+            const dateU = parseDate(row['U']); // Return date logic
+            
+            const processRow = (r) => {
+                const arString = String(r['Endelig AR verdi'] || "");
+                const arLav = parseInt(arString.split('-')[0].replace(/\D/g, '')) || 0;
+                const bud = parseInt(r['Bud']) || 0;
+                const diffNok = bud - arLav;
+                const diffPct = arLav > 0 ? (diffNok / arLav) * 100 : 0;
 
-            const car = {
-                Merke: row[col.Merke] || '-',
-                Modell: row[col.Modell] || '-',
-                År: row[col.År] || '-',
-                'AR lav': ar.toLocaleString('nb-NO'),
-                Bud: bud.toLocaleString('nb-NO'),
-                'Diff NOK': diffNok.toLocaleString('nb-NO'),
-                'Diff %': diffPct + '%'
+                return {
+                    merke: r['Merke'] || '-',
+                    modell: r['Modell'] || '-',
+                    aar: r['År'] || '-',
+                    arLav, bud, diffNok, diffPct
+                };
             };
 
-            // Ultra-strict: non-empty string AND valid date AND in week
-            if (oStr !== '' && oDate && oDate >= lastMonday && oDate <= lastSunday) {
-                soldCars.push(car);
-            }
-            if (uStr !== '' && uDate && uDate >= lastMonday && uDate <= lastSunday) {
-                returnedCars.push(car);
-            }
-        }
+            if (dateO && dateO >= week.start && dateO <= week.end) sold.push(processRow(row));
+            if (dateU && dateU >= week.start && dateU <= week.end) returned.push(processRow(row));
+        });
 
-        const facts = (cars) => {
-            const n = cars.length;
-            if (n === 0) return { n: 0, underPct: 0, avgUndersalgNok: '0', avgUndersalgPct: '0.0' };
-            const under = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) < 0).length;
-            const underPct = Math.round((under / n) * 100);
-            const undersalgNok = cars.map(c => Math.min(0, parseFloat(c['Diff NOK'].replace(/\s/g, '')) || 0));
-            const avgUndersalgNok = Math.round(undersalgNok.reduce((a,b)=>a+b,0) / n).toLocaleString('nb-NO');
-            const avgUndersalgPct = (undersalgNok.reduce((a,b)=>a+b,0) / n).toFixed(1);
-            return { n, underPct, avgUndersalgNok, avgUndersalgPct };
-        };
-
-        const soldF = facts(soldCars);
-        const retF = facts(returnedCars);
-
-        const total = soldF.n + retF.n;
-        const returAndel = total > 0 ? Math.round((retF.n / total) * 100) : 0;
-
-        const diffUnder = retF.underPct - soldF.underPct;
-        const diffNokRaw = parseFloat(retF.avgUndersalgNok.replace(/\s/g,'')) - parseFloat(soldF.avgUndersalgNok.replace(/\s/g,''));
-        const diffNokStr = diffNokRaw.toLocaleString('nb-NO');
-
-        const commentaryHtml = `
-            <h3>Mandagsrapport – uke ${getWeekNumber(lastMonday)}</h3>
-
-            <h4>Solgte biler (${soldF.n} stk)</h4>
-            <ul>
-                <li>Andel under AR lav: ${soldF.underPct}%</li>
-                <li>Gjennomsnittlig undersalg: ${soldF.avgUndersalgNok} NOK (${soldF.avgUndersalgPct}%)</li>
-            </ul>
-
-            <h4>Returnerte biler (${retF.n} stk)</h4>
-            <ul>
-                <li>Andel under AR lav: ${retF.underPct}%</li>
-                <li>Gjennomsnittlig undersalg: ${retF.avgUndersalgNok} NOK (${retF.avgUndersalgPct}%)</li>
-            </ul>
-
-            <h4>Sammenstilling solgt vs returnert</h4>
-            <ul>
-                <li>Total returandel: ${returAndel}% (${retF.n} av ${total})</li>
-                <li>Forskjell i andel under AR lav: ${diffUnder >= 0 ? '+' : ''}${diffUnder} pp</li>
-                <li>Forskjell i gj.sn. undersalg: ${diffNokRaw < 0 ? '' : '+'}${diffNokStr} NOK (returnerte har ${diffNokRaw < 0 ? 'mindre' : 'større'} undersalg)</li>
-            </ul>
-        `;
-
-        document.getElementById('commentary').innerHTML = commentaryHtml;
-        document.getElementById('commentary').style.display = 'block';
-
-        const renderTable = (id, cars) => {
-            const table = document.getElementById(id);
-            table.innerHTML = '';
-            if (cars.length === 0) {
-                table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler i uken</td></tr>';
-                return;
-            }
-
-            const thead = document.createElement('thead');
-            const tr = document.createElement('tr');
-            ['Merke','Modell','År','AR lav','Bud','Diff NOK','Diff %'].forEach(h => {
-                const th = document.createElement('th');
-                th.textContent = h;
-                tr.appendChild(th);
-            });
-            thead.appendChild(tr);
-            table.appendChild(thead);
-
-            const tbody = document.createElement('tbody');
-            cars.forEach(car => {
-                const row = document.createElement('tr');
-                Object.values(car).forEach((v, i) => {
-                    const td = document.createElement('td');
-                    td.textContent = v;
-                    if (i === 5 || i === 6) {
-                        const val = parseFloat(v.toString().replace(/\s/g,'').replace('%','')) || 0;
-                        td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
-                    }
-                    row.appendChild(td);
-                });
-                tbody.appendChild(row);
-            });
-            table.appendChild(tbody);
-
-            const tfoot = document.createElement('tfoot');
-            const ftr = document.createElement('tr');
-            const ftd = document.createElement('td');
-            ftd.colSpan = 3;
-            ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
-            ftr.appendChild(ftd);
-
-            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR lav'].replace(/\s/g,'')),0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')),0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')),0) / cars.length).toLocaleString('nb-NO') : '0';
-            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')),0) / cars.length).toFixed(1) + '%' : '0.0%';
-
-            [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
-                const td = document.createElement('td');
-                td.textContent = v;
-                ftr.appendChild(td);
-            });
-            tfoot.appendChild(ftr);
-            table.appendChild(tfoot);
-        };
-
-        renderTable('sold-table', soldCars);
-        document.getElementById('sold-section').style.display = 'block';
-        renderTable('returned-table', returnedCars);
-        document.getElementById('returned-section').style.display = 'block';
-
-        document.getElementById('loading').style.display = 'none';
-    } catch (err) {
-        document.getElementById('loading').textContent = 'Feil: ' + err.message;
+        renderTables(sold, returned);
+        generateAutoCommentary(sold, returned);
+        
+        currentReportData = { week: currentWeekLabel, sold, returned };
+        document.getElementById('report-content').style.display = 'block';
+        document.getElementById('btn-lock').style.display = 'inline-block';
+        showStatus(`Rapport generert for ${currentWeekLabel}`);
     }
-}
 
-function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = (d.getDay() + 6) % 7;
-    d.setDate(d.getDate() - dayNum + 3);
-    const firstThursday = new Date(d.getFullYear(), 0, 4);
-    return 1 + Math.round(((d - firstThursday) / 86400000 - 3 + (firstThursday.getDay() + 6) % 7) / 7);
-}
+    function renderTables(sold, returned) {
+        const fill = (id, list) => {
+            const tbody = document.querySelector(`#${id} tbody`);
+            tbody.innerHTML = "";
+            let sumDiffNok = 0, sumPct = 0;
 
-window.onload = loadReport;
+            list.forEach(item => {
+                sumDiffNok += item.diffNok;
+                sumPct += item.diffPct;
+                const cls = item.diffNok > 0 ? 'diff-pos' : (item.diffNok < 0 ? 'diff-neg' : 'diff-zero');
+                tbody.innerHTML += `<tr>
+                    <td>${item.merke}</td><td>${item.modell}</td><td>${item.aar}</td>
+                    <td>${item.arLav.toLocaleString()}</td><td>${item.bud.toLocaleString()}</td>
+                    <td class="${cls}">${item.diffNok.toLocaleString()}</td>
+                    <td class="${cls}">${item.diffPct.toFixed(1)}%</td>
+                </tr>`;
+            });
+
+            if(list.length > 0) {
+                tbody.innerHTML += `<tr class="avg-row">
+                    <td colspan="5">Gjennomsnitt (${list.length} biler)</td>
+                    <td>${Math.round(sumDiffNok/list.length).toLocaleString()}</td>
+                    <td>${(sumPct/list.length).toFixed(1)}%</td>
+                </tr>`;
+            }
+        };
+        fill('sold-table', sold);
+        fill('returned-table', returned);
+    }
+
+    function generateAutoCommentary(sold, returned) {
+        const getStats = (list) => {
+            const under = list.filter(i => i.diffNok < 0);
+            const avgUnder = under.length ? under.reduce((a,b) => a + b.diffNok, 0) / under.length : 0;
+            const pctUnder = (under.length / list.length) * 100 || 0;
+            return { avgUnder, pctUnder };
+        };
+
+        const s = getStats(sold);
+        const r = getStats(returned);
+        
+        const ppDiff = (r.pctUnder - s.pctUnder).toFixed(1);
+        const nokDiff = Math.abs(Math.round(r.avgUnder - s.avgUnder));
+        
+        document.getElementById('commentary-box').value = 
+            `Rapport for ${currentWeekLabel}.\n` +
+            `Returnerte biler har ${ppDiff} prosentpoeng ${ppDiff > 0 ? 'høyere' : 'lavere'} andel under AR lav, ` +
+            `og et undersalg som er ${nokDiff.toLocaleString()} NOK ${r.avgUnder < s.avgUnder ? 'større' : 'mindre'} enn solgte biler i snitt.`;
+    }
+
+    function saveToLocalStorage() {
+        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
+        const timestamp = new Date().toLocaleString('no-NO');
+        
+        saved[currentWeekLabel] = {
+            ...currentReportData,
+            commentary: document.getElementById('commentary-box').value,
+            created: timestamp,
+            edited: timestamp
+        };
+        
+        localStorage.setItem('peasy_mandagsrapport', JSON.stringify(saved));
+        updateSavedDropdown();
+        showStatus("Rapport låst og lagret!");
+    }
+
+    function updateCommentary() {
+        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
+        if (saved[currentWeekLabel]) {
+            saved[currentWeekLabel].commentary = document.getElementById('commentary-box').value;
+            saved[currentWeekLabel].edited = new Date().toLocaleString('no-NO');
+            localStorage.setItem('peasy_mandagsrapport', JSON.stringify(saved));
+            loadSavedReport(); 
+            showStatus("Kommentar oppdatert.");
+        }
+    }
+
+    function loadSavedReport() {
+        const val = document.getElementById('saved-reports').value;
+        if (!val) return;
+        
+        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
+        const report = saved[val];
+        
+        currentWeekLabel = val;
+        currentReportData = report;
+        
+        renderTables(report.sold, report.returned);
+        document.getElementById('commentary-box').value = report.commentary;
+        document.getElementById('timestamp-info').innerText = `Opprettet: ${report.created} | Sist endret: ${report.edited}`;
+        document.getElementById('report-content').style.display = 'block';
+        document.getElementById('btn-lock').style.display = 'none';
+        showStatus(`Viser lagret rapport for ${val}`);
+    }
+
+    function updateSavedDropdown() {
+        const dropdown = document.getElementById('saved-reports');
+        const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '{}');
+        dropdown.innerHTML = '<option value="">-- Se lagrede rapporter --</option>';
+        Object.keys(saved).forEach(key => {
+            dropdown.innerHTML += `<option value="${key}">${key}</option>`;
+        });
+    }
+
+    function handleManualGenerate() {
+        if (new Date().getDay() === 0) {
+            alert("Det er søndag. Vent til mandag for å generere rapport for uken som gikk.");
+            return;
+        }
+        generateReport();
+    }
+
+    function showStatus(msg, type="") {
+        const el = document.getElementById('status-msg');
+        el.innerText = msg;
+        el.className = type === "error" ? "error" : "";
+    }
 </script>
+
 </body>
 </html>
