@@ -1,374 +1,331 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mandagsrapport v1.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(to bottom right, #00ff00, #008000);
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        h1, h2 {
-            color: #fff;
-        }
-        button {
-            background: #4caf50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-right: 10px;
-            font-family: 'Inter', sans-serif;
-        }
-        button:hover {
-            background: #388e3c;
-        }
-        select {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        th {
-            background: #4caf50;
-            color: white;
-            padding: 10px;
-            text-align: left;
-        }
-        td {
-            padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
-        .red {
-            color: #ff0000;
-        }
-        .green {
-            color: #00ff00;
-        }
-        .gray {
-            color: #808080;
-        }
-        #message {
-            color: #fff;
-            margin-bottom: 20px;
-        }
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Mandagsrapport – Peasy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
+        .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
+        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+        button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button#edit-btn { background: #006644; }
+        .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210, 0.10); }
+        th { background: rgba(130,191,210,0.05); font-weight: 700; }
+        tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
+        .highlight-negative { color: #d32f2f; font-weight: 600; }
+        .highlight-positive { color: #2e7d32; font-weight: 600; }
+        .highlight-zero { color: #555; font-weight: 600; }
+        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
+        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
+        #report-content { display: none; }
+        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
+        .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
+        #save-edits { margin-top: 12px; background: #2e7d32; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Mandagsrapport v1.0</h1>
-        <select id="report-select">
-            <option value="">Velg rapport</option>
+<div class="container">
+    <h1>Mandagsrapport – Peasy</h1>
+    <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter fra forrige uke. Oppdateres hver mandag for siste uke (man-søn).</p>
+    
+    <div class="controls">
+        <select id="weekSelect" onchange="loadSavedReport()">
+            <option value="">Velg uke...</option>
         </select>
-        <button id="generate-btn">Generer ny rapport</button>
-        <button id="lock-btn" style="display: none;">Lås inn rapport</button>
-        <button id="edit-btn" style="display: none;">Rediger kommentar</button>
-        <button id="save-edit" style="display: none;">Lagre endringer</button>
-        <div id="report-content"></div>
-        <textarea id="commentary-edit" style="display: none;"></textarea>
-        <div id="message"></div>
+        <button onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
+        <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
+        <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
+        <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
     </div>
-    <script>
-        const reportKey = 'peasy_mandagsrapport';
-        const xlsxUrl = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    
+    <div id="loading" style="display: none;">Laster...</div>
+    
+    <div id="report-content">
+        <div id="timestamp" class="timestamp"></div>
+        <div id="commentary" class="commentary"></div>
+        
+        <div id="sold-section">
+            <div class="section-title">Solgte biler</div>
+            <table id="sold-table"></table>
+        </div>
+        
+        <div id="returned-section">
+            <div class="section-title">Returnerte biler</div>
+            <table id="returned-table"></table>
+        </div>
+    </div>
+</body>
+<script>
+// LocalStorage key for saved reports
+const STORAGE_KEY = 'peasy_mandagsrapporter';
 
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getDate() + 4 - (d.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        }
+// Load historical weeks into dropdown on page open
+window.onload = () => {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const select = document.getElementById('weekSelect');
+    saved.forEach(report => {
+        const opt = document.createElement('option');
+        opt.value = report.id;
+        opt.textContent = report.title;
+        select.appendChild(opt);
+    });
+    if (saved.length > 0) {
+        select.value = saved[saved.length - 1].id;
+        loadSavedReport();
+    }
+};
 
-        function parseDate(str) {
-            if (!str) return null;
-            const parts = str.toString().trim().match(/(\d{2})\.(\d{2})\.(\d{4})/);
-            if (parts) {
-                return new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
-            }
-            return null;
-        }
+// Load a saved report from localStorage
+function loadSavedReport() {
+    const selectedId = document.getElementById('weekSelect').value;
+    if (!selectedId) return;
+    
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const report = saved.find(r => r.id === selectedId);
+    if (!report) return;
 
-        function getARlav(str) {
-            if (!str) return null;
-            const match = str.toString().trim().match(/(\d+)/);
-            return match ? parseInt(match[1]) : null;
-        }
+    document.getElementById('report-content').style.display = 'block';
+    document.getElementById('edit-btn').style.display = 'block';
+    document.getElementById('lock-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'none';
 
-        function getPreviousWeek() {
-            const today = new Date();
-            let day = today.getDay();
-            if (day === 0) {
-                throw new Error('Rapporten kan kun genereres på mandag eller senere.');
-            }
-            const lastSunday = new Date(today);
-            lastSunday.setDate(lastSunday.getDate() - day);
-            const monday = new Date(lastSunday);
-            monday.setDate(monday.getDate() - 6);
-            const weekNum = getWeekNumber(monday);
-            return {
-                monday,
-                sunday: lastSunday,
-                title: `Uke ${weekNum}`
+    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. Sist endret: ${report.edited || report.created}`;
+
+    document.getElementById('commentary').innerHTML = report.commentary;
+    document.getElementById('sold-table').innerHTML = report.soldTable;
+    document.getElementById('returned-table').innerHTML = report.returnedTable;
+
+    document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
+    document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
+}
+
+// Generate new report for last week (Mon-Sun)
+async function generateNewReport() {
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    document.getElementById('loading').textContent = 'Genererer ny rapport...';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('report-content').style.display = 'none';
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'none';
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ab = await res.arrayBuffer();
+        const wb = XLSX.read(ab, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+
+        // Column indices
+        const headers = data[0].map(h => (h || '').trim());
+        const col = {
+            Merke: headers.indexOf('Merke'),
+            Modell: headers.indexOf('Modell'),
+            År: headers.indexOf('År'),
+            'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
+            Bud: headers.indexOf('Bud'),
+            'Solgt på': headers.indexOf('Solgt på'),
+            Returnert: headers.findIndex(h => h.includes('Returnert'))
+        };
+
+        // Last week: previous Monday to Sunday
+        const today = new Date();
+        const dayOfWeek = today.getDay() || 7; // Sunday = 0 → 7
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - dayOfWeek - 6); // Back to last Monday
+        startDate.setHours(0,0,0,0);
+
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 7); // To next Monday (exclude)
+        endDate.setHours(0,0,0,0);
+
+        const weekNum = Math.ceil((startDate - new Date(startDate.getFullYear(),0,1)) / (86400000 * 7));
+        const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+
+        const soldCars = [];
+        const returnedCars = [];
+
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const parseDate = (str) => {
+                if (!str) return null;
+                const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+                if (!match) return null;
+                return new Date(match[3], match[2]-1, match[1]);
             };
-        }
 
-        function loadReports() {
-            return JSON.parse(localStorage.getItem(reportKey)) || {};
-        }
+            const soldDate = parseDate(row[col['Solgt på']]);
+            const retDate = parseDate(row[col.Returnert]);
 
-        function saveReport(weekTitle, report) {
-            const reports = loadReports();
-            reports[weekTitle] = report;
-            localStorage.setItem(reportKey, JSON.stringify(reports));
-        }
-
-        function populateDropdown(currentWeekTitle) {
-            const select = document.getElementById('report-select');
-            select.innerHTML = '<option value="">Velg rapport</option>';
-            const reports = loadReports();
-            Object.keys(reports).sort().forEach(key => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.text = key;
-                select.appendChild(option);
-            });
-            if (reports[currentWeekTitle]) {
-                select.value = currentWeekTitle;
-                renderReport(reports[currentWeekTitle], currentWeekTitle);
+            const arRange = row[col['Endelig AR verdi']] || '';
+            let arMid = 0;
+            if (arRange.includes('-')) {
+                const [low, high] = arRange.split('-').map(n => parseFloat(n.trim()) || 0);
+                arMid = (low + high) / 2;
             }
+
+            const bud = parseFloat(row[col.Bud] || 0);
+            const diffNok = bud - arMid;
+            const diffPct = arMid ? ((diffNok / arMid) * 100).toFixed(1) : '0.0';
+
+            const car = {
+                Merke: row[col.Merke] || '-',
+                Modell: row[col.Modell] || '-',
+                År: row[col.År] || '-',
+                'AR midtpunkt': arMid.toLocaleString('nb-NO'),
+                Bud: bud.toLocaleString('nb-NO'),
+                'Diff NOK': diffNok.toLocaleString('nb-NO'),
+                'Diff %': diffPct + '%'
+            };
+
+            if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+            if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
-        function showMessage(msg, isError = false) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = msg;
-            messageDiv.style.color = isError ? '#ff0000' : '#fff';
-        }
+        // Facts
+        const facts = (cars, type) => {
+            const n = cars.length;
+            const under = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) < 0).length;
+            const over = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) > 0).length;
+            const on = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) === 0).length;
+            const avgNok = n ? Math.round(cars.reduce((s, c) => s + parseFloat(c['Diff NOK'].replace(/\s/g, '')), 0) / n).toLocaleString('nb-NO') : '0';
+            const avgPct = n ? (cars.reduce((s, c) => s + parseFloat(c['Diff %'].replace('%', '')), 0) / n).toFixed(1) : '0.0';
+            return { n, under, over, on, avgNok, avgPct };
+        };
 
-        function renderTable(cars, title) {
-            if (cars.length === 0) return `<h2>${title}</h2><p>Ingen biler.</p>`;
-            let totalAR = 0, totalBud = 0, totalDiffNOK = 0, totalDiffPct = 0;
-            let countUnder = 0, sumUnder = 0;
-            let html = `<h2>${title}</h2><table><thead><tr><th>Merke</th><th>Modell</th><th>År</th><th>AR lav</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th></tr></thead><tbody>`;
+        const soldF = facts(soldCars, 'solgt');
+        const retF = facts(returnedCars, 'returnert');
+
+        const commentary = `
+            <h3>Fakta – siste uke (man-søn)</h3>
+            <ul>
+                <li><strong>Solgt:</strong> ${soldF.n} biler</li>
+                <li>Under midtpunkt: ${soldF.under}</li>
+                <li>Over midtpunkt: ${soldF.over}</li>
+                <li>På midtpunkt: ${soldF.on}</li>
+                <li>Gj.sn. diff: ${soldF.avgNok} NOK (${soldF.avgPct}%)</li>
+                <li><strong>Returnert:</strong> ${retF.n} biler</li>
+                <li>Gj.sn. diff returnert: ${retF.avgNok} NOK (${retF.avgPct}%)</li>
+            </ul>
+        `;
+
+        // Render tables
+        const render = (id, cars, title) => {
+            const table = document.getElementById(id);
+            table.innerHTML = '';
+            if (cars.length === 0) {
+                table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
+                return;
+            }
+            const thead = document.createElement('thead');
+            const tr = document.createElement('tr');
+            ['Merke', 'Modell', 'År', 'AR midtpunkt', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
             cars.forEach(car => {
-                const diffNOK = car.bud - car.arLav;
-                const diffPct = ((diffNOK / car.arLav) * 100).toFixed(1);
-                let diffClass = diffNOK > 0 ? 'green' : diffNOK < 0 ? 'red' : 'gray';
-                html += `<tr><td>${car.merke}</td><td>${car.modell}</td><td>${car.ar}</td><td>${car.arLav}</td><td>${car.bud}</td><td class="${diffClass}">${diffNOK}</td><td class="${diffClass}">${diffPct}%</td></tr>`;
-                totalAR += car.arLav;
-                totalBud += car.bud;
-                totalDiffNOK += diffNOK;
-                totalDiffPct += parseFloat(diffPct);
-                if (diffNOK < 0) {
-                    countUnder++;
-                    sumUnder += -diffNOK; // undersalg
-                }
+                const row = document.createElement('tr');
+                Object.keys(car).forEach(key => {
+                    const td = document.createElement('td');
+                    td.textContent = car[key];
+                    if (key === 'Diff NOK' || key === 'Diff %') {
+                        const val = parseFloat(key === 'Diff %' ? car[key].replace('%', '') : car[key].replace(/\s/g, ''));
+                        td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
+                    }
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
             });
-            const avgAR = (totalAR / cars.length).toFixed(0);
-            const avgBud = (totalBud / cars.length).toFixed(0);
-            const avgDiffNOK = (totalDiffNOK / cars.length).toFixed(0);
-            const avgDiffPct = (totalDiffPct / cars.length).toFixed(1);
-            html += `<tr><td colspan="3">Gjennomsnitt</td><td>${avgAR}</td><td>${avgBud}</td><td>${avgDiffNOK}</td><td>${avgDiffPct}%</td></tr></tbody></table>`;
-            return {html, percentUnder: (countUnder / cars.length) * 100, avgUndersalg: countUnder > 0 ? (sumUnder / countUnder) : 0};
-        }
+            table.appendChild(tbody);
 
-        function generateCommentary(soldStats, returnedStats) {
-            const ppDiff = (returnedStats.percentUnder - soldStats.percentUnder).toFixed(1);
-            const nokDiff = (returnedStats.avgUndersalg - soldStats.avgUndersalg).toFixed(0);
-            const ppSign = ppDiff >= 0 ? '+' : '';
-            const nokSign = nokDiff >= 0 ? '+' : '';
-            return `Returnerte har ${ppSign}${ppDiff} pp høyere andel under + ${nokSign}${nokDiff} NOK større undersalg.`;
-        }
+            const tfoot = document.createElement('tfoot');
+            const ftr = document.createElement('tr');
+            const ftd = document.createElement('td');
+            ftd.colSpan = 3;
+            ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
+            ftr.appendChild(ftd);
 
-        function renderReport(report, weekTitle) {
-            const contentDiv = document.getElementById('report-content');
-            const sold = renderTable(report.sold, 'Solgt');
-            const returned = renderTable(report.returned, 'Returnert');
-            const commentary = generateCommentary({percentUnder: sold.percentUnder, avgUndersalg: sold.avgUndersalg}, {percentUnder: returned.percentUnder, avgUndersalg: returned.avgUndersalg});
-            contentDiv.innerHTML = `
-                <h2>${weekTitle}</h2>
-                ${sold.html}
-                ${returned.html}
-                <h2>Kommentar</h2>
-                <p id="commentary">${report.commentary || commentary}</p>
-                <p>Opprettet: ${report.created}</p>
-                <p>${report.edited ? 'Redigert: ' + report.edited : ''}</p>
-            `;
-            document.getElementById('lock-btn').style.display = report.isNew ? 'inline-block' : 'none';
-            document.getElementById('edit-btn').style.display = !report.isNew ? 'inline-block' : 'none';
-            document.getElementById('generate-btn').style.display = report.isNew ? 'none' : 'inline-block';
-        }
+            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR midtpunkt'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')), 0) / cars.length).toFixed(1) + '%' : '0.0%';
 
-        async function generateReport() {
-            showMessage('Laster...', false);
-            try {
-                const week = getPreviousWeek();
-                const reports = loadReports();
-                if (reports[week.title]) {
-                    throw new Error('Rapporten er allerede generert for denne uken.');
-                }
-                const res = await fetch(xlsxUrl);
-                if (!res.ok) throw new Error('Feil ved henting av data.');
-                const ab = await res.arrayBuffer();
-                const wb = XLSX.read(ab, {type: 'array'});
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                const data = XLSX.utils.sheet_to_json(ws, {header: 1, blankrows: false});
-                if (data.length < 2) throw new Error('Ingen data i rapporten.');
+            [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                ftr.appendChild(td);
+            });
+            tfoot.appendChild(ftr);
+            table.appendChild(tfoot);
+        };
 
-                const headers = data[0].map(h => h ? h.toString().trim() : '');
-                const colMerke = headers.indexOf('Merke');
-                const colModell = headers.indexOf('Modell');
-                const colAr = headers.indexOf('År');
-                const colAR = headers.indexOf('Endelig AR verdi');
-                const colBud = headers.indexOf('Bud');
-                const colO = 14; // O
-                const colU = 20; // U
+        document.getElementById('timestamp').textContent = `Opprettet: ${new Date().toLocaleString('nb-NO')}. Sist endret: -`;
+        document.getElementById('commentary').innerHTML = commentary;
+        render('sold-table', soldCars);
+        render('returned-table', returnedCars);
+        document.getElementById('report-content').style.display = 'block';
+        document.getElementById('edit-btn').style.display = 'block';
+        document.getElementById('lock-btn').style.display = 'block';
+        document.getElementById('sold-section').style.display = soldCars.length > 0 ? 'block' : 'none';
+        document.getElementById('returned-section').style.display = returnedCars.length > 0 ? 'block' : 'none';
 
-                if (colMerke === -1 || colModell === -1 || colAr === -1 || colAR === -1 || colBud === -1) {
-                    throw new Error('Manglende kolonner i dataen.');
-                }
+        currentReport = { commentary, soldTable: document.getElementById('sold-table').outerHTML, returnedTable: document.getElementById('returned-table').outerHTML, created: new Date().toLocaleString('nb-NO'), title };
+    } catch (err) {
+        document.getElementById('loading').textContent = 'Feil: ' + err.message;
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
 
-                const sold = [];
-                const returned = [];
-                for (let i = 1; i < data.length; i++) {
-                    const row = data[i];
-                    const dateO = parseDate(row[colO]);
-                    const dateU = parseDate(row[colU]);
-                    const arLav = getARlav(row[colAR]);
-                    const bud = parseInt(row[colBud]) || 0;
-                    if (!arLav || isNaN(bud)) continue;
+let currentReport = null;
 
-                    const car = {
-                        merke: row[colMerke] || '',
-                        modell: row[colModell] || '',
-                        ar: row[colAr] || '',
-                        arLav,
-                        bud
-                    };
+// Edit mode
+function editReport() {
+    const commentary = document.getElementById('commentary');
+    const textarea = document.createElement('textarea');
+    textarea.value = commentary.innerHTML.trim();
+    commentary.innerHTML = '';
+    commentary.appendChild(textarea);
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'block';
+}
 
-                    if (dateO && dateO >= week.monday && dateO <= week.sunday) {
-                        sold.push(car);
-                    }
-                    if (dateU && dateU >= week.monday && dateU <= week.sunday) {
-                        returned.push(car);
-                    }
-                }
+// Save edits
+function saveEdits() {
+    const textarea = document.querySelector('textarea');
+    document.getElementById('commentary').innerHTML = textarea.value;
+    document.getElementById('edit-btn').style.display = 'block';
+    document.getElementById('save-edits').style.display = 'none';
+    document.getElementById('timestamp').textContent += ` (endret: ${new Date().toLocaleString('nb-NO')})`;
+}
 
-                const soldStats = renderTable(sold, 'Solgt');
-                const returnedStats = renderTable(returned, 'Returnert');
-                const commentary = generateCommentary({percentUnder: soldStats.percentUnder, avgUndersalg: soldStats.avgUndersalg}, {percentUnder: returnedStats.percentUnder, avgUndersalg: returnedStats.avgUndersalg});
+// Lock/save to history
+function lockReport() {
+    if (!currentReport) return alert('Generer rapport først');
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    currentReport.id = 'uke' + (saved.length + 1);
+    currentReport.edited = new Date().toLocaleString('nb-NO');
+    saved.push(currentReport);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    alert('Rapport låst inn!');
+    location.reload();  // Reload to update dropdown
+}
 
-                const report = {
-                    sold,
-                    returned,
-                    commentary,
-                    created: new Date().toLocaleString(),
-                    edited: null,
-                    isNew: true
-                };
-                renderReport(report, week.title);
-                document.getElementById('lock-btn').style.display = 'inline-block';
-                document.getElementById('generate-btn').style.display = 'none';
-                showMessage('Rapport generert.', false);
-
-                document.getElementById('lock-btn').onclick = () => {
-                    report.isNew = false;
-                    saveReport(week.title, report);
-                    populateDropdown(week.title);
-                    document.getElementById('lock-btn').style.display = 'none';
-                    document.getElementById('edit-btn').style.display = 'inline-block';
-                    showMessage('Rapport lagret.', false);
-                };
-            } catch (err) {
-                showMessage(err.message, true);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            let week;
-            try {
-                week = getPreviousWeek();
-                const reports = loadReports();
-                populateDropdown(week.title);
-                if (!reports[week.title]) {
-                    generateReport();
-                }
-            } catch (err) {
-                showMessage(err.message, true);
-            }
-
-            document.getElementById('generate-btn').onclick = generateReport;
-
-            document.getElementById('report-select').onchange = (e) => {
-                const key = e.target.value;
-                if (key) {
-                    const reports = loadReports();
-                    renderReport(reports[key], key);
-                } else {
-                    document.getElementById('report-content').innerHTML = '';
-                    document.getElementById('lock-btn').style.display = 'none';
-                    document.getElementById('edit-btn').style.display = 'none';
-                    document.getElementById('save-edit').style.display = 'none';
-                    document.getElementById('commentary-edit').style.display = 'none';
-                }
-            };
-
-            document.getElementById('edit-btn').onclick = () => {
-                const select = document.getElementById('report-select');
-                const key = select.value;
-                if (!key) return;
-                const reports = loadReports();
-                const report = reports[key];
-                const commentaryP = document.getElementById('commentary');
-                document.getElementById('commentary-edit').value = commentaryP.textContent;
-                document.getElementById('commentary-edit').style.display = 'block';
-                document.getElementById('save-edit').style.display = 'inline-block';
-                document.getElementById('edit-btn').style.display = 'none';
-
-                document.getElementById('save-edit').onclick = () => {
-                    const newCommentary = document.getElementById('commentary-edit').value;
-                    report.commentary = newCommentary;
-                    report.edited = new Date().toLocaleString();
-                    saveReport(key, report);
-                    renderReport(report, key);
-                    document.getElementById('commentary-edit').style.display = 'none';
-                    document.getElementById('save-edit').style.display = 'none';
-                    document.getElementById('edit-btn').style.display = 'inline-block';
-                    showMessage('Endringer lagret.', false);
-                };
-            };
-        });
-    </script>
+window.onload = loadReport;  // Auto-run on open
+</script>
 </body>
 </html>
