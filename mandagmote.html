@@ -36,7 +36,7 @@
 <div class="container">
     <h1>Mandagsrapport – Peasy</h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter fra forrige uke. Oppdateres hver mandag for siste uke (man-søn).</p>
-    
+   
     <div class="controls">
         <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
@@ -46,24 +46,25 @@
         <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
         <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
     </div>
-    
+   
     <div id="loading" style="display: none;">Laster...</div>
-    
+   
     <div id="report-content">
         <div id="timestamp" class="timestamp"></div>
         <div id="commentary" class="commentary"></div>
-        
+       
         <div id="sold-section">
             <div class="section-title">Solgte biler</div>
             <table id="sold-table"></table>
         </div>
-        
+       
         <div id="returned-section">
             <div class="section-title">Returnerte biler</div>
             <table id="returned-table"></table>
         </div>
     </div>
-</body>
+</div>
+
 <script>
 // LocalStorage key for saved reports
 const STORAGE_KEY = 'peasy_mandagsrapporter';
@@ -88,22 +89,18 @@ window.onload = () => {
 function loadSavedReport() {
     const selectedId = document.getElementById('weekSelect').value;
     if (!selectedId) return;
-    
+   
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const report = saved.find(r => r.id === selectedId);
     if (!report) return;
-
     document.getElementById('report-content').style.display = 'block';
     document.getElementById('edit-btn').style.display = 'block';
     document.getElementById('lock-btn').style.display = 'none';
     document.getElementById('save-edits').style.display = 'none';
-
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. Sist endret: ${report.edited || report.created}`;
-
     document.getElementById('commentary').innerHTML = report.commentary;
     document.getElementById('sold-table').innerHTML = report.soldTable;
     document.getElementById('returned-table').innerHTML = report.returnedTable;
-
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
 }
@@ -116,7 +113,6 @@ async function generateNewReport() {
     document.getElementById('report-content').style.display = 'none';
     document.getElementById('edit-btn').style.display = 'none';
     document.getElementById('save-edits').style.display = 'none';
-
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -143,7 +139,6 @@ async function generateNewReport() {
         const startDate = new Date(today);
         startDate.setDate(today.getDate() - dayOfWeek - 6); // Back to last Monday
         startDate.setHours(0,0,0,0);
-
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + 7); // To next Monday (exclude)
         endDate.setHours(0,0,0,0);
@@ -167,21 +162,24 @@ async function generateNewReport() {
             const retDate = parseDate(row[col.Returnert]);
 
             const arRange = row[col['Endelig AR verdi']] || '';
-            let arMid = 0;
+            let arLowest = 0;
+
             if (arRange.includes('-')) {
                 const [low, high] = arRange.split('-').map(n => parseFloat(n.trim()) || 0);
-                arMid = (low + high) / 2;
+                arLowest = low;
+            } else {
+                arLowest = parseFloat(arRange) || 0;
             }
 
             const bud = parseFloat(row[col.Bud] || 0);
-            const diffNok = bud - arMid;
-            const diffPct = arMid ? ((diffNok / arMid) * 100).toFixed(1) : '0.0';
+            const diffNok = bud - arLowest;
+            const diffPct = arLowest ? ((diffNok / arLowest) * 100).toFixed(1) : '0.0';
 
             const car = {
                 Merke: row[col.Merke] || '-',
                 Modell: row[col.Modell] || '-',
                 År: row[col.År] || '-',
-                'AR midtpunkt': arMid.toLocaleString('nb-NO'),
+                'AR laveste estimat': arLowest.toLocaleString('nb-NO'),
                 Bud: bud.toLocaleString('nb-NO'),
                 'Diff NOK': diffNok.toLocaleString('nb-NO'),
                 'Diff %': diffPct + '%'
@@ -209,9 +207,9 @@ async function generateNewReport() {
             <h3>Fakta – siste uke (man-søn)</h3>
             <ul>
                 <li><strong>Solgt:</strong> ${soldF.n} biler</li>
-                <li>Under midtpunkt: ${soldF.under}</li>
-                <li>Over midtpunkt: ${soldF.over}</li>
-                <li>På midtpunkt: ${soldF.on}</li>
+                <li>Under laveste estimat: ${soldF.under}</li>
+                <li>Over laveste estimat: ${soldF.over}</li>
+                <li>På laveste estimat: ${soldF.on}</li>
                 <li>Gj.sn. diff: ${soldF.avgNok} NOK (${soldF.avgPct}%)</li>
                 <li><strong>Returnert:</strong> ${retF.n} biler</li>
                 <li>Gj.sn. diff returnert: ${retF.avgNok} NOK (${retF.avgPct}%)</li>
@@ -226,9 +224,10 @@ async function generateNewReport() {
                 table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
                 return;
             }
+
             const thead = document.createElement('thead');
             const tr = document.createElement('tr');
-            ['Merke', 'Modell', 'År', 'AR midtpunkt', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
+            ['Merke', 'Modell', 'År', 'AR laveste estimat', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
                 const th = document.createElement('th');
                 th.textContent = h;
                 tr.appendChild(th);
@@ -259,7 +258,7 @@ async function generateNewReport() {
             ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
             ftr.appendChild(ftd);
 
-            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR midtpunkt'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR laveste estimat'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
             const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
             const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
             const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')), 0) / cars.length).toFixed(1) + '%' : '0.0%';
@@ -269,6 +268,7 @@ async function generateNewReport() {
                 td.textContent = v;
                 ftr.appendChild(td);
             });
+
             tfoot.appendChild(ftr);
             table.appendChild(tfoot);
         };
@@ -277,13 +277,21 @@ async function generateNewReport() {
         document.getElementById('commentary').innerHTML = commentary;
         render('sold-table', soldCars);
         render('returned-table', returnedCars);
+
         document.getElementById('report-content').style.display = 'block';
         document.getElementById('edit-btn').style.display = 'block';
         document.getElementById('lock-btn').style.display = 'block';
         document.getElementById('sold-section').style.display = soldCars.length > 0 ? 'block' : 'none';
         document.getElementById('returned-section').style.display = returnedCars.length > 0 ? 'block' : 'none';
 
-        currentReport = { commentary, soldTable: document.getElementById('sold-table').outerHTML, returnedTable: document.getElementById('returned-table').outerHTML, created: new Date().toLocaleString('nb-NO'), title };
+        currentReport = {
+            commentary,
+            soldTable: document.getElementById('sold-table').outerHTML,
+            returnedTable: document.getElementById('returned-table').outerHTML,
+            created: new Date().toLocaleString('nb-NO'),
+            title
+        };
+
     } catch (err) {
         document.getElementById('loading').textContent = 'Feil: ' + err.message;
     } finally {
@@ -322,10 +330,8 @@ function lockReport() {
     saved.push(currentReport);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     alert('Rapport låst inn!');
-    location.reload();  // Reload to update dropdown
+    location.reload(); // Reload to update dropdown
 }
-
-window.onload = loadReport;  // Auto-run on open
 </script>
 </body>
 </html>
