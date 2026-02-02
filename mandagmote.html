@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v1.1</title>
+    <title>Mandagsrapport – Peasy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -11,9 +11,7 @@
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
-        button.generate { background: #004225; color: white; }
-        button.lock { background: #2e7d32; color: white; }
+        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
         button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
         .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
@@ -23,74 +21,44 @@
         .highlight-negative { color: #d32f2f; font-weight: 600; }
         .highlight-positive { color: #2e7d32; font-weight: 600; }
         .highlight-zero { color: #555; font-weight: 600; }
-        #loading, #error-msg { font-style: italic; text-align: center; font-size: 1rem; margin: 24px 0; }
-        #error-msg { color: #d32f2f; font-weight: 600; }
-        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
+        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
+        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy v1.1</h1>
+    <h1>Mandagsrapport – Peasy</h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Forrige full uke (man–søn). Kun biler med ikke-tomme datoer i kolonne O (verdi) eller U (retur).</p>
 
     <div class="controls">
-        <button class="generate" onclick="generateReport()">Oppdater nå</button>
+        <button onclick="loadReport()">Oppdater nå</button>
     </div>
 
-    <div id="loading" style="display:none;">Laster...</div>
-    <div id="error-msg" style="display:none;"></div>
+    <div id="loading">Laster data...</div>
 
-    <div id="report" style="display:none;">
-        <div id="timestamp" class="timestamp"></div>
-        <div id="commentary" class="commentary"></div>
+    <div id="commentary" class="commentary" style="display:none;"></div>
 
-        <div id="soldSection">
-            <div class="section-title">Solgte biler (ikke-tom O-dato i uken)</div>
-            <table id="soldTable"></table>
-        </div>
+    <div id="sold-section" style="display:none;">
+        <div class="section-title">Solgte biler (ikke-tom O-dato i uken)</div>
+        <table id="sold-table"></table>
+    </div>
 
-        <div id="returnedSection">
-            <div class="section-title">Returnerte biler (ikke-tom U-dato i uken)</div>
-            <table id="returnedTable"></table>
-        </div>
+    <div id="returned-section" style="display:none;">
+        <div class="section-title">Returnerte biler (ikke-tom U-dato i uken)</div>
+        <table id="returned-table"></table>
     </div>
 </div>
 
 <script>
-async function generateReport() {
-    document.getElementById('loading').textContent = 'Laster rapport...';
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('error-msg').style.display = 'none';
-    document.getElementById('report').style.display = 'none';
-
-    const today = new Date();
-    const dayOfWeek = today.getDay() || 7;
-    if (dayOfWeek < 1) { // Sunday
-        showError('Uken er ikke komplett. Vent til mandag.');
-        document.getElementById('loading').style.display = 'none';
-        return;
-    }
-
-    const lastSunday = new Date(today);
-    lastSunday.setDate(today.getDate() - dayOfWeek);
-    lastSunday.setHours(23,59,59,999);
-
-    const lastMonday = new Date(lastSunday);
-    lastMonday.setDate(lastSunday.getDate() - 6);
-    lastMonday.setHours(0,0,0,0);
-
-    const weekNum = getWeekNumber(lastMonday);
-    const weekTitle = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
-
-    const saved = JSON.parse(localStorage.getItem('peasy_mandagsrapport') || '[]');
-    if (saved.some(r => r.title === weekTitle)) {
-        showError('Uke finnes allerede.');
-        document.getElementById('loading').style.display = 'none';
-        return;
-    }
-
+async function loadReport() {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    document.getElementById('loading').textContent = 'Laster og behandler...';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('commentary').style.display = 'none';
+    document.getElementById('sold-section').style.display = 'none';
+    document.getElementById('returned-section').style.display = 'none';
+
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -106,17 +74,27 @@ async function generateReport() {
             År: headers.indexOf('År'),
             'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
             Bud: headers.indexOf('Bud'),
-            O: headers.findIndex(h => h.toLowerCase().includes('registrert') || h.includes('O')),
-            U: headers.findIndex(h => h.toLowerCase().includes('returnert') || h.includes('U'))
+            O: headers.findIndex(h => h.includes('Registrert') || h.includes('O')),
+            U: headers.findIndex(h => h.includes('Returnert') || h.includes('U'))
         };
+
+        // Previous full week: Mon–Sun before current week
+        const today = new Date();
+        const dayOfWeek = today.getDay() || 7;
+        const lastSunday = new Date(today);
+        lastSunday.setDate(today.getDate() - dayOfWeek);
+        lastSunday.setHours(23,59,59,999);
+
+        const lastMonday = new Date(lastSunday);
+        lastMonday.setDate(lastSunday.getDate() - 6);
+        lastMonday.setHours(0,0,0,0);
 
         const soldCars = [];
         const returnedCars = [];
 
         const parseDate = (val) => {
-            if (!val) return null;
+            if (!val || (typeof val === 'string' && val.trim() === '')) return null;
             let str = val.toString().trim();
-            if (str === '') return null;
             const datePart = str.split(/\s+/)[0];
             const match = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
             if (match) {
@@ -155,6 +133,7 @@ async function generateReport() {
                 'Diff %': diffPct + '%'
             };
 
+            // Only if cell is non-empty and date parsed and in week
             if (oVal && oVal.toString().trim() !== '' && oDate && oDate >= lastMonday && oDate <= lastSunday) {
                 soldCars.push(car);
             }
@@ -163,6 +142,7 @@ async function generateReport() {
             }
         }
 
+        // Facts
         const facts = (cars) => {
             const n = cars.length;
             if (n === 0) return { n: 0, underPct: 0, avgUndersalgNok: '0', avgUndersalgPct: '0.0' };
@@ -265,40 +245,18 @@ async function generateReport() {
             table.appendChild(tfoot);
         };
 
-        renderTable('soldTable', soldCars);
-        renderTable('returnedTable', returnedCars);
+        renderTable('sold-table', soldCars);
+        document.getElementById('sold-section').style.display = 'block';
+        renderTable('returned-table', returnedCars);
+        document.getElementById('returned-section').style.display = 'block';
 
-        document.getElementById('report').style.display = 'block';
         document.getElementById('loading').style.display = 'none';
-
-        window.currentReport = {
-            title: `Mandagsrapport – uke ${weekNum}`,
-            commentary: commentaryHtml,
-            soldTable: document.getElementById('soldTable').outerHTML,
-            returnedTable: document.getElementById('returnedTable').outerHTML,
-            created: new Date().toLocaleString('nb-NO')
-        };
     } catch (err) {
         document.getElementById('loading').textContent = 'Feil: ' + err.message;
     }
 }
 
-function showError(msg) {
-    const el = document.getElementById('error-msg');
-    el.textContent = msg;
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 5000);
-}
-
-function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = (d.getDay() + 6) % 7;
-    d.setDate(d.getDate() - dayNum + 3);
-    const firstThursday = new Date(d.getFullYear(), 0, 4);
-    return 1 + Math.round(((d - firstThursday) / 86400000 - 3 + (firstThursday.getDay() + 6) % 7) / 7);
-}
-
-window.onload = generateReport;
+window.onload = loadReport;
 </script>
 </body>
 </html>
