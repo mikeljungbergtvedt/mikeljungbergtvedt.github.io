@@ -3,146 +3,39 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v13 (full sky-lagring)</title>
+    <title>Mandagsrapport – Peasy v14 (sky-lagring + kommentarredigering)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
-            color: #004225;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 40px 24px;
-        }
-        h1 {
-            font-weight: 900;
-            font-size: 2.4rem;
-            letter-spacing: -0.7px;
-            margin-bottom: 8px;
-            background: linear-gradient(to right, #004225, #006644);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: inline-block;
-        }
-        .version {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #006644;
-            margin-left: 16px;
-            vertical-align: super;
-        }
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 0.98rem;
-            font-weight: 600;
-            border-radius: 10px;
-            border: none;
-            background: #004225;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 1px 4px rgba(0,66,37,0.06);
-            transition: all 0.2s ease;
-        }
-        button:hover {
-            box-shadow: 0 3px 10px rgba(0,66,37,0.14);
-            transform: translateY(-1px);
-        }
-        button:disabled {
-            background: #aaa;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-            opacity: 0.75;
-        }
+        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
+        .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
+        h1 { font-weight: 900; font-size: 2.4rem; letter-spacing: -0.7px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
+        .version { font-size: 1.4rem; font-weight: 700; color: #006644; margin-left: 16px; vertical-align: super; }
+        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+        button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+        button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
         button#edit-btn { background: #006644; }
         button.danger { background: #c62828; }
-        .commentary {
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(130,191,210, 0.10);
-            border-radius: 14px;
-            box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-            padding: 24px;
-            margin-bottom: 40px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(130,191,210, 0.10);
-            border-radius: 14px;
-            box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-            margin-bottom: 40px;
-        }
-        th, td {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid rgba(130,191,210, 0.10);
-        }
-        th {
-            background: rgba(130,191,210,0.05);
-            font-weight: 700;
-        }
-        tfoot td {
-            font-weight: 700;
-            background: rgba(130,191,210,0.08);
-        }
+        .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210, 0.10); }
+        th { background: rgba(130,191,210,0.05); font-weight: 700; }
+        tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
         .highlight-negative { color: #d32f2f; font-weight: 600; }
         .highlight-positive { color: #2e7d32; font-weight: 600; }
-        .highlight-zero     { color: #555; font-weight: 600; }
-        #loading {
-            font-style: italic;
-            opacity: 0.75;
-            text-align: center;
-            font-size: 1rem;
-            margin: 24px 0;
-        }
-        .section-title {
-            font-size: 1.3rem;
-            margin: 32px 0 16px;
-            font-weight: 700;
-        }
+        .highlight-zero { color: #555; font-weight: 600; }
+        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
+        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
         #report-content { display: none; }
-        .timestamp {
-            font-size: 0.92rem;
-            opacity: 0.8;
-            margin-bottom: 16px;
-        }
-        .no-data {
-            text-align: center;
-            color: #777;
-            font-style: italic;
-            margin: 20px 0;
-        }
-        textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(130,191,210,0.3);
-            background: white;
-            font-family: inherit;
-            font-size: 1rem;
-        }
+        .timestamp { font-size: 0.92rem; opacity: 0.8; margin-bottom: 16px; }
+        .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        textarea { width: 100%; min-height: 160px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1.05rem; line-height: 1.5; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v13 (sky-lagring)</span></h1>
+    <h1>Mandagsrapport – Peasy<span class="version">v14</span></h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
 
     <div class="controls">
@@ -150,8 +43,7 @@
             <option value="">Velg uke...</option>
         </select>
         <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
-        <button id="edit-btn" onclick="editReport()" style="display:none;">Rediger rapport</button>
-        <button id="save-edits" onclick="saveEdits()" style="display:none;">Lagre endringer</button>
+        <button id="edit-btn" onclick="editReport()" style="display:none;">Rediger kommentar</button>
         <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
         <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
     </div>
@@ -165,8 +57,8 @@
         <div id="returned-section"><div class="section-title">Returnerte biler</div><table id="returned-table"></table></div>
     </div>
 
-    <!-- Lock modal -->
-    <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; justify-content:center; align-items:center;">
+    <!-- Lås-modal -->
+    <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
         <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
             <h3>Kommentar før låsing (valgfritt)</h3>
             <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..."></textarea>
@@ -177,8 +69,8 @@
         </div>
     </div>
 
-    <!-- Delete confirm modal -->
-    <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; justify-content:center; align-items:center;">
+    <!-- Slett-bekreftelse -->
+    <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
         <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
             <h3>Sikker på sletting?</h3>
             <p>Rapporten blir borte for alle brukere.</p>
@@ -189,32 +81,28 @@
         </div>
     </div>
 
-    <!-- Delete password prompt -->
+    <!-- Passord for sletting -->
     <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
         <h3>Passord kreves</h3>
-        <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px 0; display:block; margin-left:auto; margin-right:auto;">
-        <button onclick="checkDeletePassword()" style="background:#c62828; color:white; margin-top:12px;">Bekreft</button>
-        <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575; color:white; margin-top:12px;">Avbryt</button>
+        <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px auto; display:block;">
+        <button onclick="checkDeletePassword()" style="background:#c62828; color:white;">Bekreft</button>
+        <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575; color:white;">Avbryt</button>
     </div>
 </div>
 
 <script>
 // ────────────────────────────────────────────────
-// KONFIGURASJON – ENDRE HER
-const BIN_ID     = '6981aa3dae596e708f0d773b';                  // Din bin ID
-const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';  // Din master key
-const DELETE_PASSWORD = "slett123";  // ← endre dette til noe hemmelig!
-// ────────────────────────────────────────────────
-
+// KONFIGURASJON
+const BIN_ID = '6981aa3dae596e708f0d773b';
+const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
+const DELETE_PASSWORD = "slett123"; // ← BYTT UT MED DITT EGET HEMMELIGE PASSORD!
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = {
-    'Content-Type': 'application/json',
-    'X-Master-Key': MASTER_KEY
-};
+const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+// ────────────────────────────────────────────────
 
 let currentReport = null;
 
-// ─── Hjelpefunksjoner ────────────────────────────────────────
+// Hjelpefunksjoner
 function cleanNum(str) {
     if (!str) return 0;
     let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
@@ -232,13 +120,13 @@ function getISOWeek(date) {
 function getMostRecentCompletedWeekStart() {
     const today = new Date();
     const dayOfWeek = today.getDay() || 7;
-    let daysBack = (dayOfWeek === 1) ? 8 : dayOfWeek;
+    let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
     const endPrev = new Date(today); endPrev.setDate(today.getDate() - daysBack); endPrev.setHours(0,0,0,0);
     const startPrev = new Date(endPrev); startPrev.setDate(endPrev.getDate() - 6); startPrev.setHours(0,0,0,0);
     return startPrev;
 }
 
-// ─── JSONBin kommunikasjon ──────────────────────────────────
+// JSONBin
 async function fetchReports() {
     try {
         const res = await fetch(API_URL);
@@ -246,38 +134,32 @@ async function fetchReports() {
         const json = await res.json();
         return json.record?.reports ?? [];
     } catch (err) {
-        console.error(err);
-        alert("Kunne ikke hente data fra skyen.");
+        console.error("Feil ved henting:", err);
         return [];
     }
 }
 
 async function saveReports(reports) {
     try {
-        const res = await fetch(API_URL, {
-            method: 'PUT',
-            headers: HEADERS,
-            body: JSON.stringify({ reports })
-        });
-        if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(`Lagring feilet: ${res.status} – ${txt}`);
-        }
-        console.log("Lagret til JSONBin OK");
+        const res = await fetch(API_URL, { method: 'PUT', headers: HEADERS, body: JSON.stringify({ reports }) });
+        if (!res.ok) throw new Error(`Lagring feilet: ${res.status}`);
+        console.log("Lagret til JSONBin");
     } catch (err) {
-        console.error(err);
-        alert("Lagring til skyen feilet. Sjekk konsoll (F12).");
+        console.error("Lagring feilet:", err);
+        alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
     }
 }
 
-// ─── UI funksjoner ───────────────────────────────────────────
+// Initial lasting – nyeste rapport som default
 window.onload = async () => {
     const reports = await fetchReports();
     populateWeekSelect(reports);
-    if (reports.length) {
-        document.getElementById('weekSelect').value = reports[reports.length-1].id;
+    if (reports.length > 0) {
+        const newest = reports[reports.length - 1];
+        document.getElementById('weekSelect').value = newest.id;
         await loadSavedReport();
     }
+    await updateGenerateButtonState();
 };
 
 function populateWeekSelect(reports) {
@@ -294,7 +176,9 @@ function populateWeekSelect(reports) {
 async function loadSavedReport() {
     const id = document.getElementById('weekSelect').value;
     if (!id) {
-        hideReport();
+        document.getElementById('report-content').style.display = 'none';
+        document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
+        await updateGenerateButtonState();
         return;
     }
 
@@ -304,7 +188,11 @@ async function loadSavedReport() {
 
     currentReport = report;
 
-    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}${report.edited ? ' • Sist endret: ' + report.edited : ''}`;
+    let ts = `Opprettet: ${report.created}`;
+    if (report.edited) ts += ` • Sist endret: ${report.edited}`;
+    if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
+    document.getElementById('timestamp').textContent = ts;
+
     document.getElementById('commentary').innerHTML = report.commentary || '<p style="color:#777;">Ingen kommentar.</p>';
 
     renderTable('sold-table', report.soldCars || []);
@@ -315,96 +203,65 @@ async function loadSavedReport() {
     document.getElementById('report-content').style.display = 'block';
 
     const locked = !!report.locked;
-    document.getElementById('edit-btn').style.display   = locked ? 'none' : 'block';
-    document.getElementById('lock-btn').style.display   = locked ? 'none' : 'block';
-    document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('delete-btn').style.display = 'block';
-}
+    document.getElementById('edit-btn').style.display = 'block';          // alltid synlig (redigering OK også etter låsing)
+    document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
+    document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
 
-function hideReport() {
-    document.getElementById('report-content').style.display = 'none';
-    ['edit-btn','lock-btn','save-edits','delete-btn'].forEach(id =>
-        document.getElementById(id).style.display = 'none'
-    );
+    await updateGenerateButtonState();
 }
 
 function renderTable(id, cars) {
     const table = document.getElementById(id);
     table.innerHTML = '';
-
     if (!cars.length) {
-        table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler denne perioden</td></tr>';
+        table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
         return;
     }
 
-    // Header
-    const thead = document.createElement('thead');
-    thead.innerHTML = `<tr><th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th></tr>`;
-    table.appendChild(thead);
-
-    // Body
-    const tbody = document.createElement('tbody');
-    cars.forEach(car => {
-        const tr = document.createElement('tr');
-        ['Merke','Modell','År','AR laveste estimat','Bud','Diff NOK','Diff %'].forEach(key => {
-            const td = document.createElement('td');
-            const raw = car[key + '_raw'];
-            if (raw !== undefined) {
-                if (key.includes('Diff')) {
-                    td.textContent = raw.toLocaleString('nb-NO');
-                    td.className = raw < 0 ? 'highlight-negative' : raw > 0 ? 'highlight-positive' : 'highlight-zero';
-                } else {
-                    td.textContent = raw.toLocaleString('nb-NO');
-                }
-            } else {
-                td.textContent = car[key] ?? '-';
-            }
-            tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-
-    // Footer – gjennomsnitt
-    const tfoot = document.createElement('tfoot');
-    const ftr = document.createElement('tr');
-    ftr.innerHTML = `<td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>`;
-
-    ['AR laveste estimat','Bud','Diff NOK'].forEach(key => {
-        const td = document.createElement('td');
-        const sum = cars.reduce((s,c) => s + (c[key+'_raw'] ?? cleanNum(c[key])), 0);
-        const avg = cars.length ? Math.round(sum / cars.length) : 0;
-        td.textContent = avg.toLocaleString('nb-NO');
-        if (key === 'Diff NOK') td.className = avg < 0 ? 'highlight-negative' : avg > 0 ? 'highlight-positive' : 'highlight-zero';
-        ftr.appendChild(td);
-    });
-
-    const pctTd = document.createElement('td');
-    const pctAvg = cars.length ? (cars.reduce((s,c) => s + (c['Diff %_raw'] ?? cleanNum(c['Diff %'])), 0) / cars.length).toFixed(1) : '0.0';
-    pctTd.textContent = pctAvg + ' %';
-    ftr.appendChild(pctTd);
-
-    tfoot.appendChild(ftr);
-    table.appendChild(tfoot);
+    table.innerHTML = `
+        <thead><tr><th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th></tr></thead>
+        <tbody>${cars.map(car => `
+            <tr>
+                <td>${car.Merke}</td>
+                <td>${car.Modell}</td>
+                <td>${car.År}</td>
+                <td>${car['AR laveste estimat_raw']?.toLocaleString('nb-NO') || '-'}</td>
+                <td>${car['Bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
+                <td class="${car['Diff NOK_raw'] < 0 ? 'highlight-negative' : car['Diff NOK_raw'] > 0 ? 'highlight-positive' : 'highlight-zero'}">
+                    ${car['Diff NOK_raw']?.toLocaleString('nb-NO') || '-'}
+                </td>
+                <td>${car['Diff %_raw']?.toFixed(1) || '0.0'}%</td>
+            </tr>
+        `).join('')}</tbody>
+        <tfoot><tr>
+            <td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>
+            <td>${Math.round(cars.reduce((s,c)=>s+(c['AR laveste estimat_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
+            <td>${Math.round(cars.reduce((s,c)=>s+(c['Bud_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
+            <td class="${(()=>{let a=cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0;return a<0?'highlight-negative':a>0?'highlight-positive':'highlight-zero'})()}">
+                ${Math.round(cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}
+            </td>
+            <td>${(cars.reduce((s,c)=>s+(c['Diff %_raw']||0),0)/cars.length||0).toFixed(1)}%</td>
+        </tr></tfoot>`;
 }
 
-// ─── Generer ny rapport ──────────────────────────────────────
+// Generer ny rapport
 async function generateNewReport() {
     const btn = document.getElementById('generate-btn');
+    if (btn.disabled) return;
     btn.disabled = true;
-    document.getElementById('loading').textContent = 'Henter og behandler Excel...';
+    document.getElementById('loading').textContent = 'Genererer...';
     document.getElementById('loading').style.display = 'block';
 
     try {
         const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`Excel-feil: ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const ab = await res.arrayBuffer();
-        const wb = XLSX.read(ab, {type:'array'});
+        const wb = XLSX.read(ab, {type: 'array'});
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
 
-        const headers = data[0].map(h => (h||'').trim());
+        const headers = data[0].map(h => (h || '').trim());
         const col = {
             Merke: headers.indexOf('Merke'),
             Modell: headers.indexOf('Modell'),
@@ -415,16 +272,15 @@ async function generateNewReport() {
             Returnert: headers.findIndex(h => h?.includes('Returnert'))
         };
 
-        const start = getMostRecentCompletedWeekStart();
-        const end = new Date(start); end.setDate(start.getDate() + 7);
-
-        const week = getISOWeek(start);
-        const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
-        const now = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
+        const startDate = getMostRecentCompletedWeekStart();
+        const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 7);
+        const weekNum = getISOWeek(startDate);
+        const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+        const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
 
         const reports = await fetchReports();
-        if (reports.some(r => r.title === title && r.locked)) {
-            alert('Denne uken er allerede låst.');
+        if (reports.some(r => r.title === title)) {
+            alert('Rapport for denne uken finnes allerede.');
             return;
         }
 
@@ -432,52 +288,48 @@ async function generateNewReport() {
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-            const parseD = s => {
-                const m = s?.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-                return m ? new Date(m[3],m[2]-1,m[1]) : null;
+            const parseDate = str => {
+                if (!str) return null;
+                const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+                return m ? new Date(m[3], m[2]-1, m[1]) : null;
             };
+            const soldDate = parseDate(row[col['Solgt på']]);
+            const retDate = parseDate(row[col.Returnert]);
 
-            const sd = parseD(row[col['Solgt på']]);
-            const rd = parseD(row[col.Returnert]);
-
-            let arLow = 0;
-            const ar = row[col['Endelig AR verdi']] || '';
-            if (ar.includes('-')) {
-                arLow = parseFloat(ar.split('-')[0].trim()) || 0;
+            let arLowest = 0;
+            const arRange = row[col['Endelig AR verdi']] || '';
+            if (arRange.includes('-')) {
+                arLowest = parseFloat(arRange.split('-')[0].trim()) || 0;
             } else {
-                arLow = parseFloat(ar) || 0;
+                arLowest = parseFloat(arRange) || 0;
             }
 
             const bud = parseFloat(row[col.Bud] || 0);
-            const dNOK = bud - arLow;
-            const dPct = arLow ? (dNOK / arLow * 100) : 0;
+            const diffNok = bud - arLowest;
+            const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
 
             const car = {
                 Merke: row[col.Merke] || '-',
                 Modell: row[col.Modell] || '-',
                 År: row[col.År] || '-',
-                'AR laveste estimat': arLow.toLocaleString('nb-NO'),
-                'AR laveste estimat_raw': arLow,
-                Bud: bud.toLocaleString('nb-NO'),
+                'AR laveste estimat_raw': arLowest,
                 'Bud_raw': bud,
-                'Diff NOK': dNOK.toLocaleString('nb-NO'),
-                'Diff NOK_raw': dNOK,
-                'Diff %': dPct.toFixed(1) + '%',
-                'Diff %_raw': dPct
+                'Diff NOK_raw': diffNok,
+                'Diff %_raw': diffPct
             };
 
-            if (sd && sd >= start && sd < end) soldCars.push(car);
-            if (rd && rd >= start && rd < end) returnedCars.push(car);
+            if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+            if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
         }
 
-        const commentary = generateCommentaryHtml(soldCars, returnedCars);
+        const commentaryHtml = generateCommentary(soldCars, returnedCars);
 
         currentReport = {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2),
             title,
-            created: now,
+            created: nowStr,
             edited: null,
-            commentary,
+            commentary: commentaryHtml,
             soldCars,
             returnedCars,
             locked: false,
@@ -485,78 +337,105 @@ async function generateNewReport() {
         };
 
         await saveCurrentReport();
-        const updated = await fetchReports();
-        populateWeekSelect(updated);
+        const updatedReports = await fetchReports();
+        populateWeekSelect(updatedReports);
         document.getElementById('weekSelect').value = currentReport.id;
         await loadSavedReport();
 
-        alert('Ny rapport generert og lagret i skyen!');
+        alert('Rapport generert og lagret i skyen!');
     } catch (err) {
         console.error(err);
-        alert('Feil under generering:\n' + err.message);
+        alert('Feil: ' + err.message);
     } finally {
         document.getElementById('loading').style.display = 'none';
         btn.disabled = false;
     }
 }
 
-function generateCommentaryHtml(sold, ret) {
+function generateCommentary(sold, returned) {
     const stats = arr => {
-        if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:'0.0'};
+        if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
         let u=0,o=0,z=0,sn=0,sp=0;
         arr.forEach(c => {
             const n = c['Diff NOK_raw'];
             if (n<0) u++; else if (n>0) o++; else z++;
             sn += n; sp += c['Diff %_raw'];
         });
-        return {
-            n: arr.length,
-            u, o, z,
-            avgN: Math.round(sn/arr.length),
-            avgP: (sp/arr.length).toFixed(1)
-        };
+        return {n:arr.length,u,o,z,avgN:Math.round(sn/arr.length),avgP:(sp/arr.length).toFixed(1)};
     };
-
-    const s = stats(sold), r = stats(ret);
-
+    const s = stats(sold), r = stats(returned);
     return `
-        <h3>Fakta – forrige fullførte uke</h3>
+        <h3>Fakta – forrige fullførte uke (man-søn)</h3>
         <ul>
-            <li><b>Solgt:</b> ${s.n} biler</li>
-            <li>Under estimat: ${s.u}</li>
-            <li>Over estimat: ${s.o}</li>
-            <li>På estimat: ${s.z}</li>
-            <li>Gj.snitt diff: ${s.avgN.toLocaleString('nb-NO')} kr (${s.avgP}%)</li>
-            <li><b>Returnert:</b> ${r.n} biler</li>
-            <li>Gj.snitt diff retur: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)</li>
+            <li><strong>Solgte:</strong> ${s.n} biler (Under: ${s.u}, Over: ${s.o}, På: ${s.z})</li>
+            <li>Gj.sn. diff: ${s.avgN.toLocaleString('nb-NO')} kr (${s.avgP}%)</li>
+            <li><strong>Returnerte:</strong> ${r.n} biler</li>
+            <li>Gj.sn. diff retur: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)</li>
         </ul>
     `;
 }
 
 async function saveCurrentReport() {
     if (!currentReport) return;
-    const all = await fetchReports();
-    const idx = all.findIndex(r => r.title === currentReport.title);
-    if (idx >= 0) {
-        all[idx] = {...currentReport, edited: new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'})};
-    } else {
-        all.push(currentReport);
-    }
-    await saveReports(all);
+    let reports = await fetchReports();
+    const idx = reports.findIndex(r => r.id === currentReport.id);
+    if (idx >= 0) reports[idx] = currentReport;
+    else reports.push(currentReport);
+    await saveReports(reports);
 }
 
-// ─── Låsing ──────────────────────────────────────────────────
-function showLockCommentModal() {
-    document.getElementById('lock-comment-modal').style.display = 'flex';
+async function updateGenerateButtonState() {
+    const btn = document.getElementById('generate-btn');
+    const start = getMostRecentCompletedWeekStart();
+    const week = getISOWeek(start);
+    const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+    const reports = await fetchReports();
+    const exists = reports.some(r => r.title === title);
+    btn.disabled = exists;
+    btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
-function closeLockModal() {
-    document.getElementById('lock-comment-modal').style.display = 'none';
+
+// Rediger kun kommentar (fungerer også på låste rapporter)
+function editReport() {
+    if (!currentReport) return;
+    const div = document.getElementById('commentary');
+    const text = currentReport.commentary.replace(/<[^>]+>/g, '').trim();
+
+    div.innerHTML = `
+        <textarea id="edit-textarea">${text}</textarea>
+        <div style="margin-top:12px; text-align:right;">
+            <button onclick="cancelEdit()" style="background:#757575; margin-right:8px;">Avbryt</button>
+            <button onclick="saveEdit()" style="background:#2e7d32;">Lagre kommentar</button>
+        </div>
+    `;
+    document.getElementById('edit-btn').style.display = 'none';
 }
+
+function cancelEdit() {
+    loadSavedReport();
+}
+
+async function saveEdit() {
+    const ta = document.getElementById('edit-textarea');
+    if (!ta) return;
+    const newText = ta.value.trim();
+    if (!newText) return alert('Kommentaren kan ikke være tom.');
+
+    currentReport.commentary = newText.replace(/\n/g, '<br>');
+    currentReport.edited = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
+    await saveCurrentReport();
+    await loadSavedReport();
+}
+
+// Låsing
+function showLockCommentModal() { document.getElementById('lock-comment-modal').style.display = 'flex'; }
+function closeLockModal() { document.getElementById('lock-comment-modal').style.display = 'none'; }
+
 async function confirmLockWithComment() {
-    const txt = document.getElementById('lock-comment-text').value.trim();
+    const comment = document.getElementById('lock-comment-text').value.trim();
     if (currentReport) {
         currentReport.locked = true;
-        currentReport.lockComment = txt || '(ingen kommentar)';
+        currentReport.lockComment = comment || '(ingen kommentar)';
         await saveCurrentReport();
         alert('Rapporten er nå låst.');
         closeLockModal();
@@ -564,46 +443,31 @@ async function confirmLockWithComment() {
     }
 }
 
-// ─── Sletting ────────────────────────────────────────────────
-function showDeleteConfirm() {
-    document.getElementById('delete-modal').style.display = 'flex';
-}
-function closeDeleteModal() {
-    document.getElementById('delete-modal').style.display = 'none';
-}
+// Sletting
+function showDeleteConfirm() { document.getElementById('delete-modal').style.display = 'flex'; }
+function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; }
 function promptPasswordForDelete() {
     closeDeleteModal();
     document.getElementById('password-prompt').style.display = 'block';
 }
-function closePasswordPrompt() {
-    document.getElementById('password-prompt').style.display = 'none';
-    document.getElementById('password-input').value = '';
-}
+function closePasswordPrompt() { document.getElementById('password-prompt').style.display = 'none'; }
+
 async function checkDeletePassword() {
-    const input = document.getElementById('password-input').value;
-    if (input === DELETE_PASSWORD) {
-        await deleteCurrentReport();
+    if (document.getElementById('password-input').value === DELETE_PASSWORD) {
+        let reports = await fetchReports();
+        reports = reports.filter(r => r.id !== currentReport.id);
+        await saveReports(reports);
+        alert('Rapport slettet.');
+        currentReport = null;
+        const updated = await fetchReports();
+        populateWeekSelect(updated);
+        document.getElementById('report-content').style.display = 'none';
         closePasswordPrompt();
+        await updateGenerateButtonState();
     } else {
         alert('Feil passord.');
     }
 }
-
-async function deleteCurrentReport() {
-    if (!currentReport) return;
-    let all = await fetchReports();
-    all = all.filter(r => r.id !== currentReport.id);
-    await saveReports(all);
-    alert('Rapport slettet fra skyen.');
-    currentReport = null;
-    const updated = await fetchReports();
-    populateWeekSelect(updated);
-    hideReport();
-}
-
-// ─── Ikke implementert ennå (kan utvides senere) ─────────────
-function editReport()    { alert("Redigering ikke aktivert i denne versjonen."); }
-function saveEdits()     { alert("Lagre endringer ikke aktivert ennå."); }
 </script>
 </body>
 </html>
