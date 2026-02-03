@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v7</title>
+    <title>Mandagsrapport – Peasy v8</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -35,14 +35,14 @@
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v7</span></h1>
-    <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres hver mandag for forrige uke (man–søn).</p>
+    <h1>Mandagsrapport – Peasy<span class="version">v8</span></h1>
+    <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres for forrige fullførte uke (man–søn).</p>
    
     <div class="controls">
         <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
         </select>
-        <button id="generate-btn" onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
+        <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
         <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
         <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
         <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
@@ -81,24 +81,31 @@ function cleanNum(str) {
     return parseFloat(cleaned) || 0;
 }
 
-// Correct ISO week (ISO 8601: week starts Monday, week 1 has Jan 4)
 function getISOWeek(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    // Thursday in current week
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const yearStart = new Date(d.getFullYear(), 0, 1);
     const days = Math.floor((d - yearStart) / 86400000);
     return Math.ceil((days + 1) / 7);
 }
 
-function getCurrentReportWeekNum() {
+function getMostRecentCompletedWeekStart() {
     const today = new Date();
     const dayOfWeek = today.getDay() || 7;
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - dayOfWeek - 6);
-    startDate.setHours(0,0,0,0);
-    return getISOWeek(startDate);
+    let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek; // If Monday, go back to previous Sunday +1 week
+    const endOfPrevWeek = new Date(today);
+    endOfPrevWeek.setDate(today.getDate() - daysBack);
+    endOfPrevWeek.setHours(0,0,0,0);
+    const startOfPrevWeek = new Date(endOfPrevWeek);
+    startOfPrevWeek.setDate(endOfPrevWeek.getDate() - 6);
+    startOfPrevWeek.setHours(0,0,0,0);
+    return startOfPrevWeek;
+}
+
+function getMostRecentCompletedWeekNum() {
+    const start = getMostRecentCompletedWeekStart();
+    return getISOWeek(start);
 }
 
 window.onload = () => {
@@ -124,27 +131,24 @@ function loadReportsToSelect() {
 
 function updateGenerateButton() {
     const btn = document.getElementById('generate-btn');
-    const today = new Date();
-    const dayOfWeek = today.getDay() || 7;
-    const selectedId = document.getElementById('weekSelect').value;
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const selectedId = document.getElementById('weekSelect').value;
     const isSelectedLocked = saved.some(r => r.id === selectedId && r.locked);
 
-    const thisWeekNum = getCurrentReportWeekNum();
-    const weekAlreadyExists = saved.some(r => r.title.includes(`uke ${thisWeekNum}`) && r.locked);
+    const prevWeekNum = getMostRecentCompletedWeekNum();
+    const prevWeekAlreadyLocked = saved.some(r => 
+        r.title.includes(`uke ${prevWeekNum}`) && r.locked
+    );
 
-    if (weekAlreadyExists) {
+    if (prevWeekAlreadyLocked) {
         btn.disabled = true;
-        btn.textContent = `Uke ${thisWeekNum} allerede generert og låst`;
+        btn.textContent = `Uke ${prevWeekNum} allerede generert og låst`;
     } else if (isSelectedLocked) {
         btn.disabled = true;
-        btn.textContent = 'Valgt uke er låst';
-    } else if (dayOfWeek !== 1) {
-        btn.disabled = true;
-        btn.textContent = 'Vent til mandag etter uken er ferdig';
+        btn.textContent = 'Valgt uke er låst – kan ikke generere på nytt';
     } else {
         btn.disabled = false;
-        btn.textContent = 'Generer ny rapport (siste uke)';
+        btn.textContent = 'Generer rapport for forrige fullførte uke';
     }
 }
 
@@ -205,20 +209,15 @@ async function generateNewReport() {
             Returnert: headers.findIndex(h => h && h.includes('Returnert'))
         };
 
-        const today = new Date();
-        const dayOfWeek = today.getDay() || 7;
-        const startDate = new Date(today);
-        startDate.setDate(today.getDate() - dayOfWeek - 6);
-        startDate.setHours(0,0,0,0);
+        const startDate = getMostRecentCompletedWeekStart();
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + 7);
         endDate.setHours(0,0,0,0);
 
         const weekNum = getISOWeek(startDate);
-        const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+        const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
         const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
 
-        // Double-check no duplicate
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         if (saved.some(r => r.title === title)) {
             alert('Rapport for denne uken finnes allerede!');
@@ -286,7 +285,7 @@ async function generateNewReport() {
         const retF = facts(returnedCars);
 
         const commentaryHtml = `
-            <h3>Fakta – siste uke (man-søn)</h3>
+            <h3>Fakta – forrige fullførte uke (man-søn)</h3>
             <ul>
                 <li><strong>Solgt:</strong> ${soldF.n} biler</li>
                 <li>Under laveste estimat: ${soldF.under}</li>
