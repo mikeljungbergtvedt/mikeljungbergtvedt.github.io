@@ -1,668 +1,596 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v15 (sky-lagring + egen kommentar)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      margin: 0; padding: 0;
-      background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
-      color: #004225;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
-    h1 {
-      font-weight: 900;
-      font-size: 2.4rem;
-      letter-spacing: -0.7px;
-      margin-bottom: 8px;
-      background: linear-gradient(to right, #004225, #006644);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      display: inline-block;
-    }
-    .version {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #006644;
-      margin-left: 16px;
-      vertical-align: super;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 0.98rem;
-      font-weight: 600;
-      border-radius: 10px;
-      border: none;
-      background: #004225;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 1px 4px rgba(0,66,37,0.06);
-      transition: all 0.2s ease;
-    }
-    button:hover {
-      box-shadow: 0 3px 10px rgba(0,66,37,0.14);
-      transform: translateY(-1px);
-    }
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-      opacity: 0.75;
-    }
-    button#edit-btn { background: #006644; }
-    button.danger { background: #c62828; }
-    .commentary {
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(130,191,210, 0.10);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-      padding: 24px;
-      margin-bottom: 40px;
-    }
-    .user-comment {
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(130,191,210,0.2);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(130,191,210, 0.10);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-      margin-bottom: 40px;
-    }
-    th, td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid rgba(130,191,210, 0.10);
-    }
-    th {
-      background: rgba(130,191,210,0.05);
-      font-weight: 700;
-    }
-    tfoot td {
-      font-weight: 700;
-      background: rgba(130,191,210,0.08);
-    }
-    .highlight-negative { color: #d32f2f; font-weight: 600; }
-    .highlight-positive { color: #2e7d32; font-weight: 600; }
-    .highlight-zero { color: #555; font-weight: 600; }
-    #loading {
-      font-style: italic;
-      opacity: 0.75;
-      text-align: center;
-      font-size: 1rem;
-      margin: 24px 0;
-    }
-    .section-title {
-      font-size: 1.3rem;
-      margin: 32px 0 16px;
-      font-weight: 700;
-    }
-    #report-content { display: none; }
-    .timestamp {
-      font-size: 0.92rem;
-      opacity: 0.8;
-      margin-bottom: 16px;
-    }
-    .no-data {
-      text-align: center;
-      color: #777;
-      font-style: italic;
-      margin: 20px 0;
-    }
-    textarea {
-      width: 100%;
-      min-height: 180px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(130,191,210,0.3);
-      background: white;
-      font-family: inherit;
-      font-size: 1.05rem;
-      line-height: 1.6;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Peasy Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
+        .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
+        h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        select, input[type="date"], button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: white; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; cursor: pointer; }
+        select:hover, input[type="date"]:hover, button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+        button { background: #004225; color: white; font-weight: 700; }
+        button:active { transform: translateY(0); }
+        .funnel, .kpi-card, .chart-container { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05), inset 0 1px 0 rgba(255,255,255,0.5); padding: 24px; transition: transform 0.25s ease, box-shadow 0.25s ease; margin-bottom: 24px; }
+        .funnel:hover, .kpi-card:hover, .chart-container:hover { transform: translateY(-3px) scale(1.008); box-shadow: 0 12px 32px rgba(0,66,37,0.08), inset 0 1px 0 rgba(255,255,255,0.6); }
+        .funnel-row { display: flex; align-items: center; gap: 20px; margin-bottom: 16px; font-size: 1.25rem; font-weight: 700; }
+        .funnel-title { font-weight: 600; width: 130px; text-align: left; color: #004225; }
+        .funnel-number { font-size: 3rem; font-weight: 900; min-width: 140px; text-align: center; line-height: 1; }
+        .arrow { font-size: 2.6rem; color: #82BFD2; font-weight: 300; }
+        .arrow.in-production { font-size: 1.8rem; color: #777; opacity: 0.6; }
+        .arrow-ratio { font-weight: 900; font-size: 1.8rem; }
+        .arrow-ratio.alert { color: #d32f2f; }
+        .arrow-ratio.good { color: #2e7d32; }
+        .funnel-in-prod { font-size: 1.15rem; color: #555; opacity: 0.8; font-weight: 500; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 40px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+        .kpi-card { text-align: center; transition: all 0.22s ease; position: relative; }
+        .kpi-card.highlight { border: 1.5px solid #004225; background: rgba(130,191,210,0.05); }
+        .kpi-card.good { border: 1.5px solid #2e7d32; color: #1b5e20; background: rgba(46,125,50,0.05); }
+        .kpi-card.alert { border: 1.5px solid #d32f2f; color: #b71c1c; background: rgba(211,47,47,0.05); }
+        .kpi-value { font-size: 2.6rem; font-weight: 900; line-height: 1; letter-spacing: -0.8px; margin: 6px 0; }
+        .kpi-sub { font-size: 1rem; font-weight: 600; color: #004225; opacity: 0.9; margin-top: -2px; cursor: pointer; }
+        .kpi-target { font-size: 0.85rem; font-weight: 600; margin-top: 4px; }
+        .kpi-target.good { color: #2e7d32; }
+        .kpi-target.alert { color: #d32f2f; }
+        .kpi-label { font-size: 0.95rem; font-weight: 500; color: #004225; opacity: 0.8; margin-top: 6px; }
+        .sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
+        .chart-container { padding: 20px; }
+        .chart-container h2 { font-weight: 800; font-size: 1.45rem; margin-bottom: 16px; color: #004225; }
+        .version { font-size: 0.8rem; color: #555; text-align: right; margin: 12px 0; opacity: 0.75; }
+        .config-line { font-size: 0.95rem; opacity: 0.9; margin: 12px 0 24px; }
+        .config-trigger { font-weight: 700; color: #004225; cursor: pointer; transition: all 0.2s; }
+        .config-trigger:hover { color: #006644; text-decoration: underline; }
+        .config-details { display: none; font-size: 0.92rem; margin-top: 10px; line-height: 1.6; color: #444; }
+        .editable { cursor: pointer; text-decoration: underline dotted; color: #004225; }
+        .editable:hover { background: rgba(130,191,210,0.12); border-radius: 4px; padding: 2px 5px; }
+        .editable-input { width: 88px; padding: 4px 8px; font-size: 0.92rem; border: 1px solid #82BFD2; border-radius: 6px; text-align: center; background: white; }
+        #configPrompt { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.68); justify-content: center; align-items: center; z-index: 9999; }
+        .prompt-box { background: white; padding: 28px; border-radius: 14px; width: 440px; max-height: 88vh; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.22); }
+        .prompt-box h3 { margin-top: 0; font-weight: 800; }
+        .prompt-box pre { background: #f8f9fa; padding: 14px; border-radius: 10px; overflow: auto; font-size: 0.88rem; }
+        .short-period-note { font-size: 0.95rem; color: #555; margin: 20px 0; font-style: italic; text-align: center; opacity: 0.85; }
+        #loading { margin: 24px 0; font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; }
+        .cost-breakdown { display: none; font-size: 0.9rem; color: #444; margin-top: 8px; text-align: left; padding: 10px; background: rgba(0,102,68,0.05); border-radius: 8px; border: 1px solid rgba(0,102,68,0.2); }
+        .cost-sub:hover .cost-breakdown { display: block; }
+    </style>
 </head>
 <body>
-
 <div class="container">
-  <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
-  <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
-
-  <div class="controls">
-    <select id="weekSelect" onchange="loadSavedReport()">
-      <option value="">Velg uke...</option>
-    </select>
-    <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
-    <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
-    <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
-    <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
-  </div>
-
-  <div id="loading" style="display:none;">Laster...</div>
-
-  <div id="report-content" style="display:none;">
-    <div id="timestamp" class="timestamp"></div>
-    <div id="commentary" class="commentary"></div>
-
-    <div id="sold-section">
-      <div class="section-title">Solgte biler</div>
-      <table id="sold-table"></table>
+    <h1>Peasy – Key Metrics Overview</h1>
+    <div class="controls">
+        <label for="periodSelect">Period:</label>
+        <select id="periodSelect" onchange="toggleCustomDates(); loadDashboard()">
+            <option value="today">Today</option>
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="all">All time</option>
+            <option value="custom">Custom period</option>
+        </select>
+        <button onclick="loadDashboard()">Refresh</button>
+        <div id="customDates" style="display:none; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label for="customStart">From:</label>
+            <input type="date" id="customStart" onchange="loadDashboard()">
+            <label for="customEnd">To:</label>
+            <input type="date" id="customEnd" onchange="loadDashboard()">
+        </div>
+    </div>
+    <p class="config-line">
+        Last updated: <span id="lastUpdate">—</span> •
+        <span id="periodDisplay">Periode: —</span> •
+        Valuation ≈ <span id="valTimeDisplay" class="config-trigger" onclick="toggleConfigDetails()">2</span> min/car •
+        Working day <span id="workDayDisplay">7.5</span> h
+    </p>
+    <div id="configDetails" class="config-details">
+        <div>
+            Valuation time: <span id="valTimeDisplayDet" class="editable" onclick="makeEditable(this, 'valTime', 'number', 0.1)">2</span> min<br>
+            Working day: <span id="workDayDisplayDet" class="editable" onclick="makeEditable(this, 'workDay', 'number', 0.5)">7.5</span> h<br>
+            Transport cost: <span id="transportDisplay" class="editable" onclick="makeEditable(this, 'transportCost', 'number', 10)">750</span> NOK<br>
+            AR %: <span id="arDisplay" class="editable" onclick="makeEditable(this, 'arPercent', 'number', 0.1)">2.7</span>%<br>
+            Prod sold <25k: <span id="psuDisplay" class="editable" onclick="makeEditable(this, 'prodSoldUnder', 'number', 100)">2000</span> NOK<br>
+            Prod sold ≥25k: <span id="psoDisplay" class="editable" onclick="makeEditable(this, 'prodSoldOver', 'number', 100)">2500</span> NOK<br>
+            Prod ret <25k: <span id="pruDisplay" class="editable" onclick="makeEditable(this, 'prodRetUnder', 'number', 100)">1300</span> NOK<br>
+            Prod ret ≥25k: <span id="proDisplay" class="editable" onclick="makeEditable(this, 'prodRetOver', 'number', 100)">1700</span> NOK<br>
+            Marketing daily: <span id="marketingDailyDisplay" class="editable" onclick="makeEditable(this, 'marketingDaily', 'number', 100)">1000</span> NOK/day from<br>
+            <span id="marketingStartDisplay" class="editable" onclick="makeEditable(this, 'marketingStart', 'text')">2025-11-01</span>
+        </div>
+        <div style="margin-top:16px; font-size:0.85rem; opacity:0.7;">
+            Click any value to edit • Changes saved automatically
+        </div>
+    </div>
+    <div id="loading">Loading data...</div>
+    <div class="version">
+        Version 1.40.4 – Periode-dato + stabil lasting
     </div>
 
-    <div id="returned-section">
-      <div class="section-title">Returnerte biler</div>
-      <table id="returned-table"></table>
+    <div id="funnelContainer" style="display:none;">
+        <div class="funnel" id="funnelArea"></div>
     </div>
-  </div>
 
-  <!-- Lås-modal -->
-  <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-      <h3>Kommentar før låsing (valgfritt)</h3>
-      <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..."></textarea>
-      <div style="margin-top:16px; text-align:right;">
-        <button onclick="closeLockModal()" style="background:#757575; margin-right:12px;">Avbryt</button>
-        <button onclick="confirmLockWithComment()" style="background:#2e7d32;">Lås inn</button>
-      </div>
+    <div id="shortPeriodNote" class="short-period-note" style="display:none;">
+        Funnel hidden for short periods (due to process delay)
     </div>
-  </div>
 
-  <!-- Slett-bekreftelse -->
-  <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-      <h3>Sikker på sletting?</h3>
-      <p>Rapporten blir borte for alle brukere.</p>
-      <div style="margin-top:20px;">
-        <button onclick="promptPasswordForDelete()" style="background:#c62828; color:white;">Ja, slett</button>
-        <button onclick="closeDeleteModal()" style="margin-left:16px; background:#757575; color:white;">Nei</button>
-      </div>
+    <div id="topSummaryGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;"></div>
+    <div id="throughputGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;"></div>
+    <div id="detailsGrid" class="kpi-grid"></div>
+
+    <div class="chart-container">
+        <h2>Valuations per day (Customer Service Load)</h2>
+        <canvas id="workloadChart" height="140"></canvas>
     </div>
-  </div>
+    <div class="chart-container">
+        <h2>Received vs Sold</h2>
+        <canvas id="receivedSoldChart" height="140"></canvas>
+    </div>
+</div>
 
-  <!-- Passord for sletting -->
-  <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
-    <h3>Passord kreves</h3>
-    <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px auto; display:block;">
-    <button onclick="checkDeletePassword()" style="background:#c62828; color:white;">Bekreft</button>
-    <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575; color:white;">Avbryt</button>
-  </div>
+<div id="configPrompt">
+    <div class="prompt-box">
+        <h3>Advanced Configuration</h3>
+        <p>Most values can be edited by clicking them above (e.g. "2 min/car").</p>
+        <pre>
+localStorage.setItem('peasyConfig', JSON.stringify({
+  valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7,
+  prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700,
+  marketingDaily: 1000, marketingStart: "2025-11-01"
+}));
+        </pre>
+        <p>Current values:</p>
+        <ul style="line-height:1.6; font-size:0.95rem;">
+            <li>Valuation: <strong id="curValTime"></strong> min</li>
+            <li>Work day: <strong id="curWorkDay"></strong> h</li>
+            <li>Transport: <strong id="curTransport"></strong> NOK</li>
+            <li>AR: <strong id="curAr"></strong>%</li>
+            <li>Prod sold <25k: <strong id="curPSU"></strong> NOK</li>
+            <li>≥25k: <strong id="curPSO"></strong> NOK</li>
+            <li>Prod ret <25k: <strong id="curPRU"></strong> NOK</li>
+            <li>≥25k: <strong id="curPRO"></strong> NOK</li>
+            <li>Marketing daily: <strong id="curMarketingDaily"></strong> NOK</li>
+            <li>Start: <strong id="curMarketingStart"></strong></li>
+        </ul>
+        <button onclick="hideConfigPrompt()">Close</button>
+    </div>
 </div>
 
 <script>
-// ────────────────────────────────────────────────
-// KONFIGURASJON
-const BIN_ID = '6981aa3dae596e708f0d773b';
-const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123"; // ← BYTT UT MED DITT EGET HEMMELIGE PASSORD!
-const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
-// ────────────────────────────────────────────────
-
-let currentReport = null;
-
-// Hjelpefunksjoner
-function cleanNum(str) {
-  if (!str) return 0;
-  let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
-  return parseFloat(s) || 0;
+const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
+let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
+function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
+function updateDisplays() {
+  document.getElementById('valTimeDisplay').textContent = config.valTime;
+  document.getElementById('workDayDisplay').textContent = config.workDay;
+  document.getElementById('valTimeDisplayDet').textContent = config.valTime;
+  document.getElementById('workDayDisplayDet').textContent = config.workDay;
+  document.getElementById('transportDisplay').textContent = config.transportCost;
+  document.getElementById('arDisplay').textContent = config.arPercent;
+  document.getElementById('psuDisplay').textContent = config.prodSoldUnder;
+  document.getElementById('psoDisplay').textContent = config.prodSoldOver;
+  document.getElementById('pruDisplay').textContent = config.prodRetUnder;
+  document.getElementById('proDisplay').textContent = config.prodRetOver;
+  document.getElementById('marketingDailyDisplay').textContent = config.marketingDaily;
+  document.getElementById('marketingStartDisplay').textContent = config.marketingStart;
+  document.getElementById('curValTime').textContent = config.valTime;
+  document.getElementById('curWorkDay').textContent = config.workDay;
+  document.getElementById('curTransport').textContent = config.transportCost;
+  document.getElementById('curAr').textContent = config.arPercent;
+  document.getElementById('curPSU').textContent = config.prodSoldUnder;
+  document.getElementById('curPSO').textContent = config.prodSoldOver;
+  document.getElementById('curPRU').textContent = config.prodRetUnder;
+  document.getElementById('curPRO').textContent = config.prodRetOver;
+  document.getElementById('curMarketingDaily').textContent = config.marketingDaily;
+  document.getElementById('curMarketingStart').textContent = config.marketingStart;
 }
-
-function getISOWeek(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d - yearStart) / 86400000);
-  return Math.ceil((days + 1) / 7);
+updateDisplays();
+function toggleConfigDetails() { const det = document.getElementById('configDetails'); det.style.display = det.style.display === 'block' ? 'none' : 'block'; }
+function makeEditable(span, key, type = 'number', step = 1) {
+  const val = config[key];
+  span.innerHTML = `<input class="editable-input" type="${type}" value="${val}" step="${step}">`;
+  const input = span.querySelector('input');
+  input.focus(); input.select();
+  input.onblur = () => { const newVal = type === 'number' ? parseFloat(input.value) : input.value; if (!isNaN(newVal) || type !== 'number') saveConfig(key, newVal); else updateDisplays(); };
+  input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
 }
-
-function getMostRecentCompletedWeekStart() {
-  const today = new Date();
-  const dayOfWeek = today.getDay() || 7;
-  let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
-  const endPrev = new Date(today);
-  endPrev.setDate(today.getDate() - daysBack);
-  endPrev.setHours(0,0,0,0);
-  const startPrev = new Date(endPrev);
-  startPrev.setDate(endPrev.getDate() - 6);
-  startPrev.setHours(0,0,0,0);
-  return startPrev;
+function showConfigPrompt() { document.getElementById('configPrompt').style.display = 'flex'; }
+function hideConfigPrompt() { document.getElementById('configPrompt').style.display = 'none'; }
+function toggleLogicNotes() {
+  const notes = document.getElementById('logicnotes');
+  notes.style.display = notes.style.display === 'block' ? 'none' : 'block';
 }
-
-// JSONBin
-async function fetchReports() {
+function toggleCustomDates() {
+  const select = document.getElementById('periodSelect');
+  const customDiv = document.getElementById('customDates');
+  customDiv.style.display = select.value === 'custom' ? 'flex' : 'none';
+  if (select.value === 'custom') {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - 30);
+    document.getElementById('customStart').value = start.toISOString().split('T')[0];
+    document.getElementById('customEnd').value = today.toISOString().split('T')[0];
+  }
+}
+function getDate(ws, row, col) {
+  const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+  if (!cell || cell.v == null) return null;
+  let value = cell.v;
+  if (typeof value === 'number' && value > 0) {
+    try {
+      const d = XLSX.SSF.parse_date_code(value);
+      return new Date(d.y, d.m - 1, d.d);
+    } catch (e) {}
+  }
+  if (typeof value === 'string') {
+    value = value.trim();
+    if (!value) return null;
+    let datePart = value.split(/\s+/)[0].trim();
+    const m = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10);
+      const year = parseInt(m[3], 10);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
+        return new Date(year, month - 1, day);
+      }
+    }
+  }
+  return null;
+}
+function dateToYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+let workloadChart = null;
+let receivedSoldChart = null;
+async function loadDashboard() {
+  console.log("Starter lasting...");
+  const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+  const loading = document.getElementById('loading');
+  loading.textContent = 'Loading data...';
+  document.getElementById('funnelArea').innerHTML = '';
+  document.getElementById('topSummaryGrid').innerHTML = '';
+  document.getElementById('throughputGrid').innerHTML = '';
+  document.getElementById('detailsGrid').innerHTML = '';
+  document.getElementById('funnelContainer').style.display = 'none';
+  document.getElementById('shortPeriodNote').style.display = 'none';
   try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error(`Henting feilet: ${res.status}`);
-    const json = await res.json();
-    return json.record?.reports ?? [];
-  } catch (err) {
-    console.error("Feil ved henting:", err);
-    return [];
-  }
-}
-
-async function saveReports(reports) {
-  try {
-    const res = await fetch(API_URL, {
-      method: 'PUT',
-      headers: HEADERS,
-      body: JSON.stringify({ reports })
-    });
-    if (!res.ok) throw new Error(`Lagring feilet: ${res.status}`);
-    console.log("Lagret til JSONBin");
-  } catch (err) {
-    console.error("Lagring feilet:", err);
-    alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
-  }
-}
-
-// Initial lasting – nyeste rapport som default
-window.onload = async () => {
-  const reports = await fetchReports();
-  populateWeekSelect(reports);
-  if (reports.length > 0) {
-    const newest = reports[reports.length - 1];
-    document.getElementById('weekSelect').value = newest.id;
-    await loadSavedReport();
-  }
-  await updateGenerateButtonState();
-};
-
-function populateWeekSelect(reports) {
-  const sel = document.getElementById('weekSelect');
-  sel.innerHTML = '<option value="">Velg uke...</option>';
-  reports.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id;
-    opt.textContent = r.title;
-    sel.appendChild(opt);
-  });
-}
-
-async function loadSavedReport() {
-  const id = document.getElementById('weekSelect').value;
-  if (!id) {
-    document.getElementById('report-content').style.display = 'none';
-    document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
-    await updateGenerateButtonState();
-    return;
-  }
-
-  const reports = await fetchReports();
-  const report = reports.find(r => r.id === id);
-  if (!report) return;
-
-  currentReport = report;
-
-  let ts = `Opprettet: ${report.created}`;
-  if (report.edited) ts += ` • Sist endret: ${report.edited}`;
-  if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
-  document.getElementById('timestamp').textContent = ts;
-
-  let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
-  if (report.userComment) {
-    html += `
-      <div class="user-comment">
-        <h3>Kommentar til rapporten</h3>
-        <div style="white-space: pre-wrap; line-height:1.6;">${report.userComment.replace(/\n/g, '<br>')}</div>
-      </div>`;
-  }
-  document.getElementById('commentary').innerHTML = html;
-
-  renderTable('sold-table', report.soldCars || []);
-  renderTable('returned-table', report.returnedCars || []);
-
-  document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
-  document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
-
-  document.getElementById('report-content').style.display = 'block';
-
-  const locked = !!report.locked;
-  document.getElementById('edit-btn').style.display = 'block';
-  document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
-  document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
-
-  await updateGenerateButtonState();
-}
-
-function renderTable(id, cars) {
-  const table = document.getElementById(id);
-  table.innerHTML = '';
-  if (!cars.length) {
-    table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
-    return;
-  }
-
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${cars.map(car => `
-        <tr>
-          <td>${car.Merke}</td>
-          <td>${car.Modell}</td>
-          <td>${car.År}</td>
-          <td>${car['AR laveste estimat_raw']?.toLocaleString('nb-NO') || '-'}</td>
-          <td>${car['Bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
-          <td class="${car['Diff NOK_raw'] < 0 ? 'highlight-negative' : car['Diff NOK_raw'] > 0 ? 'highlight-positive' : 'highlight-zero'}">
-            ${car['Diff NOK_raw']?.toLocaleString('nb-NO') || '-'}
-          </td>
-          <td>${(car['Diff %_raw'] ?? 0).toFixed(1)}%</td>
-        </tr>
-      `).join('')}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>
-        <td>${Math.round(cars.reduce((s,c)=>s+(c['AR laveste estimat_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
-        <td>${Math.round(cars.reduce((s,c)=>s+(c['Bud_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
-        <td class="${(()=>{let a=cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0;return a<0?'highlight-negative':a>0?'highlight-positive':'highlight-zero'})()}">
-          ${Math.round(cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}
-        </td>
-        <td>${(cars.reduce((s,c)=>s+(c['Diff %_raw']||0),0)/cars.length||0).toFixed(1)}%</td>
-      </tr>
-    </tfoot>`;
-}
-
-// Generer ny rapport
-async function generateNewReport() {
-  const btn = document.getElementById('generate-btn');
-  if (btn.disabled) return;
-  btn.disabled = true;
-  document.getElementById('loading').textContent = 'Genererer...';
-  document.getElementById('loading').style.display = 'block';
-
-  try {
-    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ab = await res.arrayBuffer();
-    const wb = XLSX.read(ab, {type: 'array'});
+    const wb = XLSX.read(ab, {type:'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-
-    const headers = data[0].map(h => (h || '').trim());
-    const col = {
-      Merke: headers.indexOf('Merke'),
-      Modell: headers.indexOf('Modell'),
-      År: headers.indexOf('År'),
-      'Endelig AR verdi': headers.findIndex(h => h?.includes('Endelig AR verdi')),
-      Bud: headers.indexOf('Bud'),
-      'Solgt på': headers.indexOf('Solgt på'),
-      Returnert: headers.findIndex(h => h?.includes('Returnert'))
-    };
-
-    const startDate = getMostRecentCompletedWeekStart();
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 7);
-    const weekNum = getISOWeek(startDate);
-    const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
-    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
-
-    const reports = await fetchReports();
-    if (reports.some(r => r.title === title)) {
-      alert('Rapport for denne uken finnes allerede.');
-      return;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const COL_O = 14, COL_P = 15, COL_LEVERE = 16, COL_Q = 17, COL_R = 18, COL_S = 19, COL_T = 20, COL_U = 21;
+    const today = new Date();
+    let startDate = new Date(today);
+    let endDate = new Date(today);
+    endDate.setHours(23,59,59,999);
+    const periodValue = document.getElementById('periodSelect').value;
+    if (periodValue === 'custom') {
+      const s = document.getElementById('customStart').value;
+      const e = document.getElementById('customEnd').value;
+      startDate = s ? new Date(s + 'T00:00:00') : new Date(2000, 0, 1);
+      endDate = e ? new Date(e + 'T23:59:59.999') : new Date(today);
+    } else if (periodValue === 'today') {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    } else if (periodValue === 'all') {
+      startDate = new Date(2000, 0, 1);
+    } else {
+      startDate.setDate(today.getDate() - parseInt(periodValue));
     }
-
-    const soldCars = [], returnedCars = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      const parseDate = str => {
-        if (!str) return null;
-        const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-        return m ? new Date(m[3], m[2]-1, m[1]) : null;
-      };
-
-      const soldDate = parseDate(row[col['Solgt på']]);
-      const retDate  = parseDate(row[col.Returnert]);
-
-      let arLowest = 0;
-      const arRange = row[col['Endelig AR verdi']] || '';
-      if (arRange.includes('-')) {
-        arLowest = parseFloat(arRange.split('-')[0].trim()) || 0;
-      } else {
-        arLowest = parseFloat(arRange) || 0;
+    const marketingStartDate = new Date(config.marketingStart);
+    const mapO = new Map(), mapQ = new Map(), mapR = new Map();
+    let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
+    let gireOrdered = 0;
+    let levereSelv = 0;
+    let sumS = 0, countS = 0;
+    let sumT = 0, countT = 0;
+    let soldUnder25k = 0, soldOver25k = 0;
+    let returnedUnder25k = 0, returnedOver25k = 0;
+    let transportSum = 0;
+    let prodSoldSum = 0;
+    let prodReturnedSum = 0;
+    let sumDaysToSell = 0, countDaysToSell = 0;
+    let inProduction = 0;
+    for (let row = range.s.r + 1; row <= range.e.r; row++) {
+      const dO = getDate(ws, row, COL_O);
+      const dQ = getDate(ws, row, COL_Q);
+      const dR = getDate(ws, row, COL_R);
+      const dU = getDate(ws, row, COL_U);
+      const dP = getDate(ws, row, COL_P);
+      const dLevere = getDate(ws, row, COL_LEVERE);
+      const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
+      const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
+      if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
+        gireOrdered++;
       }
-
-      const bud = parseFloat(row[col.Bud] || 0);
-      const diffNok = bud - arLowest;
-      const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
-
-      const car = {
-        Merke: row[col.Merke] || '-',
-        Modell: row[col.Modell] || '-',
-        År: row[col.År] || '-',
-        'AR laveste estimat_raw': arLowest,
-        'Bud_raw': bud,
-        'Diff NOK_raw': diffNok,
-        'Diff %_raw': diffPct
-      };
-
-      if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
-      if (retDate  && retDate  >= startDate && retDate  < endDate) returnedCars.push(car);
+      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
+        levereSelv++;
+      }
+      const inPeriod =
+        (dO && dO >= startDate && dO <= endDate) ||
+        (dQ && dQ >= startDate && dQ <= endDate) ||
+        (dR && dR >= startDate && dR <= endDate) ||
+        (dU && dU >= startDate && dU <= endDate);
+      if (!inPeriod) continue;
+      if (dO && dO >= startDate && dO <= endDate) {
+        mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
+        totalO++;
+      }
+      if (dQ && dQ >= startDate && dQ <= endDate) {
+        mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
+        totalQ++;
+      }
+      if (pVal !== '') {
+        transportSum += config.transportCost;
+      }
+      if (dR && dR >= startDate && dR <= endDate) {
+        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
+        totalR++;
+        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+        sumS += bud; countS++;
+        const avgift = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_T})]?.v || 0);
+        sumT += avgift; if (avgift !== 0) countT++;
+        if (bud < 25000) { soldUnder25k++; prodSoldSum += config.prodSoldUnder; }
+        else { soldOver25k++; prodSoldSum += config.prodSoldOver; }
+        if (dO && dR && dR >= dO) {
+          const days = Math.floor((dR - dO) / 86400000);
+          if (days >= 0) { sumDaysToSell += days; countDaysToSell++; }
+        }
+      }
+      if (dU && dU >= startDate && dU <= endDate) {
+        totalU++;
+        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+        if (bud < 25000) { returnedUnder25k++; prodReturnedSum += config.prodRetUnder; }
+        else { returnedOver25k++; prodReturnedSum += config.prodRetOver; }
+      }
+      if (dQ) {
+        const isSold = dR && dR <= endDate;
+        const isReturned = dU && dU <= endDate;
+        if (!isSold && !isReturned) inProduction++;
+      }
     }
+    const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
+    const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
+    const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
+    const daysCountLabel = countDaysToSell > 0 ? `(${countDaysToSell} sales)` : '(no completed sales)';
+    const periodEnd = new Date(today); periodEnd.setHours(23,59,59,999);
+    let marketingDays = 0, marketingTotal = 0;
+    if (marketingStartDate <= periodEnd) {
+      const effStart = new Date(Math.max(startDate, marketingStartDate));
+      if (effStart <= periodEnd) {
+        const diff = periodEnd - effStart;
+        marketingDays = Math.floor(diff / 86400000) + 1;
+        marketingTotal = marketingDays * config.marketingDaily;
+      }
+    }
+    const totalCosts = transportSum + prodSoldSum + prodReturnedSum + marketingTotal;
+    const costPerSoldNum = totalR > 0 ? Math.round(totalCosts / totalR) : 0;
+    const costPerSold = costPerSoldNum.toLocaleString('nb-NO');
+    const costTotal = totalCosts.toLocaleString('nb-NO');
+    const incomePerSold = avgT;
+    const gpNok = totalR > 0 ? Math.round(incomePerSold - costPerSoldNum) : 0;
+    const gpPct = incomePerSold > 0 ? (gpNok / incomePerSold) * 100 : 0;
+    const profitClass = gpNok >= 0 ? 'good' : 'alert';
+    const isAllTime = periodValue === 'all';
+    const daysInPeriod = isAllTime ? 30 : (periodValue === 'custom' ? Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1) : (periodValue === 'today' ? 1 : parseInt(periodValue)));
+    const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
+    const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
+    const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
+    const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
+    const fteNeeded = isAllTime ? 'N/A' : (minPerDayRaw / (config.workDay * 60)).toFixed(2);
+    const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
+    const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
+    const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
+    const pricedToSold = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
+    const pricedToSoldClass = pricedToSold < 10 ? 'alert' : 'good';
+    const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
+    const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
+    const costVsAvgiftClass = (costPerSoldNum > avgT && totalR > 0) ? 'alert' : 'good';
+    const avgBudClass = avgS < 125000 ? 'alert' : 'good';
+    const shortPeriod = periodValue === 'today' || periodValue === '7';
+    document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
+    document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
+    let displayRange = '';
+    if (periodValue === 'custom') displayRange = ` (${document.getElementById('customStart').value} – ${document.getElementById('customEnd').value})`;
 
-    const commentaryHtml = generateCommentary(soldCars, returnedCars);
+    // Last updated + Periode
+    let periodText = '';
+    if (periodValue === 'all') {
+      periodText = 'All time';
+    } else if (periodValue === 'today') {
+      periodText = startDate.toLocaleDateString('nb-NO');
+    } else {
+      const from = startDate.toLocaleDateString('nb-NO');
+      const to = endDate.toLocaleDateString('nb-NO');
+      periodText = `${from} – ${to}`;
+    }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
+    document.getElementById('periodDisplay').textContent = `Periode: ${periodText}`;
 
-    currentReport = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      title,
-      created: nowStr,
-      edited: null,
-      commentary: commentaryHtml,
-      userComment: '',
-      soldCars,
-      returnedCars,
-      locked: false,
-      lockComment: ''
-    };
-
-    await saveCurrentReport();
-
-    const updatedReports = await fetchReports();
-    populateWeekSelect(updatedReports);
-    document.getElementById('weekSelect').value = currentReport.id;
-    await loadSavedReport();
-
-    alert('Rapport generert og lagret i skyen!');
-  } catch (err) {
-    console.error(err);
-    alert('Feil: ' + err.message);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-    btn.disabled = false;
-  }
-}
-
-function generateCommentary(sold, returned) {
-  const stats = arr => {
-    if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
-    let u=0,o=0,z=0,sn=0,sp=0;
-    arr.forEach(c => {
-      const n = c['Diff NOK_raw'];
-      if (n<0) u++;
-      else if (n>0) o++;
-      else z++;
-      sn += n;
-      sp += c['Diff %_raw'];
+    if (!shortPeriod) {
+      document.getElementById('funnelArea').innerHTML = `
+        <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
+        <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">${convVR}%</span></div></div>
+        <div class="funnel-row"><div class="funnel-title">Received</div><div class="funnel-number"></div></div>
+        <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : '')}">${convQR}%</span></div></div>
+        <div class="funnel-row"><div class="funnel-title">Sold</div><div class="funnel-number"></div></div>
+        <div class="funnel-row"><div class="funnel-title"></div><div class="arrow arrow.in-production">↳</div><div class="funnel-in-prod">In Production</div><div class="funnel-number" style="font-size:2.2rem; color:#555; opacity:0.9;">${inProduction}</div></div>
+        <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convQU >= 30 ? 'alert' : 'good'}">${convQU}%</span></div></div>
+        <div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number">${totalU}</div></div>
+      `;
+      document.getElementById('topSummaryGrid').innerHTML = `
+        <div class="kpi-card ${pricedToSoldClass}" style="border: 2px solid ${pricedToSoldClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${pricedToSoldClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
+          <div class="kpi-value">${pricedToSold}%</div>
+          <div class="kpi-sub">(${totalR} / ${totalO})</div>
+          <div class="kpi-label">Priced → Sold</div>
+          <div class="kpi-target ${pricedToSoldClass}">Target: ≥10%</div>
+        </div>
+        <div class="kpi-card ${profitClass}">
+          <div class="kpi-value">${gpPct.toFixed(1)} %</div>
+          <div class="kpi-sub">${gpNok.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-label">Gross Profit per Sold Unit</div>
+          <div class="kpi-target ${profitClass}">Target: ≥0%</div>
+        </div>
+        <div class="kpi-card cost-sub ${costVsAvgiftClass}" style="border: 2px solid ${costVsAvgiftClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${costVsAvgiftClass === 'alert' ? '211,47,47' : '46,125,50'},0.05); cursor: pointer;">
+          <div class="kpi-value">${costPerSold} NOK</div>
+          <div class="kpi-sub">Total: ${costTotal} NOK <span style="color:#d32f2f; font-weight: bold;">+</span></div>
+          <div class="kpi-label">Cost per Sold Car</div>
+          <div class="kpi-target ${costVsAvgiftClass}">Target: ≤ Avg Avgift</div>
+          <div class="cost-breakdown">
+            Transport: ${transportSum.toLocaleString('nb-NO')} NOK<br>
+            AR Cost: ${(prodSoldSum + prodReturnedSum).toLocaleString('nb-NO')} NOK<br>
+            Marketing: ${marketingTotal.toLocaleString('nb-NO')} NOK
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${avgDaysToSell} dager</div>
+          <div class="kpi-sub">${daysCountLabel}</div>
+          <div class="kpi-label">Avg Valuation → Sold</div>
+        </div>
+      `;
+      document.getElementById('throughputGrid').innerHTML = `
+        <div class="kpi-card">
+          <div class="kpi-value">${totalO}</div>
+          <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
+          <div class="kpi-label">Valuations</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalQ}</div>
+          <div class="kpi-label">Received</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalR}</div>
+          <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
+          <div class="kpi-label">Sold</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${inProduction}</div>
+          <div class="kpi-sub">(current stock)</div>
+          <div class="kpi-label">In Production</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalU}</div>
+          <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
+          <div class="kpi-label">Returned</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${gireOrdered}</div>
+          <div class="kpi-label">Gire ordered</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${levereSelv}</div>
+          <div class="kpi-label">Levere Selv</div>
+        </div>
+      `;
+      document.getElementById('detailsGrid').innerHTML = `
+        <div class="kpi-card ${avgBudClass}" style="border: 2px solid ${avgBudClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${avgBudClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
+          <div class="kpi-value">${avgS.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-sub">Total: ${sumS.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-label">Avg Bud (per sold)</div>
+          <div class="kpi-target ${avgBudClass}">Target: ≥125 000 NOK</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${arIncomeAvg.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-sub">Total est.: ${arIncomeTotal.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-label">AR Income (${config.arPercent}% of Bud)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${avgT.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-sub">Total: ${sumT.toLocaleString('nb-NO')} NOK</div>
+          <div class="kpi-label">Avg Avgift (per sold)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${hoursPerDay} h / ${fteNeeded} FTE</div>
+          <div class="kpi-sub">Based on ${config.valTime} min/car</div>
+          <div class="kpi-label">Pricing Time / Load per day</div>
+        </div>
+      `;
+    } else {
+      document.getElementById('throughputGrid').innerHTML = `
+        <div class="kpi-card">
+          <div class="kpi-value">${totalO}</div>
+          <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
+          <div class="kpi-label">Valuations</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalQ}</div>
+          <div class="kpi-label">Received</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${gireOrdered}</div>
+          <div class="kpi-label">Gire ordered</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${levereSelv}</div>
+          <div class="kpi-label">Levere Selv</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalR}</div>
+          <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
+          <div class="kpi-label">Sold</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalU}</div>
+          <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
+          <div class="kpi-label">Returned</div>
+        </div>
+      `;
+    }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
+    const datesO = [...mapO.keys()].sort();
+    const dataO = datesO.map(k => mapO.get(k));
+    if (workloadChart) workloadChart.destroy();
+    workloadChart = new Chart(document.getElementById('workloadChart'), {
+      type: 'line',
+      data: {
+        labels: datesO,
+        datasets: [{
+          label: 'Valuations per day',
+          data: dataO,
+          borderColor: '#004225',
+          backgroundColor: 'rgba(0, 66, 37, 0.08)',
+          tension: 0.2,
+          fill: true,
+          trendlineLinear: { style: '#00422588', lineStyle: 'dashed', width: 2 }
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
     });
-    return {
-      n: arr.length,
-      u, o, z,
-      avgN: Math.round(sn / arr.length),
-      avgP: (sp / arr.length).toFixed(1)
-    };
-  };
-
-  const s = stats(sold);
-  const r = stats(returned);
-
-  return `
-    <h3>Fakta – forrige fullførte uke (man–søn)</h3>
-
-    <div style="margin: 24px 0 12px 0;">
-      <strong>Solgte biler</strong><br>
-      Totalt: ${s.n} biler
-    </div>
-
-    <ul style="margin: 8px 0 32px 24px; line-height: 1.6; list-style-type: disc; color: #004225;">
-      <li>Under estimat: ${s.u} biler</li>
-      <li>Over estimat: ${s.o} biler</li>
-      <li>På estimat: ${s.z} biler</li>
-      <li style="margin-top: 12px; font-weight: 500; color: #2e7d32;">
-        Gjennomsnittlig diff: ${s.avgN.toLocaleString('nb-NO')} kr (${s.avgP}%)
-      </li>
-    </ul>
-
-    <div style="margin: 32px 0 12px 0;">
-      <strong>Returnerte biler</strong><br>
-      Totalt: ${r.n} biler
-    </div>
-
-    <div style="margin-bottom: 24px; color: #004225; font-weight: 500;">
-      Gjennomsnittlig diff: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)
-    </div>
-  `;
-}
-
-async function saveCurrentReport() {
-  if (!currentReport) return;
-  let reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx >= 0) reports[idx] = currentReport;
-  else reports.push(currentReport);
-  await saveReports(reports);
-}
-
-async function updateGenerateButtonState() {
-  const btn = document.getElementById('generate-btn');
-  const start = getMostRecentCompletedWeekStart();
-  const week = getISOWeek(start);
-  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
-  const reports = await fetchReports();
-  const exists = reports.some(r => r.title === title);
-  btn.disabled = exists;
-  btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
-}
-
-// Rediger KUN brukerens egen kommentar
-function editUserComment() {
-  if (!currentReport) return;
-  const div = document.getElementById('commentary');
-  const currentUserText = currentReport.userComment || '';
-
-  let html = currentReport.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
-  html += `
-    <div class="user-comment" style="margin-top:32px; padding-top:20px; border-top:1px solid rgba(130,191,210,0.2);">
-      <h3>Rediger kommentar til rapporten</h3>
-      <textarea id="user-comment-textarea">${currentUserText}</textarea>
-      <div style="margin-top:12px; text-align:right;">
-        <button onclick="cancelUserEdit()" style="background:#757575; margin-right:8px;">Avbryt</button>
-        <button onclick="saveUserComment()" style="background:#2e7d32;">Lagre kommentar</button>
-      </div>
-    </div>`;
-  div.innerHTML = html;
-  document.getElementById('edit-btn').style.display = 'none';
-}
-
-function cancelUserEdit() {
-  loadSavedReport();
-}
-
-async function saveUserComment() {
-  const ta = document.getElementById('user-comment-textarea');
-  if (!ta) return;
-  const newText = ta.value.trim();
-  currentReport.userComment = newText;
-  currentReport.edited = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
-  await saveCurrentReport();
-  await loadSavedReport();
-}
-
-// Låsing
-function showLockCommentModal() {
-  document.getElementById('lock-comment-modal').style.display = 'flex';
-}
-
-function closeLockModal() {
-  document.getElementById('lock-comment-modal').style.display = 'none';
-}
-
-async function confirmLockWithComment() {
-  const comment = document.getElementById('lock-comment-text').value.trim();
-  if (currentReport) {
-    currentReport.locked = true;
-    currentReport.lockComment = comment || '(ingen kommentar)';
-    await saveCurrentReport();
-    alert('Rapporten er nå låst.');
-    closeLockModal();
-    await loadSavedReport();
+    const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
+    const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
+    const dataR_chart = allDates.map(d => mapR.get(d) || 0);
+    if (receivedSoldChart) receivedSoldChart.destroy();
+    receivedSoldChart = new Chart(document.getElementById('receivedSoldChart'), {
+      type: 'line',
+      data: {
+        labels: allDates,
+        datasets: [
+          { label: 'Received', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2,
+            trendlineLinear: { style: '#82BFD288', lineStyle: 'dashed', width: 2 } },
+          { label: 'Sold', data: dataR_chart, borderColor: '#FFCC33', tension: 0.2,
+            trendlineLinear: { style: '#FFCC3388', lineStyle: 'dashed', width: 2 } }
+        ]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  } catch (err) {
+    console.error("Feil ved lasting:", err);
+    document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Åpne XLSX manuelt</a>`;
+  } finally {
+    document.getElementById('loading').textContent = '';
   }
 }
-
-// Sletting
-function showDeleteConfirm() {
-  document.getElementById('delete-modal').style.display = 'flex';
-}
-
-function closeDeleteModal() {
-  document.getElementById('delete-modal').style.display = 'none';
-}
-
-function promptPasswordForDelete() {
-  closeDeleteModal();
-  document.getElementById('password-prompt').style.display = 'block';
-}
-
-function closePasswordPrompt() {
-  document.getElementById('password-prompt').style.display = 'none';
-}
-
-async function checkDeletePassword() {
-  if (document.getElementById('password-input').value === DELETE_PASSWORD) {
-    let reports = await fetchReports();
-    reports = reports.filter(r => r.id !== currentReport.id);
-    await saveReports(reports);
-    alert('Rapport slettet.');
-    currentReport = null;
-    const updated = await fetchReports();
-    populateWeekSelect(updated);
-    document.getElementById('report-content').style.display = 'none';
-    closePasswordPrompt();
-    await updateGenerateButtonState();
-  } else {
-    alert('Feil passord.');
-  }
-}
+window.onload = function() {
+  toggleCustomDates();
+  loadDashboard();
+};
 </script>
 </body>
 </html>
