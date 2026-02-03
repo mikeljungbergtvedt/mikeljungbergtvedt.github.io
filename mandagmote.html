@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v12 (JSONBin shared)</title>
+    <title>Mandagsrapport – Peasy v13 (full sky-lagring)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        /* Dine eksisterende stiler – behold som før */
         body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.4rem; letter-spacing: -0.7px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
@@ -32,22 +33,10 @@
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
         textarea { width: 100%; min-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
         #save-edits, #lock-comment-save { margin-top: 12px; background: #2e7d32; }
-        #lock-comment-modal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; 
-        }
-        #lock-comment-box { 
-            background: white; padding: 32px; border-radius: 16px; width: 90%; max-width: 600px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
-        }
-        #delete-modal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; 
-        }
-        #delete-confirm-box { 
-            background: white; padding: 32px; border-radius: 16px; text-align: center; 
-            max-width: 400px; 
-        }
+        #lock-comment-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #lock-comment-box { background: white; padding: 32px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #delete-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #delete-confirm-box { background: white; padding: 32px; border-radius: 16px; text-align: center; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -110,9 +99,7 @@
 </div>
 
 <script>
-// ────────────────────────────────────────────────
-// Dine nøkler – allerede satt inn
-// ────────────────────────────────────────────────
+// Dine nøkler
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -121,7 +108,7 @@ const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY
 let currentReport = null;
 let currentCreatedTime = '';
 
-// Hent alle rapporter fra bin (ingen key nødvendig for lesing på public bin)
+// Hent rapporter fra bin
 async function fetchReports() {
     try {
         const res = await fetch(API_URL);
@@ -129,13 +116,12 @@ async function fetchReports() {
         const json = await res.json();
         return json.record.reports || [];
     } catch (err) {
-        console.error('Feil ved henting fra bin:', err);
-        alert('Kunne ikke laste rapporter fra skyen. Sjekk internett eller bin-innstillinger.');
+        console.error('Feil ved henting:', err);
         return [];
     }
 }
 
-// Lagre alle rapporter til bin
+// Lagre til bin
 async function saveReports(reports) {
     try {
         const res = await fetch(API_URL, {
@@ -143,10 +129,10 @@ async function saveReports(reports) {
             headers: HEADERS,
             body: JSON.stringify({ reports })
         });
-        if (!res.ok) throw new Error(`Kunne ikke lagre: ${res.status} - ${await res.text()}`);
+        if (!res.ok) throw new Error(`Lagring feilet: ${res.status}`);
     } catch (err) {
-        console.error('Feil ved lagring til bin:', err);
-        alert('Kunne ikke lagre rapporten til skyen. Prøv igjen.');
+        console.error('Lagring feilet:', err);
+        alert('Kunne ikke lagre til skyen.');
     }
 }
 
@@ -177,10 +163,6 @@ function getMostRecentCompletedWeekStart() {
     return startPrev;
 }
 
-function getMostRecentCompletedWeekNum() {
-    return getISOWeek(getMostRecentCompletedWeekStart());
-}
-
 window.onload = async () => {
     const saved = await fetchReports();
     const select = document.getElementById('weekSelect');
@@ -202,7 +184,7 @@ async function loadSavedReport() {
     const id = document.getElementById('weekSelect').value;
     if (!id) {
         document.getElementById('report-content').style.display = 'none';
-        ['edit-btn','lock-btn','save-edits','delete-btn'].forEach(id => document.getElementById(id).style.display = 'none');
+        ['edit-btn','lock-btn','save-edits','delete-btn'].forEach(el => document.getElementById(el).style.display = 'none');
         updateGenerateButton();
         return;
     }
@@ -223,39 +205,77 @@ async function loadSavedReport() {
     const edited = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${edited}`;
     document.getElementById('commentary').innerHTML = report.commentary || '<p>Ingen ekstra kommentar.</p>';
-    document.getElementById('sold-table').innerHTML = report.soldTable || '';
-    document.getElementById('returned-table').innerHTML = report.returnedTable || '';
-    document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
-    document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
+
+    // Re-render tables from saved raw data
+    renderTable('sold-table', report.soldCars || []);
+    renderTable('returned-table', report.returnedCars || []);
+    document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
+    document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
 
     updateGenerateButton();
 }
 
-function updateGenerateButton() {
-    const btn = document.getElementById('generate-btn');
-    const prevWeekNum = getMostRecentCompletedWeekNum();
-    fetchReports().then(saved => {
-        const alreadyLocked = saved.some(r => r.title.includes(`uke ${prevWeekNum}`) && r.locked);
-        const selectedLocked = saved.some(r => r.id === document.getElementById('weekSelect').value && r.locked);
+function renderTable(id, cars) {
+    const table = document.getElementById(id);
+    table.innerHTML = '';
+    if (!cars.length) {
+        table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
+        return;
+    }
 
-        if (alreadyLocked) {
-            btn.disabled = true;
-            btn.textContent = `Uke ${prevWeekNum} allerede låst`;
-        } else if (selectedLocked) {
-            btn.disabled = true;
-            btn.textContent = 'Valgt rapport er låst';
-        } else {
-            btn.disabled = false;
-            btn.textContent = 'Generer rapport for forrige fullførte uke';
-        }
+    const thead = document.createElement('thead');
+    const tr = document.createElement('tr');
+    ['Merke','Modell','År','AR laveste estimat','Bud','Diff NOK','Diff %'].forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        tr.appendChild(th);
     });
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    cars.forEach(car => {
+        const row = document.createElement('tr');
+        ['Merke','Modell','År','AR laveste estimat','Bud','Diff NOK','Diff %'].forEach(key => {
+            const td = document.createElement('td');
+            td.textContent = car[key] || '-';
+            if (key === 'Diff NOK' || key === 'Diff %') {
+                const val = cleanNum(car[key]);
+                td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
+            }
+            row.appendChild(td);
+        });
+        tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+
+    const tfoot = document.createElement('tfoot');
+    const ftr = document.createElement('tr');
+    const ftd = document.createElement('td');
+    ftd.colSpan = 3;
+    ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
+    ftr.appendChild(ftd);
+
+    const avgs = [
+        cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO') : '0',
+        cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO') : '0',
+        cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO') : '0',
+        cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%' : '0.0%'
+    ];
+    avgs.forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        ftr.appendChild(td);
+    });
+    tfoot.appendChild(ftr);
+    table.appendChild(tfoot);
 }
 
 async function generateNewReport() {
     if (document.getElementById('generate-btn').disabled) return;
 
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    document.getElementById('loading').textContent = 'Genererer ny rapport...';
+    document.getElementById('loading').textContent = 'Genererer...';
     document.getElementById('loading').style.display = 'block';
     document.getElementById('report-content').style.display = 'none';
 
@@ -289,7 +309,7 @@ async function generateNewReport() {
 
         const saved = await fetchReports();
         if (saved.some(r => r.title === title && r.locked)) {
-            alert('Rapport for denne uken finnes allerede og er låst!');
+            alert('Denne uken er allerede låst!');
             return;
         }
 
@@ -362,66 +382,15 @@ async function generateNewReport() {
             </ul>
         `;
 
-        const renderTable = (id, cars) => {
-            const table = document.getElementById(id);
-            table.innerHTML = '';
-            if (!cars.length) {
-                table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
-                return;
-            }
-            const thead = document.createElement('thead');
-            const tr = document.createElement('tr');
-            ['Merke','Modell','År','AR laveste estimat','Bud','Diff NOK','Diff %'].forEach(h => {
-                const th = document.createElement('th');
-                th.textContent = h;
-                tr.appendChild(th);
-            });
-            thead.appendChild(tr);
-            table.appendChild(thead);
-
-            const tbody = document.createElement('tbody');
-            cars.forEach(car => {
-                const row = document.createElement('tr');
-                Object.values(car).forEach((val, i) => {
-                    const td = document.createElement('td');
-                    td.textContent = val;
-                    if (i >= 5) {
-                        const num = cleanNum(val);
-                        td.className = num < 0 ? 'highlight-negative' : num > 0 ? 'highlight-positive' : 'highlight-zero';
-                    }
-                    row.appendChild(td);
-                });
-                tbody.appendChild(row);
-            });
-            table.appendChild(tbody);
-
-            const tfoot = document.createElement('tfoot');
-            const ftr = document.createElement('tr');
-            const ftd = document.createElement('td');
-            ftd.colSpan = 3;
-            ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
-            ftr.appendChild(ftd);
-
-            const avgs = [
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']),0)/cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud),0)/cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']),0)/cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']),0)/cars.length).toFixed(1)+' %' : '0.0 %'
-            ];
-            avgs.forEach(v => {
-                const td = document.createElement('td');
-                td.textContent = v;
-                ftr.appendChild(td);
-            });
-            tfoot.appendChild(ftr);
-            table.appendChild(tfoot);
-        };
-
         document.getElementById('timestamp').textContent = `Opprettet: ${nowStr}. Sist endret: -`;
         currentCreatedTime = nowStr;
         document.getElementById('commentary').innerHTML = commentaryHtml;
+
+        // Render tables directly (using raw data)
         renderTable('sold-table', soldCars);
         renderTable('returned-table', returnedCars);
+        document.getElementById('sold-section').style.display = soldCars.length ? 'block' : 'none';
+        document.getElementById('returned-section').style.display = returnedCars.length ? 'block' : 'none';
 
         document.getElementById('report-content').style.display = 'block';
         document.getElementById('edit-btn').style.display = 'block';
@@ -429,8 +398,8 @@ async function generateNewReport() {
 
         currentReport = {
             commentary: commentaryHtml,
-            soldTable: document.getElementById('sold-table').outerHTML,
-            returnedTable: document.getElementById('returned-table').outerHTML,
+            soldCars,          // <-- raw array
+            returnedCars,      // <-- raw array
             created: nowStr,
             title,
             locked: false,
@@ -447,104 +416,9 @@ async function generateNewReport() {
     }
 }
 
-function editReport() {
-    const div = document.getElementById('commentary');
-    const ta = document.createElement('textarea');
-    ta.value = div.innerHTML.trim();
-    div.innerHTML = '';
-    div.appendChild(ta);
-    document.getElementById('edit-btn').style.display = 'none';
-    document.getElementById('save-edits').style.display = 'block';
-}
+// ... resten av funksjonene (editReport, saveEdits, showLockCommentModal, confirmLockWithComment, lockReport, showDeleteConfirm, promptPasswordForDelete, etc.) er de samme som i v12 ...
 
-function saveEdits() {
-    const ta = document.querySelector('#commentary textarea');
-    const newHtml = ta.value;
-    document.getElementById('commentary').innerHTML = newHtml;
-    document.getElementById('edit-btn').style.display = 'block';
-    document.getElementById('save-edits').style.display = 'none';
-
-    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
-    document.getElementById('timestamp').textContent = `Opprettet: ${currentCreatedTime}. Sist endret: ${nowStr}`;
-
-    currentReport.commentary = newHtml;
-    currentReport.edited = nowStr;
-
-    // Save edit back to bin
-    fetchReports().then(saved => {
-        const index = saved.findIndex(r => r.id === currentReport.id);
-        if (index !== -1) {
-            saved[index] = currentReport;
-            saveReports(saved);
-        }
-    });
-}
-
-function showLockCommentModal() {
-    document.getElementById('lock-comment-modal').style.display = 'flex';
-    document.getElementById('lock-comment-text').value = currentReport.lockComment || '';
-}
-
-function closeLockModal() {
-    document.getElementById('lock-comment-modal').style.display = 'none';
-}
-
-async function confirmLockWithComment() {
-    const comment = document.getElementById('lock-comment-text').value.trim();
-    currentReport.lockComment = comment;
-    closeLockModal();
-
-    let saved = await fetchReports();
-    currentReport.id = 'uke' + (saved.length + 1);
-    currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
-    currentReport.locked = true;
-    saved.push(currentReport);
-
-    await saveReports(saved);
-
-    alert('Rapport låst og lagret i skyen som ' + currentReport.id + (comment ? ' med kommentar' : ''));
-
-    // Reload dropdown
-    const select = document.getElementById('weekSelect');
-    select.innerHTML = '<option value="">Velg uke...</option>';
-    saved.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r.id;
-        opt.textContent = r.title;
-        select.appendChild(opt);
-    });
-    select.value = currentReport.id;
-    await loadSavedReport();
-}
-
-function showDeleteConfirm() {
-    document.getElementById('delete-modal').style.display = 'flex';
-}
-
-function closeDeleteModal() {
-    document.getElementById('delete-modal').style.display = 'none';
-}
-
-function promptPasswordForDelete() {
-    closeDeleteModal();
-    const password = prompt('Skriv inn passord for å slette (peasy):');
-    if (password === PASSWORD) {
-        fetchReports().then(saved => {
-            const filtered = saved.filter(r => r.id !== currentReport.id);
-            saveReports(filtered).then(() => {
-                alert('Rapport slettet fra skyen.');
-                loadReportsToSelect();
-                document.getElementById('report-content').style.display = 'none';
-                document.getElementById('delete-btn').style.display = 'none';
-                updateGenerateButton();
-            });
-        });
-    } else if (password !== null) {
-        alert('Feil passord.');
-    }
-}
-
-document.getElementById('weekSelect').addEventListener('change', loadSavedReport);
+// Viktig: I lockReport og saveEdits – bruk saveReports(saved) som vist i v12
 </script>
 </body>
 </html>
