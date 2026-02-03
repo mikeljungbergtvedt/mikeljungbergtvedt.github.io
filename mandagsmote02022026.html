@@ -10,9 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
     <style>
-        /* ────────────────────────────────────────────────────────────── */
-        /* exactly the same CSS as before – no changes                     */
-        /* ────────────────────────────────────────────────────────────── */
         body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -111,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.5 – header-based columns
+        Version 1.40.5 – exact headers from screenshot
     </div>
     <div id="funnelContainer" style="display:none;">
         <div class="funnel" id="funnelArea"></div>
@@ -160,13 +157,8 @@ localStorage.setItem('peasyConfig', JSON.stringify({
 </div>
 
 <script>
-// ──────────────────────────────────────────────────────────────────────
-// exactly the same script as 1.40.4 except for column detection
-// ──────────────────────────────────────────────────────────────────────
-
 const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
 let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
-
 function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
 function updateDisplays() {
   document.getElementById('valTimeDisplay').textContent = config.valTime;
@@ -193,7 +185,6 @@ function updateDisplays() {
   document.getElementById('curMarketingStart').textContent = config.marketingStart;
 }
 updateDisplays();
-
 function toggleConfigDetails() { const det = document.getElementById('configDetails'); det.style.display = det.style.display === 'block' ? 'none' : 'block'; }
 function makeEditable(span, key, type = 'number', step = 1) {
   const val = config[key];
@@ -203,8 +194,6 @@ function makeEditable(span, key, type = 'number', step = 1) {
   input.onblur = () => { const newVal = type === 'number' ? parseFloat(input.value) : input.value; if (!isNaN(newVal) || type !== 'number') saveConfig(key, newVal); else updateDisplays(); };
   input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
 }
-function showConfigPrompt() { document.getElementById('configPrompt').style.display = 'flex'; }
-function hideConfigPrompt() { document.getElementById('configPrompt').style.display = 'none'; }
 function toggleCustomDates() {
   const select = document.getElementById('periodSelect');
   const customDiv = document.getElementById('customDates');
@@ -267,41 +256,33 @@ async function loadDashboard() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
 
-    // ─── NEW: read headers and find columns dynamically ────────────────
+    // Read headers from row 0 (exact as shown in your screenshot)
     const headers = [];
     for (let c = range.s.c; c <= range.e.c; ++c) {
       const cell = ws[XLSX.utils.encode_cell({r:0, c})];
       headers[c] = cell && cell.v ? String(cell.v).trim() : '';
     }
 
-    function findCol(search) {
-      const s = search.toLowerCase().trim();
-      for (let i = 0; i < headers.length; i++) {
-        const h = headers[i].toLowerCase().trim();
-        if (h.includes(s)) return i;
-      }
-      return -1;
-    }
+    // Strict lookup using EXACT headers from your screenshot
+    const COL_O = headers.findIndex(h => (h || '').trim() === "SD mottatt på");
+    const COL_P = headers.findIndex(h => (h || '').trim() === "Gire bestilt på");
+    const COL_LEVERE = headers.findIndex(h => (h || '').trim() === "report.peasy.list.on_the_way");
+    const COL_Q = headers.findIndex(h => (h || '').trim() === "Mottatt");
+    const COL_R = headers.findIndex(h => (h || '').trim() === "Solgt på");
+    const COL_S = headers.findIndex(h => (h || '').trim() === "Bud");
+    const COL_T = headers.findIndex(h => (h || '').trim() === "Avgift");
+    const COL_U = headers.findIndex(h => (h || '').trim() === "Returnert på");
 
-    const COL_O = findCol("SD mottatt på");          // Valued
-    const COL_P = findCol("Gire bestilt på");
-    const COL_LEVERE = findCol("report.peasy.list.on_the_way");
-    const COL_Q = findCol("Mottatt");                // Received
-    const COL_R = findCol("Solgt på");
-    const COL_S = findCol("Bud");
-    const COL_T = findCol("Avgift");
-    const COL_U = findCol("Returnert på");
-
-    // Optional: log what we found (good for debugging)
-    console.log("Found columns:", {
-      "SD mottatt på": headers[COL_O],
-      "Gire bestilt på": headers[COL_P],
-      "Levere Selv": headers[COL_LEVERE],
-      "Mottatt": headers[COL_Q],
-      "Solgt på": headers[COL_R],
-      "Bud": headers[COL_S],
-      "Avgift": headers[COL_T],
-      "Returnert på": headers[COL_U]
+    // Debug: show what was actually found
+    console.log("Column mapping from headers:", {
+      O: headers[COL_O] || "NOT FOUND",
+      P: headers[COL_P] || "NOT FOUND",
+      LEVERE: headers[COL_LEVERE] || "NOT FOUND",
+      Q: headers[COL_Q] || "NOT FOUND",
+      R: headers[COL_R] || "NOT FOUND",
+      S: headers[COL_S] || "NOT FOUND",
+      T: headers[COL_T] || "NOT FOUND",
+      U: headers[COL_U] || "NOT FOUND"
     });
 
     const today = new Date();
@@ -393,8 +374,6 @@ async function loadDashboard() {
         if (!isSold && !isReturned) inProduction++;
       }
     }
-
-    // ─── everything below this line is 100% unchanged from your 1.40.4 ───
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
