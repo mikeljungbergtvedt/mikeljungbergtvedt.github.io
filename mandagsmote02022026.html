@@ -108,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.6 – Fikset SD mottatt telling (uavhengig av Mottatt)
+        Version 1.40.6 – SD mottatt uavhengig av Mottatt
     </div>
 
     <div id="funnelContainer" style="display:none;">
@@ -268,7 +268,7 @@ async function loadDashboard() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
 
-    // ─── Header-basert kolonnefinning – tilpasset DINE titler ───────
+    // Read headers
     const headers = [];
     for (let c = range.s.c; c <= range.e.c; ++c) {
       const cell = ws[XLSX.utils.encode_cell({r:0, c:c})];
@@ -285,40 +285,34 @@ async function loadDashboard() {
           }
         }
       }
-      console.warn(`Fant ikke kolonne for: ${searchTerms.join(', ')} – bruker fallback ${fallbackIndex}`);
+      console.warn(`Fant ikke kolonne for: ${searchTerms.join(', ')} – fallback ${fallbackIndex}`);
       return fallbackIndex;
     };
 
-    const COL_O       = findCol(['sd mottatt på', 'mottatt på', 'sd mottatt', 'mottatt'], 14);
-    const COL_P       = findCol(['gire bestilt på', 'gire', 'bestilt på', 'gire bestilt'], 15);
-    const COL_LEVERE  = findCol(['report.peasy.list.on_the_way', 'on_the_way', 'peasy.list', 'on the way', 'på vei', 'levere'], 16);
-    const COL_Q       = findCol(['mottatt'], 17);
-    const COL_R       = findCol(['solgt på', 'solgt'], 18);
-    const COL_S       = findCol(['bud'], 19);
-    const COL_T       = findCol(['avgift'], 20);
-    const COL_U       = findCol(['returnert på', 'returnert'], 21);
+    const COL_SD_MOTTATT = findCol(['sd mottatt på', 'sd mottatt', 'mottatt på'], 14); // Valued
+    const COL_GIRE       = findCol(['gire bestilt på', 'gire'], 15);
+    const COL_LEVERE     = findCol(['report.peasy.list.on_the_way', 'on_the_way', 'peasy.list'], 16);
+    const COL_MOTTATT    = findCol(['mottatt'], 17); // Real Received
+    const COL_SOLGT      = findCol(['solgt på', 'solgt'], 18);
+    const COL_BUD        = findCol(['bud'], 19);
+    const COL_AVGIFT     = findCol(['avgift'], 20);
+    const COL_RETURNERT  = findCol(['returnert på', 'returnert'], 21);
 
-    // ─── ERROR-SJEKK ────────────────────────────────────────────────────
-    const missingCols = [];
-    if (COL_O === -1) missingCols.push("SD mottatt på (Valued)");
-    if (COL_P === -1) missingCols.push("Gire bestilt på");
-    if (COL_LEVERE === -1) missingCols.push("report.peasy.list.on_the_way (Levere Selv)");
-    if (COL_Q === -1) missingCols.push("Mottatt");
-    if (COL_R === -1) missingCols.push("Solgt på");
-    if (COL_S === -1) missingCols.push("Bud");
-    if (COL_T === -1) missingCols.push("Avgift");
-    if (COL_U === -1) missingCols.push("Returnert på");
+    // Error check
+    const missing = [];
+    if (COL_SD_MOTTATT === -1) missing.push("SD mottatt på");
+    if (COL_GIRE === -1) missing.push("Gire bestilt på");
+    if (COL_LEVERE === -1) missing.push("Levere Selv (report.peasy.list.on_the_way)");
+    if (COL_MOTTATT === -1) missing.push("Mottatt");
+    if (COL_SOLGT === -1) missing.push("Solgt på");
+    if (COL_RETURNERT === -1) missing.push("Returnert på");
 
-    if (missingCols.length > 0) {
-      console.error("Manglende kolonner:", missingCols);
+    if (missing.length > 0) {
       document.getElementById('loading').innerHTML = `
-        <strong style="color:#d32f2f; font-size:1.2rem;">Feil: Rapportstrukturen har endret seg!</strong><br><br>
-        Mangler: <strong>${missingCols.join('<br>')}</strong><br><br>
-        Sjekk <a href="${url}" target="_blank" style="color:#d32f2f; font-weight:bold;">rapporten manuelt</a>.<br>
-        Oppdater søkeord i koden eller kontakt support.
+        <strong style="color:#d32f2f; font-size:1.2rem;">FEIL: Manglende kolonner!</strong><br><br>
+        Fant ikke: <strong>${missing.join('<br>')}</strong><br><br>
+        <a href="${url}" target="_blank" style="color:#d32f2f;">Åpne rapporten</a> og sjekk overskriftene.
       `;
-      document.getElementById('loading').style.color = '#d32f2f';
-      document.getElementById('loading').style.fontWeight = 'bold';
       return;
     }
 
@@ -340,8 +334,11 @@ async function loadDashboard() {
       startDate.setDate(today.getDate() - parseInt(periodValue));
     }
     const marketingStartDate = new Date(config.marketingStart);
-    const mapO = new Map(), mapQ = new Map(), mapR = new Map();
-    let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
+    const mapO = new Map();
+    let totalSDMottatt = 0;  // Valued
+    let totalMottatt = 0;    // Received
+    let totalSold = 0;
+    let totalReturned = 0;
     let gireOrdered = 0;
     let levereSelv = 0;
     let sumS = 0, countS = 0;
@@ -355,63 +352,65 @@ async function loadDashboard() {
     let inProduction = 0;
 
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
-      const dO = getDate(ws, row, COL_O);
-      const dQ = getDate(ws, row, COL_Q);
-      const dR = getDate(ws, row, COL_R);
-      const dU = getDate(ws, row, COL_U);
-      const dP = getDate(ws, row, COL_P);
-      const dLevere = getDate(ws, row, COL_LEVERE);
-      const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
+      const dSDMottatt = getDate(ws, row, COL_SD_MOTTATT);
+      const dGire      = getDate(ws, row, COL_GIRE);
+      const dLevere    = getDate(ws, row, COL_LEVERE);
+      const dMottatt   = getDate(ws, row, COL_MOTTATT);
+      const dSold      = getDate(ws, row, COL_SOLGT);
+      const dReturned  = getDate(ws, row, COL_RETURNERT);
+
+      const gireVal   = String(ws[XLSX.utils.encode_cell({r:row, c:COL_GIRE})]?.v || '').trim();
       const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
 
-      // Valuations (SD mottatt på) – telles uavhengig av andre datoer
-      if (dO && dO >= startDate && dO <= endDate) {
-        mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
-        totalO++;
+      if (gireVal !== '' && dGire && dGire >= startDate && dGire <= endDate) gireOrdered++;
+      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) levereSelv++;
+
+      // SD mottatt (Valued) – uavhengig av alt annet
+      if (dSDMottatt && dSDMottatt >= startDate && dSDMottatt <= endDate) {
+        mapO.set(dateToYMD(dSDMottatt), (mapO.get(dateToYMD(dSDMottatt)) || 0) + 1);
+        totalSDMottatt++;
       }
 
-      // Relevance filter for alle andre metrikker (Received, Sold, Returned, In Production)
-      const inPeriod =
-        (dQ && dQ >= startDate && dQ <= endDate) ||
-        (dR && dR >= startDate && dR <= endDate) ||
-        (dU && dU >= startDate && dU <= endDate);
+      // Relevance filter for downstream metrics
+      const inPeriod = 
+        (dMottatt && dMottatt >= startDate && dMottatt <= endDate) ||
+        (dSold    && dSold    >= startDate && dSold    <= endDate) ||
+        (dReturned && dReturned >= startDate && dReturned <= endDate);
 
       if (!inPeriod) continue;
 
-      if (dQ && dQ >= startDate && dQ <= endDate) {
-        mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
-        totalQ++;
+      if (dMottatt && dMottatt >= startDate && dMottatt <= endDate) totalMottatt++;
+      if (dSold    && dSold    >= startDate && dSold    <= endDate) totalSold++;
+      if (dReturned && dReturned >= startDate && dReturned <= endDate) totalReturned++;
+
+      if (dMottatt) {
+        const isSold = dSold && dSold <= endDate;
+        const isReturned = dReturned && dReturned <= endDate;
+        if (!isSold && !isReturned) inProduction++;
       }
-      if (pVal !== '') {
-        transportSum += config.transportCost;
-      }
-      if (dR && dR >= startDate && dR <= endDate) {
-        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
-        totalR++;
-        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+
+      // ... bud, avgift, transport, daysToSell etc. unchanged ...
+      if (dSold && dSold >= startDate && dSold <= endDate) {
+        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_BUD})]?.v || 0);
         sumS += bud; countS++;
-        const avgift = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_T})]?.v || 0);
+        const avgift = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_AVGIFT})]?.v || 0);
         sumT += avgift; if (avgift !== 0) countT++;
         if (bud < 25000) { soldUnder25k++; prodSoldSum += config.prodSoldUnder; }
         else { soldOver25k++; prodSoldSum += config.prodSoldOver; }
-        if (dO && dR && dR >= dO) {
-          const days = Math.floor((dR - dO) / 86400000);
+        if (dSDMottatt && dSold && dSold >= dSDMottatt) {
+          const days = Math.floor((dSold - dSDMottatt) / 86400000);
           if (days >= 0) { sumDaysToSell += days; countDaysToSell++; }
         }
       }
-      if (dU && dU >= startDate && dU <= endDate) {
-        totalU++;
-        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
+      if (dReturned && dReturned >= startDate && dReturned <= endDate) {
+        const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_BUD})]?.v || 0);
         if (bud < 25000) { returnedUnder25k++; prodReturnedSum += config.prodRetUnder; }
         else { returnedOver25k++; prodReturnedSum += config.prodRetOver; }
       }
-      if (dQ) {
-        const isSold = dR && dR <= endDate;
-        const isReturned = dU && dU <= endDate;
-        if (!isSold && !isReturned) inProduction++;
-      }
+      if (gireVal !== '') transportSum += config.transportCost;
     }
 
+    // ... calculations for avgS, avgT, gpPct, etc. unchanged ...
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
@@ -427,28 +426,28 @@ async function loadDashboard() {
       }
     }
     const totalCosts = transportSum + prodSoldSum + prodReturnedSum + marketingTotal;
-    const costPerSoldNum = totalR > 0 ? Math.round(totalCosts / totalR) : 0;
+    const costPerSoldNum = totalSold > 0 ? Math.round(totalCosts / totalSold) : 0;
     const costPerSold = costPerSoldNum.toLocaleString('nb-NO');
     const costTotal = totalCosts.toLocaleString('nb-NO');
     const incomePerSold = avgT;
-    const gpNok = totalR > 0 ? Math.round(incomePerSold - costPerSoldNum) : 0;
+    const gpNok = totalSold > 0 ? Math.round(incomePerSold - costPerSoldNum) : 0;
     const gpPct = incomePerSold > 0 ? (gpNok / incomePerSold) * 100 : 0;
     const profitClass = gpNok >= 0 ? 'good' : 'alert';
     const isAllTime = periodValue === 'all';
     const daysInPeriod = isAllTime ? 30 : (periodValue === 'custom' ? Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1) : (periodValue === 'today' ? 1 : parseInt(periodValue)));
-    const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
-    const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
+    const avgDailyValued = isAllTime ? 'N/A' : (totalSDMottatt / daysInPeriod).toFixed(0);
+    const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyValued) * config.valTime);
     const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
     const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
     const fteNeeded = isAllTime ? 'N/A' : (minPerDayRaw / (config.workDay * 60)).toFixed(2);
-    const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
-    const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
-    const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
-    const pricedToSold = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
+    const convVR = totalSDMottatt > 0 ? ((totalMottatt / totalSDMottatt) * 100).toFixed(1) : 0;
+    const convQR = totalMottatt > 0 ? ((totalSold / totalMottatt) * 100).toFixed(1) : 0;
+    const convQU = totalMottatt > 0 ? ((totalReturned / totalMottatt) * 100).toFixed(1) : 0;
+    const pricedToSold = totalSDMottatt > 0 ? ((totalSold / totalSDMottatt) * 100).toFixed(1) : 0;
     const pricedToSoldClass = pricedToSold < 10 ? 'alert' : 'good';
     const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
     const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
-    const costVsAvgiftClass = (costPerSoldNum > avgT && totalR > 0) ? 'alert' : 'good';
+    const costVsAvgiftClass = (costPerSoldNum > avgT && totalSold > 0) ? 'alert' : 'good';
     const avgBudClass = avgS < 125000 ? 'alert' : 'good';
     const shortPeriod = periodValue === 'today' || periodValue === '7';
     document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
@@ -471,19 +470,19 @@ async function loadDashboard() {
 
     if (!shortPeriod) {
       document.getElementById('funnelArea').innerHTML = `
-        <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
+        <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalSDMottatt}</div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convVR >= 10 ? 'good' : (convVR < 10 ? 'alert' : '')}">${convVR}%</span></div></div>
         <div class="funnel-row"><div class="funnel-title">Received</div><div class="funnel-number"></div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convQR >= 70 ? 'good' : (convQR < 70 ? 'alert' : '')}">${convQR}%</span></div></div>
         <div class="funnel-row"><div class="funnel-title">Sold</div><div class="funnel-number"></div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow arrow.in-production">↳</div><div class="funnel-in-prod">In Production</div><div class="funnel-number" style="font-size:2.2rem; color:#555; opacity:0.9;">${inProduction}</div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convQU >= 30 ? 'alert' : 'good'}">${convQU}%</span></div></div>
-        <div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number">${totalU}</div></div>
+        <div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number">${totalReturned}</div></div>
       `;
       document.getElementById('topSummaryGrid').innerHTML = `
         <div class="kpi-card ${pricedToSoldClass}" style="border: 2px solid ${pricedToSoldClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${pricedToSoldClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
           <div class="kpi-value">${pricedToSold}%</div>
-          <div class="kpi-sub">(${totalR} / ${totalO})</div>
+          <div class="kpi-sub">(${totalSold} / ${totalSDMottatt})</div>
           <div class="kpi-label">Priced → Sold</div>
           <div class="kpi-target ${pricedToSoldClass}">Target: ≥10%</div>
         </div>
@@ -512,16 +511,16 @@ async function loadDashboard() {
       `;
       document.getElementById('throughputGrid').innerHTML = `
         <div class="kpi-card">
-          <div class="kpi-value">${totalO}</div>
-          <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
-          <div class="kpi-label">Valuations</div>
+          <div class="kpi-value">${totalSDMottatt}</div>
+          <div class="kpi-sub">Avg/day: ${avgDailyValued}</div>
+          <div class="kpi-label">Valuations (SD mottatt)</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalQ}</div>
-          <div class="kpi-label">Received</div>
+          <div class="kpi-value">${totalMottatt}</div>
+          <div class="kpi-label">Received (Mottatt)</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalR}</div>
+          <div class="kpi-value">${totalSold}</div>
           <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
           <div class="kpi-label">Sold</div>
         </div>
@@ -531,7 +530,7 @@ async function loadDashboard() {
           <div class="kpi-label">In Production</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalU}</div>
+          <div class="kpi-value">${totalReturned}</div>
           <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
           <div class="kpi-label">Returned</div>
         </div>
@@ -570,13 +569,13 @@ async function loadDashboard() {
     } else {
       document.getElementById('throughputGrid').innerHTML = `
         <div class="kpi-card">
-          <div class="kpi-value">${totalO}</div>
-          <div class="kpi-sub">Avg/day: ${avgDailyO}</div>
-          <div class="kpi-label">Valuations</div>
+          <div class="kpi-value">${totalSDMottatt}</div>
+          <div class="kpi-sub">Avg/day: ${avgDailyValued}</div>
+          <div class="kpi-label">Valuations (SD mottatt)</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalQ}</div>
-          <div class="kpi-label">Received</div>
+          <div class="kpi-value">${totalMottatt}</div>
+          <div class="kpi-label">Received (Mottatt)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${gireOrdered}</div>
@@ -587,12 +586,12 @@ async function loadDashboard() {
           <div class="kpi-label">Levere Selv</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalR}</div>
+          <div class="kpi-value">${totalSold}</div>
           <div class="sold-split"><25k: ${soldUnder25k} | ≥25k: ${soldOver25k}</div>
           <div class="kpi-label">Sold</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-value">${totalU}</div>
+          <div class="kpi-value">${totalReturned}</div>
           <div class="sold-split"><25k: ${returnedUnder25k} | ≥25k: ${returnedOver25k}</div>
           <div class="kpi-label">Returned</div>
         </div>
