@@ -30,7 +30,6 @@
         .arrow-ratio.good { color: #2e7d32; }
         .funnel-in-prod { font-size: 1.15rem; color: #555; opacity: 0.8; font-weight: 500; }
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 40px; max-width: 1600px; margin-left: auto; margin-right: auto; }
-        .kpi-row-nok { grid-column: 1 / -1; display: grid; grid-template-columns: inherit; gap: inherit; margin-top: 8px; padding-top: 16px; border-top: 1px solid rgba(0,66,37,0.1); }
         .kpi-card { text-align: center; transition: all 0.22s ease; position: relative; }
         .kpi-card.highlight { border: 1.5px solid #004225; background: rgba(130,191,210,0.05); }
         .kpi-card.good { border: 1.5px solid #2e7d32; color: #1b5e20; background: rgba(46,125,50,0.05); }
@@ -106,43 +105,23 @@
             Click any value to edit • Changes saved automatically
         </div>
     </div>
-    <div id="loading"></div>
+    <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40 – Gire ordered fully independent (no inPeriod filter) •
-        <span class="config-trigger" onclick="toggleLogicNotes()">calculation logic</span>
+        Version 1.40.3 – Levere Selv telling lagt til
     </div>
-    <div id="logicnotes" class="config-details" style="display:none; margin-top:8px; padding:16px; background:rgba(255,255,255,0.7); border-radius:10px; border:1px solid rgba(130,191,210,0.15);">
-        <h3 style="margin:0 0 12px 0; font-size:1.1rem;">How Metrics Are Calculated</h3>
-        <p style="margin-bottom:12px; font-size:0.92rem;">All numbers come from the XLSX report. Rows are filtered to only those with at least one relevant date (columns O, Q, R, U) in the selected period — except for Gire ordered which is now counted fully independently (even if no O/Q/R/U date in period) and handles time in P column.</p>
-        <ul style="margin:0; padding-left:20px; line-height:1.7; font-size:0.92rem;">
-            <li><strong>Valuations (totalO)</strong>: Count of rows where column O is in the period.</li>
-            <li><strong>Received (totalQ)</strong>: Count of rows where column Q is in the period.</li>
-            <li><strong>Sold (totalR)</strong>: Count of rows where column R is in the period.</li>
-            <li><strong>In Production</strong>: Received but not sold/returned as of now.</li>
-            <li><strong>Returned (totalU)</strong>: Count of rows where column U is in the period.</li>
-            <li><strong>Gire ordered</strong>: Count of rows where column P is non-empty and parsed date (ignoring time) is in the period — counted independently, no need for O/Q/R/U in period.</li>
-            <li><strong>Avg Bud (per sold)</strong>: Average of column S for sold cars. Red if <125 000 NOK.</li>
-            <li><strong>AR Income</strong>: Avg Bud × AR %.</li>
-            <li><strong>Avg Avgift (per sold)</strong>: Average of column T for sold cars.</li>
-            <li><strong>Cost per Sold Car</strong>: (Transport + Prod sold/ret + Marketing) / totalR.</li>
-            <li><strong>Gross Profit per Sold Unit</strong>: Avg Avgift - Cost per Sold. Red if <0.</li>
-            <li><strong>Priced → Sold</strong>: (totalR / totalO) × 100. Red if <10%.</li>
-            <li><strong>Avg Valuation → Sold</strong>: Average days from O to R for sold cars.</li>
-            <li><strong>Pricing Time / Load</strong>: FTE needed based on valuations × valTime.</li>
-        </ul>
-        <p style="margin:16px 0 0; font-size:0.85rem; opacity:0.7;">
-            Click "calculation logic" again to hide • All based on XLSX columns O–U + config values.
-        </p>
-    </div>
+
     <div id="funnelContainer" style="display:none;">
         <div class="funnel" id="funnelArea"></div>
     </div>
+
     <div id="shortPeriodNote" class="short-period-note" style="display:none;">
         Funnel hidden for short periods (due to process delay)
     </div>
+
     <div id="topSummaryGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;"></div>
     <div id="throughputGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;"></div>
     <div id="detailsGrid" class="kpi-grid"></div>
+
     <div class="chart-container">
         <h2>Valuations per day (Customer Service Load)</h2>
         <canvas id="workloadChart" height="140"></canvas>
@@ -152,6 +131,7 @@
         <canvas id="receivedSoldChart" height="140"></canvas>
     </div>
 </div>
+
 <div id="configPrompt">
     <div class="prompt-box">
         <h3>Advanced Configuration</h3>
@@ -236,47 +216,37 @@ function toggleCustomDates() {
     document.getElementById('customEnd').value = today.toISOString().split('T')[0];
   }
 }
-
 function getDate(ws, row, col) {
   const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
   if (!cell || cell.v == null) return null;
-
   let value = cell.v;
-
   if (typeof value === 'number' && value > 0) {
     try {
       const d = XLSX.SSF.parse_date_code(value);
       return new Date(d.y, d.m - 1, d.d);
     } catch (e) {}
   }
-
   if (typeof value === 'string') {
     value = value.trim();
     if (!value) return null;
-
     let datePart = value.split(/\s+/)[0].trim();
-
     const m = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (m) {
-      const day   = parseInt(m[1], 10);
+      const day = parseInt(m[1], 10);
       const month = parseInt(m[2], 10);
-      const year  = parseInt(m[3], 10);
+      const year = parseInt(m[3], 10);
       if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
         return new Date(year, month - 1, day);
       }
     }
   }
-
   return null;
 }
-
 function dateToYMD(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-
 let workloadChart = null;
 let receivedSoldChart = null;
-
 async function loadDashboard() {
   const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
   const loading = document.getElementById('loading');
@@ -287,7 +257,6 @@ async function loadDashboard() {
   document.getElementById('detailsGrid').innerHTML = '';
   document.getElementById('funnelContainer').style.display = 'none';
   document.getElementById('shortPeriodNote').style.display = 'none';
-
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -295,19 +264,17 @@ async function loadDashboard() {
     const wb = XLSX.read(ab, {type:'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
-    const COL_O = 14, COL_P = 15, COL_Q = 16, COL_R = 17, COL_S = 18, COL_T = 19, COL_U = 20;
-
+    const COL_O = 14, COL_P = 15, COL_LEVERE = 16, COL_Q = 17, COL_R = 18, COL_S = 19, COL_T = 20, COL_U = 21;
     const today = new Date();
     let startDate = new Date(today);
     let endDate = new Date(today);
     endDate.setHours(23,59,59,999);
-
     const periodValue = document.getElementById('periodSelect').value;
     if (periodValue === 'custom') {
       const s = document.getElementById('customStart').value;
       const e = document.getElementById('customEnd').value;
       startDate = s ? new Date(s + 'T00:00:00') : new Date(2000, 0, 1);
-      endDate   = e ? new Date(e + 'T23:59:59.999') : new Date(today);
+      endDate = e ? new Date(e + 'T23:59:59.999') : new Date(today);
     } else if (periodValue === 'today') {
       startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
     } else if (periodValue === 'all') {
@@ -315,12 +282,11 @@ async function loadDashboard() {
     } else {
       startDate.setDate(today.getDate() - parseInt(periodValue));
     }
-
     const marketingStartDate = new Date(config.marketingStart);
-
     const mapO = new Map(), mapQ = new Map(), mapR = new Map();
     let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
     let gireOrdered = 0;
+    let levereSelv = 0;
     let sumS = 0, countS = 0;
     let sumT = 0, countT = 0;
     let soldUnder25k = 0, soldOver25k = 0;
@@ -330,42 +296,43 @@ async function loadDashboard() {
     let prodReturnedSum = 0;
     let sumDaysToSell = 0, countDaysToSell = 0;
     let inProduction = 0;
-
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       const dO = getDate(ws, row, COL_O);
       const dQ = getDate(ws, row, COL_Q);
       const dR = getDate(ws, row, COL_R);
       const dU = getDate(ws, row, COL_U);
       const dP = getDate(ws, row, COL_P);
+      const dLevere = getDate(ws, row, COL_LEVERE);
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
-
-      // GIRE ORDERED – fully independent, before relevance filter
+      const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
+      // GIRE ORDERED – fully independent
       if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
         gireOrdered++;
       }
-
+      // LEVERE SELV – samme logikk som Gire ordered
+      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
+        levereSelv++;
+      }
       // Relevance filter for ALL OTHER metrics
-      const inPeriod = 
+      const inPeriod =
         (dO && dO >= startDate && dO <= endDate) ||
         (dQ && dQ >= startDate && dQ <= endDate) ||
         (dR && dR >= startDate && dR <= endDate) ||
         (dU && dU >= startDate && dU <= endDate);
-
       if (!inPeriod) continue;
-
-      if (dO && dO >= startDate && dO <= endDate) { 
-        mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1); 
-        totalO++; 
+      if (dO && dO >= startDate && dO <= endDate) {
+        mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
+        totalO++;
       }
-      if (dQ && dQ >= startDate && dQ <= endDate) { 
-        mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1); 
-        totalQ++; 
+      if (dQ && dQ >= startDate && dQ <= endDate) {
+        mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
+        totalQ++;
       }
       if (pVal !== '') {
         transportSum += config.transportCost;
       }
       if (dR && dR >= startDate && dR <= endDate) {
-        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1); 
+        mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
         totalR++;
         const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
         sumS += bud; countS++;
@@ -390,7 +357,6 @@ async function loadDashboard() {
         if (!isSold && !isReturned) inProduction++;
       }
     }
-
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
@@ -443,7 +409,7 @@ async function loadDashboard() {
         <div class="funnel-row"><div class="funnel-title">Sold</div><div class="funnel-number"></div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow arrow.in-production">↳</div><div class="funnel-in-prod">In Production</div><div class="funnel-number" style="font-size:2.2rem; color:#555; opacity:0.9;">${inProduction}</div></div>
         <div class="funnel-row"><div class="funnel-title"></div><div class="arrow">↓ <span class="arrow-ratio ${convQU >= 30 ? 'alert' : 'good'}">${convQU}%</span></div></div>
-        <div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number"></div></div>
+        <div class="funnel-row"><div class="funnel-title">Returned</div><div class="funnel-number">${totalU}</div></div>
       `;
       document.getElementById('topSummaryGrid').innerHTML = `
         <div class="kpi-card ${pricedToSoldClass}" style="border: 2px solid ${pricedToSoldClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${pricedToSoldClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
@@ -504,6 +470,10 @@ async function loadDashboard() {
           <div class="kpi-value">${gireOrdered}</div>
           <div class="kpi-label">Gire ordered</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${levereSelv}</div>
+          <div class="kpi-label">Levere Selv</div>
+        </div>
       `;
       document.getElementById('detailsGrid').innerHTML = `
         <div class="kpi-card ${avgBudClass}" style="border: 2px solid ${avgBudClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${avgBudClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
@@ -542,6 +512,10 @@ async function loadDashboard() {
         <div class="kpi-card">
           <div class="kpi-value">${gireOrdered}</div>
           <div class="kpi-label">Gire ordered</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${levereSelv}</div>
+          <div class="kpi-label">Levere Selv</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${totalR}</div>
