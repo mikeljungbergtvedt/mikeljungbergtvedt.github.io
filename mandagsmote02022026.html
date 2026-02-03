@@ -108,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.6 – SD mottatt uavhengig av Mottatt
+        Version 1.40.7 – SD mottatt / Mottatt korrekt separert
     </div>
 
     <div id="funnelContainer" style="display:none;">
@@ -268,7 +268,7 @@ async function loadDashboard() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
 
-    // Read headers
+    // Read headers from row 0
     const headers = [];
     for (let c = range.s.c; c <= range.e.c; ++c) {
       const cell = ws[XLSX.utils.encode_cell({r:0, c:c})];
@@ -289,25 +289,27 @@ async function loadDashboard() {
       return fallbackIndex;
     };
 
-    const COL_SD_MOTTATT = findCol(['sd mottatt på', 'sd mottatt', 'mottatt på'], 14); // Valued
-    const COL_GIRE       = findCol(['gire bestilt på', 'gire'], 15);
-    const COL_LEVERE     = findCol(['report.peasy.list.on_the_way', 'on_the_way', 'peasy.list'], 16);
-    const COL_MOTTATT    = findCol(['mottatt'], 17); // Real Received
-    const COL_SOLGT      = findCol(['solgt på', 'solgt'], 18);
+    // Exact header matches from your report
+    const COL_SD_MOTTATT = findCol(['sd mottatt på'], 14);          // Valued - SD mottatt
+    const COL_GIRE       = findCol(['gire bestilt på'], 15);        // Gire ordered
+    const COL_LEVERE     = findCol(['report.peasy.list.on_the_way'], 16); // Levere Selv
+    const COL_MOTTATT    = findCol(['mottatt'], 17);                // Real Received - Mottatt
+    const COL_SOLGT      = findCol(['solgt på'], 18);               // Sold
     const COL_BUD        = findCol(['bud'], 19);
     const COL_AVGIFT     = findCol(['avgift'], 20);
-    const COL_RETURNERT  = findCol(['returnert på', 'returnert'], 21);
+    const COL_RETURNERT  = findCol(['returnert på'], 21);           // Returned
 
-    // Error check
+    // Error check for missing critical columns
     const missing = [];
-    if (COL_SD_MOTTATT === -1) missing.push("SD mottatt på");
+    if (COL_SD_MOTTATT === -1) missing.push("SD mottatt på (Valued)");
     if (COL_GIRE === -1) missing.push("Gire bestilt på");
     if (COL_LEVERE === -1) missing.push("Levere Selv (report.peasy.list.on_the_way)");
-    if (COL_MOTTATT === -1) missing.push("Mottatt");
+    if (COL_MOTTATT === -1) missing.push("Mottatt (Received)");
     if (COL_SOLGT === -1) missing.push("Solgt på");
     if (COL_RETURNERT === -1) missing.push("Returnert på");
 
     if (missing.length > 0) {
+      console.error("Manglende kolonner:", missing);
       document.getElementById('loading').innerHTML = `
         <strong style="color:#d32f2f; font-size:1.2rem;">FEIL: Manglende kolonner!</strong><br><br>
         Fant ikke: <strong>${missing.join('<br>')}</strong><br><br>
@@ -334,9 +336,9 @@ async function loadDashboard() {
       startDate.setDate(today.getDate() - parseInt(periodValue));
     }
     const marketingStartDate = new Date(config.marketingStart);
-    const mapO = new Map();
-    let totalSDMottatt = 0;  // Valued
-    let totalMottatt = 0;    // Received
+    const mapValued = new Map();
+    let totalSDMottatt = 0;   // Valued - SD mottatt på
+    let totalMottatt = 0;     // Received - Mottatt
     let totalSold = 0;
     let totalReturned = 0;
     let gireOrdered = 0;
@@ -362,16 +364,17 @@ async function loadDashboard() {
       const gireVal   = String(ws[XLSX.utils.encode_cell({r:row, c:COL_GIRE})]?.v || '').trim();
       const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
 
+      // Gire and Levere Selv - independent
       if (gireVal !== '' && dGire && dGire >= startDate && dGire <= endDate) gireOrdered++;
       if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) levereSelv++;
 
-      // SD mottatt (Valued) – uavhengig av alt annet
+      // SD mottatt (Valued) - counted independently
       if (dSDMottatt && dSDMottatt >= startDate && dSDMottatt <= endDate) {
-        mapO.set(dateToYMD(dSDMottatt), (mapO.get(dateToYMD(dSDMottatt)) || 0) + 1);
+        mapValued.set(dateToYMD(dSDMottatt), (mapValued.get(dateToYMD(dSDMottatt)) || 0) + 1);
         totalSDMottatt++;
       }
 
-      // Relevance filter for downstream metrics
+      // Relevance filter for downstream metrics (Received, Sold, Returned, In Production)
       const inPeriod = 
         (dMottatt && dMottatt >= startDate && dMottatt <= endDate) ||
         (dSold    && dSold    >= startDate && dSold    <= endDate) ||
@@ -389,7 +392,6 @@ async function loadDashboard() {
         if (!isSold && !isReturned) inProduction++;
       }
 
-      // ... bud, avgift, transport, daysToSell etc. unchanged ...
       if (dSold && dSold >= startDate && dSold <= endDate) {
         const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_BUD})]?.v || 0);
         sumS += bud; countS++;
@@ -410,7 +412,6 @@ async function loadDashboard() {
       if (gireVal !== '') transportSum += config.transportCost;
     }
 
-    // ... calculations for avgS, avgT, gpPct, etc. unchanged ...
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
@@ -598,8 +599,8 @@ async function loadDashboard() {
       `;
     }
     document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
-    const datesO = [...mapO.keys()].sort();
-    const dataO = datesO.map(k => mapO.get(k));
+    const datesO = [...mapValued.keys()].sort();
+    const dataO = datesO.map(k => mapValued.get(k));
     if (workloadChart) workloadChart.destroy();
     workloadChart = new Chart(document.getElementById('workloadChart'), {
       type: 'line',
@@ -617,7 +618,7 @@ async function loadDashboard() {
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
-    const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
+    const allDates = [...new Set([...mapValued.keys(), ...mapR.keys()])].sort(); // Use mapValued for Valued
     const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
     const dataR_chart = allDates.map(d => mapR.get(d) || 0);
     if (receivedSoldChart) receivedSoldChart.destroy();
@@ -626,7 +627,7 @@ async function loadDashboard() {
       data: {
         labels: allDates,
         datasets: [
-          { label: 'Received', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2,
+          { label: 'Received (Mottatt)', data: dataQ_chart, borderColor: '#82BFD2', tension: 0.2,
             trendlineLinear: { style: '#82BFD288', lineStyle: 'dashed', width: 2 } },
           { label: 'Sold', data: dataR_chart, borderColor: '#FFCC33', tension: 0.2,
             trendlineLinear: { style: '#FFCC3388', lineStyle: 'dashed', width: 2 } }
