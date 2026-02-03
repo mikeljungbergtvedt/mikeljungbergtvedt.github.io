@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Peasy Dashboard 2</title>
+    <title>Peasy Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
     <style>
-        /* Your original CSS – unchanged */
         body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -109,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.6 – Fikset dobbelttelling SD mottatt → Mottatt
+        Version 1.40.6 – Fikset SD mottatt telling (uavhengig av Mottatt)
     </div>
 
     <div id="funnelContainer" style="display:none;">
@@ -249,6 +248,7 @@ function dateToYMD(d) {
 }
 let workloadChart = null;
 let receivedSoldChart = null;
+
 async function loadDashboard() {
   console.log("Starter lasting...");
   const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -267,7 +267,61 @@ async function loadDashboard() {
     const wb = XLSX.read(ab, {type:'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
-    const COL_O = 14, COL_P = 15, COL_LEVERE = 16, COL_Q = 17, COL_R = 18, COL_S = 19, COL_T = 20, COL_U = 21;
+
+    // ─── Header-basert kolonnefinning – tilpasset DINE titler ───────
+    const headers = [];
+    for (let c = range.s.c; c <= range.e.c; ++c) {
+      const cell = ws[XLSX.utils.encode_cell({r:0, c:c})];
+      headers[c] = cell && cell.v ? String(cell.v).trim() : '';
+    }
+
+    const findCol = (searchTerms, fallbackIndex = -1) => {
+      for (let c = 0; c < headers.length; c++) {
+        if (headers[c]) {
+          const lower = headers[c].toLowerCase();
+          if (searchTerms.some(term => lower.includes(term.toLowerCase()))) {
+            console.log(`Fant kolonne "${headers[c]}" for søk: ${searchTerms.join(', ')} på index ${c}`);
+            return c;
+          }
+        }
+      }
+      console.warn(`Fant ikke kolonne for: ${searchTerms.join(', ')} – bruker fallback ${fallbackIndex}`);
+      return fallbackIndex;
+    };
+
+    const COL_O       = findCol(['sd mottatt på', 'mottatt på', 'sd mottatt', 'mottatt'], 14);
+    const COL_P       = findCol(['gire bestilt på', 'gire', 'bestilt på', 'gire bestilt'], 15);
+    const COL_LEVERE  = findCol(['report.peasy.list.on_the_way', 'on_the_way', 'peasy.list', 'on the way', 'på vei', 'levere'], 16);
+    const COL_Q       = findCol(['mottatt'], 17);
+    const COL_R       = findCol(['solgt på', 'solgt'], 18);
+    const COL_S       = findCol(['bud'], 19);
+    const COL_T       = findCol(['avgift'], 20);
+    const COL_U       = findCol(['returnert på', 'returnert'], 21);
+
+    // ─── ERROR-SJEKK ────────────────────────────────────────────────────
+    const missingCols = [];
+    if (COL_O === -1) missingCols.push("SD mottatt på (Valued)");
+    if (COL_P === -1) missingCols.push("Gire bestilt på");
+    if (COL_LEVERE === -1) missingCols.push("report.peasy.list.on_the_way (Levere Selv)");
+    if (COL_Q === -1) missingCols.push("Mottatt");
+    if (COL_R === -1) missingCols.push("Solgt på");
+    if (COL_S === -1) missingCols.push("Bud");
+    if (COL_T === -1) missingCols.push("Avgift");
+    if (COL_U === -1) missingCols.push("Returnert på");
+
+    if (missingCols.length > 0) {
+      console.error("Manglende kolonner:", missingCols);
+      document.getElementById('loading').innerHTML = `
+        <strong style="color:#d32f2f; font-size:1.2rem;">Feil: Rapportstrukturen har endret seg!</strong><br><br>
+        Mangler: <strong>${missingCols.join('<br>')}</strong><br><br>
+        Sjekk <a href="${url}" target="_blank" style="color:#d32f2f; font-weight:bold;">rapporten manuelt</a>.<br>
+        Oppdater søkeord i koden eller kontakt support.
+      `;
+      document.getElementById('loading').style.color = '#d32f2f';
+      document.getElementById('loading').style.fontWeight = 'bold';
+      return;
+    }
+
     const today = new Date();
     let startDate = new Date(today);
     let endDate = new Date(today);
@@ -299,6 +353,7 @@ async function loadDashboard() {
     let prodReturnedSum = 0;
     let sumDaysToSell = 0, countDaysToSell = 0;
     let inProduction = 0;
+
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       const dO = getDate(ws, row, COL_O);
       const dQ = getDate(ws, row, COL_Q);
@@ -308,22 +363,21 @@ async function loadDashboard() {
       const dLevere = getDate(ws, row, COL_LEVERE);
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
       const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
-      if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
-        gireOrdered++;
-      }
-      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
-        levereSelv++;
-      }
-      // FIX: Fjernet dO fra inPeriod – så SD mottatt ikke trigger "Received"-telling
-      const inPeriod =
-        (dQ && dQ >= startDate && dQ <= endDate) ||
-        (dR && dR >= startDate && dR <= endDate) ||
-        (dU && dU >= startDate && dU <= endDate);
-      if (!inPeriod) continue;
+
+      // Valuations (SD mottatt på) – telles uavhengig av andre datoer
       if (dO && dO >= startDate && dO <= endDate) {
         mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
         totalO++;
       }
+
+      // Relevance filter for alle andre metrikker (Received, Sold, Returned, In Production)
+      const inPeriod =
+        (dQ && dQ >= startDate && dQ <= endDate) ||
+        (dR && dR >= startDate && dR <= endDate) ||
+        (dU && dU >= startDate && dU <= endDate);
+
+      if (!inPeriod) continue;
+
       if (dQ && dQ >= startDate && dQ <= endDate) {
         mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
         totalQ++;
@@ -357,6 +411,7 @@ async function loadDashboard() {
         if (!isSold && !isReturned) inProduction++;
       }
     }
+
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
@@ -400,7 +455,7 @@ async function loadDashboard() {
     document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
     let displayRange = '';
     if (periodValue === 'custom') displayRange = ` (${document.getElementById('customStart').value} – ${document.getElementById('customEnd').value})`;
-    // Last updated + Periode
+
     let periodText = '';
     if (periodValue === 'all') {
       periodText = 'All time';
@@ -413,6 +468,7 @@ async function loadDashboard() {
     }
     document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
     document.getElementById('periodDisplay').textContent = `Periode: ${periodText}`;
+
     if (!shortPeriod) {
       document.getElementById('funnelArea').innerHTML = `
         <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
