@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v8</title>
+    <title>Mandagsrapport – Peasy v10</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -16,6 +16,7 @@
         button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
         button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
         button#edit-btn { background: #006644; }
+        button.danger { background: #c62828; }
         .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
         th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210, 0.10); }
@@ -29,13 +30,29 @@
         #report-content { display: none; }
         .timestamp { font-size: 0.92rem; opacity: 0.8; margin-bottom: 16px; }
         .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
-        textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
-        #save-edits { margin-top: 12px; background: #2e7d32; }
+        textarea { width: 100%; min-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
+        #save-edits, #lock-comment-save { margin-top: 12px; background: #2e7d32; }
+        #lock-comment-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; 
+        }
+        #lock-comment-box { 
+            background: white; padding: 32px; border-radius: 16px; width: 90%; max-width: 600px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+        }
+        #delete-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; 
+        }
+        #delete-confirm-box { 
+            background: white; padding: 32px; border-radius: 16px; text-align: center; 
+            max-width: 400px; 
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v8</span></h1>
+    <h1>Mandagsrapport – Peasy<span class="version">v10</span></h1>
     <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres for forrige fullførte uke (man–søn).</p>
    
     <div class="controls">
@@ -45,7 +62,8 @@
         <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
         <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
         <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
-        <button id="lock-btn" onclick="lockReport()" style="display: none;">Lås inn rapport</button>
+        <button id="lock-btn" onclick="showLockCommentModal()" style="display: none;">Lås inn rapport</button>
+        <button id="delete-btn" onclick="showDeleteConfirm()" style="display: none; background: #c62828;">Slett rapport</button>
     </div>
    
     <div id="loading" style="display: none;">Laster...</div>
@@ -64,20 +82,41 @@
             <table id="returned-table"></table>
         </div>
     </div>
+
+    <!-- Modal for comment before lock -->
+    <div id="lock-comment-modal">
+        <div id="lock-comment-box">
+            <h3>Legg til kommentar før låsing (valgfritt)</h3>
+            <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..."></textarea>
+            <div style="margin-top: 16px;">
+                <button id="lock-comment-save" onclick="confirmLockWithComment()">Lås inn med kommentar</button>
+                <button onclick="closeLockModal()" style="margin-left: 16px; background: #757575;">Avbryt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="delete-modal">
+        <div id="delete-confirm-box">
+            <h3>Sikker?</h3>
+            <p>Vil du virkelig slette denne rapporten permanent?</p>
+            <div style="margin-top: 20px;">
+                <button onclick="deleteReport()" style="background: #c62828;">Ja, slett</button>
+                <button onclick="closeDeleteModal()" style="margin-left: 16px; background: #757575;">Nei, avbryt</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 const STORAGE_KEY = 'peasy_mandagsrapporter';
+const PASSWORD = 'peasy';
 let currentReport = null;
 let currentCreatedTime = '';
 
 function cleanNum(str) {
     if (!str) return 0;
-    let cleaned = (str + '')
-        .replace(/\s/g, '')
-        .replace(/\u00A0/g, '')
-        .replace(/\u2212/g, '-')
-        .replace(/[^0-9.-]/g, '');
+    let cleaned = (str + '').replace(/\s/g, '').replace(/\u00A0/g, '').replace(/\u2212/g, '-').replace(/[^0-9.-]/g, '');
     return parseFloat(cleaned) || 0;
 }
 
@@ -93,19 +132,18 @@ function getISOWeek(date) {
 function getMostRecentCompletedWeekStart() {
     const today = new Date();
     const dayOfWeek = today.getDay() || 7;
-    let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek; // If Monday, go back to previous Sunday +1 week
-    const endOfPrevWeek = new Date(today);
-    endOfPrevWeek.setDate(today.getDate() - daysBack);
-    endOfPrevWeek.setHours(0,0,0,0);
-    const startOfPrevWeek = new Date(endOfPrevWeek);
-    startOfPrevWeek.setDate(endOfPrevWeek.getDate() - 6);
-    startOfPrevWeek.setHours(0,0,0,0);
-    return startOfPrevWeek;
+    let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
+    const endOfPrev = new Date(today);
+    endOfPrev.setDate(today.getDate() - daysBack);
+    endOfPrev.setHours(0,0,0,0);
+    const startOfPrev = new Date(endOfPrev);
+    startOfPrev.setDate(endOfPrev.getDate() - 6);
+    startOfPrev.setHours(0,0,0,0);
+    return startOfPrev;
 }
 
 function getMostRecentCompletedWeekNum() {
-    const start = getMostRecentCompletedWeekStart();
-    return getISOWeek(start);
+    return getISOWeek(getMostRecentCompletedWeekStart());
 }
 
 window.onload = () => {
@@ -131,21 +169,18 @@ function loadReportsToSelect() {
 
 function updateGenerateButton() {
     const btn = document.getElementById('generate-btn');
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const selectedId = document.getElementById('weekSelect').value;
-    const isSelectedLocked = saved.some(r => r.id === selectedId && r.locked);
-
     const prevWeekNum = getMostRecentCompletedWeekNum();
-    const prevWeekAlreadyLocked = saved.some(r => 
-        r.title.includes(`uke ${prevWeekNum}`) && r.locked
-    );
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const alreadyLocked = saved.some(r => r.title.includes(`uke ${prevWeekNum}`) && r.locked);
+    const selectedId = document.getElementById('weekSelect').value;
+    const selectedLocked = saved.some(r => r.id === selectedId && r.locked);
 
-    if (prevWeekAlreadyLocked) {
+    if (alreadyLocked) {
         btn.disabled = true;
-        btn.textContent = `Uke ${prevWeekNum} allerede generert og låst`;
-    } else if (isSelectedLocked) {
+        btn.textContent = `Uke ${prevWeekNum} allerede låst`;
+    } else if (selectedLocked) {
         btn.disabled = true;
-        btn.textContent = 'Valgt uke er låst – kan ikke generere på nytt';
+        btn.textContent = 'Valgt uke er låst';
     } else {
         btn.disabled = false;
         btn.textContent = 'Generer rapport for forrige fullførte uke';
@@ -159,19 +194,24 @@ function loadSavedReport() {
         document.getElementById('edit-btn').style.display = 'none';
         document.getElementById('lock-btn').style.display = 'none';
         document.getElementById('save-edits').style.display = 'none';
+        document.getElementById('delete-btn').style.display = 'none';
         updateGenerateButton();
         return;
     }
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const report = saved.find(r => r.id === selectedId);
     if (!report) return;
+
     currentReport = report;
     currentCreatedTime = report.created;
+
     document.getElementById('report-content').style.display = 'block';
     const isLocked = report.locked === true;
     document.getElementById('edit-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('lock-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('save-edits').style.display = 'none';
+    document.getElementById('delete-btn').style.display = isLocked ? 'inline-block' : 'none';
+
     const editedText = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${editedText}`;
     document.getElementById('commentary').innerHTML = report.commentary;
@@ -179,6 +219,7 @@ function loadSavedReport() {
     document.getElementById('returned-table').innerHTML = report.returnedTable || '';
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
+
     updateGenerateButton();
 }
 
@@ -368,7 +409,8 @@ async function generateNewReport() {
             returnedTable: document.getElementById('returned-table').outerHTML,
             created: nowStr,
             title,
-            locked: false
+            locked: false,
+            lockComment: '' // prepare for comment
         };
 
         document.getElementById('weekSelect').value = '';
@@ -405,19 +447,65 @@ function saveEdits() {
     currentReport.edited = nowStr;
 }
 
-function lockReport() {
+function showLockCommentModal() {
+    document.getElementById('lock-comment-modal').style.display = 'flex';
+    document.getElementById('lock-comment-text').value = currentReport.lockComment || '';
+    document.getElementById('lock-comment-text').focus();
+}
+
+function closeLockModal() {
+    document.getElementById('lock-comment-modal').style.display = 'none';
+}
+
+function confirmLockWithComment() {
+    const comment = document.getElementById('lock-comment-text').value.trim();
+    currentReport.lockComment = comment;
+    closeLockModal();
+    lockReport();
+}
+
+async function lockReport() {
     if (!currentReport) return alert('Generer rapport først');
+
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     currentReport.id = 'uke' + (saved.length + 1);
     currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
     currentReport.locked = true;
     saved.push(currentReport);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    alert('Rapport låst inn som ' + currentReport.id);
+
+    alert('Rapport låst inn som ' + currentReport.id + (currentReport.lockComment ? ' med kommentar' : ''));
     loadReportsToSelect();
 }
 
-document.getElementById('weekSelect').addEventListener('change', updateGenerateButton);
+function showDeleteConfirm() {
+    document.getElementById('delete-modal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'none';
+}
+
+function deleteReport() {
+    const password = prompt('Skriv inn passord for å slette (peasy):');
+    if (password !== PASSWORD) {
+        alert('Feil passord.');
+        closeDeleteModal();
+        return;
+    }
+
+    let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    saved = saved.filter(r => r.id !== currentReport.id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+    alert('Rapport slettet.');
+    closeDeleteModal();
+    loadReportsToSelect();
+    document.getElementById('report-content').style.display = 'none';
+    document.getElementById('delete-btn').style.display = 'none';
+}
+
+document.getElementById('weekSelect').addEventListener('change', loadSavedReport);
 </script>
 </body>
 </html>
