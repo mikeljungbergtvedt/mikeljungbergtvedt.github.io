@@ -3,90 +3,109 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v14 (bin fix)</title>
+    <title>Mandagsrapport – Peasy v13.1 (bin fix)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
         h1 { font-weight: 900; font-size: 2.25rem; letter-spacing: -0.6px; margin-bottom: 12px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .version { font-size: 1.2rem; color: #006644; margin-left: 12px; }
         .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; }
-        button:hover { background: #005533; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        button { padding: 10px 20px; font-size: 0.95rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+        button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+        button:disabled { background: #aaa; cursor: not-allowed; opacity: 0.75; }
+        button#edit-btn { background: #006644; }
         button.danger { background: #c62828; }
-        button.danger:hover { background: #b71c1c; }
-        .commentary, table { background: rgba(255,255,255,0.9); border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; }
-        th { background: #f5f5f5; }
-        .highlight-negative { color: #c62828; font-weight: bold; }
-        .highlight-positive { color: #2e7d32; font-weight: bold; }
-        .highlight-zero { color: #555; }
-        #loading { text-align: center; padding: 20px; font-style: italic; }
+        .commentary { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210, 0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210, 0.10); }
+        th { background: rgba(130,191,210,0.05); font-weight: 700; }
+        tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
+        .highlight-negative { color: #d32f2f; font-weight: 600; }
+        .highlight-positive { color: #2e7d32; font-weight: 600; }
+        .highlight-zero { color: #555; font-weight: 600; }
+        #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
+        .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
         #report-content { display: none; }
+        .timestamp { font-size: 0.85rem; opacity: 0.7; margin-bottom: 16px; }
+        .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+        textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1rem; }
+        #save-edits, #lock-comment-save { margin-top: 12px; background: #2e7d32; }
+        #lock-comment-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #lock-comment-box { background: white; padding: 32px; border-radius: 16px; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #delete-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #delete-confirm-box { background: white; padding: 32px; border-radius: 16px; text-align: center; max-width: 400px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport <span class="version">v14</span></h1>
-    <p>Rapporter lagres i din JSONBin – synlig for alle.</p>
-
+    <h1>Mandagsrapport – Peasy v13.1</h1>
+    <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle.</p>
+   
     <div class="controls">
         <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
         </select>
-        <button id="generate-btn" onclick="generateNewReport()">Generer forrige uke</button>
-        <button id="edit-btn" onclick="editReport()" style="display:none;">Rediger</button>
-        <button id="save-edits" onclick="saveEdits()" style="display:none;">Lagre endringer</button>
-        <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn</button>
-        <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none;background:#c62828;color:white;">Slett</button>
+        <button onclick="generateNewReport()">Generer ny rapport (siste uke)</button>
+        <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
+        <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
+        <button id="lock-btn" onclick="showLockCommentModal()" style="display: none;">Lås inn rapport</button>
+        <button id="delete-btn" onclick="showDeleteConfirm()" style="display: none; background: #c62828;">Slett rapport</button>
     </div>
-
-    <div id="loading">Laster...</div>
-
+   
+    <div id="loading" style="display: none;">Laster...</div>
+   
     <div id="report-content">
-        <div id="timestamp"></div>
-        <div id="commentary"></div>
-        <div id="sold-section"><h3>Solgte biler</h3><table id="sold-table"></table></div>
-        <div id="returned-section"><h3>Returnerte biler</h3><table id="returned-table"></table></div>
+        <div id="timestamp" class="timestamp"></div>
+        <div id="commentary" class="commentary"></div>
+       
+        <div id="sold-section">
+            <div class="section-title">Solgte biler</div>
+            <table id="sold-table"></table>
+        </div>
+       
+        <div id="returned-section">
+            <div class="section-title">Returnerte biler</div>
+            <table id="returned-table"></table>
+        </div>
     </div>
 
     <!-- Lock comment modal -->
-    <div id="lock-comment-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center;">
-        <div style="background:white;padding:24px;border-radius:12px;max-width:500px;width:90%;">
+    <div id="lock-comment-modal">
+        <div id="lock-comment-box">
             <h3>Kommentar før låsing (valgfritt)</h3>
-            <textarea id="lock-comment-text" style="width:100%;height:100px;"></textarea>
-            <div style="margin-top:16px;text-align:right;">
-                <button onclick="document.getElementById('lock-comment-modal').style.display='none'">Avbryt</button>
-                <button onclick="confirmLockWithComment()" style="margin-left:12px;background:#006644;color:white;">Lås inn</button>
+            <textarea id="lock-comment-text" placeholder="Skriv kommentar..."></textarea>
+            <div style="margin-top:16px;">
+                <button onclick="confirmLockWithComment()">Lås inn</button>
+                <button onclick="document.getElementById('lock-comment-modal').style.display='none'" style="margin-left:16px;background:#757575;">Avbryt</button>
             </div>
         </div>
     </div>
 
     <!-- Delete confirm -->
-    <div id="delete-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center;">
-        <div style="background:white;padding:24px;border-radius:12px;text-align:center;max-width:400px;">
-            <h3>Slette rapport?</h3>
-            <p>Dette fjerner den for alle.</p>
-            <div style="margin-top:16px;">
-                <button onclick="document.getElementById('delete-modal').style.display='none'">Nei</button>
-                <button onclick="deleteReport()" style="margin-left:12px;background:#c62828;color:white;">Ja, slett</button>
+    <div id="delete-modal">
+        <div id="delete-confirm-box">
+            <h3>Sikker på sletting?</h3>
+            <p>Rapporten blir borte for alle brukere.</p>
+            <div style="margin-top:20px;">
+                <button onclick="promptPasswordForDelete()" style="background:#c62828;color:white;">Ja, slett</button>
+                <button onclick="document.getElementById('delete-modal').style.display='none'" style="margin-left:16px;background:#757575;">Nei</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// ────────────────────────────────────────────────
 // Dine nøkler
-// ────────────────────────────────────────────────
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS_WRITE = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 
-// Hent rapporter
+let currentReport = null;
+let currentCreatedTime = '';
+
+// Hent rapporter fra bin
 async function fetchReports() {
     try {
         const res = await fetch(API_URL);
@@ -102,18 +121,18 @@ async function fetchReports() {
     }
 }
 
-// Lagre rapporter
+// Lagre til bin
 async function saveReports(reports) {
     try {
         const res = await fetch(API_URL, {
             method: 'PUT',
-            headers: HEADERS_WRITE,
+            headers: HEADERS,
             body: JSON.stringify({ reports })
         });
         if (!res.ok) {
-            const errText = await res.text();
-            console.error('Save failed:', res.status, errText);
-            alert('Lagring til bin feilet: ' + errText);
+            const err = await res.text();
+            console.error('Save failed:', res.status, err);
+            alert('Lagring feilet: ' + err);
             return false;
         }
         return true;
@@ -124,8 +143,10 @@ async function saveReports(reports) {
     }
 }
 
-let currentReport = null;
-let currentCreatedTime = '';
+function cleanNum(str) {
+    if (!str) return 0;
+    return parseFloat((str + '').replace(/\s/g,'').replace(/\u00A0/g,'').replace(/\u2212/g,'-').replace(/[^0-9.-]/g,'')) || 0;
+}
 
 window.onload = async () => {
     await loadDropdown();
@@ -156,7 +177,6 @@ async function loadSavedReport() {
         updateGenerateButton();
         return;
     }
-
     const saved = await fetchReports();
     const report = saved.find(r => r.id === id);
     if (!report) return;
@@ -169,7 +189,7 @@ async function loadSavedReport() {
     document.getElementById('edit-btn').style.display = locked ? 'none' : 'block';
     document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
     document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
+    document.getElementById('delete-btn').style.display = locked ? 'inline-block' : 'none';
 
     const edited = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
     document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${edited}`;
@@ -190,7 +210,6 @@ function renderTable(id, cars) {
         table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
         return;
     }
-
     const thead = document.createElement('thead');
     const tr = document.createElement('tr');
     ['Merke','Modell','År','AR laveste estimat','Bud','Diff NOK','Diff %'].forEach(h => {
@@ -242,43 +261,234 @@ function renderTable(id, cars) {
 async function generateNewReport() {
     if (document.getElementById('generate-btn').disabled) return;
 
-    // ... (all the fetch, processing, soldCars, returnedCars building code – same as your original)
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    document.getElementById('loading').textContent = 'Genererer ny rapport...';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('report-content').style.display = 'none';
 
-    // After building soldCars and returnedCars:
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ab = await res.arrayBuffer();
+        const wb = XLSX.read(ab, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
 
-    const commentaryHtml = /* your facts HTML */;
+        const headers = data[0].map(h => (h || '').trim());
+        const col = {
+            Merke: headers.indexOf('Merke'),
+            Modell: headers.indexOf('Modell'),
+            År: headers.indexOf('År'),
+            'Endelig AR verdi': headers.findIndex(h => h.includes('Endelig AR verdi')),
+            Bud: headers.indexOf('Bud'),
+            'Solgt på': headers.indexOf('Solgt på'),
+            Returnert: headers.findIndex(h => h.includes('Returnert'))
+        };
 
-    document.getElementById('timestamp').textContent = `Opprettet: ${nowStr}. Sist endret: -`;
-    document.getElementById('commentary').innerHTML = commentaryHtml;
-    renderTable('sold-table', soldCars);
-    renderTable('returned-table', returnedCars);
+        const today = new Date();
+        const dayOfWeek = today.getDay() || 7;
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - dayOfWeek - 6);
+        startDate.setHours(0,0,0,0);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 7);
+        endDate.setHours(0,0,0,0);
 
-    document.getElementById('report-content').style.display = 'block';
+        const weekNum = Math.ceil((startDate - new Date(startDate.getFullYear(),0,1)) / (86400000 * 7));
+        const title = `Mandag ${today.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+        const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+
+        const saved = await fetchReports();
+        if (saved.some(r => r.title === title && r.locked)) {
+            alert('Denne uken er allerede generert og låst!');
+            return;
+        }
+
+        const soldCars = [];
+        const returnedCars = [];
+
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const parseDate = (str) => {
+                if (!str) return null;
+                const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+                if (!match) return null;
+                return new Date(match[3], match[2]-1, match[1]);
+            };
+            const soldDate = parseDate(row[col['Solgt på']]);
+            const retDate = parseDate(row[col.Returnert]);
+            const arRange = row[col['Endelig AR verdi']] || '';
+            let arMid = 0;
+            if (arRange.includes('-')) {
+                const [low, high] = arRange.split('-').map(n => parseFloat(n.trim()) || 0);
+                arMid = (low + high) / 2;
+            }
+            const bud = parseFloat(row[col.Bud] || 0);
+            const diffNok = bud - arMid;
+            const diffPct = arMid ? ((diffNok / arMid) * 100).toFixed(1) : '0.0';
+            const car = {
+                Merke: row[col.Merke] || '-',
+                Modell: row[col.Modell] || '-',
+                År: row[col.År] || '-',
+                'AR midtpunkt': arMid.toLocaleString('nb-NO'),
+                Bud: bud.toLocaleString('nb-NO'),
+                'Diff NOK': diffNok.toLocaleString('nb-NO'),
+                'Diff %': diffPct + '%'
+            };
+            if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+            if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
+        }
+
+        const facts = (cars) => {
+            const n = cars.length;
+            const under = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) < 0).length;
+            const over = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) > 0).length;
+            const on = cars.filter(c => parseFloat(c['Diff NOK'].replace(/\s/g, '')) === 0).length;
+            const avgNok = n ? Math.round(cars.reduce((s, c) => s + parseFloat(c['Diff NOK'].replace(/\s/g, '')), 0) / n).toLocaleString('nb-NO') : '0';
+            const avgPct = n ? (cars.reduce((s, c) => s + parseFloat(c['Diff %'].replace('%', '')), 0) / n).toFixed(1) : '0.0';
+            return { n, under, over, on, avgNok, avgPct };
+        };
+
+        const soldF = facts(soldCars);
+        const retF = facts(returnedCars);
+
+        const commentary = `
+            <h3>Fakta – siste uke (man-søn)</h3>
+            <ul>
+                <li><strong>Solgt:</strong> ${soldF.n} biler</li>
+                <li>Under midtpunkt: ${soldF.under}</li>
+                <li>Over midtpunkt: ${soldF.over}</li>
+                <li>På midtpunkt: ${soldF.on}</li>
+                <li>Gj.sn. diff: ${soldF.avgNok} NOK (${soldF.avgPct}%)</li>
+                <li><strong>Returnert:</strong> ${retF.n} biler</li>
+                <li>Gj.sn. diff returnert: ${retF.avgNok} NOK (${retF.avgPct}%)</li>
+            </ul>
+        `;
+
+        const render = (id, cars) => {
+            const table = document.getElementById(id);
+            table.innerHTML = '';
+            if (cars.length === 0) {
+                table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
+                return;
+            }
+            const thead = document.createElement('thead');
+            const tr = document.createElement('tr');
+            ['Merke', 'Modell', 'År', 'AR midtpunkt', 'Bud', 'Diff NOK', 'Diff %'].forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            cars.forEach(car => {
+                const row = document.createElement('tr');
+                Object.keys(car).forEach(key => {
+                    const td = document.createElement('td');
+                    td.textContent = car[key];
+                    if (key === 'Diff NOK' || key === 'Diff %') {
+                        const val = parseFloat(key === 'Diff %' ? car[key].replace('%', '') : car[key].replace(/\s/g, ''));
+                        td.className = val < 0 ? 'highlight-negative' : val > 0 ? 'highlight-positive' : 'highlight-zero';
+                    }
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            const tfoot = document.createElement('tfoot');
+            const ftr = document.createElement('tr');
+            const ftd = document.createElement('td');
+            ftd.colSpan = 3;
+            ftd.innerHTML = `<strong>Gjennomsnitt (${cars.length} biler)</strong>`;
+            ftr.appendChild(ftd);
+            const avgAR = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['AR midtpunkt'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgBud = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c.Bud.replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffN = cars.length ? Math.round(cars.reduce((s,c) => s + parseFloat(c['Diff NOK'].replace(/\s/g,'')), 0) / cars.length).toLocaleString('nb-NO') : '0';
+            const avgDiffP = cars.length ? (cars.reduce((s,c) => s + parseFloat(c['Diff %'].replace('%','')), 0) / cars.length).toFixed(1) + '%' : '0.0%';
+            [avgAR, avgBud, avgDiffN, avgDiffP].forEach(v => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                ftr.appendChild(td);
+            });
+            tfoot.appendChild(ftr);
+            table.appendChild(tfoot);
+        };
+
+        document.getElementById('timestamp').textContent = `Opprettet: ${new Date().toLocaleString('nb-NO')}. Sist endret: -`;
+        document.getElementById('commentary').innerHTML = commentary;
+        render('sold-table', soldCars);
+        render('returned-table', returnedCars);
+        document.getElementById('report-content').style.display = 'block';
+        document.getElementById('edit-btn').style.display = 'block';
+        document.getElementById('lock-btn').style.display = 'block';
+        document.getElementById('delete-btn').style.display = 'none';
+
+        currentReport = {
+            commentary,
+            soldCars,
+            returnedCars,
+            created: new Date().toLocaleString('nb-NO'),
+            title,
+            lockComment: '',
+            locked: false
+        };
+    } catch (err) {
+        document.getElementById('loading').textContent = 'Feil: ' + err.message;
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+function editReport() {
+    const commentary = document.getElementById('commentary');
+    const textarea = document.createElement('textarea');
+    textarea.value = commentary.innerHTML.trim();
+    commentary.innerHTML = '';
+    commentary.appendChild(textarea);
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('save-edits').style.display = 'block';
+}
+
+function saveEdits() {
+    const textarea = document.querySelector('textarea');
+    document.getElementById('commentary').innerHTML = textarea.value;
     document.getElementById('edit-btn').style.display = 'block';
-    document.getElementById('lock-btn').style.display = 'block';
+    document.getElementById('save-edits').style.display = 'none';
 
-    currentReport = {
-        commentary: commentaryHtml,
-        soldCars: soldCars,       // ← raw array
-        returnedCars: returnedCars, // ← raw array
-        created: nowStr,
-        title,
-        locked: false,
-        lockComment: ''
-    };
+    const nowStr = new Date().toLocaleString('nb-NO');
+    document.getElementById('timestamp').textContent = `Opprettet: ${currentCreatedTime}. Sist endret: ${nowStr}`;
 
-    document.getElementById('weekSelect').value = '';
-    updateGenerateButton();
+    currentReport.commentary = textarea.value;
+    currentReport.edited = nowStr;
+
+    // Save to bin
+    fetchReports().then(saved => {
+        const index = saved.findIndex(r => r.id === currentReport.id);
+        if (index !== -1) {
+            saved[index] = currentReport;
+            saveReports(saved);
+        }
+    });
+}
+
+function showLockCommentModal() {
+    document.getElementById('lock-comment-modal').style.display = 'flex';
+    document.getElementById('lock-comment-text').value = currentReport.lockComment || '';
+}
+
+function closeLockModal() {
+    document.getElementById('lock-comment-modal').style.display = 'none';
 }
 
 async function confirmLockWithComment() {
     const comment = document.getElementById('lock-comment-text').value.trim();
     currentReport.lockComment = comment;
-    document.getElementById('lock-comment-modal').style.display = 'none';
+    closeLockModal();
 
     let saved = await fetchReports();
     currentReport.id = 'uke' + (saved.length + 1);
-    currentReport.edited = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
+    currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO');
     currentReport.locked = true;
     saved.push(currentReport);
 
@@ -290,26 +500,6 @@ async function confirmLockWithComment() {
     await loadSavedReport();
 }
 
-async function saveEdits() {
-    const newHtml = document.querySelector('#commentary textarea').value;
-    document.getElementById('commentary').innerHTML = newHtml;
-    document.getElementById('edit-btn').style.display = 'block';
-    document.getElementById('save-edits').style.display = 'none';
-
-    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
-    document.getElementById('timestamp').textContent = `Opprettet: ${currentCreatedTime}. Sist endret: ${nowStr}`;
-
-    currentReport.commentary = newHtml;
-    currentReport.edited = nowStr;
-
-    let saved = await fetchReports();
-    const index = saved.findIndex(r => r.id === currentReport.id);
-    if (index !== -1) {
-        saved[index] = currentReport;
-        await saveReports(saved);
-    }
-}
-
 function showDeleteConfirm() {
     document.getElementById('delete-modal').style.display = 'flex';
 }
@@ -318,23 +508,24 @@ function closeDeleteModal() {
     document.getElementById('delete-modal').style.display = 'none';
 }
 
-function promptPasswordForDelete() {
+async function promptPasswordForDelete() {
     closeDeleteModal();
-    const pw = prompt('Passord (peasy):');
-    if (pw === 'peasy') {
-        fetchReports().then(saved => {
-            const filtered = saved.filter(r => r.id !== currentReport.id);
-            saveReports(filtered).then(() => {
-                alert('Slettet fra bin.');
-                loadDropdown();
-                document.getElementById('report-content').style.display = 'none';
-                document.getElementById('delete-btn').style.display = 'none';
-            });
-        });
-    } else if (pw !== null) {
+    const password = prompt('Skriv inn passord for å slette (peasy):');
+    if (password === PASSWORD) {
+        let saved = await fetchReports();
+        saved = saved.filter(r => r.id !== currentReport.id);
+        await saveReports(saved);
+        alert('Rapport slettet fra bin.');
+        await loadDropdown();
+        document.getElementById('report-content').style.display = 'none';
+        document.getElementById('delete-btn').style.display = 'none';
+        updateGenerateButton();
+    } else if (password !== null) {
         alert('Feil passord.');
     }
 }
+
+document.getElementById('weekSelect').addEventListener('change', loadSavedReport);
 </script>
 </body>
 </html>
