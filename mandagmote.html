@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Mandagsrapport – Peasy v11</title>
+    <title>Mandagsrapport – Peasy v12 (JSONBin shared)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -52,45 +52,37 @@
 </head>
 <body>
 <div class="container">
-    <h1>Mandagsrapport – Peasy<span class="version">v11</span></h1>
-    <p style="opacity: 0.8; margin-bottom: 32px;">Historiske rapporter. Oppdateres for forrige fullførte uke (man–søn).</p>
+    <h1>Mandagsrapport – Peasy<span class="version">v12 (sky-delt)</span></h1>
+    <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
    
     <div class="controls">
         <select id="weekSelect" onchange="loadSavedReport()">
             <option value="">Velg uke...</option>
         </select>
         <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
-        <button id="edit-btn" onclick="editReport()" style="display: none;">Rediger rapport</button>
-        <button id="save-edits" onclick="saveEdits()" style="display: none;">Lagre endringer</button>
-        <button id="lock-btn" onclick="showLockCommentModal()" style="display: none;">Lås inn rapport</button>
-        <button id="delete-btn" onclick="showDeleteConfirm()" style="display: none; background: #c62828;">Slett rapport</button>
+        <button id="edit-btn" onclick="editReport()" style="display:none;">Rediger rapport</button>
+        <button id="save-edits" onclick="saveEdits()" style="display:none;">Lagre endringer</button>
+        <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
+        <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
     </div>
    
-    <div id="loading" style="display: none;">Laster...</div>
+    <div id="loading" style="display:none;">Laster...</div>
    
-    <div id="report-content">
+    <div id="report-content" style="display:none;">
         <div id="timestamp" class="timestamp"></div>
         <div id="commentary" class="commentary"></div>
-       
-        <div id="sold-section">
-            <div class="section-title">Solgte biler</div>
-            <table id="sold-table"></table>
-        </div>
-       
-        <div id="returned-section">
-            <div class="section-title">Returnerte biler</div>
-            <table id="returned-table"></table>
-        </div>
+        <div id="sold-section"><div class="section-title">Solgte biler</div><table id="sold-table"></table></div>
+        <div id="returned-section"><div class="section-title">Returnerte biler</div><table id="returned-table"></table></div>
     </div>
 
     <!-- Lock comment modal -->
     <div id="lock-comment-modal">
         <div id="lock-comment-box">
-            <h3>Legg til kommentar før låsing (valgfritt)</h3>
+            <h3>Kommentar før låsing (valgfritt)</h3>
             <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..."></textarea>
-            <div style="margin-top: 16px;">
-                <button id="lock-comment-save" onclick="confirmLockWithComment()">Lås inn med kommentar</button>
-                <button onclick="closeLockModal()" style="margin-left: 16px; background: #757575;">Avbryt</button>
+            <div style="margin-top:16px;">
+                <button id="lock-comment-save" onclick="confirmLockWithComment()">Lås inn</button>
+                <button onclick="closeLockModal()" style="margin-left:16px;background:#757575;">Avbryt</button>
             </div>
         </div>
     </div>
@@ -98,43 +90,76 @@
     <!-- Delete confirmation -->
     <div id="delete-modal">
         <div id="delete-confirm-box">
-            <h3>Sikker?</h3>
-            <p>Vil du virkelig slette denne rapporten permanent?</p>
-            <div style="margin-top: 20px;">
-                <button onclick="promptPasswordForDelete()" style="background: #c62828;">Ja, slett</button>
-                <button onclick="closeDeleteModal()" style="margin-left: 16px; background: #757575;">Nei, avbryt</button>
+            <h3>Sikker på sletting?</h3>
+            <p>Rapporten blir borte for alle brukere.</p>
+            <div style="margin-top:20px;">
+                <button onclick="promptPasswordForDelete()" style="background:#c62828;">Ja, slett</button>
+                <button onclick="closeDeleteModal()" style="margin-left:16px;background:#757575;">Nei</button>
             </div>
         </div>
     </div>
 
-    <!-- Password prompt for delete -->
-    <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
-        <h3>Skriv inn passord</h3>
-        <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px 0;">
+    <!-- Password prompt -->
+    <div id="password-prompt" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:32px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:1100;text-align:center;">
+        <h3>Passord kreves</h3>
+        <input type="password" id="password-input" placeholder="Passord" style="padding:12px;font-size:1.1rem;width:220px;margin:16px 0;">
         <br>
         <button onclick="checkDeletePassword()">Bekreft</button>
-        <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575;">Avbryt</button>
+        <button onclick="closePasswordPrompt()" style="margin-left:16px;background:#757575;">Avbryt</button>
     </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'peasy_mandagsrapporter';
-const PASSWORD = 'peasy';
+// ────────────────────────────────────────────────
+// Dine nøkler – allerede satt inn
+// ────────────────────────────────────────────────
+const BIN_ID = '6981aa3dae596e708f0d773b';
+const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
+const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+
 let currentReport = null;
 let currentCreatedTime = '';
-let pendingDelete = false;
+
+// Hent alle rapporter fra bin (ingen key nødvendig for lesing på public bin)
+async function fetchReports() {
+    try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`Kunne ikke lese bin: ${res.status}`);
+        const json = await res.json();
+        return json.record.reports || [];
+    } catch (err) {
+        console.error('Feil ved henting fra bin:', err);
+        alert('Kunne ikke laste rapporter fra skyen. Sjekk internett eller bin-innstillinger.');
+        return [];
+    }
+}
+
+// Lagre alle rapporter til bin
+async function saveReports(reports) {
+    try {
+        const res = await fetch(API_URL, {
+            method: 'PUT',
+            headers: HEADERS,
+            body: JSON.stringify({ reports })
+        });
+        if (!res.ok) throw new Error(`Kunne ikke lagre: ${res.status} - ${await res.text()}`);
+    } catch (err) {
+        console.error('Feil ved lagring til bin:', err);
+        alert('Kunne ikke lagre rapporten til skyen. Prøv igjen.');
+    }
+}
 
 function cleanNum(str) {
     if (!str) return 0;
-    let cleaned = (str + '').replace(/\s/g, '').replace(/\u00A0/g, '').replace(/\u2212/g, '-').replace(/[^0-9.-]/g, '');
-    return parseFloat(cleaned) || 0;
+    return parseFloat((str + '').replace(/\s/g,'').replace(/\u00A0/g,'').replace(/\u2212/g,'-').replace(/[^0-9.-]/g,'')) || 0;
 }
 
 function getISOWeek(date) {
     const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
+    d.setHours(0,0,0,0);
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const yearStart = new Date(d.getFullYear(),0,1);
     const days = Math.floor((d - yearStart) / 86400000);
     return Math.ceil((days + 1) / 7);
 }
@@ -143,94 +168,87 @@ function getMostRecentCompletedWeekStart() {
     const today = new Date();
     const dayOfWeek = today.getDay() || 7;
     let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
-    const endOfPrev = new Date(today);
-    endOfPrev.setDate(today.getDate() - daysBack);
-    endOfPrev.setHours(0,0,0,0);
-    const startOfPrev = new Date(endOfPrev);
-    startOfPrev.setDate(endOfPrev.getDate() - 6);
-    startOfPrev.setHours(0,0,0,0);
-    return startOfPrev;
+    const endPrev = new Date(today);
+    endPrev.setDate(today.getDate() - daysBack);
+    endPrev.setHours(0,0,0,0);
+    const startPrev = new Date(endPrev);
+    startPrev.setDate(endPrev.getDate() - 6);
+    startPrev.setHours(0,0,0,0);
+    return startPrev;
 }
 
 function getMostRecentCompletedWeekNum() {
     return getISOWeek(getMostRecentCompletedWeekStart());
 }
 
-window.onload = () => {
-    loadReportsToSelect();
-    updateGenerateButton();
-};
-
-function loadReportsToSelect() {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+window.onload = async () => {
+    const saved = await fetchReports();
     const select = document.getElementById('weekSelect');
     select.innerHTML = '<option value="">Velg uke...</option>';
-    saved.forEach(report => {
+    saved.forEach(r => {
         const opt = document.createElement('option');
-        opt.value = report.id;
-        opt.textContent = report.title;
+        opt.value = r.id;
+        opt.textContent = r.title;
         select.appendChild(opt);
     });
     if (saved.length > 0) {
         select.value = saved[saved.length - 1].id;
-        loadSavedReport();
+        await loadSavedReport();
     }
-}
+    updateGenerateButton();
+};
 
-function updateGenerateButton() {
-    const btn = document.getElementById('generate-btn');
-    const prevWeekNum = getMostRecentCompletedWeekNum();
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const alreadyLocked = saved.some(r => r.title.includes(`uke ${prevWeekNum}`) && r.locked === true);
-    const selectedId = document.getElementById('weekSelect').value;
-    const selectedLocked = saved.some(r => r.id === selectedId && r.locked === true);
-
-    if (alreadyLocked) {
-        btn.disabled = true;
-        btn.textContent = `Uke ${prevWeekNum} allerede låst`;
-    } else if (selectedLocked) {
-        btn.disabled = true;
-        btn.textContent = 'Valgt uke er låst';
-    } else {
-        btn.disabled = false;
-        btn.textContent = 'Generer rapport for forrige fullførte uke';
-    }
-}
-
-function loadSavedReport() {
-    const selectedId = document.getElementById('weekSelect').value;
-    if (!selectedId) {
+async function loadSavedReport() {
+    const id = document.getElementById('weekSelect').value;
+    if (!id) {
         document.getElementById('report-content').style.display = 'none';
-        document.getElementById('edit-btn').style.display = 'none';
-        document.getElementById('lock-btn').style.display = 'none';
-        document.getElementById('save-edits').style.display = 'none';
-        document.getElementById('delete-btn').style.display = 'none';
+        ['edit-btn','lock-btn','save-edits','delete-btn'].forEach(id => document.getElementById(id).style.display = 'none');
         updateGenerateButton();
         return;
     }
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const report = saved.find(r => r.id === selectedId);
+    const saved = await fetchReports();
+    const report = saved.find(r => r.id === id);
     if (!report) return;
 
     currentReport = report;
     currentCreatedTime = report.created;
 
     document.getElementById('report-content').style.display = 'block';
-    const isLocked = report.locked === true;
-    document.getElementById('edit-btn').style.display = isLocked ? 'none' : 'block';
-    document.getElementById('lock-btn').style.display = isLocked ? 'none' : 'block';
+    const locked = report.locked === true;
+    document.getElementById('edit-btn').style.display = locked ? 'none' : 'block';
+    document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
     document.getElementById('save-edits').style.display = 'none';
-    document.getElementById('delete-btn').style.display = isLocked ? 'inline-block' : 'none';
+    document.getElementById('delete-btn').style.display = locked ? 'inline-block' : 'none';
 
-    const editedText = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
-    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${editedText}`;
-    document.getElementById('commentary').innerHTML = report.commentary || '<p>Ingen kommentar</p>';
+    const edited = report.edited ? `Sist endret: ${report.edited}` : 'Sist endret: -';
+    document.getElementById('timestamp').textContent = `Opprettet: ${report.created}. ${edited}`;
+    document.getElementById('commentary').innerHTML = report.commentary || '<p>Ingen ekstra kommentar.</p>';
     document.getElementById('sold-table').innerHTML = report.soldTable || '';
     document.getElementById('returned-table').innerHTML = report.returnedTable || '';
     document.getElementById('sold-section').style.display = report.soldTable ? 'block' : 'none';
     document.getElementById('returned-section').style.display = report.returnedTable ? 'block' : 'none';
 
     updateGenerateButton();
+}
+
+function updateGenerateButton() {
+    const btn = document.getElementById('generate-btn');
+    const prevWeekNum = getMostRecentCompletedWeekNum();
+    fetchReports().then(saved => {
+        const alreadyLocked = saved.some(r => r.title.includes(`uke ${prevWeekNum}`) && r.locked);
+        const selectedLocked = saved.some(r => r.id === document.getElementById('weekSelect').value && r.locked);
+
+        if (alreadyLocked) {
+            btn.disabled = true;
+            btn.textContent = `Uke ${prevWeekNum} allerede låst`;
+        } else if (selectedLocked) {
+            btn.disabled = true;
+            btn.textContent = 'Valgt rapport er låst';
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Generer rapport for forrige fullførte uke';
+        }
+    });
 }
 
 async function generateNewReport() {
@@ -269,7 +287,7 @@ async function generateNewReport() {
         const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
         const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
 
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const saved = await fetchReports();
         if (saved.some(r => r.title === title && r.locked)) {
             alert('Rapport for denne uken finnes allerede og er låst!');
             return;
@@ -325,11 +343,7 @@ async function generateNewReport() {
                 sumN += nok;
                 sumP += cleanNum(c['Diff %']);
             });
-            return {
-                n, under:u, over:o, on:z,
-                avgNok: Math.round(sumN / n).toLocaleString('nb-NO'),
-                avgPct: (sumP / n).toFixed(1)
-            };
+            return { n, under:u, over:o, on:z, avgNok: Math.round(sumN/n).toLocaleString('nb-NO'), avgPct: (sumP/n).toFixed(1) };
         };
 
         const soldF = facts(soldCars);
@@ -389,10 +403,10 @@ async function generateNewReport() {
             ftr.appendChild(ftd);
 
             const avgs = [
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']), 0) / cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud), 0) / cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']), 0) / cars.length).toLocaleString('nb-NO') : '0',
-                cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']), 0) / cars.length).toFixed(1) + '%' : '0.0%'
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['AR laveste estimat']),0)/cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c.Bud),0)/cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? Math.round(cars.reduce((s,c) => s + cleanNum(c['Diff NOK']),0)/cars.length).toLocaleString('nb-NO') : '0',
+                cars.length ? (cars.reduce((s,c) => s + cleanNum(c['Diff %']),0)/cars.length).toFixed(1)+' %' : '0.0 %'
             ];
             avgs.forEach(v => {
                 const td = document.createElement('td');
@@ -456,44 +470,51 @@ function saveEdits() {
     currentReport.commentary = newHtml;
     currentReport.edited = nowStr;
 
-    // Save edit to storage
-    let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const index = saved.findIndex(r => r.id === currentReport.id);
-    if (index !== -1) {
-        saved[index] = currentReport;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    }
+    // Save edit back to bin
+    fetchReports().then(saved => {
+        const index = saved.findIndex(r => r.id === currentReport.id);
+        if (index !== -1) {
+            saved[index] = currentReport;
+            saveReports(saved);
+        }
+    });
 }
 
 function showLockCommentModal() {
     document.getElementById('lock-comment-modal').style.display = 'flex';
     document.getElementById('lock-comment-text').value = currentReport.lockComment || '';
-    document.getElementById('lock-comment-text').focus();
 }
 
 function closeLockModal() {
     document.getElementById('lock-comment-modal').style.display = 'none';
 }
 
-function confirmLockWithComment() {
+async function confirmLockWithComment() {
     const comment = document.getElementById('lock-comment-text').value.trim();
     currentReport.lockComment = comment;
     closeLockModal();
-    lockReport();
-}
 
-function lockReport() {
-    if (!currentReport) return alert('Generer rapport først');
-
-    let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let saved = await fetchReports();
     currentReport.id = 'uke' + (saved.length + 1);
-    currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+    currentReport.edited = currentReport.edited || new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
     currentReport.locked = true;
     saved.push(currentReport);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
-    alert('Rapport låst inn som ' + currentReport.id + (currentReport.lockComment ? ' med kommentar' : ''));
-    loadReportsToSelect();
+    await saveReports(saved);
+
+    alert('Rapport låst og lagret i skyen som ' + currentReport.id + (comment ? ' med kommentar' : ''));
+
+    // Reload dropdown
+    const select = document.getElementById('weekSelect');
+    select.innerHTML = '<option value="">Velg uke...</option>';
+    saved.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.title;
+        select.appendChild(opt);
+    });
+    select.value = currentReport.id;
+    await loadSavedReport();
 }
 
 function showDeleteConfirm() {
@@ -508,14 +529,16 @@ function promptPasswordForDelete() {
     closeDeleteModal();
     const password = prompt('Skriv inn passord for å slette (peasy):');
     if (password === PASSWORD) {
-        let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        saved = saved.filter(r => r.id !== currentReport.id);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-        alert('Rapport slettet.');
-        loadReportsToSelect();
-        document.getElementById('report-content').style.display = 'none';
-        document.getElementById('delete-btn').style.display = 'none';
-        updateGenerateButton(); // Re-enable generate if needed
+        fetchReports().then(saved => {
+            const filtered = saved.filter(r => r.id !== currentReport.id);
+            saveReports(filtered).then(() => {
+                alert('Rapport slettet fra skyen.');
+                loadReportsToSelect();
+                document.getElementById('report-content').style.display = 'none';
+                document.getElementById('delete-btn').style.display = 'none';
+                updateGenerateButton();
+            });
+        });
     } else if (password !== null) {
         alert('Feil passord.');
     }
