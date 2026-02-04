@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Tool</title>
+    <title>Peasy Verdsettelsesverktøy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -17,19 +17,8 @@
         }
         .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
         .header { margin-bottom: 48px; }
-        h1 {
-            font-weight: 900;
-            font-size: 2.8rem;
-            letter-spacing: -0.8px;
-            margin: 0 0 8px 0;
-            color: #004225;
-        }
-        h2 {
-            font-weight: 700;
-            font-size: 1.75rem;
-            margin: 48px 0 20px;
-            color: #004225;
-        }
+        h1 { font-weight: 900; font-size: 2.8rem; letter-spacing: -0.8px; margin: 0 0 8px 0; color: #004225; }
+        h2 { font-weight: 700; font-size: 1.75rem; margin: 48px 0 20px; color: #004225; }
         .card {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(16px);
@@ -74,20 +63,20 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Valuation Tool</h1>
+            <h1>Verdsettelsesverktøy</h1>
         </div>
-        <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
-        <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
+        <button onclick="loadAndShowPending()">Last inn / Oppdater ventende leads</button>
+        <input type="text" id="searchReg" placeholder="Søk RegNr..." oninput="filterPendingTable()">
         <div id="pending" class="card">
-            <h2>Pending Leads</h2>
-            <p id="pendingCount">Click button to load...</p>
+            <h2>Ventende leads</h2>
+            <p id="pendingCount">Klikk knappen for å laste...</p>
             <table id="pendingTable">
                 <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
         <hr>
-        <h2>Valuation Calculator</h2>
+        <h2>Verdikalkulator</h2>
         <div class="guidelines">
             <div class="guidelines-header" onclick="toggleGuidelines()">
                 <strong>Retningslinjer</strong>
@@ -96,6 +85,10 @@
             <div class="guidelines-content">
                 Identifiser nøyaktig årstall, merke, modell, batteri-/motorstørrelse osv.<br>
                 Sammenlign med lignende biler på Finn.no sortert pris lav-høy. Hvis hvit, sammenlign med hvite; hvis svart, med svarte, ellers hvilken som helst farge. Ved flere lignende biler, bruk gjennomsnittet av de 3-5 lavest prisede sammenlignbare. KM kan variere +/- 5%.<br><br>
+                <strong>Mileage-intervall i Finn-søk:</strong><br>
+                • < 50 000 km → bruk ±10 000 km intervall<br>
+                • 50 000 – 100 000 km → bruk ±20 000 km intervall<br>
+                • > 100 000 km → bruk ±30 000 km intervall<br><br>
                 <strong>Snarveier:</strong><br>
                 • <a href="https://www.finn.no/car/used/search.html" target="_blank">Finn.no bil-søk</a>
             </div>
@@ -105,11 +98,12 @@
             <label>Merke:</label><input type="text" id="make" required>
             <label>Modell:</label><input type="text" id="model" required>
             <label>År:</label><input type="number" id="year" required>
-            <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required placeholder="Paste from Finn search">
+            <label>KM stand:</label><input type="text" id="kmstand" placeholder="Fra kolonne W" disabled>
+            <label>Finn pris ex omreg:</label><input type="number" id="finn_avg" required placeholder="Lim inn fra Finn-søk">
             <label>Margin %:</label><input type="number" id="margin" value="12">
             <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
-            <label>Motivation %:</label><input type="number" id="motivation" value="3">
-            <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
+            <label>Motivasjon %:</label><input type="number" id="motivation" value="3">
+            <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
 
             <div id="finnSearchLink">
                 <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
@@ -121,6 +115,7 @@
     <script>
     let data = [];
     let headers = [];
+    let selectedKm = 0;
 
     async function loadReport() {
         const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -137,7 +132,7 @@
             return true;
         } catch (err) {
             console.error(err);
-            alert('Load failed');
+            alert('Innlasting feilet');
             return false;
         }
     }
@@ -173,7 +168,7 @@
 
         pending.sort((a, b) => new Date(b[sdCol].split('.').reverse().join('-')) - new Date(a[sdCol].split('.').reverse().join('-')));
 
-        document.getElementById('pendingCount').textContent = `Found ${pending.length} pending leads`;
+        document.getElementById('pendingCount').textContent = `Fant ${pending.length} ventende leads`;
 
         const tbody = document.querySelector('#pendingTable tbody');
         tbody.innerHTML = '';
@@ -196,8 +191,7 @@
     function updateFinnLink() {
         const make  = document.getElementById('make').value.trim();
         const model = document.getElementById('model').value.trim();
-        const yearStr = document.getElementById('year').value.trim();
-        const year  = parseInt(yearStr) || 0;
+        const year  = parseInt(document.getElementById('year').value) || 0;
 
         const linkContainer = document.getElementById('finnSearchLink');
         const linkEl = document.getElementById('finnLink');
@@ -207,18 +201,17 @@
             return;
         }
 
-        // Sniff mileage from column W (index 22, 0-based: A=0 ... W=22)
-        let km = 0;
-        const kmColIndex = 22; // Column W
-        if (data.length > 0 && headers.length > kmColIndex) {
-            // We don't have the current row here, but we can skip for now or use a global if needed
-            // For simplicity: mileage only added if we had it from fillFormFromRow (future improvement)
-            // Placeholder: assume no mileage for dynamic updates until we store it
-        }
-
-        // If you later want to store km when filling row, add a hidden input or global var
-        // For now: no mileage in dynamic update (only year/make/model trigger)
         let mileageParams = '';
+        if (selectedKm > 0) {
+            let delta = 10000;
+            if (selectedKm >= 50000 && selectedKm <= 100000) delta = 20000;
+            if (selectedKm > 100000) delta = 30000;
+
+            const fromKm = Math.max(0, selectedKm - delta);
+            const toKm   = selectedKm + delta;
+
+            mileageParams = `&mileage_from=${fromKm}&mileage_to=${toKm}`;
+        }
 
         const encodedMake  = encodeURIComponent(make);
         const encodedModel = encodeURIComponent(model);
@@ -241,65 +234,23 @@
         const model = (row[modelCol] || '').trim();
         const year  = parseInt(row[yearCol]) || '';
 
+        const kmRaw = row[22] || '';
+        const kmClean = String(kmRaw).trim().replace(/\s+/g, '');
+        selectedKm = parseInt(kmClean, 10);
+        if (isNaN(selectedKm) || selectedKm < 0) selectedKm = 0;
+
         document.getElementById('regnr').value = row[regCol] || '';
         document.getElementById('make').value  = make;
         document.getElementById('model').value = model;
         document.getElementById('year').value  = year;
+        document.getElementById('kmstand').value = selectedKm > 0 ? selectedKm.toLocaleString('nb-NO') : '';
 
-        // Trigger Finn link update
         updateFinnLink();
-    }
-
-    function getHistoricalComps(specs) {
-        const budCol = findColumn(['Bud']);
-        const lowCol = findColumn(['Endelig AR verdi', 'Laveste']);
-        const makeCol = findColumn(['Merke']);
-        const modelCol = findColumn(['Modell']);
-        const yearCol = findColumn(['År']);
-        const soldCol = findColumn(['Solgt på']);
-        const regCol = findColumn(['RegNr']);
-
-        const now = new Date(2026, 1, 4);
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
-
-        const comps = data.filter(row => {
-            const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
-            const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
-            const y = parseInt(row[yearCol]) || 0;
-            const bud = parseFloat(row[budCol]) || 0;
-            const soldStr = row[soldCol] || '';
-            let soldDate;
-            try { soldDate = new Date(soldStr.split(' ')[0].split('.').reverse().join('-')); } catch { soldDate = new Date(0); }
-            return m === specs.make.toLowerCase() &&
-                   mo === specs.model.toLowerCase() &&
-                   y >= specs.year - 1 && y <= specs.year + 1 &&
-                   bud > 0 &&
-                   soldDate >= thirtyDaysAgo;
-        }).map(row => {
-            const bud = parseFloat(row[budCol]) || 0;
-            const low = parseFloat(row[lowCol]) || bud;
-            const variance = low > 0 ? ((bud - low) / low * 100) : 0;
-            return {
-                regnr: row[regCol] || '-',
-                make: row[makeCol] || '',
-                model: row[modelCol] || '',
-                year: row[yearCol] || '',
-                bud,
-                low,
-                variance,
-                sold: row[soldCol] || '-'
-            };
-        });
-
-        if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
-        const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
-        return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
         const finn = parseFloat(document.getElementById('finn_avg').value) || 0;
-        if (!finn) return alert('Enter Finn avg');
+        if (!finn) return alert('Lim inn Finn pris ex omreg');
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
@@ -320,27 +271,27 @@
         const hist = getHistoricalComps(specs);
         const likely_bid = low * (1 + hist.var_pct / 100);
 
-        const copyText = `Valuation for ${document.getElementById('regnr').value || 'unknown'}\n` +
+        const copyText = `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}\n` +
                          `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n\n` +
-                         `Base (Finn avg): ${finn.toLocaleString('nb-NO')} NOK\n` +
-                         `After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK\n` +
-                         `After motivation ${document.getElementById('motivation').value}%: ${Math.round(midpoint).toLocaleString('nb-NO')} NOK (midpoint)\n` +
-                         `From (mid -5%): ${Math.round(low).toLocaleString('nb-NO')} NOK\n` +
-                         `To (mid +5%): ${Math.round(high).toLocaleString('nb-NO')} NOK\n` +
-                         `Likely accept (hist variance ${hist.var_pct.toFixed(1)}% below low): ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK\n` +
-                         `Historical variance: ${hist.var_pct.toFixed(1)}% (based on last 30 days sold cars – ${hist.count} comps)`;
+                         `Base (Finn pris ex omreg): ${finn.toLocaleString('nb-NO')} kr\n` +
+                         `Etter margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr\n` +
+                         `Etter motivasjon ${document.getElementById('motivation').value}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)\n` +
+                         `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr\n` +
+                         `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr\n` +
+                         `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}% under lav): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr\n` +
+                         `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på solgte biler siste 30 dager – ${hist.count} sammenlignbare)`;
 
         document.getElementById('output').innerHTML = `
-            <h3>Calculation Steps (100% Finn base – no blending)</h3>
-            <div class="step">1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong></div>
-            <div class="step">2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong></div>
-            <div class="step">3. After motivation ${document.getElementById('motivation').value}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> ← this is the midpoint</div>
-            <div class="step">4. ±5% spread around midpoint:<br><strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br><strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong></div>
-            <div class="step likely">Likely accept (historical reference): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} NOK</strong></div>
-            <div class="step"><strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>(based on last 30 days sold cars – ${hist.count} comps)</div>
-            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
-            <h4>Historical Comps (for reflection only – ${hist.count})</h4>
-            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th class="red">Variance %</th><th>Sold</th></tr></thead><tbody>${
+            <h3>Beregningstrinn (100% Finn-base – ingen blanding med historikk)</h3>
+            <div class="step">1. Base (Finn pris ex omreg): <strong>${finn.toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step">2. Etter margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step">3. Etter motivasjon ${document.getElementById('motivation').value}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← dette er midtpunktet</div>
+            <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step likely">Sannsynlig akseptert (historisk referanse): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på solgte biler siste 30 dager – ${hist.count} sammenlignbare)</div>
+            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Kopier full beregning til ERP</button>
+            <h4>Historiske sammenlignbare (kun til ettertanke – ${hist.count})</h4>
+            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Merke/Modell/År</th><th>Bud</th><th>Lavt estimat</th><th class="red">Varians %</th><th>Solgt</th></tr></thead><tbody>${
                 hist.comps.map(c => `
                     <tr>
                         <td>${c.regnr}</td>
@@ -356,7 +307,7 @@
     }
 
     function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => alert('Copied – paste into ERP')).catch(err => alert('Copy failed'));
+        navigator.clipboard.writeText(text).then(() => alert('Kopiert – lim inn i ERP')).catch(err => alert('Kopiering feilet'));
     }
 
     function filterPendingTable() {
@@ -378,7 +329,6 @@
         }
     }
 
-    // Auto-update Finn link on changes to make/model/year
     document.getElementById('make').addEventListener('input', updateFinnLink);
     document.getElementById('model').addEventListener('input', updateFinnLink);
     document.getElementById('year').addEventListener('input', updateFinnLink);
