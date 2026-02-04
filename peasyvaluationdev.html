@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Dev v11 – Pedagogic Calc + Full Copy</title>
+    <title>Peasy Valuation Dev v12 – Exact Agreed Logic</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
@@ -14,15 +14,16 @@
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background: #f0f0f0; }
         .red { color: #c00; font-weight: bold; }
-        .step { margin: 12px 0; padding: 10px; background: #f8f8f8; border-left: 4px solid #006600; }
-        #copyBtn { background: #006600; color: white; font-weight: bold; cursor: pointer; }
+        .step { margin: 12px 0; padding: 12px; background: #f8f8f8; border-left: 5px solid #006600; border-radius: 4px; }
+        .likely { font-weight: bold; color: #006600; margin: 15px 0; font-size: 1.1em; }
+        #copyBtn { background: #006600; color: white; font-weight: bold; cursor: pointer; padding: 12px; font-size: 18px; }
         #copyBtn:hover { background: #004d00; }
         #searchReg { width: 300px; }
     </style>
 </head>
 <body>
-    <h1>Peasy Valuation Dev v11</h1>
-    <p>Calculation is pedagogic (step-by-step), historical variance in red, full copy-paste string for ERP. Spread ±5% from final midpoint. Refresh page to update pending leads.</p>
+    <h1>Peasy Valuation Dev v12</h1>
+    <p>Now exactly as agreed: 100% Finn base → -12% margin → +motivation → ±5% spread (10% total).<br>Historical variance in red (last 30 days), only for reflection. Full copy-paste string.</p>
 
     <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
     <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
@@ -194,64 +195,73 @@
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
-        const spread = 0.05; // ±5% = 10% total spread
+        const spread = 0.05; // ±5%
 
         // Step 1: Midpoint after margin + tillegg
         let midpoint = finn * (1 - margin - tillegg);
 
-        // Step 2: Add motivation to midpoint
+        // Step 2: Add motivation
         midpoint += midpoint * motivation;
 
         // Step 3: Apply spread
         const low = midpoint * (1 - spread);
         const high = midpoint * (1 + spread);
 
-        // Historical
+        // Historical (for display only)
         const specs = {
             make: document.getElementById('make').value,
             model: document.getElementById('model').value,
             year: parseInt(document.getElementById('year').value) || 0
         };
         const hist = getHistoricalComps(specs);
-        const likely_bid = midpoint * (1 + hist.var_pct / 100);
+        const likely_bid = low * (1 + hist.var_pct / 100);
 
         const copyText = `Valuation for ${document.getElementById('regnr').value || 'unknown'}\n` +
-                         `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n` +
+                         `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n\n` +
                          `Base (Finn avg): ${finn.toLocaleString('nb-NO')} NOK\n` +
-                         `After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(midpoint / (1 + motivation)).toLocaleString('nb-NO')} NOK\n` +
+                         `After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK\n` +
                          `After motivation ${document.getElementById('motivation').value}%: ${Math.round(midpoint).toLocaleString('nb-NO')} NOK (midpoint)\n` +
                          `From (mid -5%): ${Math.round(low).toLocaleString('nb-NO')} NOK\n` +
                          `To (mid +5%): ${Math.round(high).toLocaleString('nb-NO')} NOK\n` +
-                         `Likely bid (hist variance ${hist.var_pct.toFixed(1)}% below low): ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK`;
+                         `Likely accept (hist variance ${hist.var_pct.toFixed(1)}% below low): ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK\n` +
+                         `Historical variance: ${hist.var_pct.toFixed(1)}% (based on last 30 days sold cars – ${hist.count} comps)`;
 
         document.getElementById('output').innerHTML = `
-            <h3>Calculation Steps</h3>
+            <h3>Calculation Steps (100% Finn base – no blending)</h3>
+
             <div class="step">
                 1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong>
             </div>
+
             <div class="step">
                 2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: 
                 <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong>
             </div>
+
             <div class="step">
                 3. After motivation ${document.getElementById('motivation').value}%: 
-                <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> (midpoint)
+                <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> ← this is the midpoint
             </div>
+
             <div class="step">
-                4. Spread ±5% around midpoint:<br>
+                4. ±5% spread around midpoint:<br>
                 <strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br>
                 <strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong>
             </div>
-            <div class="step">
-                <strong class="likely">Likely bid (historical reference):</strong> ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK
+
+            <div class="step likely">
+                Likely accept (historical reference): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} NOK</strong>
             </div>
+
             <div class="step">
                 <strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>
-                (based on last 30 days sold cars – ${hist.count} comps)<br>
-                <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
+                (based on last 30 days sold cars – ${hist.count} comps)
             </div>
-            <h4>Historical Comps Used (${hist.count})</h4>
-            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th>Variance %</th><th>Sold</th></tr></thead><tbody>${
+
+            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
+
+            <h4>Historical Comps (for reflection only – ${hist.count})</h4>
+            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th class="red">Variance %</th><th>Sold</th></tr></thead><tbody>${
                 hist.comps.map(c => `
                     <tr>
                         <td>${c.regnr}</td>
@@ -267,7 +277,7 @@
     }
 
     function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => alert('Full calculation copied – paste into ERP')).catch(err => alert('Copy failed'));
+        navigator.clipboard.writeText(text).then(() => alert('Full calculation copied – paste into ERP notes or valuation field')).catch(err => alert('Copy failed'));
     }
 
     function filterPendingTable() {
