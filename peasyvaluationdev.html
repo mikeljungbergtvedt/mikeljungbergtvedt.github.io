@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Dev v5 – "-" as Empty Fixed</title>
+    <title>Peasy Valuation Dev v6 – Status Filter Added</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
@@ -19,8 +19,8 @@
     </style>
 </head>
 <body>
-    <h1>Peasy Valuation Dev v5</h1>
-    <p>Fixed: treats "-" in Endelig AR verdi (col D) as empty → pending leads now detected correctly.<br>
+    <h1>Peasy Valuation Dev v6</h1>
+    <p>Now only shows rows where Status contains "Endelig estimat" OR "SD mottatt" + SD mottatt på filled + Endelig AR verdi empty or "-".<br>
     Refresh page to update. Click row to auto-fill calculator. Manual Finn avg for now.</p>
 
     <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
@@ -36,6 +36,7 @@
                     <th>Modell</th>
                     <th>År</th>
                     <th>SD mottatt på</th>
+                    <th>Status</th>
                     <th>Postnr/Sted</th>
                 </tr>
             </thead>
@@ -99,40 +100,46 @@
             if (!loaded) return;
         }
 
-        const sdCol = findColumn(['SD mottatt på']);
-        const arCol = findColumn(['Endelig AR verdi']);
-        const regCol = findColumn(['RegNr', 'Registreringsnummer']);
+        const sdCol    = findColumn(['SD mottatt på']);
+        const arCol    = findColumn(['Endelig AR verdi']);
+        const statusCol = findColumn(['Status']);
+        const regCol   = findColumn(['RegNr', 'Registreringsnummer']);
         const merkeCol = findColumn(['Merke']);
         const modellCol = findColumn(['Modell']);
         const arYearCol = findColumn(['År']);
-        const postCol = findColumn(['Postnr']);
-        const stedCol = findColumn(['Sted']);
+        const postCol  = findColumn(['Postnr']);
+        const stedCol  = findColumn(['Sted']);
 
-        if (sdCol === -1 || arCol === -1) {
-            alert('Could not find key columns. Check console for headers.');
+        if (sdCol === -1 || arCol === -1 || statusCol === -1) {
+            alert('Could not find key columns (SD mottatt på, Endelig AR verdi, Status). Check console.');
             return;
         }
 
         let pending = data.filter(row => {
-            const sdVal = row[sdCol] != null ? String(row[sdCol]).trim() : '';
-            let arVal   = row[arCol] != null ? String(row[arCol]).trim() : '';
+            const sdVal   = row[sdCol] != null ? String(row[sdCol]).trim() : '';
+            let arVal     = row[arCol] != null ? String(row[arCol]).trim() : '';
+            const statusVal = row[statusCol] != null ? String(row[statusCol]).trim().toLowerCase() : '';
 
-            // FIX: treat "-" (and variants) as empty
+            // Treat "-" as empty for Endelig AR verdi
             if (['-', '–', '—', ''].includes(arVal)) {
                 arVal = '';
             }
 
-            const isPending = sdVal !== '' && arVal === '';
+            // New rule: only if Status contains "endelig estimat" or "sd mottatt"
+            const isRelevantStatus = statusVal.includes('endelig estimat') || 
+                                    statusVal.includes('sd mottatt');
 
-            // Debug log for rows containing 14056 or first few
-            if (String(row).includes('14056') || row.some(cell => String(cell).includes('14056'))) {
-                console.log(`Row with 14056: SD="${sdVal}", AR raw="${row[arCol]}", AR norm="${arVal}", isPending=${isPending}`);
+            const isPending = sdVal !== '' && arVal === '' && isRelevantStatus;
+
+            // Debug for 14056
+            if (String(row).toUpperCase().includes('14056')) {
+                console.log(`14056 row: Status="${statusVal}", SD="${sdVal}", AR raw="${row[arCol]}", AR norm="${arVal}", isRelevantStatus=${isRelevantStatus}, isPending=${isPending}`);
             }
 
             return isPending;
         });
 
-        // Sort newest first (dd.mm.yyyy)
+        // Sort newest first
         pending.sort((a, b) => {
             const parseDate = str => {
                 if (!str) return new Date(0);
@@ -147,7 +154,7 @@
         });
 
         document.getElementById('pendingCount').textContent = 
-            `Found ${pending.length} pending leads (SD mottatt på filled, Endelig AR verdi empty or "-").`;
+            `Found ${pending.length} pending leads (Status "Endelig estimat" or "SD mottatt" + SD filled + AR empty or "-").`;
 
         const tbody = document.querySelector('#pendingTable tbody');
         tbody.innerHTML = '';
@@ -160,13 +167,14 @@
                 <td>${row[modellCol] || '-'}</td>
                 <td>${row[arYearCol] || '-'}</td>
                 <td>${row[sdCol] || '-'}</td>
+                <td>${row[statusCol] || '-'}</td>
                 <td>${row[postCol] || ''} ${row[stedCol] || ''}</td>
             `;
             tbody.appendChild(tr);
         });
 
         if (pending.length === 0) {
-            alert('No pending leads found.\n\nPossible reasons:\n- No rows with SD mottatt på filled + Endelig AR verdi empty or "-"\n- Check downloaded XLSX for "14056" and verify columns O & D\n- See console (F12) for debug logs');
+            alert('No pending leads found with the new status rule.\n\nCheck console for debug on 14056 row.\nVerify in XLSX: Status must contain "Endelig estimat" or "SD mottatt", SD mottatt på filled, Endelig AR verdi empty or "-".');
         }
     }
 
@@ -194,12 +202,12 @@
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
         const low = finn * (1 - margin - tillegg);
-        const high = low * (1 + motivation + 0.04);  // Example +4% buffer
+        const high = low * (1 + motivation + 0.04);  // +4% example buffer
         document.getElementById('output').innerHTML = `
             <h3>Suggested Range</h3>
             <p>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</p>
             <p>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</p>
-            <p>(Basic calc – expand with historical comps later)</p>
+            <p>(Basic – expand with historical later)</p>
         `;
     }
     </script>
