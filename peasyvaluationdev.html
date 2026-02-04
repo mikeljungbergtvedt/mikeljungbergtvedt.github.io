@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
         body { 
             font-family: 'Inter', sans-serif; 
             margin: 0; 
@@ -16,7 +15,7 @@
             color: #004225; 
             min-height: 100vh; 
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
         .header { margin-bottom: 48px; }
         h1 { 
             font-weight: 900; 
@@ -103,8 +102,6 @@
     </div>
 
     <script>
-    // [The exact same JavaScript you confirmed works – loadReport, findColumn, loadAndShowPending, fillFormFromRow, getHistoricalComps, calculateValuation, copyToClipboard, filterPendingTable]
-    // No logic changes – only design cleanup
     let data = [];
     let headers = [];
 
@@ -188,6 +185,55 @@
         document.getElementById('make').value = row[findColumn(['Merke'])] || '';
         document.getElementById('model').value = row[findColumn(['Modell'])] || '';
         document.getElementById('year').value = row[findColumn(['År'])] || '';
+    }
+
+    function getHistoricalComps(specs) {
+        const budCol = findColumn(['Bud']);
+        const lowCol = findColumn(['Endelig AR verdi', 'Laveste']);
+        const makeCol = findColumn(['Merke']);
+        const modelCol = findColumn(['Modell']);
+        const yearCol = findColumn(['År']);
+        const soldCol = findColumn(['Solgt på']);
+        const regCol = findColumn(['RegNr']);
+
+        const now = new Date(2026, 1, 4);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        const comps = data.filter(row => {
+            const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
+            const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
+            const y = parseInt(row[yearCol]) || 0;
+            const bud = parseFloat(row[budCol]) || 0;
+            const soldStr = row[soldCol] || '';
+            let soldDate;
+            try { soldDate = new Date(soldStr.split(' ')[0].split('.').reverse().join('-')); } catch { soldDate = new Date(0); }
+            return m === specs.make.toLowerCase() &&
+                   mo === specs.model.toLowerCase() &&
+                   y >= specs.year - 1 && y <= specs.year + 1 &&
+                   bud > 0 &&
+                   soldDate >= thirtyDaysAgo;
+        }).map(row => {
+            const bud = parseFloat(row[budCol]) || 0;
+            const low = parseFloat(row[lowCol]) || bud;
+            const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+            return {
+                regnr: row[regCol] || '-',
+                make: row[makeCol] || '',
+                model: row[modelCol] || '',
+                year: row[yearCol] || '',
+                bud,
+                low,
+                variance,
+                sold: row[soldCol] || '-'
+            };
+        });
+
+        if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+
+        const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
+
+        return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
