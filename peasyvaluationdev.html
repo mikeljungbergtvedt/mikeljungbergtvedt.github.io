@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Dev v8 – Comps List + Editable + Copy to ERP</title>
+    <title>Peasy Valuation Dev v11 – Pedagogic Calc + Full Copy</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.5; }
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
         form, #pending, #output { max-width: 1000px; }
         label { display: block; margin: 12px 0 6px; font-weight: bold; }
-        input, button, select { padding: 10px; font-size: 16px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        input, button { padding: 10px; font-size: 16px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
         table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background: #f0f0f0; }
-        tr:hover { background: #f9f9f9; }
-        #output { margin-top: 30px; padding: 20px; border: 1px solid #aaa; background: #fff; border-radius: 6px; }
-        #compsTable { max-height: 300px; overflow-y: auto; }
+        .red { color: #c00; font-weight: bold; }
+        .step { margin: 12px 0; padding: 10px; background: #f8f8f8; border-left: 4px solid #006600; }
         #copyBtn { background: #006600; color: white; font-weight: bold; cursor: pointer; }
         #copyBtn:hover { background: #004d00; }
         #searchReg { width: 300px; }
     </style>
 </head>
 <body>
-    <h1>Peasy Valuation Dev v8</h1>
-    <p>Shows pending leads → click row to auto-fill + show historical comps list (verify at glance) → edit buffer/margin → calculate → copy to ERP.</p>
+    <h1>Peasy Valuation Dev v11</h1>
+    <p>Calculation is pedagogic (step-by-step), historical variance in red, full copy-paste string for ERP. Spread ±5% from final midpoint. Refresh page to update pending leads.</p>
 
     <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
     <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
@@ -31,17 +30,7 @@
         <h2>Pending Leads</h2>
         <p id="pendingCount">Click button to load...</p>
         <table id="pendingTable">
-            <thead>
-                <tr>
-                    <th>RegNr</th>
-                    <th>Merke</th>
-                    <th>Modell</th>
-                    <th>År</th>
-                    <th>SD mottatt på</th>
-                    <th>Status</th>
-                    <th>Postnr/Sted</th>
-                </tr>
-            </thead>
+            <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -54,13 +43,11 @@
         <label>Merke:</label><input type="text" id="make" required>
         <label>Modell:</label><input type="text" id="model" required>
         <label>År:</label><input type="number" id="year" required>
-        <label>Kilometerstand (if available):</label><input type="number" id="mileage" value="0">
         <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required placeholder="Paste from Finn search">
-        <label>Historical Buffer % (auto-suggested, editable):</label><input type="number" id="buffer" step="0.1" value="4.0">
         <label>Margin %:</label><input type="number" id="margin" value="12">
         <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
         <label>Motivation %:</label><input type="number" id="motivation" value="3">
-        <button type="button" onclick="calculateValuation()">Calculate & Show Comps</button>
+        <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
     </form>
 
     <div id="output"></div>
@@ -84,7 +71,7 @@
             return true;
         } catch (err) {
             console.error(err);
-            alert('Load failed: ' + err.message);
+            alert('Load failed');
             return false;
         }
     }
@@ -110,11 +97,6 @@
         const postCol = findColumn(['Postnr']);
         const stedCol = findColumn(['Sted']);
 
-        if (sdCol === -1 || arCol === -1 || statusCol === -1) {
-            alert('Missing key columns');
-            return;
-        }
-
         let pending = data.filter(row => {
             const sdVal = row[sdCol] ? String(row[sdCol]).trim() : '';
             let arVal = row[arCol] ? String(row[arCol]).trim() : '';
@@ -127,10 +109,7 @@
             return sdVal !== '' && arVal === '' && isRelevantStatus;
         });
 
-        pending.sort((a, b) => {
-            const parseDate = s => s ? new Date(s.split('.').reverse().join('-')) : new Date(0);
-            return parseDate(b[sdCol]) - parseDate(a[sdCol]);
-        });
+        pending.sort((a, b) => new Date(b[sdCol].split('.').reverse().join('-')) - new Date(a[sdCol].split('.').reverse().join('-')));
 
         document.getElementById('pendingCount').textContent = `Found ${pending.length} pending leads`;
 
@@ -157,34 +136,6 @@
         document.getElementById('make').value = row[findColumn(['Merke'])] || '';
         document.getElementById('model').value = row[findColumn(['Modell'])] || '';
         document.getElementById('year').value = row[findColumn(['År'])] || '';
-        document.getElementById('mileage').value = row[findColumn(['Kilometerstand'])] || 0;
-
-        const specs = {
-            make: document.getElementById('make').value,
-            model: document.getElementById('model').value,
-            year: parseInt(document.getElementById('year').value) || 0
-        };
-        const hist = getHistoricalComps(specs);
-        const buffer = Math.abs(hist.var_pct).toFixed(1);
-        document.getElementById('buffer').value = buffer;
-
-        document.getElementById('output').innerHTML = `
-            <p><strong>Historical comps for ${specs.make} ${specs.model} ${specs.year}:</strong> ${hist.count} matches</p>
-            <p>Avg variance: ${hist.var_pct.toFixed(1)}% → Suggested buffer: +${buffer}%</p>
-            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th>Variance %</th><th>Sold</th></tr></thead><tbody>${
-                hist.comps.map(c => `
-                    <tr>
-                        <td>${c.regnr}</td>
-                        <td>${c.make} ${c.model} ${c.year}</td>
-                        <td>${c.bud.toLocaleString('nb-NO')}</td>
-                        <td>${c.low.toLocaleString('nb-NO')}</td>
-                        <td>${c.variance.toFixed(1)}%</td>
-                        <td>${c.sold}</td>
-                    </tr>
-                `).join('')
-            }</tbody></table></div>
-            <p>Enter Finn avg and adjust buffer/margin if needed.</p>
-        `;
     }
 
     function getHistoricalComps(specs) {
@@ -196,17 +147,23 @@
         const soldCol = findColumn(['Solgt på']);
         const regCol = findColumn(['RegNr']);
 
-        if (budCol === -1 || makeCol === -1) return { avg_bid: 0, var_pct: -4, count: 0, comps: [] };
+        const now = new Date(2026, 1, 4); // Feb 4, 2026
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
 
         const comps = data.filter(row => {
             const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
             const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
             const y = parseInt(row[yearCol]) || 0;
             const bud = parseFloat(row[budCol]) || 0;
+            const soldStr = row[soldCol] || '';
+            let soldDate;
+            try { soldDate = new Date(soldStr.split(' ')[0].split('.').reverse().join('-')); } catch { soldDate = new Date(0); }
             return m === specs.make.toLowerCase() &&
                    mo === specs.model.toLowerCase() &&
                    y >= specs.year - 1 && y <= specs.year + 1 &&
-                   bud > 0;
+                   bud > 0 &&
+                   soldDate >= thirtyDaysAgo;
         }).map(row => {
             const bud = parseFloat(row[budCol]) || 0;
             const low = parseFloat(row[lowCol]) || bud;
@@ -223,53 +180,76 @@
             };
         });
 
-        if (comps.length === 0) return { avg_bid: 0, var_pct: -4, count: 0, comps: [] };
+        if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
 
-        const avg_bid = comps.reduce((s, c) => s + c.bud, 0) / comps.length;
         const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
 
-        return { avg_bid, var_pct, count: comps.length, comps };
+        return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
         const finn = parseFloat(document.getElementById('finn_avg').value) || 0;
-        if (!finn) {
-            alert('Enter Finn avg');
-            return;
-        }
+        if (!finn) return alert('Enter Finn avg');
 
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
-        const buffer = parseFloat(document.getElementById('buffer').value) / 100;
+        const spread = 0.05; // ±5% = 10% total spread
 
-        const hist = getHistoricalComps({
+        // Step 1: Midpoint after margin + tillegg
+        let midpoint = finn * (1 - margin - tillegg);
+
+        // Step 2: Add motivation to midpoint
+        midpoint += midpoint * motivation;
+
+        // Step 3: Apply spread
+        const low = midpoint * (1 - spread);
+        const high = midpoint * (1 + spread);
+
+        // Historical
+        const specs = {
             make: document.getElementById('make').value,
             model: document.getElementById('model').value,
             year: parseInt(document.getElementById('year').value) || 0
-        });
-
-        const blended = (finn * 0.7) + (hist.avg_bid * 0.3);
-        let net = blended * (1 - margin - tillegg);
-        net += net * motivation;
-
-        const low = net * 0.95;
-        const high = net * 1.05 + (net * buffer);
+        };
+        const hist = getHistoricalComps(specs);
+        const likely_bid = midpoint * (1 + hist.var_pct / 100);
 
         const copyText = `Valuation for ${document.getElementById('regnr').value || 'unknown'}\n` +
                          `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n` +
-                         `From: ${Math.round(low).toLocaleString('nb-NO')} NOK\n` +
-                         `To: ${Math.round(high).toLocaleString('nb-NO')} NOK\n` +
-                         `Finn avg: ${finn.toLocaleString('nb-NO')} | Margin: ${margin*100}% | Buffer: ${buffer*100}% | Motivation: ${motivation*100}%\n` +
-                         `Historical comps: ${hist.count} | Avg variance: ${hist.var_pct.toFixed(1)}%`;
+                         `Base (Finn avg): ${finn.toLocaleString('nb-NO')} NOK\n` +
+                         `After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(midpoint / (1 + motivation)).toLocaleString('nb-NO')} NOK\n` +
+                         `After motivation ${document.getElementById('motivation').value}%: ${Math.round(midpoint).toLocaleString('nb-NO')} NOK (midpoint)\n` +
+                         `From (mid -5%): ${Math.round(low).toLocaleString('nb-NO')} NOK\n` +
+                         `To (mid +5%): ${Math.round(high).toLocaleString('nb-NO')} NOK\n` +
+                         `Likely bid (hist variance ${hist.var_pct.toFixed(1)}% below low): ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK`;
 
         document.getElementById('output').innerHTML = `
-            <h3>Suggested Range</h3>
-            <p><strong>From:</strong> ${Math.round(low).toLocaleString('nb-NO')} NOK (safe backstop)</p>
-            <p><strong>To:</strong> ${Math.round(high).toLocaleString('nb-NO')} NOK (tempting)</p>
-            <p>Blended base: ${Math.round(blended).toLocaleString('nb-NO')} NOK (70% Finn + 30% sold bids)</p>
-            <p>Buffer used: +${(buffer*100).toFixed(1)}% (from historical or manual)</p>
-            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy to ERP</button>
+            <h3>Calculation Steps</h3>
+            <div class="step">
+                1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong>
+            </div>
+            <div class="step">
+                2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: 
+                <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong>
+            </div>
+            <div class="step">
+                3. After motivation ${document.getElementById('motivation').value}%: 
+                <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> (midpoint)
+            </div>
+            <div class="step">
+                4. Spread ±5% around midpoint:<br>
+                <strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br>
+                <strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong>
+            </div>
+            <div class="step">
+                <strong class="likely">Likely bid (historical reference):</strong> ${Math.round(likely_bid).toLocaleString('nb-NO')} NOK
+            </div>
+            <div class="step">
+                <strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>
+                (based on last 30 days sold cars – ${hist.count} comps)<br>
+                <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
+            </div>
             <h4>Historical Comps Used (${hist.count})</h4>
             <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th>Variance %</th><th>Sold</th></tr></thead><tbody>${
                 hist.comps.map(c => `
@@ -278,7 +258,7 @@
                         <td>${c.make} ${c.model} ${c.year}</td>
                         <td>${c.bud.toLocaleString('nb-NO')}</td>
                         <td>${c.low.toLocaleString('nb-NO')}</td>
-                        <td>${c.variance.toFixed(1)}%</td>
+                        <td class="red">${c.variance.toFixed(1)}%</td>
                         <td>${c.sold}</td>
                     </tr>
                 `).join('')
@@ -287,11 +267,7 @@
     }
 
     function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Copied to clipboard – paste into ERP');
-        }).catch(err => {
-            alert('Copy failed: ' + err);
-        });
+        navigator.clipboard.writeText(text).then(() => alert('Full calculation copied – paste into ERP')).catch(err => alert('Copy failed'));
     }
 
     function filterPendingTable() {
