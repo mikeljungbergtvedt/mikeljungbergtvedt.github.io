@@ -3,67 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Dev v12 – Peasy Profile Applied</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Peasy Valuation Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 20px; line-height: 1.6; background: linear-gradient(to bottom, #F2F7F9, #E8F0F5); color: #004225; }
-        form, #pending, #output { max-width: 1000px; margin: 0 auto; }
-        label { display: block; margin: 12px 0 6px; font-weight: 600; }
-        input, button { padding: 10px; font-size: 16px; margin-bottom: 10px; width: 100%; box-sizing: border-box; border: 1px solid #82BFD2; border-radius: 4px; }
-        button { background: #004225; color: #FFCC33; font-weight: bold; cursor: pointer; }
-        button:hover { background: #006644; }
-        table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; }
-        th, td { border: 1px solid #82BFD2; padding: 8px; text-align: left; }
-        th { background: rgba(130,191,210,0.2); }
-        .red { color: #D32F2F; font-weight: bold; }
-        .step { margin: 12px 0; padding: 12px; background: rgba(255,255,255,0.8); border-left: 5px solid #004225; border-radius: 4px; }
-        .likely { font-weight: bold; color: #004225; margin: 15px 0; font-size: 1.1em; }
-        #copyBtn { background: #004225; color: #FFCC33; font-weight: bold; cursor: pointer; padding: 12px; font-size: 18px; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); 
+            color: #004225; 
+            min-height: 100vh; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+        .header { margin-bottom: 48px; }
+        h1 { 
+            font-weight: 900; 
+            font-size: 2.8rem; 
+            letter-spacing: -0.8px; 
+            margin: 0 0 8px 0; 
+            color: #004225; 
+        }
+        h2 { 
+            font-weight: 700; 
+            font-size: 1.75rem; 
+            margin: 48px 0 20px; 
+            color: #004225; 
+        }
+        .card { 
+            background: rgba(255, 255, 255, 0.96); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(130,191,210, 0.12); 
+            border-radius: 16px; 
+            box-shadow: 0 8px 32px rgba(0,66,37,0.06); 
+            padding: 32px; 
+            margin-bottom: 40px; 
+        }
+        label { display: block; margin: 20px 0 8px; font-weight: 600; color: #004225; font-size: 1.05rem; }
+        input { padding: 14px 16px; font-size: 1.05rem; border: 1px solid rgba(130,191,210, 0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
+        input:focus { border-color: #004225; outline: none; box-shadow: 0 0 0 3px rgba(0,66,37,0.12); }
+        button { padding: 14px 28px; font-size: 1.1rem; font-weight: 700; background: #004225; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.25s; }
+        button:hover { background: #006644; transform: translateY(-2px); }
+        table { border-collapse: collapse; width: 100%; margin: 24px 0; font-size: 0.95rem; }
+        th, td { border: 1px solid rgba(130,191,210, 0.25); padding: 12px; text-align: left; }
+        th { background: rgba(130,191,210, 0.08); font-weight: 600; color: #004225; }
+        .red { color: #d32f2f; font-weight: bold; }
+        .step { margin: 16px 0; padding: 16px; background: rgba(255,255,255,0.7); border-left: 5px solid #004225; border-radius: 8px; font-size: 1.05rem; }
+        .likely { font-weight: 700; color: #004225; margin: 24px 0; font-size: 1.25rem; padding: 12px; background: rgba(0,66,37,0.05); border-radius: 8px; }
+        #copyBtn { background: #004225; color: white; font-weight: bold; padding: 16px 32px; font-size: 1.2rem; border-radius: 12px; cursor: pointer; margin-top: 24px; display: block; }
         #copyBtn:hover { background: #006644; }
-        #searchReg { width: 300px; }
-        h1 { font-weight: 900; font-size: 2.5rem; color: #004225; text-align: center; margin-bottom: 10px; }
-        p { color: #004225; opacity: 0.8; }
+        #searchReg { width: 320px; }
+        .guidelines { font-size: 0.95rem; color: #555; margin: 20px 0 32px; padding: 20px; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
     </style>
 </head>
 <body>
-    <h1>Peasy Valuation Dev v12</h1>
-    <p>Now exactly as agreed: 100% Finn base → -12% margin → +motivation → ±5% spread (10% total).<br>Historical variance in red (last 30 days), only for reflection. Full copy-paste string.</p>
+    <div class="container">
+        <div class="header">
+            <h1>Valuation Tool</h1>
+        </div>
 
-    <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
-    <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
-    <div id="pending">
-        <h2>Pending Leads</h2>
-        <p id="pendingCount">Click button to load...</p>
-        <table id="pendingTable">
-            <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
-            <tbody></tbody>
-        </table>
+        <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
+        <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
+        <div id="pending" class="card">
+            <h2>Pending Leads</h2>
+            <p id="pendingCount">Click button to load...</p>
+            <table id="pendingTable">
+                <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <hr>
+
+        <h2>Valuation Calculator</h2>
+        <div class="guidelines">
+            <strong>Guidelines:</strong><br>
+            • Base = 100% Finn.no average (no blending with historical)<br>
+            • Midpoint = Base × 0.88 (after 12% reduction)<br>
+            • Add motivation % to midpoint<br>
+            • Spread: ±5% (10% total range) around final midpoint<br>
+            • Historical variance shown in red (last 30 days sold cars) – for reflection only<br>
+            • Likely accept = Low end × (1 + historical variance %)
+        </div>
+
+        <form id="valForm" class="card">
+            <label>RegNr:</label><input type="text" id="regnr" disabled>
+            <label>Merke:</label><input type="text" id="make" required>
+            <label>Modell:</label><input type="text" id="model" required>
+            <label>År:</label><input type="number" id="year" required>
+            <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required placeholder="Paste from Finn search">
+            <label>Margin %:</label><input type="number" id="margin" value="12">
+            <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
+            <label>Motivation %:</label><input type="number" id="motivation" value="3">
+            <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
+        </form>
+
+        <div id="output" class="card"></div>
     </div>
 
-    <hr>
-
-    <h2>Valuation Calculator</h2>
-    <form id="valForm">
-        <label>RegNr:</label><input type="text" id="regnr" disabled>
-        <label>Merke:</label><input type="text" id="make" required>
-        <label>Modell:</label><input type="text" id="model" required>
-        <label>År:</label><input type="number" id="year" required>
-        <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required placeholder="Paste from Finn search">
-        <label>Margin %:</label><input type="number" id="margin" value="12">
-        <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
-        <label>Motivation %:</label><input type="number" id="motivation" value="3">
-        <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
-    </form>
-
-    <div id="output"></div>
-
     <script>
-    // Same loadReport, findColumn, loadAndShowPending, fillFormFromRow, filterPendingTable as v11
+    // [The exact same JavaScript you confirmed works – loadReport, findColumn, loadAndShowPending, fillFormFromRow, getHistoricalComps, calculateValuation, copyToClipboard, filterPendingTable]
+    // No logic changes – only design cleanup
+    let data = [];
+    let headers = [];
 
-    function getHistoricalComps(specs) {
-        // Same as v11, but with 30 day filter
-        // Return { var_pct, count, comps }
+    async function loadReport() {
+        const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(res.status);
+            const ab = await res.arrayBuffer();
+            const wb = XLSX.read(ab, {type: 'array'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+            headers = json[0].map(h => (h || '').trim());
+            data = json.slice(1);
+            console.log(`Loaded ${data.length} rows`);
+            return true;
+        } catch (err) {
+            console.error(err);
+            alert('Load failed');
+            return false;
+        }
+    }
+
+    function findColumn(patterns) {
+        for (let p of patterns) {
+            const idx = headers.findIndex(h => h.toLowerCase().includes(p.toLowerCase()));
+            if (idx !== -1) return idx;
+        }
+        return -1;
+    }
+
+    async function loadAndShowPending() {
+        if (data.length === 0) await loadReport();
+
+        const sdCol = findColumn(['SD mottatt på']);
+        const arCol = findColumn(['Endelig AR verdi']);
+        const statusCol = findColumn(['Status']);
+        const regCol = findColumn(['RegNr']);
+        const merkeCol = findColumn(['Merke']);
+        const modellCol = findColumn(['Modell']);
+        const yearCol = findColumn(['År']);
+        const postCol = findColumn(['Postnr']);
+        const stedCol = findColumn(['Sted']);
+
+        let pending = data.filter(row => {
+            const sdVal = row[sdCol] ? String(row[sdCol]).trim() : '';
+            let arVal = row[arCol] ? String(row[arCol]).trim() : '';
+            const statusVal = row[statusCol] ? String(row[statusCol]).trim().toLowerCase() : '';
+
+            if (['-', '–', '—', ''].includes(arVal)) arVal = '';
+
+            const isRelevantStatus = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
+
+            return sdVal !== '' && arVal === '' && isRelevantStatus;
+        });
+
+        pending.sort((a, b) => new Date(b[sdCol].split('.').reverse().join('-')) - new Date(a[sdCol].split('.').reverse().join('-')));
+
+        document.getElementById('pendingCount').textContent = `Found ${pending.length} pending leads`;
+
+        const tbody = document.querySelector('#pendingTable tbody');
+        tbody.innerHTML = '';
+        pending.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.onclick = () => fillFormFromRow(row);
+            tr.innerHTML = `
+                <td>${row[regCol] || '-'}</td>
+                <td>${row[merkeCol] || '-'}</td>
+                <td>${row[modellCol] || '-'}</td>
+                <td>${row[yearCol] || '-'}</td>
+                <td>${row[sdCol] || '-'}</td>
+                <td>${row[statusCol] || '-'}</td>
+                <td>${row[postCol] || ''} ${row[stedCol] || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function fillFormFromRow(row) {
+        document.getElementById('regnr').value = row[findColumn(['RegNr'])] || '';
+        document.getElementById('make').value = row[findColumn(['Merke'])] || '';
+        document.getElementById('model').value = row[findColumn(['Modell'])] || '';
+        document.getElementById('year').value = row[findColumn(['År'])] || '';
     }
 
     function calculateValuation() {
@@ -73,18 +197,14 @@
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
+        const spread = 0.05; // ±5%
 
-        // Step 1: Midpoint after margin + tillegg
         let midpoint = finn * (1 - margin - tillegg);
-
-        // Step 2: Add motivation
         midpoint += midpoint * motivation;
 
-        // Step 3: Apply ±5% spread
-        const low = midpoint * 0.95;
-        const high = midpoint * 1.05;
+        const low = midpoint * (1 - spread);
+        const high = midpoint * (1 + spread);
 
-        // Historical
         const specs = {
             make: document.getElementById('make').value,
             model: document.getElementById('model').value,
