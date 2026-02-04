@@ -3,28 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peasy Valuation Dev v6 – Status Filter Added</title>
+    <title>Peasy Valuation Dev v8 – Comps List + Editable + Copy to ERP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        form, #pending { max-width: 900px; }
-        label { display: block; margin: 10px 0 5px; }
-        input, button { padding: 8px; width: 100%; margin-bottom: 10px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; cursor: pointer; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f2f2f2; }
-        tr:hover { background: #f5f5f5; }
-        #output { margin-top: 30px; border: 1px solid #ccc; padding: 15px; background: #f9f9f9; }
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.5; }
+        form, #pending, #output { max-width: 1000px; }
+        label { display: block; margin: 12px 0 6px; font-weight: bold; }
+        input, button, select { padding: 10px; font-size: 16px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; }
+        tr:hover { background: #f9f9f9; }
+        #output { margin-top: 30px; padding: 20px; border: 1px solid #aaa; background: #fff; border-radius: 6px; }
+        #compsTable { max-height: 300px; overflow-y: auto; }
+        #copyBtn { background: #006600; color: white; font-weight: bold; cursor: pointer; }
+        #copyBtn:hover { background: #004d00; }
         #searchReg { width: 300px; }
     </style>
 </head>
 <body>
-    <h1>Peasy Valuation Dev v6</h1>
-    <p>Now only shows rows where Status contains "Endelig estimat" OR "SD mottatt" + SD mottatt på filled + Endelig AR verdi empty or "-".<br>
-    Refresh page to update. Click row to auto-fill calculator. Manual Finn avg for now.</p>
+    <h1>Peasy Valuation Dev v8</h1>
+    <p>Shows pending leads → click row to auto-fill + show historical comps list (verify at glance) → edit buffer/margin → calculate → copy to ERP.</p>
 
     <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
-    <input type="text" id="searchReg" placeholder="Search RegNr (e.g. 14056)" oninput="filterPendingTable()">
+    <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
     <div id="pending">
         <h2>Pending Leads</h2>
         <p id="pendingCount">Click button to load...</p>
@@ -46,20 +48,21 @@
 
     <hr>
 
-    <h2>Valuation Calculator (Click pending row to auto-fill)</h2>
+    <h2>Valuation Calculator</h2>
     <form id="valForm">
-        <label>RegNr (auto-filled):</label><input type="text" id="regnr" disabled>
-        <label>Merke (Make):</label><input type="text" id="make" required>
+        <label>RegNr:</label><input type="text" id="regnr" disabled>
+        <label>Merke:</label><input type="text" id="make" required>
         <label>Modell:</label><input type="text" id="model" required>
-        <label>År (Year):</label><input type="number" id="year" required>
-        <label>Kilometerstand (Mileage if in report):</label><input type="number" id="mileage" value="0">
-        <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required>
-        <label>Margin % (default 12):</label><input type="number" id="margin" value="12">
-        <label>Tillegg % (default 0):</label><input type="number" id="tillegg" value="0">
-        <label>Motivation % (default 3):</label><input type="number" id="motivation" value="3">
-        <button type="button" onclick="calculateValuation()">Calculate Range</button>
+        <label>År:</label><input type="number" id="year" required>
+        <label>Kilometerstand (if available):</label><input type="number" id="mileage" value="0">
+        <label>Manual Finn Avg (NOK):</label><input type="number" id="finn_avg" required placeholder="Paste from Finn search">
+        <label>Historical Buffer % (auto-suggested, editable):</label><input type="number" id="buffer" step="0.1" value="4.0">
+        <label>Margin %:</label><input type="number" id="margin" value="12">
+        <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
+        <label>Motivation %:</label><input type="number" id="motivation" value="3">
+        <button type="button" onclick="calculateValuation()">Calculate & Show Comps</button>
     </form>
-    
+
     <div id="output"></div>
 
     <script>
@@ -70,91 +73,66 @@
         const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
         try {
             const res = await fetch(url);
-            if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+            if (!res.ok) throw new Error(res.status);
             const ab = await res.arrayBuffer();
             const wb = XLSX.read(ab, {type: 'array'});
             const ws = wb.Sheets[wb.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
             headers = json[0].map(h => (h || '').trim());
             data = json.slice(1);
-            console.log(`Loaded ${data.length} rows, headers:`, headers);
+            console.log(`Loaded ${data.length} rows`);
             return true;
         } catch (err) {
             console.error(err);
-            alert('Failed to load report: ' + err.message + '\nCheck console (F12)');
+            alert('Load failed: ' + err.message);
             return false;
         }
     }
 
-    function findColumn(namePatterns) {
-        for (let pattern of namePatterns) {
-            const idx = headers.findIndex(h => h.toLowerCase().includes(pattern.toLowerCase()));
+    function findColumn(patterns) {
+        for (let p of patterns) {
+            const idx = headers.findIndex(h => h.toLowerCase().includes(p.toLowerCase()));
             if (idx !== -1) return idx;
         }
         return -1;
     }
 
     async function loadAndShowPending() {
-        if (data.length === 0) {
-            const loaded = await loadReport();
-            if (!loaded) return;
-        }
+        if (data.length === 0) await loadReport();
 
-        const sdCol    = findColumn(['SD mottatt på']);
-        const arCol    = findColumn(['Endelig AR verdi']);
+        const sdCol = findColumn(['SD mottatt på']);
+        const arCol = findColumn(['Endelig AR verdi']);
         const statusCol = findColumn(['Status']);
-        const regCol   = findColumn(['RegNr', 'Registreringsnummer']);
+        const regCol = findColumn(['RegNr']);
         const merkeCol = findColumn(['Merke']);
         const modellCol = findColumn(['Modell']);
-        const arYearCol = findColumn(['År']);
-        const postCol  = findColumn(['Postnr']);
-        const stedCol  = findColumn(['Sted']);
+        const yearCol = findColumn(['År']);
+        const postCol = findColumn(['Postnr']);
+        const stedCol = findColumn(['Sted']);
 
         if (sdCol === -1 || arCol === -1 || statusCol === -1) {
-            alert('Could not find key columns (SD mottatt på, Endelig AR verdi, Status). Check console.');
+            alert('Missing key columns');
             return;
         }
 
         let pending = data.filter(row => {
-            const sdVal   = row[sdCol] != null ? String(row[sdCol]).trim() : '';
-            let arVal     = row[arCol] != null ? String(row[arCol]).trim() : '';
-            const statusVal = row[statusCol] != null ? String(row[statusCol]).trim().toLowerCase() : '';
+            const sdVal = row[sdCol] ? String(row[sdCol]).trim() : '';
+            let arVal = row[arCol] ? String(row[arCol]).trim() : '';
+            const statusVal = row[statusCol] ? String(row[statusCol]).trim().toLowerCase() : '';
 
-            // Treat "-" as empty for Endelig AR verdi
-            if (['-', '–', '—', ''].includes(arVal)) {
-                arVal = '';
-            }
+            if (['-', '–', '—', ''].includes(arVal)) arVal = '';
 
-            // New rule: only if Status contains "endelig estimat" or "sd mottatt"
-            const isRelevantStatus = statusVal.includes('endelig estimat') || 
-                                    statusVal.includes('sd mottatt');
+            const isRelevantStatus = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
 
-            const isPending = sdVal !== '' && arVal === '' && isRelevantStatus;
-
-            // Debug for 14056
-            if (String(row).toUpperCase().includes('14056')) {
-                console.log(`14056 row: Status="${statusVal}", SD="${sdVal}", AR raw="${row[arCol]}", AR norm="${arVal}", isRelevantStatus=${isRelevantStatus}, isPending=${isPending}`);
-            }
-
-            return isPending;
+            return sdVal !== '' && arVal === '' && isRelevantStatus;
         });
 
-        // Sort newest first
         pending.sort((a, b) => {
-            const parseDate = str => {
-                if (!str) return new Date(0);
-                try {
-                    const [d, m, y] = String(str).split('.');
-                    return new Date(y, m-1, d);
-                } catch {
-                    return new Date(0);
-                }
-            };
+            const parseDate = s => s ? new Date(s.split('.').reverse().join('-')) : new Date(0);
             return parseDate(b[sdCol]) - parseDate(a[sdCol]);
         });
 
-        document.getElementById('pendingCount').textContent = 
-            `Found ${pending.length} pending leads (Status "Endelig estimat" or "SD mottatt" + SD filled + AR empty or "-").`;
+        document.getElementById('pendingCount').textContent = `Found ${pending.length} pending leads`;
 
         const tbody = document.querySelector('#pendingTable tbody');
         tbody.innerHTML = '';
@@ -165,17 +143,13 @@
                 <td>${row[regCol] || '-'}</td>
                 <td>${row[merkeCol] || '-'}</td>
                 <td>${row[modellCol] || '-'}</td>
-                <td>${row[arYearCol] || '-'}</td>
+                <td>${row[yearCol] || '-'}</td>
                 <td>${row[sdCol] || '-'}</td>
                 <td>${row[statusCol] || '-'}</td>
                 <td>${row[postCol] || ''} ${row[stedCol] || ''}</td>
             `;
             tbody.appendChild(tr);
         });
-
-        if (pending.length === 0) {
-            alert('No pending leads found with the new status rule.\n\nCheck console for debug on 14056 row.\nVerify in XLSX: Status must contain "Endelig estimat" or "SD mottatt", SD mottatt på filled, Endelig AR verdi empty or "-".');
-        }
     }
 
     function fillFormFromRow(row) {
@@ -184,31 +158,147 @@
         document.getElementById('model').value = row[findColumn(['Modell'])] || '';
         document.getElementById('year').value = row[findColumn(['År'])] || '';
         document.getElementById('mileage').value = row[findColumn(['Kilometerstand'])] || 0;
-        alert('Auto-filled from lead: ' + (row[findColumn(['RegNr'])] || 'Unknown'));
+
+        const specs = {
+            make: document.getElementById('make').value,
+            model: document.getElementById('model').value,
+            year: parseInt(document.getElementById('year').value) || 0
+        };
+        const hist = getHistoricalComps(specs);
+        const buffer = Math.abs(hist.var_pct).toFixed(1);
+        document.getElementById('buffer').value = buffer;
+
+        document.getElementById('output').innerHTML = `
+            <p><strong>Historical comps for ${specs.make} ${specs.model} ${specs.year}:</strong> ${hist.count} matches</p>
+            <p>Avg variance: ${hist.var_pct.toFixed(1)}% → Suggested buffer: +${buffer}%</p>
+            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th>Variance %</th><th>Sold</th></tr></thead><tbody>${
+                hist.comps.map(c => `
+                    <tr>
+                        <td>${c.regnr}</td>
+                        <td>${c.make} ${c.model} ${c.year}</td>
+                        <td>${c.bud.toLocaleString('nb-NO')}</td>
+                        <td>${c.low.toLocaleString('nb-NO')}</td>
+                        <td>${c.variance.toFixed(1)}%</td>
+                        <td>${c.sold}</td>
+                    </tr>
+                `).join('')
+            }</tbody></table></div>
+            <p>Enter Finn avg and adjust buffer/margin if needed.</p>
+        `;
     }
 
-    function filterPendingTable() {
-        const filter = document.getElementById('searchReg').value.toUpperCase();
-        const rows = document.querySelectorAll('#pendingTable tbody tr');
-        rows.forEach(row => {
-            const reg = row.cells[0].textContent.toUpperCase();
-            row.style.display = reg.includes(filter) ? '' : 'none';
+    function getHistoricalComps(specs) {
+        const budCol = findColumn(['Bud']);
+        const lowCol = findColumn(['Endelig AR verdi', 'Laveste']);
+        const makeCol = findColumn(['Merke']);
+        const modelCol = findColumn(['Modell']);
+        const yearCol = findColumn(['År']);
+        const soldCol = findColumn(['Solgt på']);
+        const regCol = findColumn(['RegNr']);
+
+        if (budCol === -1 || makeCol === -1) return { avg_bid: 0, var_pct: -4, count: 0, comps: [] };
+
+        const comps = data.filter(row => {
+            const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
+            const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
+            const y = parseInt(row[yearCol]) || 0;
+            const bud = parseFloat(row[budCol]) || 0;
+            return m === specs.make.toLowerCase() &&
+                   mo === specs.model.toLowerCase() &&
+                   y >= specs.year - 1 && y <= specs.year + 1 &&
+                   bud > 0;
+        }).map(row => {
+            const bud = parseFloat(row[budCol]) || 0;
+            const low = parseFloat(row[lowCol]) || bud;
+            const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+            return {
+                regnr: row[regCol] || '-',
+                make: row[makeCol] || '',
+                model: row[modelCol] || '',
+                year: row[yearCol] || '',
+                bud,
+                low,
+                variance,
+                sold: row[soldCol] || '-'
+            };
         });
+
+        if (comps.length === 0) return { avg_bid: 0, var_pct: -4, count: 0, comps: [] };
+
+        const avg_bid = comps.reduce((s, c) => s + c.bud, 0) / comps.length;
+        const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
+
+        return { avg_bid, var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
         const finn = parseFloat(document.getElementById('finn_avg').value) || 0;
+        if (!finn) {
+            alert('Enter Finn avg');
+            return;
+        }
+
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
-        const low = finn * (1 - margin - tillegg);
-        const high = low * (1 + motivation + 0.04);  // +4% example buffer
+        const buffer = parseFloat(document.getElementById('buffer').value) / 100;
+
+        const hist = getHistoricalComps({
+            make: document.getElementById('make').value,
+            model: document.getElementById('model').value,
+            year: parseInt(document.getElementById('year').value) || 0
+        });
+
+        const blended = (finn * 0.7) + (hist.avg_bid * 0.3);
+        let net = blended * (1 - margin - tillegg);
+        net += net * motivation;
+
+        const low = net * 0.95;
+        const high = net * 1.05 + (net * buffer);
+
+        const copyText = `Valuation for ${document.getElementById('regnr').value || 'unknown'}\n` +
+                         `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n` +
+                         `From: ${Math.round(low).toLocaleString('nb-NO')} NOK\n` +
+                         `To: ${Math.round(high).toLocaleString('nb-NO')} NOK\n` +
+                         `Finn avg: ${finn.toLocaleString('nb-NO')} | Margin: ${margin*100}% | Buffer: ${buffer*100}% | Motivation: ${motivation*100}%\n` +
+                         `Historical comps: ${hist.count} | Avg variance: ${hist.var_pct.toFixed(1)}%`;
+
         document.getElementById('output').innerHTML = `
             <h3>Suggested Range</h3>
-            <p>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</p>
-            <p>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</p>
-            <p>(Basic – expand with historical later)</p>
+            <p><strong>From:</strong> ${Math.round(low).toLocaleString('nb-NO')} NOK (safe backstop)</p>
+            <p><strong>To:</strong> ${Math.round(high).toLocaleString('nb-NO')} NOK (tempting)</p>
+            <p>Blended base: ${Math.round(blended).toLocaleString('nb-NO')} NOK (70% Finn + 30% sold bids)</p>
+            <p>Buffer used: +${(buffer*100).toFixed(1)}% (from historical or manual)</p>
+            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy to ERP</button>
+            <h4>Historical Comps Used (${hist.count})</h4>
+            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th>Variance %</th><th>Sold</th></tr></thead><tbody>${
+                hist.comps.map(c => `
+                    <tr>
+                        <td>${c.regnr}</td>
+                        <td>${c.make} ${c.model} ${c.year}</td>
+                        <td>${c.bud.toLocaleString('nb-NO')}</td>
+                        <td>${c.low.toLocaleString('nb-NO')}</td>
+                        <td>${c.variance.toFixed(1)}%</td>
+                        <td>${c.sold}</td>
+                    </tr>
+                `).join('')
+            }</tbody></table></div>
         `;
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Copied to clipboard – paste into ERP');
+        }).catch(err => {
+            alert('Copy failed: ' + err);
+        });
+    }
+
+    function filterPendingTable() {
+        const filter = document.getElementById('searchReg').value.toUpperCase();
+        document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
+            row.style.display = row.cells[0].textContent.toUpperCase().includes(filter) ? '' : 'none';
+        });
     }
     </script>
 </body>
