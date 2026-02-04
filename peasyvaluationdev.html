@@ -14,7 +14,7 @@
         h2 { font-weight: 700; font-size: 1.75rem; margin: 48px 0 20px; color: #004225; }
         .card { background: rgba(255,255,255,0.96); backdrop-filter: blur(16px); border: 1px solid rgba(130,191,210,0.12); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,66,37,0.06); padding: 32px; margin-bottom: 40px; }
         label { display: block; margin: 20px 0 8px; font-weight: 600; color: #004225; font-size: 1.05rem; }
-        input { padding: 14px 16px; font-size: 1.05rem; border: 1px solid rgba(130,191,210,0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
+        input { padding: 14px 16px; font-size: 1.05rem; border: 1px solid rgba(130,191,210,0.4); border-radius: 10px; width: 100%; transition: all 0.2s; box-sizing: border-box; }
         input:focus { border-color: #004225; outline: none; box-shadow: 0 0 0 3px rgba(0,66,37,0.12); }
         button { padding: 14px 28px; font-size: 1.1rem; font-weight: 700; background: #004225; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.25s; }
         button:hover { background: #006644; transform: translateY(-2px); }
@@ -24,16 +24,17 @@
         .red { color: #d32f2f; font-weight: bold; }
         .step { margin: 16px 0; padding: 16px; background: rgba(255,255,255,0.7); border-left: 5px solid #004225; border-radius: 8px; font-size: 1.05rem; }
         .likely { font-weight: 700; color: #004225; margin: 24px 0; font-size: 1.25rem; padding: 12px; background: rgba(0,66,37,0.05); border-radius: 8px; }
-        #copyBtn { background: #004225; color: white; font-weight: bold; padding: 16px 32px; font-size: 1.2rem; border-radius: 12px; cursor: pointer; margin-top: 24px; display: block; }
+        #copyBtn { background: #004225; color: white; font-weight: bold; padding: 16px 32px; font-size: 1.2rem; border-radius: 12px; cursor: pointer; margin: 28px auto 12px; display: block; min-width: 260px; }
         #copyBtn:hover { background: #006644; }
-        #searchReg { width: 320px; }
+        #searchReg { width: 320px; margin: 16px 0 24px; }
         .guidelines { font-size: 0.95rem; color: #555; margin: 20px 0 32px; padding: 20px; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
-        #finnSearchLink { margin-top: 24px; display: none; }
+        #finnSearchLink { margin-top: 24px; display: none; text-align: center; }
         #finnLink { display: inline-block; padding: 14px 28px; background: #006644; color: white; font-weight: 700; border-radius: 10px; text-decoration: none; transition: all 0.25s; }
         #finnLink:hover { background: #008855; transform: translateY(-2px); }
         .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .guidelines-content { display: none; margin-top: 12px; }
         .guidelines-toggle { font-size: 1.2rem; }
+        #copyFeedback { color: #006644; font-weight: 500; text-align: center; margin: 8px 0; min-height: 1.3em; }
     </style>
 </head>
 <body>
@@ -71,14 +72,13 @@
             <label>RegNr:</label><input type="text" id="regnr" disabled>
             <label>Merke:</label><input type="text" id="make" required>
             <label>Modell:</label><input type="text" id="model" required>
-            <label>År:</label><input type="number" id="year" required>
+            <label>År:</label><input type="number" id="year" required min="1900" max="2030">
             <label>KM stand:</label><input type="number" id="kmstand" placeholder="Fra kolonne W eller angi manuelt">
-            <label>Finn pris ex omreg:</label><input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk">
-            <label>Margin %:</label><input type="number" id="margin" value="12">
-            <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
-            <label>Motivasjon %:</label><input type="number" id="motivation" value="3">
+            <label>Finn pris ex omreg:</label><input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk (f.eks. 249 000)">
+            <label>Margin %:</label><input type="number" id="margin" value="12" min="0" step="0.5">
+            <label>Tillegg %:</label><input type="number" id="tillegg" value="0" min="0" step="0.5">
+            <label>Motivasjon %:</label><input type="number" id="motivation" value="3" min="0" step="0.5">
             <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
-
             <div id="finnSearchLink">
                 <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
             </div>
@@ -89,24 +89,23 @@
     <script>
     let data = [];
     let headers = [];
-    let selectedKm = 0;
 
     async function loadReport() {
         const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
         try {
             const res = await fetch(url);
-            if (!res.ok) throw new Error(res.status);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const ab = await res.arrayBuffer();
             const wb = XLSX.read(ab, {type: 'array'});
             const ws = wb.Sheets[wb.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-            headers = json[0].map(h => (h || '').trim());
+            headers = json[0].map(h => String(h || '').trim());
             data = json.slice(1);
             console.log(`Loaded ${data.length} rows`);
             return true;
         } catch (err) {
             console.error(err);
-            alert('Innlasting feilet');
+            alert('Kunne ikke laste rapporten – sjekk nettverk eller API-tilgang');
             return false;
         }
     }
@@ -121,34 +120,38 @@
 
     async function loadAndShowPending() {
         if (data.length === 0) await loadReport();
-        const sdCol = findColumn(['SD mottatt på']);
-        const arCol = findColumn(['Endelig AR verdi']);
+        const sdCol    = findColumn(['SD mottatt på']);
+        const arCol    = findColumn(['Endelig AR verdi']);
         const statusCol = findColumn(['Status']);
-        const regCol = findColumn(['RegNr']);
+        const regCol   = findColumn(['RegNr']);
         const merkeCol = findColumn(['Merke']);
         const modellCol = findColumn(['Modell']);
-        const yearCol = findColumn(['År']);
-        const postCol = findColumn(['Postnr']);
-        const stedCol = findColumn(['Sted']);
+        const yearCol  = findColumn(['År']);
+        const postCol  = findColumn(['Postnr']);
+        const stedCol  = findColumn(['Sted']);
 
         let pending = data.filter(row => {
-            const sdVal = row[sdCol] ? String(row[sdCol]).trim() : '';
-            let arVal = row[arCol] ? String(row[arCol]).trim() : '';
-            const statusVal = row[statusCol] ? String(row[statusCol]).trim().toLowerCase() : '';
+            const sdVal = String(row[sdCol] || '').trim();
+            let arVal = String(row[arCol] || '').trim();
+            const statusVal = String(row[statusCol] || '').trim().toLowerCase();
             if (['-', '–', '—', ''].includes(arVal)) arVal = '';
-            const isRelevantStatus = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
-            return sdVal !== '' && arVal === '' && isRelevantStatus;
+            const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
+            return sdVal !== '' && arVal === '' && isRelevant;
         });
 
-        pending.sort((a, b) => new Date(b[sdCol].split('.').reverse().join('-')) - new Date(a[sdCol].split('.').reverse().join('-')));
+        pending.sort((a, b) => {
+            const da = new Date(a[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
+            const db = new Date(b[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
+            return db - da;
+        });
 
         document.getElementById('pendingCount').textContent = `Fant ${pending.length} ventende leads`;
-
         const tbody = document.querySelector('#pendingTable tbody');
         tbody.innerHTML = '';
         pending.forEach(row => {
             const tr = document.createElement('tr');
-            tr.onclick = () => fillFormFromRow(row);
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', () => fillFormFromRow(row));
             tr.innerHTML = `
                 <td>${row[regCol] || '-'}</td>
                 <td>${row[merkeCol] || '-'}</td>
@@ -162,212 +165,225 @@
         });
     }
 
-    function updateFinnLink() {
-        const make = document.getElementById('make').value.trim();
-        const model = document.getElementById('model').value.trim();
-        const year = parseInt(document.getElementById('year').value) || 0;
-        const kmInput = parseInt(document.getElementById('kmstand').value) || 0;
+    function parseFinnPrice(str) {
+        if (!str) return 0;
+        return parseFloat(
+            str.replace(/\s+/g, '')
+               .replace(/\u00A0/g, '')
+               .replace(/[^0-9.,-]/g, '')
+               .replace(',', '.')
+        ) || 0;
+    }
 
-        const linkContainer = document.getElementById('finnSearchLink');
-        const linkEl = document.getElementById('finnLink');
+    function updateFinnLink() {
+        const make  = document.getElementById('make').value.trim();
+        const model = document.getElementById('model').value.trim();
+        const year  = parseInt(document.getElementById('year').value) || 0;
+        const km    = parseInt(document.getElementById('kmstand').value) || 0;
+
+        const container = document.getElementById('finnSearchLink');
+        const link      = document.getElementById('finnLink');
 
         if (!make || !model || year < 1900 || year > 2030) {
-            linkContainer.style.display = 'none';
+            container.style.display = 'none';
             return;
         }
 
-        let mileageParams = '';
-        if (kmInput > 0) {
-            let delta = 10000;
-            if (kmInput >= 50000 && kmInput <= 100000) delta = 20000;
-            if (kmInput > 100000) delta = 30000;
-
-            const fromKm = Math.max(0, kmInput - delta);
-            const toKm = kmInput + delta;
-
-            mileageParams = `&mileage_from=${fromKm}&mileage_to=${toKm}`;
+        let mileage = '';
+        if (km > 0) {
+            let delta = km < 50000 ? 10000 : km <= 100000 ? 20000 : 30000;
+            mileage = `&mileage_from=${Math.max(0, km - delta)}&mileage_to=${km + delta}`;
         }
 
-        const encodedMake = encodeURIComponent(make);
-        const encodedModel = encodeURIComponent(model);
-        const keywords = `${encodedMake}+${encodedModel}`;
+        const q = encodeURIComponent(`${make} ${model}`);
+        const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
 
-        const finnUrl = `https://www.finn.no/mobility/search/car?q=${keywords}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileageParams}`;
-
-        linkEl.href = finnUrl;
-        linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
-        linkContainer.style.display = 'block';
+        link.href = url;
+        link.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
+        container.style.display = 'block';
     }
 
     function fillFormFromRow(row) {
-        const regCol = findColumn(['RegNr']);
-        const makeCol = findColumn(['Merke']);
-        const modelCol = findColumn(['Modell']);
-        const yearCol = findColumn(['År']);
+        const idx = {
+            reg:    findColumn(['RegNr']),
+            make:   findColumn(['Merke']),
+            model:  findColumn(['Modell']),
+            year:   findColumn(['År']),
+            km:     22, // assuming column W = index 22
+        };
 
-        const make = (row[makeCol] || '').trim();
-        const model = (row[modelCol] || '').trim();
-        const year = parseInt(row[yearCol]) || '';
+        const kmRaw = String(row[idx.km] || '').trim().replace(/\s+/g, '').replace(/\u00A0/g, '');
+        const km = parseInt(kmRaw, 10);
 
-        const kmRaw = row[22] || '';
-        const kmClean = String(kmRaw).trim().replace(/\s+/g, '');
-        selectedKm = parseInt(kmClean, 10);
-        if (isNaN(selectedKm) || selectedKm < 0) selectedKm = 0;
-
-        document.getElementById('regnr').value = row[regCol] || '';
-        document.getElementById('make').value = make;
-        document.getElementById('model').value = model;
-        document.getElementById('year').value = year;
-        document.getElementById('kmstand').value = selectedKm > 0 ? selectedKm : '';
+        document.getElementById('regnr').value    = row[idx.reg]   || '';
+        document.getElementById('make').value     = row[idx.make]  || '';
+        document.getElementById('model').value    = row[idx.model] || '';
+        document.getElementById('year').value     = row[idx.year]  || '';
+        document.getElementById('kmstand').value  = isNaN(km) || km <= 0 ? '' : km;
 
         updateFinnLink();
     }
 
     function getHistoricalComps(specs) {
-        const budCol = findColumn(['Bud']);
-        const lowCol = findColumn(['Endelig AR verdi', 'Laveste']);
-        const makeCol = findColumn(['Merke']);
-        const modelCol = findColumn(['Modell']);
-        const yearCol = findColumn(['År']);
-        const soldCol = findColumn(['Solgt på']);
-        const regCol = findColumn(['RegNr']);
+        const idx = {
+            bud:   findColumn(['Bud']),
+            low:   findColumn(['Endelig AR verdi', 'Laveste']),
+            make:  findColumn(['Merke']),
+            model: findColumn(['Modell']),
+            year:  findColumn(['År']),
+            sold:  findColumn(['Solgt på']),
+            reg:   findColumn(['RegNr']),
+        };
 
-        const now = new Date(2026, 1, 4);
+        const now = new Date(2026, 1, 4); // Feb 4, 2026
         const thirtyDaysAgo = new Date(now);
         thirtyDaysAgo.setDate(now.getDate() - 30);
 
         const comps = data.filter(row => {
-            const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
-            const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
-            const y = parseInt(row[yearCol]) || 0;
-            const bud = parseFloat(row[budCol]) || 0;
-            const soldStr = row[soldCol] || '';
+            const m   = String(row[idx.make]  || '').trim().toLowerCase();
+            const mo  = String(row[idx.model] || '').trim().toLowerCase();
+            const y   = parseInt(row[idx.year]) || 0;
+            const bud = parseFloat(row[idx.bud]) || 0;
             let soldDate;
-            try { soldDate = new Date(soldStr.split(' ')[0].split('.').reverse().join('-')); } catch { soldDate = new Date(0); }
+            try {
+                const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
+                soldDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+            } catch {
+                soldDate = new Date(0);
+            }
             return m === specs.make.toLowerCase() &&
                    mo === specs.model.toLowerCase() &&
                    y >= specs.year - 1 && y <= specs.year + 1 &&
                    bud > 0 &&
-                   soldDate >= thirtyDaysAgo;
+                   soldDate >= thirtyDaysAgo && !isNaN(soldDate);
         }).map(row => {
-            const bud = parseFloat(row[budCol]) || 0;
-            const low = parseFloat(row[lowCol]) || bud;
+            const bud = parseFloat(row[idx.bud]) || 0;
+            const low = parseFloat(row[idx.low]) || bud;
             const variance = low > 0 ? ((bud - low) / low * 100) : 0;
             return {
-                regnr: row[regCol] || '-',
-                make: row[makeCol] || '',
-                model: row[modelCol] || '',
-                year: row[yearCol] || '',
+                regnr: row[idx.reg] || '-',
+                make: row[idx.make] || '',
+                model: row[idx.model] || '',
+                year: row[idx.year] || '',
                 bud,
                 low,
                 variance,
-                sold: row[soldCol] || '-'
+                sold: row[idx.sold] || '-'
             };
         });
 
         if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
-        const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
+
+        const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
         return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
-        const finnInput = document.getElementById('finn_avg').value.trim();
-        const cleanedInput = finnInput.replace(/\s+/g, '').replace(',', '.');
-        const finn = parseFloat(cleanedInput) || 0;
+        const finnStr = document.getElementById('finn_avg').value.trim();
+        const finn    = parseFinnPrice(finnStr);
 
-        if (finnInput !== '' && isNaN(finn)) {
-            alert('Ugyldig verdi i "Finn pris ex omreg" – bruk kun tall (f.eks. 250000 eller 123 456)');
+        if (finnStr !== '' && finn <= 0) {
+            alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
             return;
         }
 
-        const margin = parseFloat(document.getElementById('margin').value) / 100 || 0;
-        const tillegg = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
+        const margin    = parseFloat(document.getElementById('margin').value)    / 100 || 0;
+        const tillegg   = parseFloat(document.getElementById('tillegg').value)   / 100 || 0;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
-        const spread = 0.05;
+        const spread    = 0.05;
 
         let midpoint = finn * (1 - margin - tillegg);
         midpoint += midpoint * motivation;
 
-        const low = midpoint * (1 - spread);
+        const low  = midpoint * (1 - spread);
         const high = midpoint * (1 + spread);
 
         const specs = {
-            make: document.getElementById('make').value.trim(),
+            make:  document.getElementById('make').value.trim(),
             model: document.getElementById('model').value.trim(),
-            year: parseInt(document.getElementById('year').value) || 0
+            year:  parseInt(document.getElementById('year').value) || 0
         };
 
         const hist = getHistoricalComps(specs);
         const likely_bid = low * (1 + hist.var_pct / 100);
 
-        const copyText = "Verdsettelse for " + (document.getElementById('regnr').value || 'ukjent') + "\n" +
-                         document.getElementById('make').value + " " + document.getElementById('model').value + " " + document.getElementById('year').value + "\n\n" +
-                         "Base (Finn pris ex omreg): " + finn.toLocaleString('nb-NO') + " kr\n" +
-                         "Etter margin " + document.getElementById('margin').value + "% + tillegg " + document.getElementById('tillegg').value + "%: " + Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO') + " kr\n" +
-                         "Etter motivasjon " + document.getElementById('motivation').value + "%: " + Math.round(midpoint).toLocaleString('nb-NO') + " kr (midtpunkt)\n" +
-                         "Fra (midtpunkt -5%): " + Math.round(low).toLocaleString('nb-NO') + " kr\n" +
-                         "Til (midtpunkt +5%): " + Math.round(high).toLocaleString('nb-NO') + " kr\n" +
-                         "Sannsynlig akseptert (hist varians " + hist.var_pct.toFixed(1) + "% under lav): " + Math.round(likely_bid).toLocaleString('nb-NO') + " kr\n" +
-                         "Historisk varians: " + hist.var_pct.toFixed(1) + "% (basert på solgte biler siste 30 dager – " + hist.count + " sammenlignbare)";
+        const copyText = [
+            `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
+            `${specs.make} ${specs.model} ${specs.year}`,
+            "",
+            `Base (Finn pris ex omreg):        ${finn.toLocaleString('nb-NO')} kr`,
+            `Etter margin ${margin*100}% + tillegg ${tillegg*100}%:  ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr`,
+            `Etter motivasjon ${motivation*100}%:           ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
+            `Fra (midtpunkt -5%):               ${Math.round(low).toLocaleString('nb-NO')} kr`,
+            `Til (midtpunkt +5%):               ${Math.round(high).toLocaleString('nb-NO')} kr`,
+            `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
+            `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
+        ].join('\n');
 
-        document.getElementById('output').innerHTML = `
-            <h3>Beregningstrinn (100% Finn-base – ingen blanding med historikk)</h3>
+        const output = document.getElementById('output');
+        output.innerHTML = `
+            <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
             <div class="step">1. Base (Finn pris ex omreg): <strong>${finn.toLocaleString('nb-NO')} kr</strong></div>
-            <div class="step">2. Etter margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
-            <div class="step">3. Etter motivasjon ${document.getElementById('motivation').value}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← dette er midtpunktet</div>
+            <div class="step">2. Etter margin ${margin*100}% + tillegg ${tillegg*100}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
             <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
-            <div class="step likely">Sannsynlig akseptert (historisk referanse): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
-            <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på solgte biler siste 30 dager – ${hist.count} sammenlignbare)</div>
-            <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Kopier full beregning til ERP</button>
-            <h4>Historiske sammenlignbare (kun til ettertanke – ${hist.count})</h4>
-            <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Merke/Modell/År</th><th>Bud</th><th>Lavt estimat</th><th class="red">Varians %</th><th>Solgt</th></tr></thead><tbody>${
-                hist.comps.map(c => `
-                    <tr>
-                        <td>${c.regnr}</td>
-                        <td>${c.make} ${c.model} ${c.year}</td>
-                        <td>${c.bud.toLocaleString('nb-NO')}</td>
-                        <td>${c.low.toLocaleString('nb-NO')}</td>
-                        <td class="red">${c.variance.toFixed(1)}%</td>
-                        <td>${c.sold}</td>
-                    </tr>
-                `).join('')
-            }</tbody></table></div>
-        `;
-    }
+            <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
 
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Kopiert – lim inn i ERP');
-        }).catch(err => {
-            console.error('Copy failed:', err);
-            alert('Kopiering feilet – prøv å markere teksten manuelt');
+            <button id="copyBtn">Kopier full beregning til ERP</button>
+            <div id="copyFeedback"></div>
+
+            <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
+            <table>
+                <thead><tr><th>RegNr</th><th>Merke/Modell/År</th><th>Bud</th><th>Lavt estimat</th><th class="red">Varians %</th><th>Solgt</th></tr></thead>
+                <tbody>${
+                    hist.comps.map(c => `
+                        <tr>
+                            <td>${c.regnr}</td>
+                            <td>${c.make} ${c.model} ${c.year}</td>
+                            <td>${c.bud.toLocaleString('nb-NO')}</td>
+                            <td>${c.low.toLocaleString('nb-NO')}</td>
+                            <td class="red">${c.variance.toFixed(1)}%</td>
+                            <td>${c.sold}</td>
+                        </tr>
+                    `).join('')
+                }</tbody>
+            </table>
+        `;
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(copyText).then(() => {
+                const fb = document.getElementById('copyFeedback');
+                fb.textContent = '✓ Kopiert til utklippstavlen!';
+                fb.style.color = '#006644';
+                setTimeout(() => { fb.textContent = ''; }, 4000);
+            }).catch(err => {
+                console.error(err);
+                alert('Kopiering mislyktes – marker teksten manuelt');
+            });
         });
     }
 
     function filterPendingTable() {
-        const filter = document.getElementById('searchReg').value.toUpperCase();
+        const filter = document.getElementById('searchReg').value.toUpperCase().trim();
         document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
-            row.style.display = row.cells[0].textContent.toUpperCase().includes(filter) ? '' : 'none';
+            const reg = row.cells[0]?.textContent?.toUpperCase() || '';
+            row.style.display = reg.includes(filter) ? '' : 'none';
         });
     }
 
     function toggleGuidelines() {
         const content = document.querySelector('.guidelines-content');
         const toggle = document.querySelector('.guidelines-toggle');
-        if (content.style.display === 'block') {
-            content.style.display = 'none';
-            toggle.textContent = '+';
-        } else {
-            content.style.display = 'block';
-            toggle.textContent = '−';
-        }
+        const isHidden = content.style.display !== 'block';
+        content.style.display = isHidden ? 'block' : 'none';
+        toggle.textContent = isHidden ? '−' : '+';
     }
 
-    // Auto-update Finn link
-    document.getElementById('make').addEventListener('input', updateFinnLink);
-    document.getElementById('model').addEventListener('input', updateFinnLink);
-    document.getElementById('year').addEventListener('input', updateFinnLink);
-    document.getElementById('kmstand').addEventListener('input', updateFinnLink);
+    // Live update Finn link
+    ['make','model','year','kmstand'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateFinnLink);
+    });
     </script>
 </body>
 </html>
