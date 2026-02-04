@@ -108,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.9 – revert to 1.40.6 + exclude partial day on rolling
+        Version 1.40.6 – restored stable version
     </div>
     <div id="funnelContainer" style="display:none;">
         <div class="funnel" id="funnelArea"></div>
@@ -129,10 +129,130 @@
     </div>
 </div>
 
-<!-- configPrompt div unchanged – omitted for brevity -->
+<div id="configPrompt">
+    <div class="prompt-box">
+        <h3>Advanced Configuration</h3>
+        <p>Most values can be edited by clicking them above (e.g. "2 min/car").</p>
+        <pre>
+localStorage.setItem('peasyConfig', JSON.stringify({
+  valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7,
+  prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700,
+  marketingDaily: 1000, marketingStart: "2025-11-01"
+}));
+        </pre>
+        <p>Current values:</p>
+        <ul style="line-height:1.6; font-size:0.95rem;">
+            <li>Valuation: <strong id="curValTime"></strong> min</li>
+            <li>Work day: <strong id="curWorkDay"></strong> h</li>
+            <li>Transport: <strong id="curTransport"></strong> NOK</li>
+            <li>AR: <strong id="curAr"></strong>%</li>
+            <li>Prod sold <25k: <strong id="curPSU"></strong> NOK</li>
+            <li>≥25k: <strong id="curPSO"></strong> NOK</li>
+            <li>Prod ret <25k: <strong id="curPRU"></strong> NOK</li>
+            <li>≥25k: <strong id="curPRO"></strong> NOK</li>
+            <li>Marketing daily: <strong id="curMarketingDaily"></strong> NOK</li>
+            <li>Start: <strong id="curMarketingStart"></strong></li>
+        </ul>
+        <button onclick="hideConfigPrompt()">Close</button>
+    </div>
+</div>
 
 <script>
-// config, saveConfig, updateDisplays, toggleConfigDetails, makeEditable, toggleCustomDates, getDate, dateToYMD unchanged ...
+const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
+let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
+
+function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
+
+function updateDisplays() {
+  document.getElementById('valTimeDisplay').textContent = config.valTime;
+  document.getElementById('workDayDisplay').textContent = config.workDay;
+  document.getElementById('valTimeDisplayDet').textContent = config.valTime;
+  document.getElementById('workDayDisplayDet').textContent = config.workDay;
+  document.getElementById('transportDisplay').textContent = config.transportCost;
+  document.getElementById('arDisplay').textContent = config.arPercent;
+  document.getElementById('psuDisplay').textContent = config.prodSoldUnder;
+  document.getElementById('psoDisplay').textContent = config.prodSoldOver;
+  document.getElementById('pruDisplay').textContent = config.prodRetUnder;
+  document.getElementById('proDisplay').textContent = config.prodRetOver;
+  document.getElementById('marketingDailyDisplay').textContent = config.marketingDaily;
+  document.getElementById('marketingStartDisplay').textContent = config.marketingStart;
+  document.getElementById('curValTime').textContent = config.valTime;
+  document.getElementById('curWorkDay').textContent = config.workDay;
+  document.getElementById('curTransport').textContent = config.transportCost;
+  document.getElementById('curAr').textContent = config.arPercent;
+  document.getElementById('curPSU').textContent = config.prodSoldUnder;
+  document.getElementById('curPSO').textContent = config.prodSoldOver;
+  document.getElementById('curPRU').textContent = config.prodRetUnder;
+  document.getElementById('curPRO').textContent = config.prodRetOver;
+  document.getElementById('curMarketingDaily').textContent = config.marketingDaily;
+  document.getElementById('curMarketingStart').textContent = config.marketingStart;
+}
+updateDisplays();
+
+function toggleConfigDetails() { 
+    const det = document.getElementById('configDetails'); 
+    det.style.display = det.style.display === 'block' ? 'none' : 'block'; 
+}
+
+function makeEditable(span, key, type = 'number', step = 1) {
+  const val = config[key];
+  span.innerHTML = `<input class="editable-input" type="${type}" value="${val}" step="${step}">`;
+  const input = span.querySelector('input');
+  input.focus(); input.select();
+  input.onblur = () => { 
+      const newVal = type === 'number' ? parseFloat(input.value) : input.value; 
+      if (!isNaN(newVal) || type !== 'number') saveConfig(key, newVal); 
+      else updateDisplays(); 
+  };
+  input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
+}
+
+function toggleCustomDates() {
+  const select = document.getElementById('periodSelect');
+  const customDiv = document.getElementById('customDates');
+  customDiv.style.display = select.value === 'custom' ? 'flex' : 'none';
+  if (select.value === 'custom') {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - 30);
+    document.getElementById('customStart').value = start.toISOString().split('T')[0];
+    document.getElementById('customEnd').value = today.toISOString().split('T')[0];
+  }
+}
+
+function getDate(ws, row, col) {
+  const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
+  if (!cell || cell.v == null) return null;
+  let value = cell.v;
+  if (typeof value === 'number' && value > 0) {
+    try {
+      const d = XLSX.SSF.parse_date_code(value);
+      return new Date(d.y, d.m - 1, d.d);
+    } catch (e) {}
+  }
+  if (typeof value === 'string') {
+    value = value.trim();
+    if (!value) return null;
+    let datePart = value.split(/\s+/)[0].trim();
+    const m = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10);
+      const year = parseInt(m[3], 10);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
+        return new Date(year, month - 1, day);
+      }
+    }
+  }
+  return null;
+}
+
+function dateToYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+let workloadChart = null;
+let receivedSoldChart = null;
 
 async function loadDashboard() {
   console.log("Starter lasting...");
@@ -154,13 +274,14 @@ async function loadDashboard() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
 
-    // Headers and column lookup (exact matches from your report)
+    // Read headers from row 0
     const headers = [];
     for (let c = range.s.c; c <= range.e.c; ++c) {
       const cell = ws[XLSX.utils.encode_cell({r:0, c})];
       headers[c] = cell && cell.v ? String(cell.v).trim() : '';
     }
 
+    // Column lookup using EXACT headers
     const COL_O = headers.findIndex(h => (h || '').trim() === "SD mottatt på");
     const COL_P = headers.findIndex(h => (h || '').trim() === "Gire bestilt på");
     const COL_LEVERE = headers.findIndex(h => (h || '').trim() === "Levere selv");
@@ -189,31 +310,20 @@ async function loadDashboard() {
     const today = new Date();
     let startDate = new Date(today);
     let endDate = new Date(today);
+    endDate.setHours(23,59,59,999);
 
     const periodValue = document.getElementById('periodSelect').value;
-
     if (periodValue === 'custom') {
       const s = document.getElementById('customStart').value;
       const e = document.getElementById('customEnd').value;
       startDate = s ? new Date(s + 'T00:00:00') : new Date(2000, 0, 1);
       endDate = e ? new Date(e + 'T23:59:59.999') : new Date(today);
     } else if (periodValue === 'today') {
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
     } else if (periodValue === 'all') {
       startDate = new Date(2000, 0, 1);
-      endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1); // exclude partial today
-      endDate.setHours(23, 59, 59, 999);
     } else {
-      // Rolling: 7,14,30,90 – exclude partial today
-      const daysBack = parseInt(periodValue);
-      startDate.setDate(today.getDate() - daysBack);
-      startDate.setHours(0, 0, 0, 0);
-
-      endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1);
-      endDate.setHours(23, 59, 59, 999);
+      startDate.setDate(today.getDate() - parseInt(periodValue));
     }
 
     const marketingStartDate = new Date(config.marketingStart);
@@ -232,7 +342,6 @@ async function loadDashboard() {
     let sumDaysToSell = 0, countDaysToSell = 0;
     let inProduction = 0;
 
-    // Data loop (unchanged from 1.40.6)
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       const dO = getDate(ws, row, COL_O);
       const dQ = getDate(ws, row, COL_Q);
@@ -241,12 +350,16 @@ async function loadDashboard() {
       const dP = getDate(ws, row, COL_P);
       const dLevere = getDate(ws, row, COL_LEVERE);
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
-      const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
+      const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERAGE})]?.v || '').trim();
 
-      if (pVal !== '' && dP && dP >= startDate && dP <= endDate) gireOrdered++;
-      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) levereSelv++;
+      if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
+        gireOrdered++;
+      }
+      if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
+        levereSelv++;
+      }
 
-      const inPeriod = 
+      const inPeriod =
         (dO && dO >= startDate && dO <= endDate) ||
         (dQ && dQ >= startDate && dQ <= endDate) ||
         (dR && dR >= startDate && dR <= endDate) ||
@@ -258,11 +371,15 @@ async function loadDashboard() {
         mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
         totalO++;
       }
+
       if (dQ && dQ >= startDate && dQ <= endDate) {
         mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
         totalQ++;
       }
-      if (pVal !== '') transportSum += config.transportCost;
+
+      if (pVal !== '') {
+        transportSum += config.transportCost;
+      }
 
       if (dR && dR >= startDate && dR <= endDate) {
         mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
@@ -293,12 +410,10 @@ async function loadDashboard() {
       }
     }
 
-    // Calculations (unchanged)
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
     const daysCountLabel = countDaysToSell > 0 ? `(${countDaysToSell} sales)` : '(no completed sales)';
-
     const periodEnd = new Date(today); periodEnd.setHours(23,59,59,999);
     let marketingDays = 0, marketingTotal = 0;
     if (marketingStartDate <= periodEnd) {
@@ -309,7 +424,6 @@ async function loadDashboard() {
         marketingTotal = marketingDays * config.marketingDaily;
       }
     }
-
     const totalCosts = transportSum + prodSoldSum + prodReturnedSum + marketingTotal;
     const costPerSoldNum = totalR > 0 ? Math.round(totalCosts / totalR) : 0;
     const costPerSold = costPerSoldNum.toLocaleString('nb-NO');
@@ -318,15 +432,13 @@ async function loadDashboard() {
     const gpNok = totalR > 0 ? Math.round(incomePerSold - costPerSoldNum) : 0;
     const gpPct = incomePerSold > 0 ? (gpNok / incomePerSold) * 100 : 0;
     const profitClass = gpNok >= 0 ? 'good' : 'alert';
-
     const isAllTime = periodValue === 'all';
-    const daysInPeriod = isAllTime ? 30 : Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1);
+    const daysInPeriod = isAllTime ? 30 : (periodValue === 'custom' ? Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1) : (periodValue === 'today' ? 1 : parseInt(periodValue)));
     const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
     const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
     const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
     const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
     const fteNeeded = isAllTime ? 'N/A' : (minPerDayRaw / (config.workDay * 60)).toFixed(2);
-
     const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
     const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
     const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
@@ -336,27 +448,25 @@ async function loadDashboard() {
     const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
     const costVsAvgiftClass = (costPerSoldNum > avgT && totalR > 0) ? 'alert' : 'good';
     const avgBudClass = avgS < 125000 ? 'alert' : 'good';
-
     const shortPeriod = periodValue === 'today' || periodValue === '7';
     document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
     document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
-
-    // Period display – now accurate to the filtered range
+    let displayRange = '';
+    if (periodValue === 'custom') displayRange = ` (${document.getElementById('customStart').value} – ${document.getElementById('customEnd').value})`;
     let periodText = '';
     if (periodValue === 'all') {
       periodText = 'All time';
     } else if (periodValue === 'today') {
       periodText = startDate.toLocaleDateString('nb-NO');
     } else {
-      const fromStr = startDate.toLocaleDateString('nb-NO');
-      const toStr = endDate.toLocaleDateString('nb-NO');
-      periodText = `${fromStr} – ${toStr}`;
+      const from = startDate.toLocaleDateString('nb-NO');
+      const to = endDate.toLocaleDateString('nb-NO');
+      periodText = `${from} – ${to}`;
     }
-
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO');
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
     document.getElementById('periodDisplay').textContent = `Periode: ${periodText}`;
 
-    // KPI tiles – always shown (restored from 1.40.6)
+    // KPI tiles – always shown
     document.getElementById('topSummaryGrid').innerHTML = `
       <div class="kpi-card ${pricedToSoldClass}" style="border: 2px solid ${pricedToSoldClass === 'alert' ? '#d32f2f' : '#2e7d32'}; background: rgba(${pricedToSoldClass === 'alert' ? '211,47,47' : '46,125,50'},0.05);">
         <div class="kpi-value">${pricedToSold}%</div>
@@ -447,7 +557,6 @@ async function loadDashboard() {
       </div>
     `;
 
-    // Funnel – only for longer periods
     if (!shortPeriod) {
       document.getElementById('funnelArea').innerHTML = `
         <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
@@ -461,7 +570,8 @@ async function loadDashboard() {
       `;
     }
 
-    // Charts (unchanged)
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
+
     const datesO = [...mapO.keys()].sort();
     const dataO = datesO.map(k => mapO.get(k));
     if (workloadChart) workloadChart.destroy();
