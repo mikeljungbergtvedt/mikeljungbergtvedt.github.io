@@ -108,7 +108,7 @@
     </div>
     <div id="loading">Loading data...</div>
     <div class="version">
-        Version 1.40.5 – exact headers from screenshot
+        Version 1.40.6 – Levere selv header updated
     </div>
     <div id="funnelContainer" style="display:none;">
         <div class="funnel" id="funnelArea"></div>
@@ -159,7 +159,9 @@ localStorage.setItem('peasyConfig', JSON.stringify({
 <script>
 const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
 let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
+
 function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
+
 function updateDisplays() {
   document.getElementById('valTimeDisplay').textContent = config.valTime;
   document.getElementById('workDayDisplay').textContent = config.workDay;
@@ -185,15 +187,25 @@ function updateDisplays() {
   document.getElementById('curMarketingStart').textContent = config.marketingStart;
 }
 updateDisplays();
-function toggleConfigDetails() { const det = document.getElementById('configDetails'); det.style.display = det.style.display === 'block' ? 'none' : 'block'; }
+
+function toggleConfigDetails() { 
+    const det = document.getElementById('configDetails'); 
+    det.style.display = det.style.display === 'block' ? 'none' : 'block'; 
+}
+
 function makeEditable(span, key, type = 'number', step = 1) {
   const val = config[key];
   span.innerHTML = `<input class="editable-input" type="${type}" value="${val}" step="${step}">`;
   const input = span.querySelector('input');
   input.focus(); input.select();
-  input.onblur = () => { const newVal = type === 'number' ? parseFloat(input.value) : input.value; if (!isNaN(newVal) || type !== 'number') saveConfig(key, newVal); else updateDisplays(); };
+  input.onblur = () => { 
+      const newVal = type === 'number' ? parseFloat(input.value) : input.value; 
+      if (!isNaN(newVal) || type !== 'number') saveConfig(key, newVal); 
+      else updateDisplays(); 
+  };
   input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
 }
+
 function toggleCustomDates() {
   const select = document.getElementById('periodSelect');
   const customDiv = document.getElementById('customDates');
@@ -206,6 +218,7 @@ function toggleCustomDates() {
     document.getElementById('customEnd').value = today.toISOString().split('T')[0];
   }
 }
+
 function getDate(ws, row, col) {
   const cell = ws[XLSX.utils.encode_cell({r:row, c:col})];
   if (!cell || cell.v == null) return null;
@@ -232,11 +245,14 @@ function getDate(ws, row, col) {
   }
   return null;
 }
+
 function dateToYMD(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+
 let workloadChart = null;
 let receivedSoldChart = null;
+
 async function loadDashboard() {
   console.log("Starter lasting...");
   const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -248,6 +264,7 @@ async function loadDashboard() {
   document.getElementById('detailsGrid').innerHTML = '';
   document.getElementById('funnelContainer').style.display = 'none';
   document.getElementById('shortPeriodNote').style.display = 'none';
+
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -256,39 +273,46 @@ async function loadDashboard() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const range = XLSX.utils.decode_range(ws['!ref']);
 
-    // Read headers from row 0 (exact as shown in your screenshot)
+    // Read headers from row 0
     const headers = [];
     for (let c = range.s.c; c <= range.e.c; ++c) {
       const cell = ws[XLSX.utils.encode_cell({r:0, c})];
       headers[c] = cell && cell.v ? String(cell.v).trim() : '';
     }
 
-    // Strict lookup using EXACT headers from your screenshot
+    // Column lookup using EXACT headers from your report
     const COL_O = headers.findIndex(h => (h || '').trim() === "SD mottatt på");
     const COL_P = headers.findIndex(h => (h || '').trim() === "Gire bestilt på");
-    const COL_LEVERE = headers.findIndex(h => (h || '').trim() === "report.peasy.list.on_the_way");
+    const COL_LEVERE = headers.findIndex(h => (h || '').trim() === "Levere selv");
     const COL_Q = headers.findIndex(h => (h || '').trim() === "Mottatt");
     const COL_R = headers.findIndex(h => (h || '').trim() === "Solgt på");
     const COL_S = headers.findIndex(h => (h || '').trim() === "Bud");
     const COL_T = headers.findIndex(h => (h || '').trim() === "Avgift");
     const COL_U = headers.findIndex(h => (h || '').trim() === "Returnert på");
 
-    // Debug: show what was actually found
-    console.log("Column mapping from headers:", {
-      O: headers[COL_O] || "NOT FOUND",
-      P: headers[COL_P] || "NOT FOUND",
-      LEVERE: headers[COL_LEVERE] || "NOT FOUND",
-      Q: headers[COL_Q] || "NOT FOUND",
-      R: headers[COL_R] || "NOT FOUND",
-      S: headers[COL_S] || "NOT FOUND",
-      T: headers[COL_T] || "NOT FOUND",
-      U: headers[COL_U] || "NOT FOUND"
+    // Debug output – open browser console (F12) to verify
+    console.table({
+      "O: SD mottatt på": headers[COL_O] || "NOT FOUND",
+      "P: Gire bestilt på": headers[COL_P] || "NOT FOUND",
+      "Levere selv": headers[COL_LEVERE] || "NOT FOUND",
+      "Q: Mottatt": headers[COL_Q] || "NOT FOUND",
+      "R: Solgt på": headers[COL_R] || "NOT FOUND",
+      "S: Bud": headers[COL_S] || "NOT FOUND",
+      "T: Avgift": headers[COL_T] || "NOT FOUND",
+      "U: Returnert på": headers[COL_U] || "NOT FOUND"
     });
+
+    // If any critical column is missing, show warning
+    if (COL_O === -1 || COL_Q === -1 || COL_R === -1 || COL_U === -1) {
+      loading.innerHTML = `<strong style="color:red">Feil: En eller flere kritiske kolonner mangler i rapporten. Sjekk konsollen (F12).</strong>`;
+      return;
+    }
 
     const today = new Date();
     let startDate = new Date(today);
     let endDate = new Date(today);
     endDate.setHours(23,59,59,999);
+
     const periodValue = document.getElementById('periodSelect').value;
     if (periodValue === 'custom') {
       const s = document.getElementById('customStart').value;
@@ -302,7 +326,9 @@ async function loadDashboard() {
     } else {
       startDate.setDate(today.getDate() - parseInt(periodValue));
     }
+
     const marketingStartDate = new Date(config.marketingStart);
+
     const mapO = new Map(), mapQ = new Map(), mapR = new Map();
     let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
     let gireOrdered = 0;
@@ -316,6 +342,7 @@ async function loadDashboard() {
     let prodReturnedSum = 0;
     let sumDaysToSell = 0, countDaysToSell = 0;
     let inProduction = 0;
+
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       const dO = getDate(ws, row, COL_O);
       const dQ = getDate(ws, row, COL_Q);
@@ -325,29 +352,36 @@ async function loadDashboard() {
       const dLevere = getDate(ws, row, COL_LEVERE);
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
       const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
+
       if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
         gireOrdered++;
       }
       if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
         levereSelv++;
       }
+
       const inPeriod =
         (dO && dO >= startDate && dO <= endDate) ||
         (dQ && dQ >= startDate && dQ <= endDate) ||
         (dR && dR >= startDate && dR <= endDate) ||
         (dU && dU >= startDate && dU <= endDate);
+
       if (!inPeriod) continue;
+
       if (dO && dO >= startDate && dO <= endDate) {
         mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
         totalO++;
       }
+
       if (dQ && dQ >= startDate && dQ <= endDate) {
         mapQ.set(dateToYMD(dQ), (mapQ.get(dateToYMD(dQ)) || 0) + 1);
         totalQ++;
       }
+
       if (pVal !== '') {
         transportSum += config.transportCost;
       }
+
       if (dR && dR >= startDate && dR <= endDate) {
         mapR.set(dateToYMD(dR), (mapR.get(dateToYMD(dR)) || 0) + 1);
         totalR++;
@@ -362,18 +396,22 @@ async function loadDashboard() {
           if (days >= 0) { sumDaysToSell += days; countDaysToSell++; }
         }
       }
+
       if (dU && dU >= startDate && dU <= endDate) {
         totalU++;
         const bud = parseFloat(ws[XLSX.utils.encode_cell({r:row, c:COL_S})]?.v || 0);
         if (bud < 25000) { returnedUnder25k++; prodReturnedSum += config.prodRetUnder; }
         else { returnedOver25k++; prodReturnedSum += config.prodRetOver; }
       }
+
       if (dQ) {
         const isSold = dR && dR <= endDate;
         const isReturned = dU && dU <= endDate;
         if (!isSold && !isReturned) inProduction++;
       }
     }
+
+    // ─── Rest of your original logic (unchanged) ──────────────────────
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
@@ -501,7 +539,7 @@ async function loadDashboard() {
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${levereSelv}</div>
-          <div class="kpi-label">Levere Selv</div>
+          <div class="kpi-label">Levere selv</div>
         </div>
       `;
       document.getElementById('detailsGrid').innerHTML = `
@@ -544,7 +582,7 @@ async function loadDashboard() {
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${levereSelv}</div>
-          <div class="kpi-label">Levere Selv</div>
+          <div class="kpi-label">Levere selv</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${totalR}</div>
@@ -559,6 +597,7 @@ async function loadDashboard() {
       `;
     }
     document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
+
     const datesO = [...mapO.keys()].sort();
     const dataO = datesO.map(k => mapO.get(k));
     if (workloadChart) workloadChart.destroy();
@@ -578,6 +617,7 @@ async function loadDashboard() {
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
+
     const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
     const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
     const dataR_chart = allDates.map(d => mapR.get(d) || 0);
@@ -595,6 +635,7 @@ async function loadDashboard() {
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
+
   } catch (err) {
     console.error("Feil ved lasting:", err);
     document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Åpne XLSX manuelt</a>`;
@@ -602,6 +643,7 @@ async function loadDashboard() {
     document.getElementById('loading').textContent = '';
   }
 }
+
 window.onload = function() {
   toggleCustomDates();
   loadDashboard();
