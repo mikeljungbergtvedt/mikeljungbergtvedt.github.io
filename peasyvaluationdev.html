@@ -7,37 +7,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); 
-            color: #004225; 
-            min-height: 100vh; 
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
+            color: #004225;
+            min-height: 100vh;
         }
         .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
         .header { margin-bottom: 48px; }
-        h1 { 
-            font-weight: 900; 
-            font-size: 2.8rem; 
-            letter-spacing: -0.8px; 
-            margin: 0 0 8px 0; 
-            color: #004225; 
+        h1 {
+            font-weight: 900;
+            font-size: 2.8rem;
+            letter-spacing: -0.8px;
+            margin: 0 0 8px 0;
+            color: #004225;
         }
-        h2 { 
-            font-weight: 700; 
-            font-size: 1.75rem; 
-            margin: 48px 0 20px; 
-            color: #004225; 
+        h2 {
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin: 48px 0 20px;
+            color: #004225;
         }
-        .card { 
-            background: rgba(255, 255, 255, 0.96); 
-            backdrop-filter: blur(16px); 
-            border: 1px solid rgba(130,191,210, 0.12); 
-            border-radius: 16px; 
-            box-shadow: 0 8px 32px rgba(0,66,37,0.06); 
-            padding: 32px; 
-            margin-bottom: 40px; 
+        .card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(130,191,210, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,66,37,0.06);
+            padding: 32px;
+            margin-bottom: 40px;
         }
         label { display: block; margin: 20px 0 8px; font-weight: 600; color: #004225; font-size: 1.05rem; }
         input { padding: 14px 16px; font-size: 1.05rem; border: 1px solid rgba(130,191,210, 0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
@@ -54,6 +54,18 @@
         #copyBtn:hover { background: #006644; }
         #searchReg { width: 320px; }
         .guidelines { font-size: 0.95rem; color: #555; margin: 20px 0 32px; padding: 20px; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
+        #finnSearchLink { margin-top: 24px; display: none; }
+        #finnLink {
+            display: inline-block;
+            padding: 14px 28px;
+            background: #006644;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: all 0.25s;
+        }
+        #finnLink:hover { background: #008855; transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -61,7 +73,6 @@
         <div class="header">
             <h1>Valuation Tool</h1>
         </div>
-
         <button onclick="loadAndShowPending()">Load / Refresh Pending Leads</button>
         <input type="text" id="searchReg" placeholder="Search RegNr..." oninput="filterPendingTable()">
         <div id="pending" class="card">
@@ -72,9 +83,7 @@
                 <tbody></tbody>
             </table>
         </div>
-
         <hr>
-
         <h2>Valuation Calculator</h2>
         <div class="guidelines">
             <strong>Guidelines:</strong><br>
@@ -85,7 +94,6 @@
             • Historical variance shown in red (last 30 days sold cars) – for reflection only<br>
             • Likely accept = Low end × (1 + historical variance %)
         </div>
-
         <form id="valForm" class="card">
             <label>RegNr:</label><input type="text" id="regnr" disabled>
             <label>Merke:</label><input type="text" id="make" required>
@@ -96,8 +104,12 @@
             <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
             <label>Motivation %:</label><input type="number" id="motivation" value="3">
             <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
-        </form>
 
+            <!-- New Finn search link (hidden until a lead is selected) -->
+            <div id="finnSearchLink">
+                <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk priser</a>
+            </div>
+        </form>
         <div id="output" class="card"></div>
     </div>
 
@@ -135,7 +147,6 @@
 
     async function loadAndShowPending() {
         if (data.length === 0) await loadReport();
-
         const sdCol = findColumn(['SD mottatt på']);
         const arCol = findColumn(['Endelig AR verdi']);
         const statusCol = findColumn(['Status']);
@@ -150,11 +161,8 @@
             const sdVal = row[sdCol] ? String(row[sdCol]).trim() : '';
             let arVal = row[arCol] ? String(row[arCol]).trim() : '';
             const statusVal = row[statusCol] ? String(row[statusCol]).trim().toLowerCase() : '';
-
             if (['-', '–', '—', ''].includes(arVal)) arVal = '';
-
             const isRelevantStatus = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
-
             return sdVal !== '' && arVal === '' && isRelevantStatus;
         });
 
@@ -181,10 +189,35 @@
     }
 
     function fillFormFromRow(row) {
-        document.getElementById('regnr').value = row[findColumn(['RegNr'])] || '';
-        document.getElementById('make').value = row[findColumn(['Merke'])] || '';
-        document.getElementById('model').value = row[findColumn(['Modell'])] || '';
-        document.getElementById('year').value = row[findColumn(['År'])] || '';
+        const regCol   = findColumn(['RegNr']);
+        const makeCol  = findColumn(['Merke']);
+        const modelCol = findColumn(['Modell']);
+        const yearCol  = findColumn(['År']);
+
+        const make  = (row[makeCol]  || '').trim();
+        const model = (row[modelCol] || '').trim();
+        const year  = parseInt(row[yearCol]) || '';
+
+        document.getElementById('regnr').value = row[regCol] || '';
+        document.getElementById('make').value  = make;
+        document.getElementById('model').value = model;
+        document.getElementById('year').value  = year;
+
+        // Generate tight Finn.no search URL (exact year only)
+        if (make && model && year) {
+            const encodedMake  = encodeURIComponent(make);
+            const encodedModel = encodeURIComponent(model);
+            const keywords     = `${encodedMake}+${encodedModel}`;
+
+            const finnUrl = `https://www.finn.no/mobility/search/car?keywords=${keywords}&registration_from=${year}&registration_to=${year}&registration_class=1&sort=PUBLISHED_DESC`;
+
+            const linkEl = document.getElementById('finnLink');
+            linkEl.href = finnUrl;
+            linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk priser`;
+            document.getElementById('finnSearchLink').style.display = 'block';
+        } else {
+            document.getElementById('finnSearchLink').style.display = 'none';
+        }
     }
 
     function getHistoricalComps(specs) {
@@ -230,16 +263,13 @@
         });
 
         if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
-
         const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
-
         return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
         const finn = parseFloat(document.getElementById('finn_avg').value) || 0;
         if (!finn) return alert('Enter Finn avg');
-
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
@@ -256,6 +286,7 @@
             model: document.getElementById('model').value,
             year: parseInt(document.getElementById('year').value) || 0
         };
+
         const hist = getHistoricalComps(specs);
         const likely_bid = low * (1 + hist.var_pct / 100);
 
@@ -271,38 +302,30 @@
 
         document.getElementById('output').innerHTML = `
             <h3>Calculation Steps (100% Finn base – no blending)</h3>
-
             <div class="step">
                 1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong>
             </div>
-
             <div class="step">
-                2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: 
+                2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%:
                 <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong>
             </div>
-
             <div class="step">
-                3. After motivation ${document.getElementById('motivation').value}%: 
+                3. After motivation ${document.getElementById('motivation').value}%:
                 <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> ← this is the midpoint
             </div>
-
             <div class="step">
                 4. ±5% spread around midpoint:<br>
                 <strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br>
                 <strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong>
             </div>
-
             <div class="step likely">
                 Likely accept (historical reference): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} NOK</strong>
             </div>
-
             <div class="step">
                 <strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>
                 (based on last 30 days sold cars – ${hist.count} comps)
             </div>
-
             <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
-
             <h4>Historical Comps (for reflection only – ${hist.count})</h4>
             <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th class="red">Variance %</th><th>Sold</th></tr></thead><tbody>${
                 hist.comps.map(c => `
