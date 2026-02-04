@@ -66,6 +66,9 @@
             transition: all 0.25s;
         }
         #finnLink:hover { background: #008855; transform: translateY(-2px); }
+        .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .guidelines-content { display: none; margin-top: 12px; }
+        .guidelines-toggle { font-size: 1.2rem; }
     </style>
 </head>
 <body>
@@ -86,13 +89,16 @@
         <hr>
         <h2>Valuation Calculator</h2>
         <div class="guidelines">
-            <strong>Guidelines:</strong><br>
-            • Base = 100% Finn.no average (no blending with historical)<br>
-            • Midpoint = Base × 0.88 (after 12% reduction)<br>
-            • Add motivation % to midpoint<br>
-            • Spread: ±5% (10% total range) around final midpoint<br>
-            • Historical variance shown in red (last 30 days sold cars) – for reflection only<br>
-            • Likely accept = Low end × (1 + historical variance %)
+            <div class="guidelines-header" onclick="toggleGuidelines()">
+                <strong>Retningslinjer</strong>
+                <span class="guidelines-toggle">+</span>
+            </div>
+            <div class="guidelines-content">
+                Identifiser nøyaktig årstall, merke, modell, batteri-/motorstørrelse osv.<br>
+                Sammenlign med lignende biler på Finn.no sortert pris lav-høy. Hvis hvit, sammenlign med hvite; hvis svart, med svarte, ellers hvilken som helst farge. Ved flere lignende biler, bruk gjennomsnittet av de 3-5 lavest prisede sammenlignbare. KM kan variere +/- 5%.<br><br>
+                <strong>Snarveier:</strong><br>
+                • <a href="https://www.finn.no/car/used/search.html" target="_blank">Finn.no bil-søk</a>
+            </div>
         </div>
         <form id="valForm" class="card">
             <label>RegNr:</label><input type="text" id="regnr" disabled>
@@ -105,9 +111,9 @@
             <label>Motivation %:</label><input type="number" id="motivation" value="3">
             <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
 
-            <!-- New Finn search link (hidden until a lead is selected) -->
+            <!-- Finn search link (hidden until a lead is selected) -->
             <div id="finnSearchLink">
-                <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk priser</a>
+                <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
             </div>
         </form>
         <div id="output" class="card"></div>
@@ -203,17 +209,17 @@
         document.getElementById('model').value = model;
         document.getElementById('year').value  = year;
 
-        // Generate tight Finn.no search URL (exact year only)
+        // Generate Finn.no search URL with registration_class=1 & sales_form=1
         if (make && model && year) {
             const encodedMake  = encodeURIComponent(make);
             const encodedModel = encodeURIComponent(model);
             const keywords     = `${encodedMake}+${encodedModel}`;
 
-            const finnUrl = `https://www.finn.no/mobility/search/car?keywords=${keywords}&registration_from=${year}&registration_to=${year}&registration_class=1&sort=PUBLISHED_DESC`;
+            const finnUrl = `https://www.finn.no/mobility/search/car?q=${keywords}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}`;
 
             const linkEl = document.getElementById('finnLink');
             linkEl.href = finnUrl;
-            linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk priser`;
+            linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
             document.getElementById('finnSearchLink').style.display = 'block';
         } else {
             document.getElementById('finnSearchLink').style.display = 'none';
@@ -351,6 +357,18 @@
         document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
             row.style.display = row.cells[0].textContent.toUpperCase().includes(filter) ? '' : 'none';
         });
+    }
+
+    function toggleGuidelines() {
+        const content = document.querySelector('.guidelines-content');
+        const toggle = document.querySelector('.guidelines-toggle');
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            toggle.textContent = '+';
+        } else {
+            content.style.display = 'block';
+            toggle.textContent = '−';
+        }
     }
     </script>
 </body>
