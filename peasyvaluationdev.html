@@ -28,9 +28,31 @@
         #copyBtn:hover { background: #006644; }
         #searchReg { width: 320px; margin: 16px 0 24px; }
         .guidelines { font-size: 0.95rem; color: #555; margin: 20px 0 32px; padding: 20px; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
-        #finnSearchLink { margin-top: 24px; display: none; text-align: center; }
-        #finnLink { display: inline-block; padding: 14px 28px; background: #006644; color: white; font-weight: 700; border-radius: 10px; text-decoration: none; transition: all 0.25s; }
-        #finnLink:hover { background: #008855; transform: translateY(-2px); }
+        #finnSearchLink { margin-top: 28px; text-align: center; display: none; }
+        #finnLink {
+            display: inline-block;
+            padding: 10px 24px;
+            background: #0063fb;                /* FINN blå */
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,99,251,0.2);
+            line-height: 1.4;
+        }
+        #finnLink:hover,
+        #finnLink:focus {
+            background: #0050d4;                /* mørkere FINN-blå */
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,99,251,0.3);
+            text-decoration: none;
+        }
+        #finnLink:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,99,251,0.2);
+        }
         .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .guidelines-content { display: none; margin-top: 12px; }
         .guidelines-toggle { font-size: 1.2rem; }
@@ -84,7 +106,9 @@
             <label>Motivasjon %:</label><input type="number" id="motivation" value="3" min="0" step="0.5">
             <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
             <div id="finnSearchLink">
-                <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
+                <a href="#" id="finnLink" target="_blank" rel="noopener noreferrer">
+                    Åpne søk på FINN →
+                </a>
             </div>
         </form>
         <div id="output" class="card"></div>
@@ -203,7 +227,7 @@
         const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
 
         link.href = url;
-        link.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
+        link.textContent = `Åpne søk på FINN →`;
         container.style.display = 'block';
     }
 
@@ -213,7 +237,7 @@
             make:   findColumn(['Merke']),
             model:  findColumn(['Modell']),
             year:   findColumn(['År']),
-            km:     22, // kolonne W = index 22 (0-basert)
+            km:     22,
         };
 
         const kmRaw = String(row[idx.km] || '').trim().replace(/\s+/g, '').replace(/\u00A0/g, '');
@@ -225,15 +249,12 @@
         document.getElementById('year').value     = row[idx.year]  || '';
         document.getElementById('kmstand').value  = (isNaN(km) || km <= 0) ? '' : km;
 
-        // Nullstill pris og gammel output
         document.getElementById('finn_avg').value = '';
         document.getElementById('output').innerHTML = '';
 
-        // Vis påminnelse
         const reminder = document.getElementById('priceReminder');
         reminder.style.display = 'block';
 
-        // Skjul påminnelse når brukeren begynner å skrive i pris-feltet
         const finnInput = document.getElementById('finn_avg');
         const hideReminder = () => {
             reminder.style.display = 'none';
@@ -400,7 +421,6 @@
         toggle.textContent = isHidden ? '−' : '+';
     }
 
-    // Live update Finn link
     ['make','model','year','kmstand'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateFinnLink);
     });
