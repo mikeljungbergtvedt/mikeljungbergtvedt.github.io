@@ -78,6 +78,7 @@
             <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
             <label>Motivasjon %:</label><input type="number" id="motivation" value="3">
             <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
+
             <div id="finnSearchLink">
                 <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
             </div>
@@ -222,17 +223,64 @@
         updateFinnLink();
     }
 
+    function getHistoricalComps(specs) {
+        const budCol = findColumn(['Bud']);
+        const lowCol = findColumn(['Endelig AR verdi', 'Laveste']);
+        const makeCol = findColumn(['Merke']);
+        const modelCol = findColumn(['Modell']);
+        const yearCol = findColumn(['År']);
+        const soldCol = findColumn(['Solgt på']);
+        const regCol = findColumn(['RegNr']);
+
+        const now = new Date(2026, 1, 4);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        const comps = data.filter(row => {
+            const m = row[makeCol] ? String(row[makeCol]).trim().toLowerCase() : '';
+            const mo = row[modelCol] ? String(row[modelCol]).trim().toLowerCase() : '';
+            const y = parseInt(row[yearCol]) || 0;
+            const bud = parseFloat(row[budCol]) || 0;
+            const soldStr = row[soldCol] || '';
+            let soldDate;
+            try { soldDate = new Date(soldStr.split(' ')[0].split('.').reverse().join('-')); } catch { soldDate = new Date(0); }
+            return m === specs.make.toLowerCase() &&
+                   mo === specs.model.toLowerCase() &&
+                   y >= specs.year - 1 && y <= specs.year + 1 &&
+                   bud > 0 &&
+                   soldDate >= thirtyDaysAgo;
+        }).map(row => {
+            const bud = parseFloat(row[budCol]) || 0;
+            const low = parseFloat(row[lowCol]) || bud;
+            const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+            return {
+                regnr: row[regCol] || '-',
+                make: row[makeCol] || '',
+                model: row[modelCol] || '',
+                year: row[yearCol] || '',
+                bud,
+                low,
+                variance,
+                sold: row[soldCol] || '-'
+            };
+        });
+
+        if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+        const var_pct = comps.reduce((s, c) => s + c.variance, 0) / comps.length;
+        return { var_pct, count: comps.length, comps };
+    }
+
     function calculateValuation() {
         const finnInput = document.getElementById('finn_avg').value.trim();
-        const finn = parseFloat(finnInput);
+        const finn = parseFloat(finnInput.replace(/\s+/g, '').replace(',', '.')) || 0;
 
-        if (isNaN(finn) || finnInput === '') {
-            alert('Vennligst skriv inn en gyldig pris i "Finn pris ex omreg" (et tall)');
+        if (finnInput !== '' && isNaN(finn)) {
+            alert('Ugyldig verdi i "Finn pris ex omreg" – bruk kun tall (f.eks. 250000)');
             return;
         }
 
-        const margin    = parseFloat(document.getElementById('margin').value) / 100;
-        const tillegg   = parseFloat(document.getElementById('tillegg').value) / 100;
+        const margin = parseFloat(document.getElementById('margin').value) / 100;
+        const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
         const spread = 0.05;
 
@@ -286,10 +334,30 @@
         `;
     }
 
-    // Rest of functions unchanged (getHistoricalComps, copyToClipboard, filterPendingTable, toggleGuidelines)
-    // ... paste them here from previous version ...
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => alert('Kopiert – lim inn i ERP')).catch(err => alert('Kopiering feilet'));
+    }
 
-    // Listeners
+    function filterPendingTable() {
+        const filter = document.getElementById('searchReg').value.toUpperCase();
+        document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
+            row.style.display = row.cells[0].textContent.toUpperCase().includes(filter) ? '' : 'none';
+        });
+    }
+
+    function toggleGuidelines() {
+        const content = document.querySelector('.guidelines-content');
+        const toggle = document.querySelector('.guidelines-toggle');
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            toggle.textContent = '+';
+        } else {
+            content.style.display = 'block';
+            toggle.textContent = '−';
+        }
+    }
+
+    // Auto-update Finn link on changes
     document.getElementById('make').addEventListener('input', updateFinnLink);
     document.getElementById('model').addEventListener('input', updateFinnLink);
     document.getElementById('year').addEventListener('input', updateFinnLink);
