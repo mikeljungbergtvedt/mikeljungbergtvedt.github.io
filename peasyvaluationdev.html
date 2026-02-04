@@ -111,7 +111,6 @@
             <label>Motivation %:</label><input type="number" id="motivation" value="3">
             <button type="button" onclick="calculateValuation()">Calculate & Show Steps</button>
 
-            <!-- Finn search link (hidden until a lead is selected) -->
             <div id="finnSearchLink">
                 <a href="#" id="finnLink" target="_blank">Åpne Finn-søk for denne bilen → sjekk laveste priser</a>
             </div>
@@ -194,6 +193,44 @@
         });
     }
 
+    function updateFinnLink() {
+        const make  = document.getElementById('make').value.trim();
+        const model = document.getElementById('model').value.trim();
+        const yearStr = document.getElementById('year').value.trim();
+        const year  = parseInt(yearStr) || 0;
+
+        const linkContainer = document.getElementById('finnSearchLink');
+        const linkEl = document.getElementById('finnLink');
+
+        if (!make || !model || year < 1900 || year > 2030) {
+            linkContainer.style.display = 'none';
+            return;
+        }
+
+        // Sniff mileage from column W (index 22, 0-based: A=0 ... W=22)
+        let km = 0;
+        const kmColIndex = 22; // Column W
+        if (data.length > 0 && headers.length > kmColIndex) {
+            // We don't have the current row here, but we can skip for now or use a global if needed
+            // For simplicity: mileage only added if we had it from fillFormFromRow (future improvement)
+            // Placeholder: assume no mileage for dynamic updates until we store it
+        }
+
+        // If you later want to store km when filling row, add a hidden input or global var
+        // For now: no mileage in dynamic update (only year/make/model trigger)
+        let mileageParams = '';
+
+        const encodedMake  = encodeURIComponent(make);
+        const encodedModel = encodeURIComponent(model);
+        const keywords     = `${encodedMake}+${encodedModel}`;
+
+        const finnUrl = `https://www.finn.no/mobility/search/car?q=${keywords}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileageParams}`;
+
+        linkEl.href = finnUrl;
+        linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
+        linkContainer.style.display = 'block';
+    }
+
     function fillFormFromRow(row) {
         const regCol   = findColumn(['RegNr']);
         const makeCol  = findColumn(['Merke']);
@@ -209,21 +246,8 @@
         document.getElementById('model').value = model;
         document.getElementById('year').value  = year;
 
-        // Generate Finn.no search URL with registration_class=1 & sales_form=1
-        if (make && model && year) {
-            const encodedMake  = encodeURIComponent(make);
-            const encodedModel = encodeURIComponent(model);
-            const keywords     = `${encodedMake}+${encodedModel}`;
-
-            const finnUrl = `https://www.finn.no/mobility/search/car?q=${keywords}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}`;
-
-            const linkEl = document.getElementById('finnLink');
-            linkEl.href = finnUrl;
-            linkEl.textContent = `Åpne Finn-søk: ${make} ${model} ${year} → sjekk laveste priser`;
-            document.getElementById('finnSearchLink').style.display = 'block';
-        } else {
-            document.getElementById('finnSearchLink').style.display = 'none';
-        }
+        // Trigger Finn link update
+        updateFinnLink();
     }
 
     function getHistoricalComps(specs) {
@@ -279,7 +303,7 @@
         const margin = parseFloat(document.getElementById('margin').value) / 100;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100;
-        const spread = 0.05; // ±5%
+        const spread = 0.05;
 
         let midpoint = finn * (1 - margin - tillegg);
         midpoint += midpoint * motivation;
@@ -308,29 +332,12 @@
 
         document.getElementById('output').innerHTML = `
             <h3>Calculation Steps (100% Finn base – no blending)</h3>
-            <div class="step">
-                1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong>
-            </div>
-            <div class="step">
-                2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%:
-                <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong>
-            </div>
-            <div class="step">
-                3. After motivation ${document.getElementById('motivation').value}%:
-                <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> ← this is the midpoint
-            </div>
-            <div class="step">
-                4. ±5% spread around midpoint:<br>
-                <strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br>
-                <strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong>
-            </div>
-            <div class="step likely">
-                Likely accept (historical reference): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} NOK</strong>
-            </div>
-            <div class="step">
-                <strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>
-                (based on last 30 days sold cars – ${hist.count} comps)
-            </div>
+            <div class="step">1. Base (Finn avg): <strong>${finn.toLocaleString('nb-NO')} NOK</strong></div>
+            <div class="step">2. After margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} NOK</strong></div>
+            <div class="step">3. After motivation ${document.getElementById('motivation').value}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} NOK</strong> ← this is the midpoint</div>
+            <div class="step">4. ±5% spread around midpoint:<br><strong>From: ${Math.round(low).toLocaleString('nb-NO')} NOK</strong><br><strong>To: ${Math.round(high).toLocaleString('nb-NO')} NOK</strong></div>
+            <div class="step likely">Likely accept (historical reference): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} NOK</strong></div>
+            <div class="step"><strong class="red">Historical variance: ${hist.var_pct.toFixed(1)}% below low estimate</strong><br>(based on last 30 days sold cars – ${hist.count} comps)</div>
             <button id="copyBtn" onclick="copyToClipboard('${copyText.replace(/'/g, "\\'")}')">Copy Full Calculation to ERP</button>
             <h4>Historical Comps (for reflection only – ${hist.count})</h4>
             <div id="compsTable"><table><thead><tr><th>RegNr</th><th>Make/Model/Year</th><th>Bud</th><th>Low Est</th><th class="red">Variance %</th><th>Sold</th></tr></thead><tbody>${
@@ -370,6 +377,11 @@
             toggle.textContent = '−';
         }
     }
+
+    // Auto-update Finn link on changes to make/model/year
+    document.getElementById('make').addEventListener('input', updateFinnLink);
+    document.getElementById('model').addEventListener('input', updateFinnLink);
+    document.getElementById('year').addEventListener('input', updateFinnLink);
     </script>
 </body>
 </html>
