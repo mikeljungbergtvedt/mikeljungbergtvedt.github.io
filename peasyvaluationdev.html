@@ -74,7 +74,11 @@
             <label>Modell:</label><input type="text" id="model" required>
             <label>År:</label><input type="number" id="year" required min="1900" max="2030">
             <label>KM stand:</label><input type="number" id="kmstand" placeholder="Fra kolonne W eller angi manuelt">
-            <label>Finn pris ex omreg:</label><input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk (f.eks. 249 000)">
+            <label>Finn pris ex omreg:</label>
+            <input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk (f.eks. 249 000)">
+            <small id="priceReminder" style="color: #d32f2f; font-weight: 500; display: none; margin-top: 6px; font-size: 0.95rem;">
+                ← Ny bil valgt – husk å taste inn oppdatert Finn-pris!
+            </small>
             <label>Margin %:</label><input type="number" id="margin" value="12" min="0" step="0.5">
             <label>Tillegg %:</label><input type="number" id="tillegg" value="0" min="0" step="0.5">
             <label>Motivasjon %:</label><input type="number" id="motivation" value="3" min="0" step="0.5">
@@ -209,17 +213,33 @@
             make:   findColumn(['Merke']),
             model:  findColumn(['Modell']),
             year:   findColumn(['År']),
-            km:     22, // assuming column W = index 22
+            km:     22, // kolonne W = index 22 (0-basert)
         };
 
         const kmRaw = String(row[idx.km] || '').trim().replace(/\s+/g, '').replace(/\u00A0/g, '');
         const km = parseInt(kmRaw, 10);
 
         document.getElementById('regnr').value    = row[idx.reg]   || '';
-        document.getElementById('make').value     = row[idx.make]  || '';
-        document.getElementById('model').value    = row[idx.model] || '';
+        document.getElementById('make').value     = String(row[idx.make]  || '').trim();
+        document.getElementById('model').value    = String(row[idx.model] || '').trim();
         document.getElementById('year').value     = row[idx.year]  || '';
-        document.getElementById('kmstand').value  = isNaN(km) || km <= 0 ? '' : km;
+        document.getElementById('kmstand').value  = (isNaN(km) || km <= 0) ? '' : km;
+
+        // Nullstill pris og gammel output
+        document.getElementById('finn_avg').value = '';
+        document.getElementById('output').innerHTML = '';
+
+        // Vis påminnelse
+        const reminder = document.getElementById('priceReminder');
+        reminder.style.display = 'block';
+
+        // Skjul påminnelse når brukeren begynner å skrive i pris-feltet
+        const finnInput = document.getElementById('finn_avg');
+        const hideReminder = () => {
+            reminder.style.display = 'none';
+            finnInput.removeEventListener('input', hideReminder);
+        };
+        finnInput.addEventListener('input', hideReminder, { once: true });
 
         updateFinnLink();
     }
@@ -235,7 +255,7 @@
             reg:   findColumn(['RegNr']),
         };
 
-        const now = new Date(2026, 1, 4); // Feb 4, 2026
+        const now = new Date(2026, 1, 4);
         const thirtyDaysAgo = new Date(now);
         thirtyDaysAgo.setDate(now.getDate() - 30);
 
