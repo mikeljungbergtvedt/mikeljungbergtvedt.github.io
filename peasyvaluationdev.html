@@ -73,7 +73,7 @@
             <label>Modell:</label><input type="text" id="model" required>
             <label>År:</label><input type="number" id="year" required>
             <label>KM stand:</label><input type="number" id="kmstand" placeholder="Fra kolonne W eller angi manuelt">
-            <label>Finn pris ex omreg:</label><input type="number" id="finn_avg" required placeholder="Lim inn fra Finn-søk">
+            <label>Finn pris ex omreg:</label><input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk">
             <label>Margin %:</label><input type="number" id="margin" value="12">
             <label>Tillegg %:</label><input type="number" id="tillegg" value="0">
             <label>Motivasjon %:</label><input type="number" id="motivation" value="3">
@@ -163,9 +163,9 @@
     }
 
     function updateFinnLink() {
-        const make  = document.getElementById('make').value.trim();
+        const make = document.getElementById('make').value.trim();
         const model = document.getElementById('model').value.trim();
-        const year  = parseInt(document.getElementById('year').value) || 0;
+        const year = parseInt(document.getElementById('year').value) || 0;
         const kmInput = parseInt(document.getElementById('kmstand').value) || 0;
 
         const linkContainer = document.getElementById('finnSearchLink');
@@ -183,14 +183,14 @@
             if (kmInput > 100000) delta = 30000;
 
             const fromKm = Math.max(0, kmInput - delta);
-            const toKm   = kmInput + delta;
+            const toKm = kmInput + delta;
 
             mileageParams = `&mileage_from=${fromKm}&mileage_to=${toKm}`;
         }
 
-        const encodedMake  = encodeURIComponent(make);
+        const encodedMake = encodeURIComponent(make);
         const encodedModel = encodeURIComponent(model);
-        const keywords     = `${encodedMake}+${encodedModel}`;
+        const keywords = `${encodedMake}+${encodedModel}`;
 
         const finnUrl = `https://www.finn.no/mobility/search/car?q=${keywords}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileageParams}`;
 
@@ -200,14 +200,14 @@
     }
 
     function fillFormFromRow(row) {
-        const regCol   = findColumn(['RegNr']);
-        const makeCol  = findColumn(['Merke']);
+        const regCol = findColumn(['RegNr']);
+        const makeCol = findColumn(['Merke']);
         const modelCol = findColumn(['Modell']);
-        const yearCol  = findColumn(['År']);
+        const yearCol = findColumn(['År']);
 
-        const make  = (row[makeCol]  || '').trim();
+        const make = (row[makeCol] || '').trim();
         const model = (row[modelCol] || '').trim();
-        const year  = parseInt(row[yearCol]) || '';
+        const year = parseInt(row[yearCol]) || '';
 
         const kmRaw = row[22] || '';
         const kmClean = String(kmRaw).trim().replace(/\s+/g, '');
@@ -215,9 +215,9 @@
         if (isNaN(selectedKm) || selectedKm < 0) selectedKm = 0;
 
         document.getElementById('regnr').value = row[regCol] || '';
-        document.getElementById('make').value  = make;
+        document.getElementById('make').value = make;
         document.getElementById('model').value = model;
-        document.getElementById('year').value  = year;
+        document.getElementById('year').value = year;
         document.getElementById('kmstand').value = selectedKm > 0 ? selectedKm : '';
 
         updateFinnLink();
@@ -272,16 +272,17 @@
 
     function calculateValuation() {
         const finnInput = document.getElementById('finn_avg').value.trim();
-        const finn = parseFloat(finnInput.replace(/\s+/g, '').replace(',', '.')) || 0;
+        const cleanedInput = finnInput.replace(/\s+/g, '').replace(',', '.');
+        const finn = parseFloat(cleanedInput) || 0;
 
         if (finnInput !== '' && isNaN(finn)) {
-            alert('Ugyldig verdi i "Finn pris ex omreg" – bruk kun tall (f.eks. 250000)');
+            alert('Ugyldig verdi i "Finn pris ex omreg" – bruk kun tall (f.eks. 250000 eller 123 456)');
             return;
         }
 
-        const margin = parseFloat(document.getElementById('margin').value) / 100;
-        const tillegg = parseFloat(document.getElementById('tillegg').value) / 100;
-        const motivation = parseFloat(document.getElementById('motivation').value) / 100;
+        const margin = parseFloat(document.getElementById('margin').value) / 100 || 0;
+        const tillegg = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
+        const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
         const spread = 0.05;
 
         let midpoint = finn * (1 - margin - tillegg);
@@ -291,23 +292,23 @@
         const high = midpoint * (1 + spread);
 
         const specs = {
-            make: document.getElementById('make').value,
-            model: document.getElementById('model').value,
+            make: document.getElementById('make').value.trim(),
+            model: document.getElementById('model').value.trim(),
             year: parseInt(document.getElementById('year').value) || 0
         };
 
         const hist = getHistoricalComps(specs);
         const likely_bid = low * (1 + hist.var_pct / 100);
 
-        const copyText = `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}\n` +
-                         `${document.getElementById('make').value} ${document.getElementById('model').value} ${document.getElementById('year').value}\n\n` +
-                         `Base (Finn pris ex omreg): ${finn.toLocaleString('nb-NO')} kr\n` +
-                         `Etter margin ${document.getElementById('margin').value}% + tillegg ${document.getElementById('tillegg').value}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr\n` +
-                         `Etter motivasjon ${document.getElementById('motivation').value}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)\n` +
-                         `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr\n` +
-                         `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr\n` +
-                         `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}% under lav): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr\n` +
-                         `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på solgte biler siste 30 dager – ${hist.count} sammenlignbare)`;
+        const copyText = "Verdsettelse for " + (document.getElementById('regnr').value || 'ukjent') + "\n" +
+                         document.getElementById('make').value + " " + document.getElementById('model').value + " " + document.getElementById('year').value + "\n\n" +
+                         "Base (Finn pris ex omreg): " + finn.toLocaleString('nb-NO') + " kr\n" +
+                         "Etter margin " + document.getElementById('margin').value + "% + tillegg " + document.getElementById('tillegg').value + "%: " + Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO') + " kr\n" +
+                         "Etter motivasjon " + document.getElementById('motivation').value + "%: " + Math.round(midpoint).toLocaleString('nb-NO') + " kr (midtpunkt)\n" +
+                         "Fra (midtpunkt -5%): " + Math.round(low).toLocaleString('nb-NO') + " kr\n" +
+                         "Til (midtpunkt +5%): " + Math.round(high).toLocaleString('nb-NO') + " kr\n" +
+                         "Sannsynlig akseptert (hist varians " + hist.var_pct.toFixed(1) + "% under lav): " + Math.round(likely_bid).toLocaleString('nb-NO') + " kr\n" +
+                         "Historisk varians: " + hist.var_pct.toFixed(1) + "% (basert på solgte biler siste 30 dager – " + hist.count + " sammenlignbare)";
 
         document.getElementById('output').innerHTML = `
             <h3>Beregningstrinn (100% Finn-base – ingen blanding med historikk)</h3>
@@ -335,7 +336,12 @@
     }
 
     function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => alert('Kopiert – lim inn i ERP')).catch(err => alert('Kopiering feilet'));
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Kopiert – lim inn i ERP');
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            alert('Kopiering feilet – prøv å markere teksten manuelt');
+        });
     }
 
     function filterPendingTable() {
@@ -357,7 +363,7 @@
         }
     }
 
-    // Auto-update Finn link on changes
+    // Auto-update Finn link
     document.getElementById('make').addEventListener('input', updateFinnLink);
     document.getElementById('model').addEventListener('input', updateFinnLink);
     document.getElementById('year').addEventListener('input', updateFinnLink);
