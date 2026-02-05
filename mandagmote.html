@@ -143,14 +143,55 @@
       font-size: 1.05rem;
       line-height: 1.6;
     }
+
+    /* ─── Logo (samme stil som på de andre sidene) ─── */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo {
+      max-width: 220px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      opacity: 0.92;
+      filter: grayscale(0.15) saturate(0.92);
+      transition: opacity 0.3s ease;
+    }
+    .logo:hover {
+      opacity: 1;
+    }
+    @media (max-width: 768px) {
+      .logo {
+        max-width: 180px;
+      }
+      .logo-container {
+        margin-bottom: 20px;
+      }
+    }
+
+    /* ─── Sticky versjonsnummer – ren tekst, ingen bakgrunn (samme som de andre) ─── */
+    #version-info {
+      position: fixed;
+      bottom: 0.75rem;
+      right: 1rem;
+      font-size: 0.75rem;
+      color: #777;
+      opacity: 0.65;
+      pointer-events: none;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
-
 <div class="container">
+  <!-- Logo lagt til her -->
+  <div class="logo-container">
+    <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
+  </div>
+
   <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
-
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
@@ -160,22 +201,23 @@
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
   </div>
-
   <div id="loading" style="display:none;">Laster...</div>
-
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="commentary"></div>
-
     <div id="sold-section">
       <div class="section-title">Solgte biler</div>
       <table id="sold-table"></table>
     </div>
-
     <div id="returned-section">
       <div class="section-title">Returnerte biler</div>
       <table id="returned-table"></table>
     </div>
+  </div>
+
+  <!-- Sticky versjonsnummer lagt til her (nederst i containeren) -->
+  <div id="version-info">
+    v15 • sist oppdatert 05.02.2026
   </div>
 
   <!-- Lås-modal -->
@@ -189,7 +231,6 @@
       </div>
     </div>
   </div>
-
   <!-- Slett-bekreftelse -->
   <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
@@ -201,7 +242,6 @@
       </div>
     </div>
   </div>
-
   <!-- Passord for sletting -->
   <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
     <h3>Passord kreves</h3>
@@ -220,16 +260,13 @@ const DELETE_PASSWORD = "slett123"; // ← BYTT UT MED DITT EGET HEMMELIGE PASSO
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
-
 let currentReport = null;
-
 // Hjelpefunksjoner
 function cleanNum(str) {
   if (!str) return 0;
   let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
   return parseFloat(s) || 0;
 }
-
 function getISOWeek(date) {
   const d = new Date(date);
   d.setHours(0,0,0,0);
@@ -238,7 +275,6 @@ function getISOWeek(date) {
   const days = Math.floor((d - yearStart) / 86400000);
   return Math.ceil((days + 1) / 7);
 }
-
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   const dayOfWeek = today.getDay() || 7;
@@ -251,7 +287,6 @@ function getMostRecentCompletedWeekStart() {
   startPrev.setHours(0,0,0,0);
   return startPrev;
 }
-
 // JSONBin
 async function fetchReports() {
   try {
@@ -264,7 +299,6 @@ async function fetchReports() {
     return [];
   }
 }
-
 async function saveReports(reports) {
   try {
     const res = await fetch(API_URL, {
@@ -279,7 +313,6 @@ async function saveReports(reports) {
     alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
   }
 }
-
 // Initial lasting – nyeste rapport som default
 window.onload = async () => {
   const reports = await fetchReports();
@@ -291,7 +324,6 @@ window.onload = async () => {
   }
   await updateGenerateButtonState();
 };
-
 function populateWeekSelect(reports) {
   const sel = document.getElementById('weekSelect');
   sel.innerHTML = '<option value="">Velg uke...</option>';
@@ -302,7 +334,6 @@ function populateWeekSelect(reports) {
     sel.appendChild(opt);
   });
 }
-
 async function loadSavedReport() {
   const id = document.getElementById('weekSelect').value;
   if (!id) {
@@ -311,18 +342,14 @@ async function loadSavedReport() {
     await updateGenerateButtonState();
     return;
   }
-
   const reports = await fetchReports();
   const report = reports.find(r => r.id === id);
   if (!report) return;
-
   currentReport = report;
-
   let ts = `Opprettet: ${report.created}`;
   if (report.edited) ts += ` • Sist endret: ${report.edited}`;
   if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
   document.getElementById('timestamp').textContent = ts;
-
   let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   if (report.userComment) {
     html += `
@@ -332,23 +359,17 @@ async function loadSavedReport() {
       </div>`;
   }
   document.getElementById('commentary').innerHTML = html;
-
   renderTable('sold-table', report.soldCars || []);
   renderTable('returned-table', report.returnedCars || []);
-
   document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
   document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
-
   document.getElementById('report-content').style.display = 'block';
-
   const locked = !!report.locked;
   document.getElementById('edit-btn').style.display = 'block';
   document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
   document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
-
   await updateGenerateButtonState();
 }
-
 function renderTable(id, cars) {
   const table = document.getElementById(id);
   table.innerHTML = '';
@@ -356,7 +377,6 @@ function renderTable(id, cars) {
     table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
     return;
   }
-
   table.innerHTML = `
     <thead>
       <tr>
@@ -390,7 +410,6 @@ function renderTable(id, cars) {
       </tr>
     </tfoot>`;
 }
-
 // Generer ny rapport
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
@@ -398,7 +417,6 @@ async function generateNewReport() {
   btn.disabled = true;
   document.getElementById('loading').textContent = 'Genererer...';
   document.getElementById('loading').style.display = 'block';
-
   try {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     const res = await fetch(url);
@@ -407,7 +425,6 @@ async function generateNewReport() {
     const wb = XLSX.read(ab, {type: 'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-
     const headers = data[0].map(h => (h || '').trim());
     const col = {
       Merke: headers.indexOf('Merke'),
@@ -418,22 +435,18 @@ async function generateNewReport() {
       'Solgt på': headers.indexOf('Solgt på'),
       Returnert: headers.findIndex(h => h?.includes('Returnert'))
     };
-
     const startDate = getMostRecentCompletedWeekStart();
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
     const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
-
     const reports = await fetchReports();
     if (reports.some(r => r.title === title)) {
       alert('Rapport for denne uken finnes allerede.');
       return;
     }
-
     const soldCars = [], returnedCars = [];
-
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       const parseDate = str => {
@@ -441,10 +454,8 @@ async function generateNewReport() {
         const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
         return m ? new Date(m[3], m[2]-1, m[1]) : null;
       };
-
       const soldDate = parseDate(row[col['Solgt på']]);
-      const retDate  = parseDate(row[col.Returnert]);
-
+      const retDate = parseDate(row[col.Returnert]);
       let arLowest = 0;
       const arRange = row[col['Endelig AR verdi']] || '';
       if (arRange.includes('-')) {
@@ -452,11 +463,9 @@ async function generateNewReport() {
       } else {
         arLowest = parseFloat(arRange) || 0;
       }
-
       const bud = parseFloat(row[col.Bud] || 0);
       const diffNok = bud - arLowest;
       const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
-
       const car = {
         Merke: row[col.Merke] || '-',
         Modell: row[col.Modell] || '-',
@@ -466,13 +475,10 @@ async function generateNewReport() {
         'Diff NOK_raw': diffNok,
         'Diff %_raw': diffPct
       };
-
       if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
-      if (retDate  && retDate  >= startDate && retDate  < endDate) returnedCars.push(car);
+      if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
     }
-
     const commentaryHtml = generateCommentary(soldCars, returnedCars);
-
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
@@ -485,14 +491,11 @@ async function generateNewReport() {
       locked: false,
       lockComment: ''
     };
-
     await saveCurrentReport();
-
     const updatedReports = await fetchReports();
     populateWeekSelect(updatedReports);
     document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
-
     alert('Rapport generert og lagret i skyen!');
   } catch (err) {
     console.error(err);
@@ -502,7 +505,6 @@ async function generateNewReport() {
     btn.disabled = false;
   }
 }
-
 function generateCommentary(sold, returned) {
   const stats = arr => {
     if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
@@ -522,18 +524,14 @@ function generateCommentary(sold, returned) {
       avgP: (sp / arr.length).toFixed(1)
     };
   };
-
   const s = stats(sold);
   const r = stats(returned);
-
   return `
     <h3>Fakta – forrige fullførte uke (man–søn)</h3>
-
     <div style="margin: 24px 0 12px 0;">
       <strong>Solgte biler</strong><br>
       Totalt: ${s.n} biler
     </div>
-
     <ul style="margin: 8px 0 32px 24px; line-height: 1.6; list-style-type: disc; color: #004225;">
       <li>Under estimat: ${s.u} biler</li>
       <li>Over estimat: ${s.o} biler</li>
@@ -542,18 +540,15 @@ function generateCommentary(sold, returned) {
         Gjennomsnittlig diff: ${s.avgN.toLocaleString('nb-NO')} kr (${s.avgP}%)
       </li>
     </ul>
-
     <div style="margin: 32px 0 12px 0;">
       <strong>Returnerte biler</strong><br>
       Totalt: ${r.n} biler
     </div>
-
     <div style="margin-bottom: 24px; color: #004225; font-weight: 500;">
       Gjennomsnittlig diff: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)
     </div>
   `;
 }
-
 async function saveCurrentReport() {
   if (!currentReport) return;
   let reports = await fetchReports();
@@ -562,7 +557,6 @@ async function saveCurrentReport() {
   else reports.push(currentReport);
   await saveReports(reports);
 }
-
 async function updateGenerateButtonState() {
   const btn = document.getElementById('generate-btn');
   const start = getMostRecentCompletedWeekStart();
@@ -573,13 +567,11 @@ async function updateGenerateButtonState() {
   btn.disabled = exists;
   btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
-
 // Rediger KUN brukerens egen kommentar
 function editUserComment() {
   if (!currentReport) return;
   const div = document.getElementById('commentary');
   const currentUserText = currentReport.userComment || '';
-
   let html = currentReport.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   html += `
     <div class="user-comment" style="margin-top:32px; padding-top:20px; border-top:1px solid rgba(130,191,210,0.2);">
@@ -593,11 +585,9 @@ function editUserComment() {
   div.innerHTML = html;
   document.getElementById('edit-btn').style.display = 'none';
 }
-
 function cancelUserEdit() {
   loadSavedReport();
 }
-
 async function saveUserComment() {
   const ta = document.getElementById('user-comment-textarea');
   if (!ta) return;
@@ -607,16 +597,13 @@ async function saveUserComment() {
   await saveCurrentReport();
   await loadSavedReport();
 }
-
 // Låsing
 function showLockCommentModal() {
   document.getElementById('lock-comment-modal').style.display = 'flex';
 }
-
 function closeLockModal() {
   document.getElementById('lock-comment-modal').style.display = 'none';
 }
-
 async function confirmLockWithComment() {
   const comment = document.getElementById('lock-comment-text').value.trim();
   if (currentReport) {
@@ -628,25 +615,20 @@ async function confirmLockWithComment() {
     await loadSavedReport();
   }
 }
-
 // Sletting
 function showDeleteConfirm() {
   document.getElementById('delete-modal').style.display = 'flex';
 }
-
 function closeDeleteModal() {
   document.getElementById('delete-modal').style.display = 'none';
 }
-
 function promptPasswordForDelete() {
   closeDeleteModal();
   document.getElementById('password-prompt').style.display = 'block';
 }
-
 function closePasswordPrompt() {
   document.getElementById('password-prompt').style.display = 'none';
 }
-
 async function checkDeletePassword() {
   if (document.getElementById('password-input').value === DELETE_PASSWORD) {
     let reports = await fetchReports();
