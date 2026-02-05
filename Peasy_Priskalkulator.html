@@ -92,8 +92,6 @@
             label { font-size: 1rem; }
             input { font-size: 0.95rem; padding: 0.7rem 0.9rem; }
         }
-
-        /* ─── Kun logo-stiler lagt til her ─── */
         .logo-container {
             margin: 0 auto 2.5rem auto;
             text-align: center;
@@ -126,11 +124,14 @@
             <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="logo">
         </div>
         <div class="header"><h1>Verdsettelsesverktøy</h1></div>
-        <button onclick="loadAndShowPending()">Last inn / Oppdater ventende leads</button>
+        
+        <button onclick="loadAndShowPending()">Oppdater ventende leads</button>
+        
         <input type="text" id="searchReg" placeholder="Søk RegNr..." oninput="filterPendingTable()">
+        
         <div id="pending" class="card">
             <h2>Ventende leads</h2>
-            <p id="pendingCount">Klikk knappen for å laste...</p>
+            <p id="pendingCount">Laster ventende leads...</p>
             <div style="overflow-x: auto;">
                 <table id="pendingTable">
                     <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
@@ -138,8 +139,10 @@
                 </table>
             </div>
         </div>
+        
         <hr>
         <h2>Verdikalkulator</h2>
+        
         <div class="guidelines">
             <div class="guidelines-header" onclick="toggleGuidelines()">
                 <strong>Retningslinjer</strong>
@@ -159,6 +162,7 @@
                 • Over 100 000 km → ±30 000 km
             </div>
         </div>
+        
         <form id="valForm" class="card">
             <label>RegNr:</label><input type="text" id="regnr" disabled>
             <label>Merke:</label><input type="text" id="make" required>
@@ -180,15 +184,18 @@
                 </a>
             </div>
         </form>
+        
         <div id="output" class="card"></div>
     </div>
+    
     <div id="version-info">
         v1.3.4 • sist oppdatert 04.02.2026
     </div>
+
     <script>
-    // All functions restored – calculation works as in original working version
     let data = [];
     let headers = [];
+
     async function loadReport() {
         const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
         try {
@@ -204,10 +211,10 @@
             return true;
         } catch (err) {
             console.error(err);
-            alert('Kunne ikke laste rapporten – sjekk nettverk eller API-tilgang');
             return false;
         }
     }
+
     function findColumn(patterns) {
         for (let p of patterns) {
             const idx = headers.findIndex(h => h.toLowerCase().includes(p.toLowerCase()));
@@ -215,17 +222,27 @@
         }
         return -1;
     }
+
     async function loadAndShowPending() {
-        if (data.length === 0) await loadReport();
-        const sdCol = findColumn(['SD mottatt på']);
-        const arCol = findColumn(['Endelig AR verdi']);
+        const countEl = document.getElementById('pendingCount');
+        countEl.textContent = "Laster ventende leads...";
+
+        const success = await loadReport();
+        if (!success) {
+            countEl.textContent = "Kunne ikke laste leads – prøv å oppdatere";
+            return false;
+        }
+
+        const sdCol    = findColumn(['SD mottatt på']);
+        const arCol    = findColumn(['Endelig AR verdi']);
         const statusCol = findColumn(['Status']);
-        const regCol = findColumn(['RegNr']);
+        const regCol   = findColumn(['RegNr']);
         const merkeCol = findColumn(['Merke']);
         const modellCol = findColumn(['Modell']);
-        const yearCol = findColumn(['År']);
-        const postCol = findColumn(['Postnr']);
-        const stedCol = findColumn(['Sted']);
+        const yearCol  = findColumn(['År']);
+        const postCol  = findColumn(['Postnr']);
+        const stedCol  = findColumn(['Sted']);
+
         let pending = data.filter(row => {
             const sdVal = String(row[sdCol] || '').trim();
             let arVal = String(row[arCol] || '').trim();
@@ -234,14 +251,18 @@
             const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
             return sdVal !== '' && arVal === '' && isRelevant;
         });
+
         pending.sort((a, b) => {
             const da = new Date(a[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
             const db = new Date(b[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
             return db - da;
         });
-        document.getElementById('pendingCount').textContent = `Fant ${pending.length} ventende leads`;
+
+        countEl.textContent = `Fant ${pending.length} ventende leads`;
+
         const tbody = document.querySelector('#pendingTable tbody');
         tbody.innerHTML = '';
+
         pending.forEach(row => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
@@ -257,7 +278,10 @@
             `;
             tbody.appendChild(tr);
         });
+
+        return true;
     }
+
     function parseFinnPrice(str) {
         if (!str) return 0;
         return parseFloat(
@@ -267,6 +291,7 @@
                .replace(',', '.')
         ) || 0;
     }
+
     function updateFinnLink() {
         const make = document.getElementById('make').value.trim();
         const model = document.getElementById('model').value.trim();
@@ -274,21 +299,25 @@
         const km = parseInt(document.getElementById('kmstand').value) || 0;
         const container = document.getElementById('finnSearchLink');
         const link = document.getElementById('finnLink');
+
         if (!make || !model || year < 1900 || year > 2030) {
             container.style.display = 'none';
             return;
         }
+
         let mileage = '';
         if (km > 0) {
             let delta = km < 50000 ? 10000 : km <= 100000 ? 20000 : 30000;
             mileage = `&mileage_from=${Math.max(0, km - delta)}&mileage_to=${km + delta}`;
         }
+
         const q = encodeURIComponent(`${make} ${model}`);
         const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
         link.href = url;
         link.textContent = `Åpne søk på FINN →`;
         container.style.display = 'block';
     }
+
     function fillFormFromRow(row) {
         const idx = {
             reg: findColumn(['RegNr']),
@@ -297,8 +326,10 @@
             year: findColumn(['År']),
             km: 22,
         };
+
         const kmRaw = String(row[idx.km] || '').trim().replace(/\s+/g, '').replace(/\u00A0/g, '');
         const km = parseInt(kmRaw, 10);
+
         document.getElementById('regnr').value = row[idx.reg] || '';
         document.getElementById('make').value = String(row[idx.make] || '').trim();
         document.getElementById('model').value = String(row[idx.model] || '').trim();
@@ -306,16 +337,20 @@
         document.getElementById('kmstand').value = (isNaN(km) || km <= 0) ? '' : km;
         document.getElementById('finn_avg').value = '';
         document.getElementById('output').innerHTML = '';
+
         const reminder = document.getElementById('priceReminder');
         reminder.style.display = 'block';
+
         const finnInput = document.getElementById('finn_avg');
         const hideReminder = () => {
             reminder.style.display = 'none';
             finnInput.removeEventListener('input', hideReminder);
         };
         finnInput.addEventListener('input', hideReminder, { once: true });
+
         updateFinnLink();
     }
+
     function getHistoricalComps(specs) {
         const idx = {
             bud: findColumn(['Bud']),
@@ -326,14 +361,17 @@
             sold: findColumn(['Solgt på']),
             reg: findColumn(['RegNr']),
         };
-        const now = new Date(2026, 1, 4);
+
+        const now = new Date(2026, 1, 4); // February 4, 2026
         const thirtyDaysAgo = new Date(now);
         thirtyDaysAgo.setDate(now.getDate() - 30);
+
         const comps = data.filter(row => {
             const m = String(row[idx.make] || '').trim().toLowerCase();
             const mo = String(row[idx.model] || '').trim().toLowerCase();
             const y = parseInt(row[idx.year]) || 0;
             const bud = parseFloat(row[idx.bud]) || 0;
+
             let soldDate;
             try {
                 const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
@@ -341,6 +379,7 @@
             } catch {
                 soldDate = new Date(0);
             }
+
             return m === specs.make.toLowerCase() &&
                    mo === specs.model.toLowerCase() &&
                    y >= specs.year - 1 && y <= specs.year + 1 &&
@@ -361,33 +400,41 @@
                 sold: row[idx.sold] || '-'
             };
         });
+
         if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
         const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
         return { var_pct, count: comps.length, comps };
     }
+
     function calculateValuation() {
-        console.log("calculateValuation called!"); // debug to confirm
         const finnStr = document.getElementById('finn_avg').value.trim();
         const finn = parseFinnPrice(finnStr);
+
         if (finnStr !== '' && finn <= 0) {
             alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
             return;
         }
+
         const margin = parseFloat(document.getElementById('margin').value) / 100 || 0;
         const tillegg = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
         const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
         const spread = 0.05;
+
         let midpoint = finn * (1 - margin - tillegg);
         midpoint += midpoint * motivation;
+
         const low = midpoint * (1 - spread);
         const high = midpoint * (1 + spread);
+
         const specs = {
             make: document.getElementById('make').value.trim(),
             model: document.getElementById('model').value.trim(),
             year: parseInt(document.getElementById('year').value) || 0
         };
+
         const hist = getHistoricalComps(specs);
         const likely_bid = low * (1 + hist.var_pct / 100);
+
         const copyText = [
             `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
             `${specs.make} ${specs.model} ${specs.year}`,
@@ -400,6 +447,7 @@
             `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
             `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
         ].join('\n');
+
         const output = document.getElementById('output');
         output.innerHTML = `
             <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
@@ -428,6 +476,7 @@
                 }</tbody>
             </table>
         `;
+
         document.getElementById('copyBtn').addEventListener('click', () => {
             navigator.clipboard.writeText(copyText).then(() => {
                 const fb = document.getElementById('copyFeedback');
@@ -440,6 +489,7 @@
             });
         });
     }
+
     function filterPendingTable() {
         const filter = document.getElementById('searchReg').value.toUpperCase().trim();
         document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
@@ -447,6 +497,7 @@
             row.style.display = reg.includes(filter) ? '' : 'none';
         });
     }
+
     function toggleGuidelines() {
         const content = document.querySelector('.guidelines-content');
         const toggle = document.querySelector('.guidelines-toggle');
@@ -454,10 +505,16 @@
         content.style.display = isHidden ? 'block' : 'none';
         toggle.textContent = isHidden ? '−' : '+';
     }
+
     ['make','model','year','kmstand'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateFinnLink);
     });
-    // Debug confirmation
+
+    // ─── Auto-load leads when page is ready ───
+    window.addEventListener('DOMContentLoaded', () => {
+        loadAndShowPending();
+    });
+
     console.log("Page loaded – calculateValuation is defined:", typeof calculateValuation === "function");
     </script>
 </body>
