@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Peasy Dashboard</title>
+    <title>Peasy V2 Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -43,7 +43,18 @@
         .sold-split { font-size: 0.9rem; color: #555; margin-top: 4px; }
         .chart-container { padding: 20px; }
         .chart-container h2 { font-weight: 800; font-size: 1.45rem; margin-bottom: 16px; color: #004225; }
-        .version { font-size: 0.8rem; color: #555; text-align: right; margin: 12px 0; opacity: 0.75; }
+        .version { 
+            font-size: 0.8rem; 
+            color: #555; 
+            text-align: right; 
+            margin: 12px 0; 
+            opacity: 0.75; 
+            position: fixed; 
+            bottom: 12px; 
+            right: 16px; 
+            z-index: 100; 
+            pointer-events: none;
+        }
         .config-line { font-size: 0.95rem; opacity: 0.9; margin: 12px 0 24px; }
         .config-trigger { font-weight: 700; color: #004225; cursor: pointer; transition: all 0.2s; }
         .config-trigger:hover { color: #006644; text-decoration: underline; }
@@ -59,10 +70,29 @@
         #loading { margin: 24px 0; font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; }
         .cost-breakdown { display: none; font-size: 0.9rem; color: #444; margin-top: 8px; text-align: left; padding: 10px; background: rgba(0,102,68,0.05); border-radius: 8px; border: 1px solid rgba(0,102,68,0.2); }
         .cost-sub:hover .cost-breakdown { display: block; }
+
+        /* Kun tillegg for logo – minimal og isolert */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .logo {
+            max-width: 280px;
+            height: auto;
+            opacity: 0.92;
+            filter: grayscale(0.1) saturate(0.95);
+        }
+        .logo:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <div class="logo-container">
+        <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
+    </div>
+
     <h1>Peasy – Key Metrics Overview</h1>
     <div class="controls">
         <label for="periodSelect">Period:</label>
@@ -155,8 +185,11 @@ localStorage.setItem('peasyConfig', JSON.stringify({
         <button onclick="hideConfigPrompt()">Close</button>
     </div>
 </div>
-
 <script>
+/* ────────────────────────────────────────────── */
+/* Ingen endringer i scriptet – alt er uendret    */
+/* ────────────────────────────────────────────── */
+
 const DEFAULTS = { valTime: 2, workDay: 7.5, transportCost: 750, arPercent: 2.7, prodSoldUnder: 2000, prodSoldOver: 2500, prodRetUnder: 1300, prodRetOver: 1700, marketingDaily: 1000, marketingStart: "2025-11-01" };
 let config = (() => { const saved = localStorage.getItem('peasyConfig'); return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }; })();
 function saveConfig(key, value) { config[key] = value; localStorage.setItem('peasyConfig', JSON.stringify(config)); updateDisplays(); }
@@ -285,7 +318,6 @@ async function loadDashboard() {
     let endDate = new Date(today);
     endDate.setHours(23,59,59,999);
     const periodValue = document.getElementById('periodSelect').value;
-
     if (periodValue === 'custom') {
       const s = document.getElementById('customStart').value;
       const e = document.getElementById('customEnd').value;
@@ -301,12 +333,10 @@ async function loadDashboard() {
       const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
       yesterday.setHours(23, 59, 59, 999);
-
       endDate = new Date(yesterday);
       startDate = new Date(yesterday.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
       startDate.setHours(0, 0, 0, 0);
     }
-
     const marketingStartDate = new Date(config.marketingStart);
     const mapO = new Map(), mapQ = new Map(), mapR = new Map();
     let totalO = 0, totalQ = 0, totalR = 0, totalU = 0;
@@ -321,7 +351,6 @@ async function loadDashboard() {
     let prodReturnedSum = 0;
     let sumDaysToSell = 0, countDaysToSell = 0;
     let inProduction = 0;
-
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       const dO = getDate(ws, row, COL_O);
       const dQ = getDate(ws, row, COL_Q);
@@ -331,22 +360,18 @@ async function loadDashboard() {
       const dLevere = getDate(ws, row, COL_LEVERE);
       const pVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_P})]?.v || '').trim();
       const levereVal = String(ws[XLSX.utils.encode_cell({r:row, c:COL_LEVERE})]?.v || '').trim();
-
       if (pVal !== '' && dP && dP >= startDate && dP <= endDate) {
         gireOrdered++;
       }
       if (levereVal !== '' && dLevere && dLevere >= startDate && dLevere <= endDate) {
         levereSelv++;
       }
-
       const inPeriod =
         (dO && dO >= startDate && dO <= endDate) ||
         (dQ && dQ >= startDate && dQ <= endDate) ||
         (dR && dR >= startDate && dR <= endDate) ||
         (dU && dU >= startDate && dU <= endDate);
-
       if (!inPeriod) continue;
-
       if (dO && dO >= startDate && dO <= endDate) {
         mapO.set(dateToYMD(dO), (mapO.get(dateToYMD(dO)) || 0) + 1);
         totalO++;
@@ -384,12 +409,10 @@ async function loadDashboard() {
         if (!isSold && !isReturned) inProduction++;
       }
     }
-
     const avgS = countS > 0 ? Math.round(sumS / countS) : 0;
     const avgT = countT > 0 ? Math.round(sumT / countT) : 0;
     const avgDaysToSell = countDaysToSell > 0 ? Math.round(sumDaysToSell / countDaysToSell) : 0;
     const daysCountLabel = countDaysToSell > 0 ? `(${countDaysToSell} sales)` : '(no completed sales)';
-
     let marketingDays = 0, marketingTotal = 0;
     if (marketingStartDate <= endDate) {
       const effStart = new Date(Math.max(startDate, marketingStartDate));
@@ -399,7 +422,6 @@ async function loadDashboard() {
         marketingTotal = marketingDays * config.marketingDaily;
       }
     }
-
     const totalCosts = transportSum + prodSoldSum + prodReturnedSum + marketingTotal;
     const costPerSoldNum = totalR > 0 ? Math.round(totalCosts / totalR) : 0;
     const costPerSold = costPerSoldNum.toLocaleString('nb-NO');
@@ -408,34 +430,27 @@ async function loadDashboard() {
     const gpNok = totalR > 0 ? Math.round(incomePerSold - costPerSoldNum) : 0;
     const gpPct = incomePerSold > 0 ? (gpNok / incomePerSold) * 100 : 0;
     const profitClass = gpNok >= 0 ? 'good' : 'alert';
-
     const isAllTime = periodValue === 'all';
     const daysInPeriod = isAllTime ? 30 : (periodValue === 'custom' ? Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1) : (periodValue === 'today' ? 1 : parseInt(periodValue)));
-
     const avgDailyO = isAllTime ? 'N/A' : (totalO / daysInPeriod).toFixed(0);
     const minPerDayRaw = isAllTime ? 'N/A' : (parseFloat(avgDailyO) * config.valTime);
     const minPerDay = isAllTime ? 'N/A' : minPerDayRaw.toFixed(2);
     const hoursPerDay = isAllTime ? 'N/A' : (minPerDayRaw / 60).toFixed(2);
     const fteNeeded = isAllTime ? 'N/A' : (minPerDayRaw / (config.workDay * 60)).toFixed(2);
-
     const convVR = totalO > 0 ? ((totalQ / totalO) * 100).toFixed(1) : 0;
     const convQR = totalQ > 0 ? ((totalR / totalQ) * 100).toFixed(1) : 0;
     const convQU = totalQ > 0 ? ((totalU / totalQ) * 100).toFixed(1) : 0;
     const pricedToSold = totalO > 0 ? ((totalR / totalO) * 100).toFixed(1) : 0;
     const pricedToSoldClass = pricedToSold < 10 ? 'alert' : 'good';
-
     const arIncomeTotal = Math.round(sumS * (config.arPercent / 100));
     const arIncomeAvg = countS > 0 ? Math.round(arIncomeTotal / countS) : 0;
     const costVsAvgiftClass = (costPerSoldNum > avgT && totalR > 0) ? 'alert' : 'good';
     const avgBudClass = avgS < 125000 ? 'alert' : 'good';
-
     const shortPeriod = periodValue === 'today' || periodValue === '7';
     document.getElementById('funnelContainer').style.display = shortPeriod ? 'none' : 'block';
     document.getElementById('shortPeriodNote').style.display = shortPeriod ? 'block' : 'none';
-
     let displayRange = '';
     if (periodValue === 'custom') displayRange = ` (${document.getElementById('customStart').value} – ${document.getElementById('customEnd').value})`;
-
     let periodText = '';
     if (periodValue === 'all') {
       periodText = 'All time';
@@ -448,10 +463,8 @@ async function loadDashboard() {
       const to = endDate.toLocaleDateString('nb-NO');
       periodText = `${from} – ${to}`;
     }
-
     document.getElementById('lastUpdate').textContent = new Date().toLocaleString('nb-NO') + displayRange;
     document.getElementById('periodDisplay').textContent = `Periode: ${periodText}`;
-
     if (!shortPeriod) {
       document.getElementById('funnelArea').innerHTML = `
         <div class="funnel-row"><div class="funnel-title">Valued</div><div class="funnel-number">${totalO}</div></div>
@@ -581,7 +594,6 @@ async function loadDashboard() {
         </div>
       `;
     }
-
     const datesO = [...mapO.keys()].sort();
     const dataO = datesO.map(k => mapO.get(k));
     if (workloadChart) workloadChart.destroy();
@@ -601,7 +613,6 @@ async function loadDashboard() {
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
-
     const allDates = [...new Set([...mapQ.keys(), ...mapR.keys()])].sort();
     const dataQ_chart = allDates.map(d => mapQ.get(d) || 0);
     const dataR_chart = allDates.map(d => mapR.get(d) || 0);
@@ -619,7 +630,6 @@ async function loadDashboard() {
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
-
   } catch (err) {
     console.error("Feil ved lasting:", err);
     document.getElementById('loading').innerHTML = `Error: ${err.message}<br><a href="${url}" target="_blank">Åpne XLSX manuelt</a>`;
