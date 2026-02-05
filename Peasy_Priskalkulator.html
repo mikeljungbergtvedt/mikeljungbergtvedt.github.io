@@ -1,395 +1,499 @@
 <!DOCTYPE html>
-<html lang="nb">
+<html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Priskalkulator – Estimert Pris</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 40px 20px;
-      background: #e0e9e5;
-      color: #004225;
-    }
-    h1 {
-      text-align: center;
-      color: #004225;
-      font-weight: bold;
-      font-size: 1.8em;
-      margin-bottom: 30px;
-    }
-    .calculator {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    }
-    .language-toggle {
-      text-align: right;
-      margin-bottom: 20px;
-      font-size: 0.9em;
-    }
-    .language-toggle a {
-      margin: 0 8px;
-      cursor: pointer;
-      color: #004225;
-      text-decoration: underline;
-    }
-    .language-toggle a.active {
-      font-weight: bold;
-      text-decoration: none;
-      cursor: default;
-    }
-    .guidelines-box {
-      background: #f5f9f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      font-size: 1em;
-      line-height: 1.5;
-      border: 1px solid #ddd;
-    }
-    .guidelines-box strong {
-      display: block;
-      margin-top: 15px;
-      margin-bottom: 8px;
-    }
-    .guidelines-box ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-    .guidelines-box li {
-      margin: 6px 0;
-    }
-    input[type="number"] {
-      width: 100%;
-      padding: 12px;
-      font-size: 1.1em;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
-    }
-    .dual-input {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .dual-input .pct-field {
-      position: relative;
-    }
-    .dual-input .pct-field::after {
-      content: '%';
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #666;
-      font-size: 1.1em;
-      pointer-events: none;
-    }
-    .dual-input input {
-      flex: 1;
-      padding-right: 30px;
-    }
-    .deduction-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      font-size: 1em;
-      color: #666;
-    }
-    .slider {
-      width: 100%;
-      margin: 12px 0 20px;
-      height: 8px;
-      accent-color: #ffcc33;
-    }
-    .result {
-      margin-top: 40px;
-      padding: 30px;
-      background: #f5f9f6;
-      border-radius: 12px;
-    }
-    .range {
-      text-align: center;
-      font-size: 1.4em;
-      margin: 20px 0;
-      color: #004225;
-      font-weight: bold;
-    }
-    .mid {
-      text-align: center;
-      font-size: 1.4em;
-      margin: 25px 0 10px 0;
-      color: #004225;
-      font-weight: bold;
-    }
-    .mid-note {
-      text-align: center;
-      font-size: 1.045em;
-      color: #666;
-      margin-top: 0;
-      margin-bottom: 20px;
-    }
-    .dealer-price {
-      text-align: center;
-      font-size: 1.045em;
-      margin: 0;
-      color: #666;
-    }
-    button {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      background: #004225;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1em;
-      margin-top: 20px;
-    }
-    button:hover {
-      background: #003319;
-    }
-    .refresh-button {
-      background: #ffcc33;
-      color: #004225;
-      margin-top: 10px;
-    }
-    .refresh-button:hover {
-      background: #e6b800;
-    }
-    .copy-notice {
-      text-align: center;
-      margin-top: 12px;
-      font-size: 1.045em;
-      color: #82bf42;
-      display: none;
-    }
-    .report-link {
-      text-align: center;
-      margin-top: 30px;
-    }
-    .report-link a {
-      color: #004225;
-      font-weight: bold;
-      text-decoration: none;
-      border-bottom: 2px solid #ffcc33;
-      padding-bottom: 2px;
-    }
-    .report-link a:hover {
-      color: #ffcc33;
-    }
-    .auto-refresh-note {
-      text-align: center;
-      font-size: 0.9em;
-      color: #666;
-      margin-top: 15px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peasy Verdsettelsesverktøy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --peasy-green: #004225;
+            --peasy-yellow: #FFCC33;
+            --peasy-yellow-hover: #FFD966;
+            --finn-blue: #0063fb;
+            --finn-blue-hover: #0050d4;
+            --light-bg: #F2F7F9;
+            --card-bg: rgba(255,255,255,0.96);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--light-bg) 0%, #E8F0F5 100%);
+            color: var(--peasy-green);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+        .header { text-align: center; margin-bottom: 3rem; }
+        h1 { font-weight: 900; font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -0.8px; margin: 0 0 0.5rem; }
+        h2 { font-weight: 700; font-size: clamp(1.5rem, 4vw, 1.75rem); margin: 3rem 0 1.25rem; }
+        .card { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid rgba(130,191,210,0.12); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,66,37,0.06); padding: clamp(1.5rem, 4vw, 2rem); margin-bottom: 2.5rem; }
+        label { display: block; margin: 1.25rem 0 0.5rem; font-weight: 600; font-size: 1.05rem; }
+        input { padding: 0.875rem 1rem; font-size: 1rem; border: 1px solid rgba(130,191,210,0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
+        input:focus { border-color: var(--peasy-green); outline: none; box-shadow: 0 0 0 3px rgba(0,66,37,0.12); }
+
+        button, #finnLink {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            display: inline-block;
+            text-decoration: none;
+            margin: 1rem 0;
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+        }
+
+        button { background: var(--peasy-yellow); color: var(--peasy-green); border: none; }
+        button:hover { background: var(--peasy-yellow-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+
+        #finnLink { background: var(--finn-blue); color: white; }
+        #finnLink:hover, #finnLink:focus { background: var(--finn-blue-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,99,251,0.3); }
+
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.95rem; }
+        th, td { border: 1px solid rgba(130,191,210,0.25); padding: 0.75rem; text-align: left; }
+        th { background: rgba(130,191,210,0.08); font-weight: 600; }
+
+        .red { color: #d32f2f; font-weight: bold; }
+        .step, .likely { margin: 1rem 0; padding: 1rem; background: rgba(255,255,255,0.7); border-left: 5px solid var(--peasy-green); border-radius: 8px; }
+        .likely { font-weight: 700; font-size: 1.25rem; background: rgba(0,66,37,0.05); }
+
+        #copyBtn { background: var(--peasy-yellow); color: var(--peasy-green); font-weight: 500; padding: 0.875rem 1.75rem; font-size: 1.1rem; border-radius: 8px; margin: 1.75rem auto 0.75rem; display: block; min-width: 260px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        #copyBtn:hover { background: var(--peasy-yellow-hover); }
+
+        #searchReg { width: 100%; max-width: 320px; margin: 1rem 0 1.5rem; }
+
+        .guidelines { font-size: 0.95rem; color: #555; margin: 1.25rem 0 2rem; padding: 1.25rem; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
+        .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .guidelines-content { display: none; margin-top: 0.75rem; line-height: 1.6; }
+        .guidelines-toggle { font-size: 1.3rem; font-weight: bold; }
+
+        #copyFeedback { color: var(--peasy-green); font-weight: 500; text-align: center; margin: 0.5rem 0; min-height: 1.3em; }
+
+        #version-info {
+            position: fixed;
+            bottom: 0.75rem;
+            right: 1rem;
+            font-size: 0.75rem;
+            color: #777;
+            opacity: 0.65;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1.5rem 1rem; }
+            h1 { font-size: 2.2rem; }
+            h2 { font-size: 1.5rem; margin: 2rem 0 1rem; }
+            .card { padding: 1.5rem; }
+            button, #finnLink, #copyBtn { width: 100%; padding: 0.7rem 1rem; font-size: 0.95rem; }
+            table { font-size: 0.9rem; }
+            th, td { padding: 0.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.9rem; }
+            label { font-size: 1rem; }
+            input { font-size: 0.95rem; padding: 0.7rem 0.9rem; }
+        }
+    </style>
 </head>
 <body>
-  <h1 data-en="Peasy Pricing Calculator – Estimated Price" data-no="Peasy Priskalkulator – Estimert Pris">Peasy Priskalkulator – Estimert Pris</h1>
+    <div class="container">
+        <div class="header"><h1>Verdsettelsesverktøy</h1></div>
 
-  <div class="calculator">
-    <div class="language-toggle">
-      <a data-lang="en">English</a> | <a data-lang="no" class="active">Norsk</a>
+        <button onclick="loadAndShowPending()">Last inn / Oppdater ventende leads</button>
+        <input type="text" id="searchReg" placeholder="Søk RegNr..." oninput="filterPendingTable()">
+
+        <div id="pending" class="card">
+            <h2>Ventende leads</h2>
+            <p id="pendingCount">Klikk knappen for å laste...</p>
+            <div style="overflow-x: auto;">
+                <table id="pendingTable">
+                    <thead><tr><th>RegNr</th><th>Merke</th><th>Modell</th><th>År</th><th>SD mottatt på</th><th>Status</th><th>Postnr/Sted</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>Verdikalkulator</h2>
+
+        <div class="guidelines">
+            <div class="guidelines-header" onclick="toggleGuidelines()">
+                <strong>Retningslinjer</strong>
+                <span class="guidelines-toggle">+</span>
+            </div>
+            <div class="guidelines-content">
+                • Finn nøyaktig årgang, merke, modell, batteri/motorstørrelse m.m.<br>
+                • Søk på Finn.no – sorter <strong>lavest til høyest pris</strong><br>
+                • Ta hensyn til farge der det er mulig<br>
+                  – Hvite biler → sammenlign mest med hvite<br>
+                  – Svarte biler → sammenlign mest med svarte<br>
+                  – Andre farger → fritt valg<br>
+                • Ved flere treff → ta <strong>gjennomsnitt</strong> av de <strong>3–5 billigste</strong> sammenlignbare<br><br>
+                <strong>Anbefalt KM-spenn i søket:</strong><br>
+                • Under 50 000 km → ±10 000 km<br>
+                • 50 000 – 100 000 km → ±20 000 km<br>
+                • Over 100 000 km → ±30 000 km
+            </div>
+        </div>
+
+        <form id="valForm" class="card">
+            <label>RegNr:</label><input type="text" id="regnr" disabled>
+            <label>Merke:</label><input type="text" id="make" required>
+            <label>Modell:</label><input type="text" id="model" required>
+            <label>År:</label><input type="number" id="year" required min="1900" max="2030">
+            <label>KM stand:</label><input type="number" id="kmstand" placeholder="Fra kolonne W eller angi manuelt">
+            <label>Finn pris ex omreg:</label>
+            <input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk (f.eks. 249 000)">
+            <small id="priceReminder" style="color: #d32f2f; font-weight: 500; display: none; margin-top: 6px; font-size: 0.95rem;">
+                ← Ny bil valgt – husk å taste inn oppdatert Finn-pris!
+            </small>
+            <label>Margin %:</label><input type="number" id="margin" value="12" min="0" step="0.5">
+            <label>Tillegg %:</label><input type="number" id="tillegg" value="0" min="0" step="0.5">
+            <label>Motivasjon %:</label><input type="number" id="motivation" value="3" min="0" step="0.5">
+            <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
+            <div id="finnSearchLink">
+                <a href="#" id="finnLink" target="_blank" rel="noopener noreferrer">
+                    Åpne søk på FINN →
+                </a>
+            </div>
+        </form>
+
+        <div id="output" class="card"></div>
     </div>
 
-    <div class="guidelines-box" data-en="<strong>Guidelines (English)</strong><br>Identify the exact year, make, model, battery / engine size etc. Compare with similar cars on <a href='https://www.finn.no/mobility/search/car?registration_class=1' target='_blank'>Finn.no</a> sorting price low - high. If white compare with white, if black compare with black, otherwise any other color. If multiple similar cars use the average of the 3-5 lowest priced comparable. KM can vary +/- 5%.<br><strong>Shortcuts</strong><ul><li><a href='https://www.finn.no/mobility/search/car?registration_class=1' target='_blank'>Finn.no car search</a></li></ul>" data-no="<strong>Retningslinjer</strong><br>Identifiser nøyaktig årstall, merke, modell, batteri-/motorstørrelse osv. Sammenlign med lignende biler på <a href='https://www.finn.no/mobility/search/car?registration_class=1' target='_blank'>Finn.no</a> sortert pris lav-høy. Hvis hvit, sammenlign med hvite; hvis svart, med svarte, ellers hvilken som helst annen farge. Ved flere lignende biler, bruk gjennomsnittet av de 3-5 lavest prisede sammenlignbare. KM kan variere +/- 5%.<br><strong>Snarveier</strong><ul><li><a href='https://www.finn.no/mobility/search/car?registration_class=1' target='_blank'>Finn.no bil-søk</a></li></ul>">
-      <strong>Retningslinjer</strong><br>
-      Identifiser nøyaktig årstall, merke, modell, batteri-/motorstørrelse osv. Sammenlign med lignende biler på <a href="https://www.finn.no/mobility/search/car?registration_class=1" target="_blank">Finn.no</a> sortert pris lav-høy. Hvis hvit, sammenlign med hvite; hvis svart, med svarte, ellers hvilken som helst annen farge. Ved flere lignende biler, bruk gjennomsnittet av de 3-5 lavest prisede sammenlignbare. KM kan variere +/- 5%.<br>
-      <strong>Snarveier</strong><br>
-      <ul>
-        <li><a href="https://www.finn.no/mobility/search/car?registration_class=1" target="_blank">Finn.no bil-søk</a></li>
-      </ul>
+    <div id="version-info">
+        v1.3.4 • sist oppdatert 04.02.2026
     </div>
 
-    <label for="finnPrice" data-en="Finn.no Price (NOK)" data-no="Finn.no Pris (NOK)">Finn.no Pris (NOK)</label>
-    <input type="number" id="finnPrice" placeholder="f.eks. 365000" step="1000">
+    <script>
+    // All functions restored – calculation works as in original working version
+    let data = [];
+    let headers = [];
 
-    <label for="marginPct" data-en="Dealer Margin" data-no="Forhandler Margin">Forhandler Margin</label>
-    <div class="dual-input">
-      <div class="pct-field">
-        <input type="number" id="marginPct" value="12" step="0.1">
-      </div>
-      <input type="number" id="marginCash" step="1000" placeholder="Kontant (NOK)">
-    </div>
-    <div class="deduction-line">
-      <span id="marginDeduction"></span>
-    </div>
+    async function loadReport() {
+        const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const ab = await res.arrayBuffer();
+            const wb = XLSX.read(ab, {type: 'array'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+            headers = json[0].map(h => String(h || '').trim());
+            data = json.slice(1);
+            console.log(`Loaded ${data.length} rows`);
+            return true;
+        } catch (err) {
+            console.error(err);
+            alert('Kunne ikke laste rapporten – sjekk nettverk eller API-tilgang');
+            return false;
+        }
+    }
 
-    <label for="pakostPct" data-en="Additional Margin" data-no="Tilleggsmargin">Tilleggsmargin</label>
-    <div class="dual-input">
-      <div class="pct-field">
-        <input type="number" id="pakostPct" step="0.1" placeholder="%">
-      </div>
-      <input type="number" id="pakostCash" step="1000" placeholder="Kontant (NOK)">
-    </div>
-    <div class="deduction-line">
-      <span id="pakostDeduction"></span>
-    </div>
+    function findColumn(patterns) {
+        for (let p of patterns) {
+            const idx = headers.findIndex(h => h.toLowerCase().includes(p.toLowerCase()));
+            if (idx !== -1) return idx;
+        }
+        return -1;
+    }
 
-    <label for="motivation" data-en="Motivation Slider (-5% to +5%)" data-no="Motivasjon Skyveknapp (-5% til +5%)">Motivasjon Skyveknapp (-5% til +5%)</label>
-    <input type="range" id="motivation" class="slider" min="-5" max="5" value="0" step="0.5">
-    <span id="motivationValue">0%</span>
+    async function loadAndShowPending() {
+        if (data.length === 0) await loadReport();
+        const sdCol    = findColumn(['SD mottatt på']);
+        const arCol    = findColumn(['Endelig AR verdi']);
+        const statusCol = findColumn(['Status']);
+        const regCol   = findColumn(['RegNr']);
+        const merkeCol = findColumn(['Merke']);
+        const modellCol = findColumn(['Modell']);
+        const yearCol  = findColumn(['År']);
+        const postCol  = findColumn(['Postnr']);
+        const stedCol  = findColumn(['Sted']);
 
-    <div class="result">
-      <div class="range" data-en="Price Range: <strong id='range'>–</strong>" data-no="Prisintervall: <strong id='range'>–</strong>">
-        Prisintervall: <strong id="range">–</strong>
-      </div>
-      <div class="mid" data-en="Mid Price: <strong id='midPrice'>–</strong>" data-no="Midtpris: <strong id='midPrice'>–</strong>">
-        Midtpris: <strong id="midPrice">–</strong>
-      </div>
-      <div class="mid-note" data-en="Mid Price is unaffected by Motivation Slider" data-no="Midtpris påvirkes ikke av Motivasjonsskyveren">
-        Midtpris påvirkes ikke av Motivasjonsskyveren
-      </div>
-      <div class="dealer-price" data-en="Dealer Price (low end + 2.7% min 2500 NOK): <strong id='dealerLow'>–</strong>" data-no="Forhandlerpris (laveste + 2.7% min 2500 NOK): <strong id='dealerLow'>–</strong>">
-        Forhandlerpris (laveste + 2.7% min 2500 NOK): <strong id="dealerLow">–</strong>
-      </div>
-
-      <button id="copyButton" data-en="Copy Calculation for Comment Field" data-no="Kopier beregning til kommentarfelt">Kopier beregning til kommentarfelt</button>
-      <button id="refreshButton" class="refresh-button" data-en="Reset Calculator" data-no="Nullstill kalkulator">Nullstill kalkulator</button>
-      <div id="copyNotice" class="copy-notice" data-en="Copied to clipboard!" data-no="Kopiert til utklippstavle!">Kopiert til utklippstavle!</div>
-    </div>
-
-    <div class="auto-refresh-note" data-en="Auto-refresh every 5 minutes" data-no="Automatisk oppdatering hvert 5. minutt">
-      Automatisk oppdatering hvert 5. minutt
-    </div>
-
-    <div class="report-link">
-      <a href="https://mikeljungbergtvedt.github.io/Peasy_Exec_Report.html" target="_blank" data-en="Open Peasy Exec Report →" data-no="Åpne Peasy Exec Report →">Åpne Peasy Exec Report →</a>
-    </div>
-  </div>
-
-  <script>
-    // Language handling
-    const langLinks = document.querySelectorAll('.language-toggle a');
-    langLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        const lang = link.getAttribute('data-lang');
-        document.documentElement.lang = lang === 'no' ? 'nb' : 'en';
-        langLinks.forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-        document.querySelectorAll('[data-en][data-no]').forEach(el => {
-          el.innerHTML = el.getAttribute(`data-${lang}`);
+        let pending = data.filter(row => {
+            const sdVal = String(row[sdCol] || '').trim();
+            let arVal = String(row[arCol] || '').trim();
+            const statusVal = String(row[statusCol] || '').trim().toLowerCase();
+            if (['-', '–', '—', ''].includes(arVal)) arVal = '';
+            const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
+            return sdVal !== '' && arVal === '' && isRelevant;
         });
-        document.getElementById('marginCash').placeholder = lang === 'en' ? 'Cash (NOK)' : 'Kontant (NOK)';
-        document.getElementById('pakostCash').placeholder = lang === 'en' ? 'Cash (NOK)' : 'Kontant (NOK)';
-        document.getElementById('finnPrice').placeholder = lang === 'en' ? 'e.g. 365000' : 'f.eks. 365000';
-        calculate();
-      });
+
+        pending.sort((a, b) => {
+            const da = new Date(a[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
+            const db = new Date(b[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
+            return db - da;
+        });
+
+        document.getElementById('pendingCount').textContent = `Fant ${pending.length} ventende leads`;
+        const tbody = document.querySelector('#pendingTable tbody');
+        tbody.innerHTML = '';
+        pending.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', () => fillFormFromRow(row));
+            tr.innerHTML = `
+                <td>${row[regCol] || '-'}</td>
+                <td>${row[merkeCol] || '-'}</td>
+                <td>${row[modellCol] || '-'}</td>
+                <td>${row[yearCol] || '-'}</td>
+                <td>${row[sdCol] || '-'}</td>
+                <td>${row[statusCol] || '-'}</td>
+                <td>${row[postCol] || ''} ${row[stedCol] || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function parseFinnPrice(str) {
+        if (!str) return 0;
+        return parseFloat(
+            str.replace(/\s+/g, '')
+               .replace(/\u00A0/g, '')
+               .replace(/[^0-9.,-]/g, '')
+               .replace(',', '.')
+        ) || 0;
+    }
+
+    function updateFinnLink() {
+        const make  = document.getElementById('make').value.trim();
+        const model = document.getElementById('model').value.trim();
+        const year  = parseInt(document.getElementById('year').value) || 0;
+        const km    = parseInt(document.getElementById('kmstand').value) || 0;
+
+        const container = document.getElementById('finnSearchLink');
+        const link      = document.getElementById('finnLink');
+
+        if (!make || !model || year < 1900 || year > 2030) {
+            container.style.display = 'none';
+            return;
+        }
+
+        let mileage = '';
+        if (km > 0) {
+            let delta = km < 50000 ? 10000 : km <= 100000 ? 20000 : 30000;
+            mileage = `&mileage_from=${Math.max(0, km - delta)}&mileage_to=${km + delta}`;
+        }
+
+        const q = encodeURIComponent(`${make} ${model}`);
+        const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
+
+        link.href = url;
+        link.textContent = `Åpne søk på FINN →`;
+        container.style.display = 'block';
+    }
+
+    function fillFormFromRow(row) {
+        const idx = {
+            reg:    findColumn(['RegNr']),
+            make:   findColumn(['Merke']),
+            model:  findColumn(['Modell']),
+            year:   findColumn(['År']),
+            km:     22,
+        };
+
+        const kmRaw = String(row[idx.km] || '').trim().replace(/\s+/g, '').replace(/\u00A0/g, '');
+        const km = parseInt(kmRaw, 10);
+
+        document.getElementById('regnr').value    = row[idx.reg]   || '';
+        document.getElementById('make').value     = String(row[idx.make]  || '').trim();
+        document.getElementById('model').value    = String(row[idx.model] || '').trim();
+        document.getElementById('year').value     = row[idx.year]  || '';
+        document.getElementById('kmstand').value  = (isNaN(km) || km <= 0) ? '' : km;
+
+        document.getElementById('finn_avg').value = '';
+        document.getElementById('output').innerHTML = '';
+
+        const reminder = document.getElementById('priceReminder');
+        reminder.style.display = 'block';
+
+        const finnInput = document.getElementById('finn_avg');
+        const hideReminder = () => {
+            reminder.style.display = 'none';
+            finnInput.removeEventListener('input', hideReminder);
+        };
+        finnInput.addEventListener('input', hideReminder, { once: true });
+
+        updateFinnLink();
+    }
+
+    function getHistoricalComps(specs) {
+        const idx = {
+            bud:   findColumn(['Bud']),
+            low:   findColumn(['Endelig AR verdi', 'Laveste']),
+            make:  findColumn(['Merke']),
+            model: findColumn(['Modell']),
+            year:  findColumn(['År']),
+            sold:  findColumn(['Solgt på']),
+            reg:   findColumn(['RegNr']),
+        };
+
+        const now = new Date(2026, 1, 4);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        const comps = data.filter(row => {
+            const m   = String(row[idx.make]  || '').trim().toLowerCase();
+            const mo  = String(row[idx.model] || '').trim().toLowerCase();
+            const y   = parseInt(row[idx.year]) || 0;
+            const bud = parseFloat(row[idx.bud]) || 0;
+            let soldDate;
+            try {
+                const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
+                soldDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+            } catch {
+                soldDate = new Date(0);
+            }
+            return m === specs.make.toLowerCase() &&
+                   mo === specs.model.toLowerCase() &&
+                   y >= specs.year - 1 && y <= specs.year + 1 &&
+                   bud > 0 &&
+                   soldDate >= thirtyDaysAgo && !isNaN(soldDate);
+        }).map(row => {
+            const bud = parseFloat(row[idx.bud]) || 0;
+            const low = parseFloat(row[idx.low]) || bud;
+            const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+            return {
+                regnr: row[idx.reg] || '-',
+                make: row[idx.make] || '',
+                model: row[idx.model] || '',
+                year: row[idx.year] || '',
+                bud,
+                low,
+                variance,
+                sold: row[idx.sold] || '-'
+            };
+        });
+
+        if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+
+        const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
+        return { var_pct, count: comps.length, comps };
+    }
+
+    function calculateValuation() {
+        console.log("calculateValuation called!"); // debug to confirm
+        const finnStr = document.getElementById('finn_avg').value.trim();
+        const finn    = parseFinnPrice(finnStr);
+
+        if (finnStr !== '' && finn <= 0) {
+            alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
+            return;
+        }
+
+        const margin    = parseFloat(document.getElementById('margin').value)    / 100 || 0;
+        const tillegg   = parseFloat(document.getElementById('tillegg').value)   / 100 || 0;
+        const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
+        const spread    = 0.05;
+
+        let midpoint = finn * (1 - margin - tillegg);
+        midpoint += midpoint * motivation;
+
+        const low  = midpoint * (1 - spread);
+        const high = midpoint * (1 + spread);
+
+        const specs = {
+            make:  document.getElementById('make').value.trim(),
+            model: document.getElementById('model').value.trim(),
+            year:  parseInt(document.getElementById('year').value) || 0
+        };
+
+        const hist = getHistoricalComps(specs);
+        const likely_bid = low * (1 + hist.var_pct / 100);
+
+        const copyText = [
+            `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
+            `${specs.make} ${specs.model} ${specs.year}`,
+            "",
+            `Base (Finn pris ex omreg):        ${finn.toLocaleString('nb-NO')} kr`,
+            `Etter margin ${margin*100}% + tillegg ${tillegg*100}%:  ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr`,
+            `Etter motivasjon ${motivation*100}%:           ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
+            `Fra (midtpunkt -5%):               ${Math.round(low).toLocaleString('nb-NO')} kr`,
+            `Til (midtpunkt +5%):               ${Math.round(high).toLocaleString('nb-NO')} kr`,
+            `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
+            `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
+        ].join('\n');
+
+        const output = document.getElementById('output');
+        output.innerHTML = `
+            <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
+            <div class="step">1. Base (Finn pris ex omreg): <strong>${finn.toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step">2. Etter margin ${margin*100}% + tillegg ${tillegg*100}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
+            <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
+            <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
+
+            <button id="copyBtn">Kopier full beregning til ERP</button>
+            <div id="copyFeedback"></div>
+
+            <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
+            <table>
+                <thead><tr><th>RegNr</th><th>Merke/Modell/År</th><th>Bud</th><th>Lavt estimat</th><th class="red">Varians %</th><th>Solgt</th></tr></thead>
+                <tbody>${
+                    hist.comps.map(c => `
+                        <tr>
+                            <td>${c.regnr}</td>
+                            <td>${c.make} ${c.model} ${c.year}</td>
+                            <td>${c.bud.toLocaleString('nb-NO')}</td>
+                            <td>${c.low.toLocaleString('nb-NO')}</td>
+                            <td class="red">${c.variance.toFixed(1)}%</td>
+                            <td>${c.sold}</td>
+                        </tr>
+                    `).join('')
+                }</tbody>
+            </table>
+        `;
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(copyText).then(() => {
+                const fb = document.getElementById('copyFeedback');
+                fb.textContent = '✓ Kopiert til utklippstavlen!';
+                fb.style.color = '#004225';
+                setTimeout(() => { fb.textContent = ''; }, 4000);
+            }).catch(err => {
+                console.error(err);
+                alert('Kopiering mislyktes – marker teksten manuelt');
+            });
+        });
+    }
+
+    function filterPendingTable() {
+        const filter = document.getElementById('searchReg').value.toUpperCase().trim();
+        document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
+            const reg = row.cells[0]?.textContent?.toUpperCase() || '';
+            row.style.display = reg.includes(filter) ? '' : 'none';
+        });
+    }
+
+    function toggleGuidelines() {
+        const content = document.querySelector('.guidelines-content');
+        const toggle = document.querySelector('.guidelines-toggle');
+        const isHidden = content.style.display !== 'block';
+        content.style.display = isHidden ? 'block' : 'none';
+        toggle.textContent = isHidden ? '−' : '+';
+    }
+
+    ['make','model','year','kmstand'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateFinnLink);
     });
 
-    const inputs = ['finnPrice', 'marginPct', 'marginCash', 'pakostPct', 'pakostCash', 'motivation'];
-    inputs.forEach(id => document.getElementById(id).addEventListener('input', calculate));
-
-    document.getElementById('copyButton').addEventListener('click', copyToClipboard);
-    document.getElementById('refreshButton').addEventListener('click', resetCalculator);
-
-    function calculate() {
-      const finn = parseFloat(document.getElementById('finnPrice').value) || 0;
-      const currentLang = document.querySelector('.language-toggle a.active').getAttribute('data-lang');
-      if (finn === 0) {
-        document.getElementById('range').textContent = '–';
-        document.getElementById('midPrice').textContent = '–';
-        document.getElementById('dealerLow').textContent = '–';
-        document.getElementById('marginDeduction').textContent = '';
-        document.getElementById('pakostDeduction').textContent = '';
-        return;
-      }
-      let marginDeduct = 0;
-      const marginCashInput = parseFloat(document.getElementById('marginCash').value);
-      const marginPctInput = parseFloat(document.getElementById('marginPct').value);
-      if (!isNaN(marginCashInput) && marginCashInput > 0) {
-        marginDeduct = marginCashInput;
-        document.getElementById('marginPct').value = ((marginDeduct / finn) * 100).toFixed(2);
-      } else if (!isNaN(marginPctInput) && marginPctInput >= 0) {
-        marginDeduct = finn * (marginPctInput / 100);
-        document.getElementById('marginCash').value = '';
-      }
-      let pakostDeduct = 0;
-      const pakostCashInput = parseFloat(document.getElementById('pakostCash').value);
-      const pakostPctInput = parseFloat(document.getElementById('pakostPct').value);
-      const priceAfterDealer = finn - marginDeduct;
-      if (!isNaN(pakostCashInput) && pakostCashInput > 0) {
-        pakostDeduct = pakostCashInput;
-        if (priceAfterDealer > 0) {
-          document.getElementById('pakostPct').value = ((pakostDeduct / priceAfterDealer) * 100).toFixed(2);
-        } else {
-          document.getElementById('pakostPct').value = '0';
-        }
-      } else if (!isNaN(pakostPctInput) && pakostPctInput >= 0) {
-        pakostDeduct = priceAfterDealer * (pakostPctInput / 100);
-        document.getElementById('pakostCash').value = '';
-      }
-      document.getElementById('marginDeduction').textContent = '- ' + Math.round(marginDeduct).toLocaleString('nb-NO') + ' NOK';
-      document.getElementById('pakostDeduction').textContent = '- ' + Math.round(pakostDeduct).toLocaleString('nb-NO') + ' NOK';
-      const midpoint = finn - marginDeduct - pakostDeduct;
-      const spreadAmount = midpoint * 0.10;
-      const sliderValue = parseFloat(document.getElementById('motivation').value) || 0;
-      const position = sliderValue / 5;
-      const low = Math.round(midpoint - (spreadAmount / 2) * (1 - position));
-      const high = low + Math.round(spreadAmount);
-      const rangeText = low.toLocaleString('nb-NO') + ' NOK – ' + high.toLocaleString('nb-NO') + ' NOK';
-      document.getElementById('range').textContent = rangeText;
-      document.getElementById('midPrice').textContent = Math.round(midpoint).toLocaleString('nb-NO') + ' NOK';
-      const motivationPercent = sliderValue.toFixed(1);
-      document.getElementById('motivationValue').textContent = (sliderValue > 0 ? '+' : '') + motivationPercent + '%';
-      const lowDealer = Math.max(Math.round(low * 1.027), low + 2500);
-      document.getElementById('dealerLow').textContent = lowDealer.toLocaleString('nb-NO') + ' NOK';
-    }
-
-    function copyToClipboard() {
-      const currentLang = document.querySelector('.language-toggle a.active').getAttribute('data-lang');
-      const finn = document.getElementById('finnPrice').value || '0';
-      const marginPct = document.getElementById('marginPct').value || '0';
-      const marginCash = document.getElementById('marginCash').value || '0';
-      const pakostPct = document.getElementById('pakostPct').value || '0';
-      const pakostCash = document.getElementById('pakostCash').value || '0';
-      const motivation = document.getElementById('motivationValue').textContent;
-      const range = document.getElementById('range').textContent;
-      const mid = document.getElementById('midPrice').textContent;
-      const dealerLow = document.getElementById('dealerLow').textContent;
-      const siteName = 'Finn.no';
-      const additionalLabel = currentLang === 'en' ? 'Additional' : 'Tillegg';
-      const rangeLabel = currentLang === 'en' ? 'Range' : 'Intervall';
-      const midLabel = currentLang === 'en' ? 'Mid' : 'Midt';
-      const dealerLabel = currentLang === 'en' ? 'Dealer Low' : 'Forhandler lav';
-      const text = `${siteName}: ${parseInt(finn).toLocaleString('nb-NO')} NOK | Margin ${marginPct}% (${marginCash} NOK) | ${additionalLabel} ${pakostPct}% (${pakostCash} NOK) | Motivasjon ${motivation} | ${rangeLabel}: ${range} | ${midLabel}: ${mid} | ${dealerLabel}: ${dealerLow}`;
-      navigator.clipboard.writeText(text).then(() => {
-        const notice = document.getElementById('copyNotice');
-        notice.textContent = notice.getAttribute(`data-${currentLang}`);
-        notice.style.display = 'block';
-        setTimeout(() => notice.style.display = 'none', 2000);
-      }).catch(() => {
-        alert(currentLang === 'en' ? 'Copy failed – please select and copy manually' : 'Kopiering feilet – vennligst merk og kopier manuelt');
-      });
-    }
-
-    function resetCalculator() {
-      document.getElementById('finnPrice').value = '';
-      document.getElementById('marginPct').value = '12';
-      document.getElementById('marginCash').value = '';
-      document.getElementById('pakostPct').value = '';
-      document.getElementById('pakostCash').value = '';
-      document.getElementById('motivation').value = '0';
-      document.getElementById('motivationValue').textContent = '0%';
-      calculate(); // Nullstiller resultatet
-    }
-
-    document.getElementById('refreshButton').addEventListener('click', resetCalculator);
-
-    // Auto-refresh every 5 minutes
-    setInterval(calculate, 300000);
-
-    // Initial calculation
-    calculate();
-  </script>
+    // Debug confirmation
+    console.log("Page loaded – calculateValuation is defined:", typeof calculateValuation === "function");
+    </script>
 </body>
 </html>
