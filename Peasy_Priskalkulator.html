@@ -212,7 +212,7 @@
   </div>
   <div id="toast"></div>
   <div id="version-info">
-    v1.6.4-diagnostic • sist oppdatert 09.02.2026
+    v1.6.6 • Høyeste bud fix • 09.02.2026
   </div>
 
   <script>
@@ -492,7 +492,7 @@
 
     function getHistoricalComps(specs) {
       const idx = {
-        bud:   findColumn(['Bud']),
+        bud:   findColumn(['Høyeste bud', 'Høyeste Bud', 'Hogste bud']),  // ← FIXED: only look for correct header
         low:   findColumn(['Endelig AR verdi', 'Laveste', 'AR verdi']),
         sold:  findColumn(['Solgt på']),
         reg:   findColumn(['RegNr', 'Reg nr', 'Regnr']),
@@ -505,14 +505,14 @@
       const sixtyDaysAgo = new Date(now);
       sixtyDaysAgo.setDate(now.getDate() - 60);
 
-      // ── Market-wide comps for variance ───────────────────────────────
+      // Market-wide variance calculation
       const marketRows = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const lowStr = String(row[idx.low] || '').trim();
         let low = 0;
         if (lowStr.includes('-')) {
           const parts = lowStr.split('-').map(p => parseFloat(p.trim()));
-          low = !isNaN(parts[0]) ? parts[0] : 0;  // Use FIRST number = low end of range
+          low = !isNaN(parts[0]) ? parts[0] : 0;  // low end of range
         } else {
           low = parseFloat(lowStr) || 0;
         }
@@ -529,20 +529,20 @@
       const marketVariances = marketRows.map(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const lowStr = String(row[idx.low] || '').trim();
-        let low = bud; // fallback
+        let low = bud;
         if (lowStr.includes('-')) {
           const parts = lowStr.split('-').map(p => parseFloat(p.trim()));
-          low = !isNaN(parts[0]) ? parts[0] : bud;  // low end of range
+          low = !isNaN(parts[0]) ? parts[0] : bud;
         } else {
           low = parseFloat(lowStr) || bud;
         }
         const variance = low > 0 ? ((bud - low) / low * 100) : 0;
 
-        // ── DIAGNOSTIC LOG ──────────────────────────────────────────────
+        // Diagnostic log - now using correct "Høyeste bud" values
         console.log(
           `Market variance row: RegNr=${row[idx.reg] || 'no reg'} | ` +
           `Sold=${row[idx.sold] || 'no date'} | ` +
-          `Bud=${bud} | ` +
+          `Høyeste bud=${bud} | ` +
           `Low=${low} (from "${lowStr}") | ` +
           `Variance=${variance.toFixed(1)}%`
         );
@@ -554,12 +554,12 @@
       if (marketVariances.length > 0) {
         market_var_pct = marketVariances.reduce((sum, v) => sum + v, 0) / marketVariances.length;
         console.log(`Total qualifying sold cars: ${marketVariances.length}`);
-        console.log(`Average market variance: ${market_var_pct.toFixed(1)}%`);
+        console.log(`Average market variance (using Høyeste bud): ${market_var_pct.toFixed(1)}%`);
       } else {
-        console.log('No sold cars with both Bud > 0 and valid Low estimate in last 60 days.');
+        console.log('No sold cars with both Høyeste bud > 0 and valid low estimate in last 60 days.');
       }
 
-      // ── Model-specific comps (reference table only) ──────────────────
+      // Model-specific comps (reference table)
       const modelRows = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const low = parseFloat(row[idx.low]) || 0;
@@ -625,7 +625,6 @@
       const hist = getHistoricalComps(specs);
       const likely_bid = low * (1 + hist.var_pct / 100);
 
-      // Dynamic variance text
       let varianceText = 'nøyaktig lik lavt estimat';
       if (Math.abs(hist.var_pct) > 0.01) {
         const direction = hist.var_pct > 0 ? 'over' : 'under';
@@ -642,8 +641,8 @@
         `Etter motivasjon ${motivation*100}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
         `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr`,
         `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr`,
-        `Sannsynlig akseptert (markedsvarians justering ${varianceText}): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
-        `Historisk markedsvarians: ${varianceText} (basert på ${hist.market_count} solgte biler – alle merker/modeller siste 60 dager)`
+        `Sannsynlig akseptert (justert med markedsvarians ${varianceText}): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
+        `Historisk markedsvarians: ${varianceText} (basert på ${hist.market_count} solgte biler – Høyeste bud – alle merker/modeller siste 60 dager)`
       ].join('\n');
 
       const output = document.getElementById('output');
@@ -654,7 +653,7 @@
         <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
         <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
         <div class="step likely">Sannsynlig akseptert (markedsvarians justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step"><strong class="red">Historisk markedsvarians: ${varianceText}</strong><br>(basert på ${hist.market_count} solgte biler – alle merker/modeller siste 60 dager)</div>
+        <div class="step"><strong class="red">Historisk markedsvarians: ${varianceText}</strong><br>(basert på ${hist.market_count} solgte biler – Høyeste bud – alle merker/modeller siste 60 dager)</div>
         <button id="copyBtn">Kopier full beregning til ERP</button>
         <div id="copyFeedback"></div>
 
@@ -665,7 +664,7 @@
               <tr>
                 <th>RegNr</th>
                 <th>Merke/Modell/År</th>
-                <th>Bud</th>
+                <th>Høyeste bud</th>
                 <th>Lavt estimat</th>
                 <th class="red">Varians %</th>
                 <th>Solgt</th>
