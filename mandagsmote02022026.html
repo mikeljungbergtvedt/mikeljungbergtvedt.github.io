@@ -3,183 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v16 (sky-lagring + egen kommentar)</title>
+  <title>Mandagsrapport – Peasy v16</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      margin: 0; padding: 0;
-      background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
-      color: #004225;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
-    h1 {
-      font-weight: 900;
-      font-size: 2.4rem;
-      letter-spacing: -0.7px;
-      margin-bottom: 8px;
-      background: linear-gradient(to right, #004225, #006644);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      display: inline-block;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 0.98rem;
-      font-weight: 600;
-      border-radius: 10px;
-      border: none;
-      background: #004225;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 1px 4px rgba(0,66,37,0.06);
-      transition: all 0.2s ease;
-    }
-    button:hover {
-      box-shadow: 0 3px 10px rgba(0,66,37,0.14);
-      transform: translateY(-1px);
-    }
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-      opacity: 0.75;
-    }
+    body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
+    .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-weight: 900; font-size: 2.4rem; letter-spacing: -0.7px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
+    .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+    button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
+    button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
     button#edit-btn { background: #006644; }
     button.danger { background: #c62828; }
-    .commentary {
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(130,191,210, 0.10);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-      padding: 24px;
-      margin-bottom: 40px;
-    }
-    .user-comment {
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(130,191,210,0.2);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(130,191,210, 0.10);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-      margin-bottom: 40px;
-    }
-    th, td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid rgba(130,191,210, 0.10);
-    }
-    th {
-      background: rgba(130,191,210,0.05);
-      font-weight: 700;
-    }
-    tfoot td {
-      font-weight: 700;
-      background: rgba(130,191,210,0.08);
-    }
+    .commentary, #historical-section { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
+    .user-comment { margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(130,191,210,0.2); }
+    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
+    th { background: rgba(130,191,210,0.05); font-weight: 700; }
+    tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
     .highlight-negative { color: #d32f2f; font-weight: 600; }
     .highlight-positive { color: #2e7d32; font-weight: 600; }
     .highlight-zero { color: #555; font-weight: 600; }
-    #loading {
-      font-style: italic;
-      opacity: 0.75;
-      text-align: center;
-      font-size: 1rem;
-      margin: 24px 0;
-    }
-    .section-title {
-      font-size: 1.3rem;
-      margin: 32px 0 16px;
-      font-weight: 700;
-    }
+    #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
+    .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
     #report-content { display: none; }
-    .timestamp {
-      font-size: 0.92rem;
-      opacity: 0.8;
-      margin-bottom: 16px;
-    }
-    .no-data {
-      text-align: center;
-      color: #777;
-      font-style: italic;
-      margin: 20px 0;
-    }
-    textarea {
-      width: 100%;
-      min-height: 180px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(130,191,210,0.3);
-      background: white;
-      font-family: inherit;
-      font-size: 1.05rem;
-      line-height: 1.6;
-    }
-    .logo-container {
-      text-align: center;
-      margin-bottom: 28px;
-    }
-    .logo {
-      max-width: 220px;
-      height: auto;
-      display: block;
-      margin: 0 auto;
-      opacity: 0.92;
-      filter: grayscale(0.15) saturate(0.92);
-      transition: opacity 0.3s ease;
-    }
-    .logo:hover {
-      opacity: 1;
-    }
-    @media (max-width: 768px) {
-      .logo {
-        max-width: 180px;
-      }
-      .logo-container {
-        margin-bottom: 20px;
-      }
-    }
-    #version-info {
-      position: fixed;
-      bottom: 0.75rem;
-      right: 1rem;
-      font-size: 0.75rem;
-      color: #777;
-      opacity: 0.65;
-      pointer-events: none;
-      z-index: 10;
-    }
-    #historical-section {
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(130,191,210, 0.10);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
-      padding: 24px;
-      margin-bottom: 40px;
-    }
+    .timestamp { font-size: 0.92rem; opacity: 0.8; margin-bottom: 16px; }
+    .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
+    textarea { width: 100%; min-height: 180px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1.05rem; line-height: 1.6; }
+    .logo-container { text-align: center; margin-bottom: 28px; }
+    .logo { max-width: 220px; height: auto; display: block; margin: 0 auto; opacity: 0.92; filter: grayscale(0.15) saturate(0.92); transition: opacity 0.3s ease; }
+    .logo:hover { opacity: 1; }
+    @media (max-width: 768px) { .logo { max-width: 180px; } .logo-container { margin-bottom: 20px; } }
+    #version-info { position: fixed; bottom: 0.75rem; right: 1rem; font-size: 0.75rem; color: #777; opacity: 0.65; pointer-events: none; z-index: 10; }
   </style>
 </head>
 <body>
@@ -189,7 +46,7 @@
   </div>
   <h1>Mandagsrapport – Peasy</h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
-  
+
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
@@ -200,7 +57,6 @@
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
   </div>
 
-  <!-- Historisk trend chart -->
   <div id="historical-section" style="display:none;">
     <div class="section-title">Historisk trend – gjennomsnittlig diff % (Bud vs AR laveste estimat)</div>
     <canvas id="trend-chart" height="110"></canvas>
@@ -220,11 +76,9 @@
     </div>
   </div>
 
-  <div id="version-info">
-    v16 • sist oppdatert 09.02.2026
-  </div>
+  <div id="version-info">v16 • sist oppdatert 09.02.2026</div>
 
-  <!-- Modals unchanged -->
+  <!-- Modals (unchanged) -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h3>Kommentar før låsing (valgfritt)</h3>
@@ -235,6 +89,7 @@
       </div>
     </div>
   </div>
+
   <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h3>Sikker på sletting?</h3>
@@ -245,6 +100,7 @@
       </div>
     </div>
   </div>
+
   <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
     <h3>Passord kreves</h3>
     <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px auto; display:block;">
@@ -271,6 +127,7 @@ function cleanNum(str) {
   let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
   return parseFloat(s) || 0;
 }
+
 function getISOWeek(date) {
   const d = new Date(date);
   d.setHours(0,0,0,0);
@@ -279,22 +136,19 @@ function getISOWeek(date) {
   const days = Math.floor((d - yearStart) / 86400000);
   return Math.ceil((days + 1) / 7);
 }
+
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dayOfWeek = today.getDay();
-
   let daysBackToSunday;
   if (dayOfWeek === 1) daysBackToSunday = 1;
   else if (dayOfWeek === 0) daysBackToSunday = 7;
   else daysBackToSunday = dayOfWeek;
-
   const endOfPrevWeek = new Date(today);
   endOfPrevWeek.setDate(today.getDate() - daysBackToSunday);
-
   const startOfPrevWeek = new Date(endOfPrevWeek);
   startOfPrevWeek.setDate(endOfPrevWeek.getDate() - 6);
-
   return startOfPrevWeek;
 }
 
@@ -310,6 +164,7 @@ async function fetchReports() {
     return [];
   }
 }
+
 async function saveReports(reports) {
   try {
     const res = await fetch(API_URL, {
@@ -318,13 +173,14 @@ async function saveReports(reports) {
       body: JSON.stringify({ reports })
     });
     if (!res.ok) throw new Error(`Lagring feilet: ${res.status}`);
+    console.log("Lagret til JSONBin");
   } catch (err) {
     console.error("Lagring feilet:", err);
-    alert("Kunne ikke lagre til skyen.");
+    alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
   }
 }
 
-// Historisk chart
+// Historisk trend chart
 async function renderHistoricalChart() {
   const reports = await fetchReports();
   if (reports.length < 2) {
@@ -332,17 +188,16 @@ async function renderHistoricalChart() {
     return;
   }
 
-  // Sort by weekStart (newest last)
-  reports.sort((a, b) => (a.weekStart || '') < (b.weekStart || '') ? -1 : 1);
+  reports.sort((a, b) => (a.weekStart || '0000-00-00') < (b.weekStart || '0000-00-00') ? -1 : 1);
 
   const labels = reports.map(r => r.title.replace('Mandag ', ''));
   const soldPct = reports.map(r => {
-    if (!r.soldCars || r.soldCars.length === 0) return null;
+    if (!r.soldCars?.length) return null;
     const sum = r.soldCars.reduce((s, c) => s + (c['Diff %_raw'] || 0), 0);
     return parseFloat((sum / r.soldCars.length).toFixed(1));
   });
   const returnedPct = reports.map(r => {
-    if (!r.returnedCars || r.returnedCars.length === 0) return null;
+    if (!r.returnedCars?.length) return null;
     const sum = r.returnedCars.reduce((s, c) => s + (c['Diff %_raw'] || 0), 0);
     return parseFloat((sum / r.returnedCars.length).toFixed(1));
   });
@@ -355,82 +210,213 @@ async function renderHistoricalChart() {
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels,
       datasets: [
-        {
-          label: 'Solgte biler – gj.snitt diff %',
-          data: soldPct,
-          borderColor: '#2e7d32',
-          backgroundColor: 'rgba(46, 125, 50, 0.1)',
-          tension: 0.3,
-          borderWidth: 3
-        },
-        {
-          label: 'Returnerte biler – gj.snitt diff %',
-          data: returnedPct,
-          borderColor: '#d32f2f',
-          backgroundColor: 'rgba(211, 47, 47, 0.1)',
-          tension: 0.3,
-          borderWidth: 3
-        }
+        { label: 'Solgte biler – gj.snitt diff %', data: soldPct, borderColor: '#2e7d32', backgroundColor: 'rgba(46,125,50,0.08)', tension: 0.3, borderWidth: 3 },
+        { label: 'Returnerte biler – gj.snitt diff %', data: returnedPct, borderColor: '#d32f2f', backgroundColor: 'rgba(211,47,47,0.08)', tension: 0.3, borderWidth: 3 }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', align: 'start' },
-        tooltip: { mode: 'index', intersect: false }
-      },
+      plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
       scales: {
-        y: {
-          title: { display: true, text: 'Gjennomsnittlig diff %' },
-          grid: { color: 'rgba(130,191,210,0.1)' }
-        },
-        x: {
-          grid: { color: 'rgba(130,191,210,0.1)' }
-        }
+        y: { title: { display: true, text: 'Gjennomsnittlig diff %' }, suggestedMin: -20, suggestedMax: 20 },
+        x: { grid: { display: false } }
       }
     }
   });
 }
 
-// Rest of your original functions (only small additions)
+// Initial lasting
 window.onload = async () => {
   const reports = await fetchReports();
   populateWeekSelect(reports);
   if (reports.length > 0) {
-    const newest = reports[reports.length - 1];
-    document.getElementById('weekSelect').value = newest.id;
+    document.getElementById('weekSelect').value = reports[reports.length - 1].id;
     await loadSavedReport();
   }
   await updateGenerateButtonState();
-  await renderHistoricalChart();   // ← new
+  await renderHistoricalChart();
 };
 
+function populateWeekSelect(reports) {
+  const sel = document.getElementById('weekSelect');
+  sel.innerHTML = '<option value="">Velg uke...</option>';
+  reports.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.title;
+    sel.appendChild(opt);
+  });
+}
+
 async function loadSavedReport() {
-  // ... your original code unchanged until the end
+  const id = document.getElementById('weekSelect').value;
+  if (!id) {
+    document.getElementById('report-content').style.display = 'none';
+    document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
+    await updateGenerateButtonState();
+    await renderHistoricalChart();
+    return;
+  }
+
+  const reports = await fetchReports();
+  const report = reports.find(r => r.id === id);
+  if (!report) return;
+
+  currentReport = report;
+
+  let ts = `Opprettet: ${report.created}`;
+  if (report.edited) ts += ` • Sist endret: ${report.edited}`;
+  if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
+  document.getElementById('timestamp').textContent = ts;
+
+  let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
+  if (report.userComment) {
+    html += `<div class="user-comment"><h3>Kommentar til rapporten</h3><div style="white-space: pre-wrap; line-height:1.6;">${report.userComment.replace(/\n/g, '<br>')}</div></div>`;
+  }
+  document.getElementById('commentary').innerHTML = html;
+
+  renderTable('sold-table', report.soldCars || []);
+  renderTable('returned-table', report.returnedCars || []);
+  document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
+  document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
+  document.getElementById('report-content').style.display = 'block';
+
   const locked = !!report.locked;
   document.getElementById('edit-btn').style.display = 'block';
   document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
   document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
+
   await updateGenerateButtonState();
-  await renderHistoricalChart();   // ← new
+  await renderHistoricalChart();
 }
 
-// In generateNewReport(), inside the try block, when creating currentReport:
+function renderTable(id, cars) {
+  const table = document.getElementById(id);
+  table.innerHTML = '';
+  if (!cars.length) {
+    table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler</td></tr>';
+    return;
+  }
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${cars.map(car => `
+        <tr>
+          <td>${car.Merke || '-'}</td>
+          <td>${car.Modell || '-'}</td>
+          <td>${car.År || '-'}</td>
+          <td>${car['AR laveste estimat_raw']?.toLocaleString('nb-NO') || '-'}</td>
+          <td>${car['Bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
+          <td class="${car['Diff NOK_raw'] < 0 ? 'highlight-negative' : car['Diff NOK_raw'] > 0 ? 'highlight-positive' : 'highlight-zero'}">
+            ${car['Diff NOK_raw']?.toLocaleString('nb-NO') || '-'}
+          </td>
+          <td>${(car['Diff %_raw'] ?? 0).toFixed(1)}%</td>
+        </tr>
+      `).join('')}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>
+        <td>${Math.round(cars.reduce((s,c)=>s+(c['AR laveste estimat_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
+        <td>${Math.round(cars.reduce((s,c)=>s+(c['Bud_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
+        <td class="${(()=>{let a=cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0;return a<0?'highlight-negative':a>0?'highlight-positive':'highlight-zero'})()}">
+          ${Math.round(cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}
+        </td>
+        <td>${(cars.reduce((s,c)=>s+(c['Diff %_raw']||0),0)/cars.length||0).toFixed(1)}%</td>
+      </tr>
+    </tfoot>`;
+}
+
+async function generateNewReport() {
+  const btn = document.getElementById('generate-btn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  document.getElementById('loading').textContent = 'Genererer...';
+  document.getElementById('loading').style.display = 'block';
+
+  try {
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ab = await res.arrayBuffer();
+    const wb = XLSX.read(ab, {type: 'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+    const headers = data[0].map(h => (h || '').trim());
+
+    const col = {
+      Merke: headers.indexOf('Merke'),
+      Modell: headers.indexOf('Modell'),
+      År: headers.indexOf('År'),
+      'Endelig AR verdi': headers.findIndex(h => h?.includes('Endelig AR verdi')),
+      Bud: headers.indexOf('Bud'),
+      'Solgt på': headers.indexOf('Solgt på'),
+      Returnert: headers.findIndex(h => h?.includes('Returnert'))
+    };
+
     const startDate = getMostRecentCompletedWeekStart();
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
 
-    // ... existing code ...
+    const reports = await fetchReports();
+    if (reports.some(r => r.title === title)) {
+      alert('Rapport for denne uken finnes allerede.');
+      return;
+    }
+
+    const soldCars = [], returnedCars = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const parseDate = str => {
+        if (!str) return null;
+        const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+        return m ? new Date(m[3], m[2]-1, m[1]) : null;
+      };
+      const soldDate = parseDate(row[col['Solgt på']]);
+      const retDate = parseDate(row[col.Returnert]);
+
+      let arLowest = 0;
+      const arRange = row[col['Endelig AR verdi']] || '';
+      if (arRange.includes('-')) {
+        arLowest = parseFloat(arRange.split('-')[0].trim()) || 0;
+      } else {
+        arLowest = parseFloat(arRange) || 0;
+      }
+
+      const bud = parseFloat(row[col.Bud] || 0);
+      const diffNok = bud - arLowest;
+      const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
+
+      const car = {
+        Merke: row[col.Merke] || '-',
+        Modell: row[col.Modell] || '-',
+        År: row[col.År] || '-',
+        'AR laveste estimat_raw': arLowest,
+        'Bud_raw': bud,
+        'Diff NOK_raw': diffNok,
+        'Diff %_raw': diffPct
+      };
+
+      if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+      if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
+    }
+
+    const commentaryHtml = generateCommentary(soldCars, returnedCars);
 
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
-      weekStart: startDate.toISOString().split('T')[0],   // ← NEW: for sorting chart
+      weekStart: startDate.toISOString().split('T')[0],
       created: nowStr,
       edited: null,
       commentary: commentaryHtml,
@@ -441,16 +427,176 @@ async function loadSavedReport() {
       lockComment: ''
     };
 
-    // ... rest unchanged ...
-
     await saveCurrentReport();
-    // ... 
+
+    const updatedReports = await fetchReports();
+    populateWeekSelect(updatedReports);
+    document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
-    await renderHistoricalChart();   // ← new
+    await renderHistoricalChart();
 
-// updateGenerateButtonState remains unchanged
+    alert('Rapport generert og lagret i skyen!');
+  } catch (err) {
+    console.error(err);
+    alert('Feil: ' + err.message);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    btn.disabled = false;
+  }
+}
 
-// All other functions (editUserComment, lock, delete, etc.) are unchanged
+function generateCommentary(sold, returned) {
+  const stats = arr => {
+    if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
+    let u=0,o=0,z=0,sn=0,sp=0;
+    arr.forEach(c => {
+      const n = c['Diff NOK_raw'];
+      if (n<0) u++;
+      else if (n>0) o++;
+      else z++;
+      sn += n;
+      sp += c['Diff %_raw'];
+    });
+    return {
+      n: arr.length,
+      u, o, z,
+      avgN: Math.round(sn / arr.length),
+      avgP: (sp / arr.length).toFixed(1)
+    };
+  };
+  const s = stats(sold);
+  const r = stats(returned);
+  return `
+    <h3>Fakta – forrige fullførte uke (man–søn)</h3>
+    <div style="margin: 24px 0 12px 0;">
+      <strong>Solgte biler</strong><br>Totalt: ${s.n} biler
+    </div>
+    <ul style="margin: 8px 0 32px 24px; line-height: 1.6; list-style-type: disc; color: #004225;">
+      <li>Under estimat: ${s.u} biler</li>
+      <li>Over estimat: ${s.o} biler</li>
+      <li>På estimat: ${s.z} biler</li>
+      <li style="margin-top: 12px; font-weight: 500; color: #2e7d32;">
+        Gjennomsnittlig diff: ${s.avgN.toLocaleString('nb-NO')} kr (${s.avgP}%)
+      </li>
+    </ul>
+    <div style="margin: 32px 0 12px 0;">
+      <strong>Returnerte biler</strong><br>Totalt: ${r.n} biler
+    </div>
+    <div style="margin-bottom: 24px; color: #004225; font-weight: 500;">
+      Gjennomsnittlig diff: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)
+    </div>
+  `;
+}
+
+async function saveCurrentReport() {
+  if (!currentReport) return;
+  let reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx >= 0) reports[idx] = currentReport;
+  else reports.push(currentReport);
+  await saveReports(reports);
+}
+
+async function updateGenerateButtonState() {
+  const btn = document.getElementById('generate-btn');
+  const start = getMostRecentCompletedWeekStart();
+  const week = getISOWeek(start);
+  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+  const reports = await fetchReports();
+  const exists = reports.some(r => r.title === title);
+  btn.disabled = exists;
+  btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
+}
+
+// Brukerens egen kommentar
+function editUserComment() {
+  if (!currentReport) return;
+  const div = document.getElementById('commentary');
+  const currentUserText = currentReport.userComment || '';
+  let html = currentReport.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
+  html += `
+    <div class="user-comment" style="margin-top:32px; padding-top:20px; border-top:1px solid rgba(130,191,210,0.2);">
+      <h3>Rediger kommentar til rapporten</h3>
+      <textarea id="user-comment-textarea">${currentUserText}</textarea>
+      <div style="margin-top:12px; text-align:right;">
+        <button onclick="cancelUserEdit()" style="background:#757575; margin-right:8px;">Avbryt</button>
+        <button onclick="saveUserComment()" style="background:#2e7d32;">Lagre kommentar</button>
+      </div>
+    </div>`;
+  div.innerHTML = html;
+  document.getElementById('edit-btn').style.display = 'none';
+}
+
+function cancelUserEdit() {
+  loadSavedReport();
+}
+
+async function saveUserComment() {
+  const ta = document.getElementById('user-comment-textarea');
+  if (!ta) return;
+  const newText = ta.value.trim();
+  currentReport.userComment = newText;
+  currentReport.edited = new Date().toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
+  await saveCurrentReport();
+  await loadSavedReport();
+}
+
+// Låsing
+function showLockCommentModal() {
+  document.getElementById('lock-comment-modal').style.display = 'flex';
+}
+
+function closeLockModal() {
+  document.getElementById('lock-comment-modal').style.display = 'none';
+}
+
+async function confirmLockWithComment() {
+  const comment = document.getElementById('lock-comment-text').value.trim();
+  if (currentReport) {
+    currentReport.locked = true;
+    currentReport.lockComment = comment || '(ingen kommentar)';
+    await saveCurrentReport();
+    alert('Rapporten er nå låst.');
+    closeLockModal();
+    await loadSavedReport();
+  }
+}
+
+// Sletting
+function showDeleteConfirm() {
+  document.getElementById('delete-modal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+}
+
+function promptPasswordForDelete() {
+  closeDeleteModal();
+  document.getElementById('password-prompt').style.display = 'block';
+}
+
+function closePasswordPrompt() {
+  document.getElementById('password-prompt').style.display = 'none';
+}
+
+async function checkDeletePassword() {
+  if (document.getElementById('password-input').value === DELETE_PASSWORD) {
+    let reports = await fetchReports();
+    reports = reports.filter(r => r.id !== currentReport.id);
+    await saveReports(reports);
+    alert('Rapport slettet.');
+    currentReport = null;
+    const updated = await fetchReports();
+    populateWeekSelect(updated);
+    document.getElementById('report-content').style.display = 'none';
+    closePasswordPrompt();
+    await updateGenerateButtonState();
+    await renderHistoricalChart();
+  } else {
+    alert('Feil passord.');
+  }
+}
 </script>
 </body>
 </html>
