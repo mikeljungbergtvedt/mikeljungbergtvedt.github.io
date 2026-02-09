@@ -56,7 +56,7 @@
     table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.95rem; }
     th, td { border: 1px solid rgba(130,191,210,0.25); padding: 0.75rem; text-align: left; }
     th { background: rgba(130,191,210,0.08); font-weight: 600; }
-    td:nth-child(5), th:nth-child(5) { text-align: right; min-width: 110px; }
+    td:nth-child(5), th:nth-child(5) { text-align: right; min-width: 130px; }
     .red { color: #d32f2f; font-weight: bold; }
     .step, .likely { margin: 1rem 0; padding: 1rem; background: rgba(255,255,255,0.7); border-left: 5px solid var(--peasy-green); border-radius: 8px; }
     .likely { font-weight: 700; font-size: 1.25rem; background: rgba(0,66,37,0.05); }
@@ -108,26 +108,13 @@
       table { font-size: 0.9rem; }
       th, td { padding: 0.6rem; }
     }
-    @media (max-width: 480px) {
-      h1 { font-size: 1.9rem; }
-      label { font-size: 1rem; }
-      input { font-size: 0.95rem; padding: 0.7rem 0.9rem; }
-    }
-    .logo-container { margin: 0 auto 2.5rem auto; text-align: center; }
-    .logo { max-width: 220px; height: auto; display: block; margin: 0 auto; opacity: 0.92; filter: grayscale(0.15) saturate(0.92); transition: opacity 0.3s ease; }
-    .logo:hover { opacity: 1; }
-    @media (max-width: 768px) { .logo { max-width: 180px; } .logo-container { margin-bottom: 2rem; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="logo-container">
-      <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="logo">
-    </div>
     <div class="header"><h1>Verdsettelsesverktøy</h1></div>
 
     <button onclick="loadAndShowPending()">Oppdater ventende leads</button>
-
     <input type="text" id="searchReg" placeholder="Søk RegNr..." oninput="filterPendingTable()">
 
     <div id="pending" class="card">
@@ -153,6 +140,7 @@
     </div>
 
     <hr>
+
     <h2>Verdikalkulator</h2>
 
     <div class="guidelines">
@@ -203,7 +191,7 @@
   <div id="toast"></div>
 
   <div id="version-info">
-    v1.3.8 • sist oppdatert 09.02.2026
+    v1.3.9 • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -211,27 +199,24 @@
     let headers = [];
 
     function formatKm(val) {
-      // Debug: log first few calls
-      if (formatKm.debugCount === undefined) formatKm.debugCount = 0;
-      if (formatKm.debugCount < 5) {
-        console.log(`formatKm input #${++formatKm.debugCount}:`, val, 'type:', typeof val);
+      if (val == null || val === '' || val === '-') return '-';
+
+      let num;
+
+      if (typeof val === 'number') {
+        num = val;
+      } else {
+        // Try to clean string
+        let str = String(val).trim()
+          .replace(/\s*km\s*/gi, '')
+          .replace(/\s+/g, '')
+          .replace(/[^0-9-]/g, '');
+        num = parseInt(str, 10);
       }
 
-      if (val == null || val === '') return '-';
+      if (isNaN(num) || num <= 0) return '-';
 
-      // Convert to string safely
-      let str = String(val).trim();
-
-      // Remove everything except digits
-      const digits = str.replace(/[^0-9]/g, '');
-
-      if (!digits) return '-';
-
-      const km = parseInt(digits, 10);
-
-      if (isNaN(km) || km <= 0) return '-';
-
-      return km.toLocaleString('nb-NO');
+      return num.toLocaleString('nb-NO') + ' km';
     }
 
     function showToast(message) {
@@ -255,26 +240,28 @@
         console.log(`Loaded ${data.length} rows. Headers:`, headers);
         return true;
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load report:', err);
         return false;
       }
     }
 
     function findColumn(patterns) {
-      // First try exact match (case-insensitive, trimmed)
-      const exactPatterns = patterns.map(p => p.trim());
-      let idx = headers.findIndex(h => {
-        const header = String(h).trim();
-        return exactPatterns.some(p => header === p || header.toLowerCase() === p.toLowerCase());
-      });
-      if (idx !== -1) return idx;
+      const lowerHeaders = headers.map(h => String(h).trim().toLowerCase());
 
-      // Then fuzzy includes
-      const lowerPatterns = patterns.map(p => p.toLowerCase().trim());
-      for (let p of lowerPatterns) {
-        idx = headers.findIndex(h => String(h).trim().toLowerCase().includes(p));
+      // Try exact match first
+      for (let pattern of patterns) {
+        const p = pattern.trim().toLowerCase();
+        const idx = lowerHeaders.findIndex(h => h === p);
         if (idx !== -1) return idx;
       }
+
+      // Then partial match
+      for (let pattern of patterns) {
+        const p = pattern.trim().toLowerCase();
+        const idx = lowerHeaders.findIndex(h => h.includes(p));
+        if (idx !== -1) return idx;
+      }
+
       return -1;
     }
 
@@ -288,33 +275,40 @@
         return false;
       }
 
-      const sdCol      = findColumn(['SD mottatt på']);
-      const arCol      = findColumn(['Endelig AR verdi']);
-      const statusCol  = findColumn(['Status']);
-      const regCol     = findColumn(['RegNr']);
-      const merkeCol   = findColumn(['Merke']);
-      const modellCol  = findColumn(['Modell']);
-      const yearCol    = findColumn(['År']);
-      const postCol    = findColumn(['Postnr']);
-      const stedCol    = findColumn(['Sted']);
+      const sdCol     = findColumn(['SD mottatt på', 'SD mottatt']);
+      const arCol     = findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']);
+      const statusCol = findColumn(['Status']);
+      const regCol    = findColumn(['RegNr', 'Reg nr', 'Regnr']);
+      const merkeCol  = findColumn(['Merke']);
+      const modellCol = findColumn(['Modell']);
+      const yearCol   = findColumn(['År', 'Årgang']);
+      const postCol   = findColumn(['Postnr']);
+      const stedCol   = findColumn(['Sted']);
 
-      // KM column - prioritize exact "KM"
-      let kmCol = headers.findIndex(h => String(h).trim() === 'KM');
-      if (kmCol === -1) {
-        kmCol = findColumn(['KM', 'Kilometer', 'Km stand', 'Stand', 'Kjørelengde']);
-      }
+      // ────────────────────────────────────────────────
+      // KM column – improved detection
+      const kmCol = findColumn([
+        'KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde',
+        'Km stand', 'Kilometerstand', 'Stand km', 'Stand'
+      ]);
 
-      console.log("KM column final index:", kmCol, "header:", kmCol >= 0 ? headers[kmCol] : "(not found)");
+      console.log("KM column → index:", kmCol, 
+                  "header:", kmCol >= 0 ? headers[kmCol] : "NOT FOUND");
+
       if (kmCol === -1) {
-        console.log("ALL HEADERS:", headers);
+        console.warn("Could not find KM column. Available headers:", headers);
       }
 
       let pending = data.filter(row => {
         const sdVal = String(row[sdCol] || '').trim();
         let arVal = String(row[arCol] || '').trim();
         const statusVal = String(row[statusCol] || '').trim().toLowerCase();
+
         if (['-', '–', '—', ''].includes(arVal)) arVal = '';
-        const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
+
+        const isRelevant = statusVal.includes('endelig estimat') || 
+                          statusVal.includes('sd mottatt');
+
         return sdVal !== '' && arVal === '' && isRelevant;
       });
 
@@ -329,12 +323,12 @@
       const tbody = document.querySelector('#pendingTable tbody');
       tbody.innerHTML = '';
 
-      if (pending.length > 0) {
-        const firstKmRaw = pending[0][kmCol];
-        console.log("First row KM raw value:", firstKmRaw, "type:", typeof firstKmRaw);
-      }
+      pending.forEach((row, i) => {
+        if (i === 0) {
+          console.log("First pending row KM raw:", row[kmCol], 
+                      "type:", typeof row[kmCol]);
+        }
 
-      pending.forEach(row => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
         tr.addEventListener('click', () => {
@@ -345,14 +339,14 @@
         const kmDisplay = formatKm(row[kmCol]);
 
         tr.innerHTML = `
-          <td>${row[regCol] || '-'}</td>
+          <td>${row[regCol]   || '-'}</td>
           <td>${row[merkeCol] || '-'}</td>
-          <td>${row[modellCol] || '-'}</td>
-          <td>${row[yearCol] || '-'}</td>
-          <td>${kmDisplay}</td>
-          <td>${row[sdCol] || '-'}</td>
-          <td>${row[statusCol] || '-'}</td>
-          <td>${row[postCol] || ''} ${row[stedCol] || ''}</td>
+          <td>${row[modellCol]|| '-'}</td>
+          <td>${row[yearCol]  || '-'}</td>
+          <td style="text-align:right">${kmDisplay}</td>
+          <td>${row[sdCol]    || '-'}</td>
+          <td>${row[statusCol]|| '-'}</td>
+          <td>${row[postCol]||''} ${row[stedCol]||''}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -371,10 +365,11 @@
     }
 
     function updateFinnLink() {
-      const make = document.getElementById('make').value.trim();
+      const make  = document.getElementById('make').value.trim();
       const model = document.getElementById('model').value.trim();
-      const year = parseInt(document.getElementById('year').value) || 0;
-      const km = parseInt(document.getElementById('kmstand').value) || 0;
+      const year  = parseInt(document.getElementById('year').value) || 0;
+      const km    = parseInt(document.getElementById('kmstand').value) || 0;
+
       const container = document.getElementById('finnSearchLink');
       const link = document.getElementById('finnLink');
 
@@ -391,33 +386,32 @@
 
       const q = encodeURIComponent(`${make} ${model}`);
       const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
+
       link.href = url;
-      link.textContent = `Åpne søk på FINN →`;
       container.style.display = 'block';
     }
 
     function fillFormFromRow(row) {
       const idx = {
-        reg: findColumn(['RegNr']),
-        make: findColumn(['Merke']),
+        reg:   findColumn(['RegNr', 'Reg nr', 'Regnr']),
+        make:  findColumn(['Merke']),
         model: findColumn(['Modell']),
-        year: findColumn(['År']),
-        km: headers.findIndex(h => String(h).trim() === 'KM'),
+        year:  findColumn(['År', 'Årgang']),
+        km:    findColumn(['KM', 'Km', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand'])
       };
-      if (idx.km === -1) {
-        idx.km = findColumn(['KM', 'Kilometer', 'Km stand', 'Stand', 'Kjørelengde']);
-      }
 
       const kmRaw = row[idx.km];
-      const kmClean = String(kmRaw || '').trim().replace(/[^0-9]/g, '');
-      const km = parseInt(kmClean, 10);
+      const kmFormatted = formatKm(kmRaw);
+      const kmNumber = kmFormatted === '-' ? '' : 
+                       parseInt(kmFormatted.replace(/\s/g, '').replace('km', '')) || '';
 
-      document.getElementById('regnr').value = row[idx.reg] || '';
-      document.getElementById('make').value = String(row[idx.make] || '').trim();
-      document.getElementById('model').value = String(row[idx.model] || '').trim();
-      document.getElementById('year').value = row[idx.year] || '';
-      document.getElementById('kmstand').value = (isNaN(km) || km <= 0) ? '' : km;
+      document.getElementById('regnr').value    = row[idx.reg]   || '';
+      document.getElementById('make').value     = String(row[idx.make]  || '').trim();
+      document.getElementById('model').value    = String(row[idx.model] || '').trim();
+      document.getElementById('year').value     = row[idx.year]  || '';
+      document.getElementById('kmstand').value  = kmNumber;
       document.getElementById('finn_avg').value = '';
+
       document.getElementById('output').innerHTML = '';
 
       const reminder = document.getElementById('priceReminder');
@@ -433,16 +427,15 @@
       updateFinnLink();
     }
 
-    // Keep the rest of your functions unchanged (getHistoricalComps, calculateValuation, filterPendingTable, toggleGuidelines, etc.)
     function getHistoricalComps(specs) {
       const idx = {
-        bud: findColumn(['Bud']),
-        low: findColumn(['Endelig AR verdi', 'Laveste']),
-        make: findColumn(['Merke']),
+        bud:   findColumn(['Bud']),
+        low:   findColumn(['Endelig AR verdi', 'Laveste']),
+        make:  findColumn(['Merke']),
         model: findColumn(['Modell']),
-        year: findColumn(['År']),
-        sold: findColumn(['Solgt på']),
-        reg: findColumn(['RegNr']),
+        year:  findColumn(['År']),
+        sold:  findColumn(['Solgt på']),
+        reg:   findColumn(['RegNr']),
       };
 
       const now = new Date();
@@ -450,9 +443,9 @@
       thirtyDaysAgo.setDate(now.getDate() - 30);
 
       const comps = data.filter(row => {
-        const m = String(row[idx.make] || '').trim().toLowerCase();
+        const m  = String(row[idx.make]  || '').trim().toLowerCase();
         const mo = String(row[idx.model] || '').trim().toLowerCase();
-        const y = parseInt(row[idx.year]) || 0;
+        const y  = parseInt(row[idx.year]) || 0;
         const bud = parseFloat(row[idx.bud]) || 0;
 
         let soldDate;
@@ -485,6 +478,7 @@
       });
 
       if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+
       const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
       return { var_pct, count: comps.length, comps };
     }
@@ -498,8 +492,8 @@
         return;
       }
 
-      const margin    = parseFloat(document.getElementById('margin').value) / 100 || 0;
-      const tillegg   = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
+      const margin    = parseFloat(document.getElementById('margin').value)    / 100 || 0;
+      const tillegg   = parseFloat(document.getElementById('tillegg').value)   / 100 || 0;
       const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
       const spread = 0.05;
 
@@ -510,9 +504,9 @@
       const high = midpoint * (1 + spread);
 
       const specs = {
-        make: document.getElementById('make').value.trim(),
+        make:  document.getElementById('make').value.trim(),
         model: document.getElementById('model').value.trim(),
-        year: parseInt(document.getElementById('year').value) || 0
+        year:  parseInt(document.getElementById('year').value) || 0
       };
 
       const hist = getHistoricalComps(specs);
@@ -540,11 +534,20 @@
         <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
         <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
         <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
+
         <button id="copyBtn">Kopier full beregning til ERP</button>
         <div id="copyFeedback"></div>
+
         <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
         <table>
-          <thead><tr><th>RegNr</th><th>Merke/Modell/År</th><th>Bud</th><th>Lavt estimat</th><th class="red">Varians %</th><th>Solgt</th></tr></thead>
+          <thead><tr>
+            <th>RegNr</th>
+            <th>Merke/Modell/År</th>
+            <th>Bud</th>
+            <th>Lavt estimat</th>
+            <th class="red">Varians %</th>
+            <th>Solgt</th>
+          </tr></thead>
           <tbody>${
             hist.comps.map(c => `
               <tr>
@@ -596,8 +599,6 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadAndShowPending();
     });
-
-    console.log("Page loaded – calculateValuation is defined:", typeof calculateValuation === "function");
   </script>
 </body>
 </html>
