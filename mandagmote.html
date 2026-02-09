@@ -143,8 +143,6 @@
       font-size: 1.05rem;
       line-height: 1.6;
     }
-
-    /* ─── Logo (samme stil som på de andre sidene) ─── */
     .logo-container {
       text-align: center;
       margin-bottom: 28px;
@@ -162,15 +160,9 @@
       opacity: 1;
     }
     @media (max-width: 768px) {
-      .logo {
-        max-width: 180px;
-      }
-      .logo-container {
-        margin-bottom: 20px;
-      }
+      .logo { max-width: 180px; }
+      .logo-container { margin-bottom: 20px; }
     }
-
-    /* ─── Sticky versjonsnummer – ren tekst, ingen bakgrunn (samme som de andre) ─── */
     #version-info {
       position: fixed;
       bottom: 0.75rem;
@@ -185,11 +177,9 @@
 </head>
 <body>
 <div class="container">
-  <!-- Logo lagt til her -->
   <div class="logo-container">
     <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
   </div>
-
   <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
   <div class="controls">
@@ -214,10 +204,8 @@
       <table id="returned-table"></table>
     </div>
   </div>
-
-  <!-- Sticky versjonsnummer lagt til her (nederst i containeren) -->
   <div id="version-info">
-    v15 • sist oppdatert 05.02.2026
+    v15 • robust parsing • 09.02.2026
   </div>
 
   <!-- Lås-modal -->
@@ -231,6 +219,7 @@
       </div>
     </div>
   </div>
+
   <!-- Slett-bekreftelse -->
   <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
@@ -242,6 +231,7 @@
       </div>
     </div>
   </div>
+
   <!-- Passord for sletting -->
   <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
     <h3>Passord kreves</h3>
@@ -261,12 +251,33 @@ const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
 let currentReport = null;
+
 // Hjelpefunksjoner
 function cleanNum(str) {
   if (!str) return 0;
   let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
   return parseFloat(s) || 0;
 }
+
+function findColumn(patterns) {
+  const cleanHeader = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const lowerHeaders = headers.map(cleanHeader);
+  
+  for (let pattern of patterns) {
+    const p = pattern.trim().replace(/\s+/g, ' ').toLowerCase();
+    const exactIdx = lowerHeaders.findIndex(h => h === p);
+    if (exactIdx !== -1) return exactIdx;
+  }
+  
+  for (let pattern of patterns) {
+    const p = pattern.trim().replace(/\s+/g, ' ').toLowerCase();
+    const partialIdx = lowerHeaders.findIndex(h => h.includes(p));
+    if (partialIdx !== -1) return partialIdx;
+  }
+  
+  return -1;
+}
+
 function getISOWeek(date) {
   const d = new Date(date);
   d.setHours(0,0,0,0);
@@ -275,6 +286,7 @@ function getISOWeek(date) {
   const days = Math.floor((d - yearStart) / 86400000);
   return Math.ceil((days + 1) / 7);
 }
+
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   const dayOfWeek = today.getDay() || 7;
@@ -287,6 +299,7 @@ function getMostRecentCompletedWeekStart() {
   startPrev.setHours(0,0,0,0);
   return startPrev;
 }
+
 // JSONBin
 async function fetchReports() {
   try {
@@ -299,6 +312,7 @@ async function fetchReports() {
     return [];
   }
 }
+
 async function saveReports(reports) {
   try {
     const res = await fetch(API_URL, {
@@ -313,7 +327,8 @@ async function saveReports(reports) {
     alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
   }
 }
-// Initial lasting – nyeste rapport som default
+
+// Initial lasting
 window.onload = async () => {
   const reports = await fetchReports();
   populateWeekSelect(reports);
@@ -324,6 +339,7 @@ window.onload = async () => {
   }
   await updateGenerateButtonState();
 };
+
 function populateWeekSelect(reports) {
   const sel = document.getElementById('weekSelect');
   sel.innerHTML = '<option value="">Velg uke...</option>';
@@ -334,6 +350,7 @@ function populateWeekSelect(reports) {
     sel.appendChild(opt);
   });
 }
+
 async function loadSavedReport() {
   const id = document.getElementById('weekSelect').value;
   if (!id) {
@@ -370,6 +387,7 @@ async function loadSavedReport() {
   document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
   await updateGenerateButtonState();
 }
+
 function renderTable(id, cars) {
   const table = document.getElementById(id);
   table.innerHTML = '';
@@ -380,7 +398,7 @@ function renderTable(id, cars) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Bud</th><th>Diff NOK</th><th>Diff %</th>
+        <th>Merke</th><th>Modell</th><th>År</th><th>AR laveste estimat</th><th>Høyeste bud</th><th>Diff NOK</th><th>Diff %</th>
       </tr>
     </thead>
     <tbody>
@@ -390,7 +408,7 @@ function renderTable(id, cars) {
           <td>${car.Modell}</td>
           <td>${car.År}</td>
           <td>${car['AR laveste estimat_raw']?.toLocaleString('nb-NO') || '-'}</td>
-          <td>${car['Bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
+          <td>${car['Høyeste bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
           <td class="${car['Diff NOK_raw'] < 0 ? 'highlight-negative' : car['Diff NOK_raw'] > 0 ? 'highlight-positive' : 'highlight-zero'}">
             ${car['Diff NOK_raw']?.toLocaleString('nb-NO') || '-'}
           </td>
@@ -402,7 +420,7 @@ function renderTable(id, cars) {
       <tr>
         <td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>
         <td>${Math.round(cars.reduce((s,c)=>s+(c['AR laveste estimat_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
-        <td>${Math.round(cars.reduce((s,c)=>s+(c['Bud_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
+        <td>${Math.round(cars.reduce((s,c)=>s+(c['Høyeste bud_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
         <td class="${(()=>{let a=cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0;return a<0?'highlight-negative':a>0?'highlight-positive':'highlight-zero'})()}">
           ${Math.round(cars.reduce((s,c)=>s+(c['Diff NOK_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}
         </td>
@@ -410,13 +428,15 @@ function renderTable(id, cars) {
       </tr>
     </tfoot>`;
 }
-// Generer ny rapport
+
+// Generer ny rapport – med robust parsing
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   if (btn.disabled) return;
   btn.disabled = true;
   document.getElementById('loading').textContent = 'Genererer...';
   document.getElementById('loading').style.display = 'block';
+
   try {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     const res = await fetch(url);
@@ -426,26 +446,36 @@ async function generateNewReport() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
     const headers = data[0].map(h => (h || '').trim());
+
     const col = {
-      Merke: headers.indexOf('Merke'),
-      Modell: headers.indexOf('Modell'),
-      År: headers.indexOf('År'),
-      'Endelig AR verdi': headers.findIndex(h => h?.includes('Endelig AR verdi')),
-      Bud: headers.indexOf('Bud'),
-      'Solgt på': headers.indexOf('Solgt på'),
-      Returnert: headers.findIndex(h => h?.includes('Returnert'))
+      Merke: findColumn(['Merke']),
+      Modell: findColumn(['Modell']),
+      År: findColumn(['År', 'Årgang']),
+      'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']),
+      'Høyeste bud': findColumn(['Høyeste bud', 'Høyeste Bud']),
+      'Solgt på': findColumn(['Solgt på']),
+      Returnert: findColumn(['Returnert', 'Returnert på'])
     };
+
+    if (col['Høyeste bud'] === -1) {
+      console.error("Fant IKKE 'Høyeste bud'. Headers:", headers);
+      alert("Feil: Kunne ikke finne kolonnen 'Høyeste bud' i Excel-filen!");
+      return;
+    }
+
     const startDate = getMostRecentCompletedWeekStart();
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
     const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+
     const reports = await fetchReports();
     if (reports.some(r => r.title === title)) {
       alert('Rapport for denne uken finnes allerede.');
       return;
     }
+
     const soldCars = [], returnedCars = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -456,28 +486,40 @@ async function generateNewReport() {
       };
       const soldDate = parseDate(row[col['Solgt på']]);
       const retDate = parseDate(row[col.Returnert]);
+
+      // Robust parsing av AR laveste
+      let arStr = String(row[col['Endelig AR verdi']] || '').trim();
+      arStr = arStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
       let arLowest = 0;
-      const arRange = row[col['Endelig AR verdi']] || '';
-      if (arRange.includes('-')) {
-        arLowest = parseFloat(arRange.split('-')[0].trim()) || 0;
+      if (arStr.includes('-')) {
+        const lowPart = arStr.split('-')[0].trim();
+        arLowest = isNaN(parseFloat(lowPart)) ? 0 : parseFloat(lowPart);
       } else {
-        arLowest = parseFloat(arRange) || 0;
+        arLowest = isNaN(parseFloat(arStr)) ? 0 : parseFloat(arStr);
       }
-      const bud = parseFloat(row[col.Bud] || 0);
-      const diffNok = bud - arLowest;
+
+      // Robust parsing av Høyeste bud
+      let budStr = String(row[col['Høyeste bud']] || '').trim();
+      budStr = budStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
+      const hoyesteBud = isNaN(parseFloat(budStr)) ? 0 : parseFloat(budStr);
+
+      const diffNok = hoyesteBud - arLowest;
       const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
+
       const car = {
         Merke: row[col.Merke] || '-',
         Modell: row[col.Modell] || '-',
         År: row[col.År] || '-',
         'AR laveste estimat_raw': arLowest,
-        'Bud_raw': bud,
+        'Høyeste bud_raw': hoyesteBud,
         'Diff NOK_raw': diffNok,
         'Diff %_raw': diffPct
       };
+
       if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
       if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
     }
+
     const commentaryHtml = generateCommentary(soldCars, returnedCars);
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -491,6 +533,7 @@ async function generateNewReport() {
       locked: false,
       lockComment: ''
     };
+
     await saveCurrentReport();
     const updatedReports = await fetchReports();
     populateWeekSelect(updatedReports);
@@ -505,6 +548,7 @@ async function generateNewReport() {
     btn.disabled = false;
   }
 }
+
 function generateCommentary(sold, returned) {
   const stats = arr => {
     if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
@@ -549,6 +593,7 @@ function generateCommentary(sold, returned) {
     </div>
   `;
 }
+
 async function saveCurrentReport() {
   if (!currentReport) return;
   let reports = await fetchReports();
@@ -557,6 +602,7 @@ async function saveCurrentReport() {
   else reports.push(currentReport);
   await saveReports(reports);
 }
+
 async function updateGenerateButtonState() {
   const btn = document.getElementById('generate-btn');
   const start = getMostRecentCompletedWeekStart();
@@ -567,7 +613,8 @@ async function updateGenerateButtonState() {
   btn.disabled = exists;
   btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
-// Rediger KUN brukerens egen kommentar
+
+// Rediger egen kommentar
 function editUserComment() {
   if (!currentReport) return;
   const div = document.getElementById('commentary');
@@ -585,9 +632,11 @@ function editUserComment() {
   div.innerHTML = html;
   document.getElementById('edit-btn').style.display = 'none';
 }
+
 function cancelUserEdit() {
   loadSavedReport();
 }
+
 async function saveUserComment() {
   const ta = document.getElementById('user-comment-textarea');
   if (!ta) return;
@@ -597,7 +646,8 @@ async function saveUserComment() {
   await saveCurrentReport();
   await loadSavedReport();
 }
-// Låsing
+
+// Låsing og sletting (uendret)
 function showLockCommentModal() {
   document.getElementById('lock-comment-modal').style.display = 'flex';
 }
@@ -615,7 +665,7 @@ async function confirmLockWithComment() {
     await loadSavedReport();
   }
 }
-// Sletting
+
 function showDeleteConfirm() {
   document.getElementById('delete-modal').style.display = 'flex';
 }
