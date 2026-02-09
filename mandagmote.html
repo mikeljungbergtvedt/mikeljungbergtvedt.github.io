@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v15 (sky-lagring + egen kommentar)</title>
+  <title>Mandagsrapport – Peasy v15 (med diagnose logging)</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -180,18 +180,18 @@
   <div class="logo-container">
     <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
   </div>
-  <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
+  <h1>Mandagsrapport – Peasy<span class="version">v15 + diagnose</span></h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
     </select>
-    <button id="generate-btn" onclick="generateNewReport()">Generer rapport for forrige fullførte uke</button>
+    <button id="generate-btn" onclick="generateNewReport()">Generer ny rapport (se F12 konsoll!)</button>
     <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
   </div>
-  <div id="loading" style="display:none;">Laster...</div>
+  <div id="loading" style="display:none;">Genererer... (konsoll vil vise detaljer)</div>
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="commentary"></div>
@@ -205,7 +205,7 @@
     </div>
   </div>
   <div id="version-info">
-    v15 • robust parsing • 09.02.2026
+    v15 • diagnose logging • 09.02.2026
   </div>
 
   <!-- Lås-modal -->
@@ -246,11 +246,12 @@
 // KONFIGURASJON
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123"; // ← BYTT UT MED DITT EGET HEMMELIGE PASSORD!
+const DELETE_PASSWORD = "slett123"; // BYTT UT MED DITT EGET PASSORD!
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
 let currentReport = null;
+let headers = [];
 
 // Hjelpefunksjoner
 function cleanNum(str) {
@@ -262,19 +263,19 @@ function cleanNum(str) {
 function findColumn(patterns) {
   const cleanHeader = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
   const lowerHeaders = headers.map(cleanHeader);
-  
+
   for (let pattern of patterns) {
     const p = pattern.trim().replace(/\s+/g, ' ').toLowerCase();
     const exactIdx = lowerHeaders.findIndex(h => h === p);
     if (exactIdx !== -1) return exactIdx;
   }
-  
+
   for (let pattern of patterns) {
     const p = pattern.trim().replace(/\s+/g, ' ').toLowerCase();
     const partialIdx = lowerHeaders.findIndex(h => h.includes(p));
     if (partialIdx !== -1) return partialIdx;
   }
-  
+
   return -1;
 }
 
@@ -429,12 +430,12 @@ function renderTable(id, cars) {
     </tfoot>`;
 }
 
-// Generer ny rapport – med robust parsing
+// Generer ny rapport – MED FULL DIAGNOSE-LOGGING
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   if (btn.disabled) return;
   btn.disabled = true;
-  document.getElementById('loading').textContent = 'Genererer...';
+  document.getElementById('loading').textContent = 'Genererer... åpne F12 → Console nå!';
   document.getElementById('loading').style.display = 'block';
 
   try {
@@ -445,21 +446,38 @@ async function generateNewReport() {
     const wb = XLSX.read(ab, {type: 'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-    const headers = data[0].map(h => (h || '').trim());
+    headers = data[0].map(h => (h || '').trim());
+
+    console.log("=== 1. Alle kolonneoverskrifter fra Excel-filen ===");
+    console.table(headers);
 
     const col = {
       Merke: findColumn(['Merke']),
       Modell: findColumn(['Modell']),
       År: findColumn(['År', 'Årgang']),
-      'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']),
-      'Høyeste bud': findColumn(['Høyeste bud', 'Høyeste Bud']),
-      'Solgt på': findColumn(['Solgt på']),
+      'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste', 'Endelig']),
+      'Høyeste bud': findColumn([
+        'Høyeste bud',
+        'H\u00f8yeste bud',
+        'Høyeste Bud',
+        'Høyeste',
+        'høyeste bud',
+        'høyeste',
+        'Hogste bud',
+        'Hoyeste bud'
+      ]),
+      'Solgt på': findColumn(['Solgt på', 'Solgt']),
       Returnert: findColumn(['Returnert', 'Returnert på'])
     };
 
+    console.log("=== 2. Fant kolonner på disse indeksene ===", col);
+
+    // Uncomment next line to FORCE column E (index 4) for one test run
+    // col['Høyeste bud'] = 4;
+
     if (col['Høyeste bud'] === -1) {
-      console.error("Fant IKKE 'Høyeste bud'. Headers:", headers);
-      alert("Feil: Kunne ikke finne kolonnen 'Høyeste bud' i Excel-filen!");
+      console.error("Fant IKKE 'Høyeste bud' eller noen variant. Headers:", headers);
+      alert("Kunne ikke finne 'Høyeste bud'-kolonnen. Se konsoll (F12) for alle overskrifter.");
       return;
     }
 
@@ -477,34 +495,49 @@ async function generateNewReport() {
     }
 
     const soldCars = [], returnedCars = [];
+
+    console.log("=== 3. Detaljert parsing av hver rad ===");
+    console.log("Rad | AR råverdi | AR parsed | Bud råverdi | Bud parsed | Diff NOK | Merke Modell");
+
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
+
       const parseDate = str => {
         if (!str) return null;
         const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
         return m ? new Date(m[3], m[2]-1, m[1]) : null;
       };
+
       const soldDate = parseDate(row[col['Solgt på']]);
       const retDate = parseDate(row[col.Returnert]);
 
-      // Robust parsing av AR laveste
-      let arStr = String(row[col['Endelig AR verdi']] || '').trim();
-      arStr = arStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
+      // AR parsing
+      let arRaw = String(row[col['Endelig AR verdi']] || '').trim();
+      let arClean = arRaw.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
       let arLowest = 0;
-      if (arStr.includes('-')) {
-        const lowPart = arStr.split('-')[0].trim();
+      if (arClean.includes('-')) {
+        const lowPart = arClean.split('-')[0].trim();
         arLowest = isNaN(parseFloat(lowPart)) ? 0 : parseFloat(lowPart);
       } else {
-        arLowest = isNaN(parseFloat(arStr)) ? 0 : parseFloat(arStr);
+        arLowest = isNaN(parseFloat(arClean)) ? 0 : parseFloat(arClean);
       }
 
-      // Robust parsing av Høyeste bud
-      let budStr = String(row[col['Høyeste bud']] || '').trim();
-      budStr = budStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
-      const hoyesteBud = isNaN(parseFloat(budStr)) ? 0 : parseFloat(budStr);
+      // Bud parsing
+      let budRaw = String(row[col['Høyeste bud']] || '').trim();
+      let budClean = budRaw.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
+      const hoyesteBud = isNaN(parseFloat(budClean)) ? 0 : parseFloat(budClean);
 
       const diffNok = hoyesteBud - arLowest;
       const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
+
+      // DIAGNOSE LOG - dette er det viktigste nå
+      console.log(
+        `Rad ${i+1} | ` +
+        `AR rå: "${arRaw}" | parsed: ${arLowest} | ` +
+        `Bud rå: "${budRaw}" | parsed: ${hoyesteBud} | ` +
+        `Diff: ${diffNok} (${diffPct.toFixed(1)}%) | ` +
+        `${row[col.Merke] || '?'} ${row[col.Modell] || '?'}`
+      );
 
       const car = {
         Merke: row[col.Merke] || '-',
@@ -521,6 +554,7 @@ async function generateNewReport() {
     }
 
     const commentaryHtml = generateCommentary(soldCars, returnedCars);
+
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
@@ -535,14 +569,16 @@ async function generateNewReport() {
     };
 
     await saveCurrentReport();
+
     const updatedReports = await fetchReports();
     populateWeekSelect(updatedReports);
     document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
-    alert('Rapport generert og lagret i skyen!');
+
+    alert('Rapport generert. Åpne F12 → Console og kopier linjene med "Rad X | AR rå..." hit!');
   } catch (err) {
-    console.error(err);
-    alert('Feil: ' + err.message);
+    console.error("Kritisk feil:", err);
+    alert('Noe gikk galt: ' + err.message + '\nSe konsoll.');
   } finally {
     document.getElementById('loading').style.display = 'none';
     btn.disabled = false;
@@ -568,8 +604,10 @@ function generateCommentary(sold, returned) {
       avgP: (sp / arr.length).toFixed(1)
     };
   };
+
   const s = stats(sold);
   const r = stats(returned);
+
   return `
     <h3>Fakta – forrige fullførte uke (man–søn)</h3>
     <div style="margin: 24px 0 12px 0;">
@@ -614,7 +652,7 @@ async function updateGenerateButtonState() {
   btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
 
-// Rediger egen kommentar
+// Rediger kommentar, lås, slett – uendret (kopier fra din gamle versjon hvis nødvendig)
 function editUserComment() {
   if (!currentReport) return;
   const div = document.getElementById('commentary');
@@ -647,13 +685,14 @@ async function saveUserComment() {
   await loadSavedReport();
 }
 
-// Låsing og sletting (uendret)
 function showLockCommentModal() {
   document.getElementById('lock-comment-modal').style.display = 'flex';
 }
+
 function closeLockModal() {
   document.getElementById('lock-comment-modal').style.display = 'none';
 }
+
 async function confirmLockWithComment() {
   const comment = document.getElementById('lock-comment-text').value.trim();
   if (currentReport) {
@@ -669,16 +708,20 @@ async function confirmLockWithComment() {
 function showDeleteConfirm() {
   document.getElementById('delete-modal').style.display = 'flex';
 }
+
 function closeDeleteModal() {
   document.getElementById('delete-modal').style.display = 'none';
 }
+
 function promptPasswordForDelete() {
   closeDeleteModal();
   document.getElementById('password-prompt').style.display = 'block';
 }
+
 function closePasswordPrompt() {
   document.getElementById('password-prompt').style.display = 'none';
 }
+
 async function checkDeletePassword() {
   if (document.getElementById('password-input').value === DELETE_PASSWORD) {
     let reports = await fetchReports();
