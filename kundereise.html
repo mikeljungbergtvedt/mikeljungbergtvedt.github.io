@@ -76,8 +76,6 @@
     button:disabled {
       background: #b0c4d8;
       cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
     }
     select {
       min-width: 240px;
@@ -182,42 +180,23 @@
     <tbody id="tableBody"></tbody>
   </table>
 
-  <div id="version">v1.0 – full JSONBin-støtte</div>
+  <div id="version">v1.1 – fikset parsing for GA4 CSV</div>
 </div>
 
 <script>
 // ────────────────────────────────────────────────
-// KONFIGURASJON – samme som i din mandagsrapport
+// JSONBin config
 const BIN_ID     = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
 const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS    = {
-  'Content-Type': 'application/json',
-  'X-Master-Key': MASTER_KEY
-};
+const HEADERS    = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
 
 let currentData = null;
 
-// Drag & drop + klikk
-document.getElementById('upload-area').addEventListener('click', () =>
+// Upload
+document.getElementById('upload-area').addEventListener('click', () => 
   document.getElementById('fileInput').click()
-);
-
-['dragover', 'dragenter'].forEach(e =>
-  document.getElementById('upload-area').addEventListener(e, ev => {
-    ev.preventDefault();
-    document.getElementById('upload-area').style.borderColor = '#006644';
-    document.getElementById('upload-area').style.background = 'rgba(255,255,255,0.92)';
-  })
-);
-
-['dragleave', 'drop'].forEach(e =>
-  document.getElementById('upload-area').addEventListener(e, ev => {
-    ev.preventDefault();
-    document.getElementById('upload-area').style.borderColor = '#c3d4e2';
-    document.getElementById('upload-area').style.background = 'rgba(255,255,255,0.75)';
-  })
 );
 
 document.getElementById('fileInput').addEventListener('change', e => {
@@ -226,32 +205,63 @@ document.getElementById('fileInput').addEventListener('change', e => {
 });
 
 async function handleFile(file) {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    alert('Kun .csv-filer støttes');
-    return;
-  }
-
-  document.getElementById('status').textContent = 'Leser CSV...';
+  document.getElementById('status').textContent = 'Leser fil...';
   document.getElementById('file-info').textContent = `Behandler: ${file.name}`;
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete: async (results) => {
-      currentData = results.data.filter(r => r.Trinn?.trim());
-      showTable();
-      document.getElementById('status').textContent = '';
-      document.getElementById('file-info').textContent = `Viser: ${file.name} (${currentData.length} rader)`;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/);
 
-      if (confirm(`Lagre filen "${file.name}" i JSONBin? (synlig for alle med lenken)`)) {
-        await saveFile(file.name, currentData);
+    // Finn header-raden som starter med "Trinn,"
+    let headerIndex = -1;
+    let headers = [];
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed.startsWith('Trinn,')) {
+        headerIndex = i;
+        headers = trimmed.split(',').map(h => h.trim());
+        break;
       }
-    },
-    error: err => {
-      console.error(err);
-      document.getElementById('status').textContent = 'Feil ved parsing av CSV';
     }
-  });
+
+    if (headerIndex === -1) {
+      document.getElementById('status').textContent = 'Kunne ikke finne "Trinn" header';
+      return;
+    }
+
+    // Parse data-rader
+    const parsed = [];
+    for (let i = headerIndex + 1; i < lines.length; i++) {
+      let line = lines[i].trim();
+      if (!line || line.startsWith('#')) continue;
+
+      const values = line.split(',').map(v => v.trim());
+      if (values.length < headers.length) continue;
+
+      const row = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx] || '';
+      });
+
+      if (row.Trinn && row.Trinn.trim()) {
+        parsed.push(row);
+      }
+    }
+
+    currentData = parsed;
+
+    showTable();
+
+    document.getElementById('status').textContent = '';
+    document.getElementById('file-info').textContent = `Viser: ${file.name} (${currentData.length} rader)`;
+
+    if (currentData.length > 0 && confirm(`Lagre "${file.name}" i skyen?`)) {
+      await saveFile(file.name, currentData);
+    }
+  };
+
+  reader.readAsText(file);
 }
 
 function showTable() {
@@ -259,66 +269,57 @@ function showTable() {
   tbody.innerHTML = '';
 
   currentData.forEach(row => {
-    const dropRaw = (row.Avbruddsfrekvens || row['Avbruddsfrekvens'] || '0').replace(/[^0-9.]/g, '');
-    const drop = parseFloat(dropRaw) || 0;
-    let cls = drop > 50 ? 'dropoff-high' : drop > 25 ? 'dropoff-med' : 'dropoff-low';
+    let dropStr = row['Avbruddsfrekvens'] || '';
+    let drop = parseFloat(dropStr.replace(/[^0-9.]/g, '')) || 0;
+
+    let cls = drop > 50 ? 'dropoff-high' :
+              drop > 25 ? 'dropoff-med'  : 'dropoff-low';
 
     tbody.innerHTML += `
       <tr>
         <td>${row.Trinn || '-'}</td>
         <td>${row.Enhetskategori || 'Totalt'}</td>
-        <td class="${cls}">${isNaN(drop) ? '-' : drop.toFixed(1) + ' %'}</td>
+        <td class="${cls}">${drop.toFixed(1)} %</td>
       </tr>`;
   });
 
-  document.getElementById('resultTable').style.display = currentData.length ? 'table' : 'none';
+  document.getElementById('resultTable').style.display = 'table';
 }
 
-// ────────────────────────────────────────────────
 // JSONBin funksjoner
 async function fetchFiles() {
   try {
     const res = await fetch(API_URL);
-    if (!res.ok) return [];
     const json = await res.json();
     return json.record?.files ?? [];
   } catch (err) {
-    console.error("Henting feilet:", err);
+    console.error(err);
     return [];
   }
 }
 
-async function saveFiles(filesArray) {
-  try {
-    const res = await fetch(API_URL, {
-      method: 'PUT',
-      headers: HEADERS,
-      body: JSON.stringify({ files: filesArray })
-    });
-    if (!res.ok) throw new Error(`Lagring feilet: ${res.status}`);
-    console.log("Lagret til JSONBin");
-  } catch (err) {
-    console.error("Lagring feilet:", err);
-    alert("Kunne ikke lagre – sjekk konsollen.");
-  }
+async function saveFiles(files) {
+  await fetch(API_URL, {
+    method: 'PUT',
+    headers: HEADERS,
+    body: JSON.stringify({ files })
+  });
 }
 
 async function saveFile(filename, data) {
   const existing = await fetchFiles();
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 
-  const entry = {
+  existing.push({
     id,
     filename,
     uploaded: new Date().toISOString(),
     rowCount: data.length,
     data
-  };
+  });
 
-  existing.push(entry);
   await saveFiles(existing);
-
-  alert(`Lagret! Fil-ID: ${id}`);
+  alert(`Lagret "${filename}" i skyen!`);
   await populateFileSelect();
 }
 
@@ -332,8 +333,8 @@ async function populateFileSelect() {
   files.forEach(f => {
     const opt = document.createElement('option');
     opt.value = f.id;
-    const dateStr = new Date(f.uploaded).toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
-    opt.textContent = `${f.filename} • ${dateStr} • ${f.rowCount} rader`;
+    const date = new Date(f.uploaded).toLocaleString('nb-NO', {dateStyle:'short', timeStyle:'short'});
+    opt.textContent = `${f.filename} • ${date} • ${f.rowCount} rader`;
     sel.appendChild(opt);
   });
 }
@@ -344,12 +345,11 @@ document.getElementById('fileSelect').addEventListener('change', async e => {
 
   const files = await fetchFiles();
   const file = files.find(f => f.id === id);
-  if (!file) return;
-
-  currentData = file.data;
-  document.getElementById('file-info').textContent = `Lastet: ${file.filename} (${file.rowCount} rader) • ${new Date(file.uploaded).toLocaleString('nb-NO')}`;
-  showTable();
-  document.getElementById('status').textContent = '';
+  if (file) {
+    currentData = file.data;
+    document.getElementById('file-info').textContent = `Lastet: ${file.filename} (${file.rowCount} rader)`;
+    showTable();
+  }
 });
 
 function clearView() {
@@ -360,7 +360,7 @@ function clearView() {
   document.getElementById('resultTable').style.display = 'none';
 }
 
-// Initial lasting av fil-liste
+// Last inn tidligere filer ved start
 window.addEventListener('load', populateFileSelect);
 </script>
 </body>
