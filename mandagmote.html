@@ -142,15 +142,36 @@ const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY
 let currentReport = null;
 let headers = [];
 
-// Helpers (unchanged)
-function findColumn(patterns) { /* ... */ }
+// Helpers
+function findColumn(patterns) {
+  const cleanHeader = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const lowerHeaders = headers.map(cleanHeader);
+  for (let p of patterns) {
+    const pattern = p.trim().replace(/\s+/g, ' ').toLowerCase();
+    const idx = lowerHeaders.findIndex(h => h === pattern);
+    if (idx !== -1) return idx;
+  }
+  for (let p of patterns) {
+    const pattern = p.trim().replace(/\s+/g, ' ').toLowerCase();
+    const idx = lowerHeaders.findIndex(h => h.includes(pattern));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
 
-function getISOWeek(date) { /* ... */ }
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d - yearStart) / 86400000);
+  return Math.ceil((days + 1) / 7);
+}
 
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   let dayOfWeek = today.getDay();
-  if (dayOfWeek === 0) dayOfWeek = 7;
+  if (dayOfWeek === 0) dayOfWeek = 7; // Sunday = 7
   const daysBack = dayOfWeek === 1 ? 7 : dayOfWeek - 1;
   const endPrev = new Date(today);
   endPrev.setDate(today.getDate() - daysBack);
@@ -161,17 +182,69 @@ function getMostRecentCompletedWeekStart() {
   return startPrev;
 }
 
-function parseDate(str) { /* ... */ }
+function parseDate(str) {
+  if (!str) return null;
+  const cleaned = String(str).trim().split(' ')[0];
+  const m = cleaned.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  return m ? new Date(m[3], m[2]-1, m[1]) : null;
+}
 
-// JSONBin functions (unchanged)
-async function fetchReports() { /* ... */ }
-async function saveReports(reports) { /* ... */ }
+// JSONBin
+async function fetchReports() {
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return json.record?.reports ?? [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+}
 
-// Clear all
-async function clearAllReports() { /* ... */ }
+async function saveReports(reports) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'PUT',
+      headers: HEADERS,
+      body: JSON.stringify({ reports })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    console.error(err);
+    alert("Lagring feilet – sjekk konsoll.");
+  }
+}
+
+// Clear all saved reports
+async function clearAllReports() {
+  if (!confirm("Sletter ALLE lagrede rapporter permanent. Fortsett?")) return;
+  try {
+    await saveReports([]);
+    alert("Alle rapporter slettet!");
+    location.reload();
+  } catch (err) {
+    alert("Feil ved sletting: " + err.message);
+  }
+}
 
 // Force unlock
-async function forceUnlock() { /* ... */ }
+async function forceUnlock() {
+  if (!currentReport) return alert("Ingen rapport lastet");
+  currentReport.locked = false;
+  currentReport.lockComment = '';
+  const reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx !== -1) {
+    reports[idx].locked = false;
+    reports[idx].lockComment = '';
+    await saveReports(reports);
+    await loadSavedReport();
+    alert("Rapport force-unlocked!");
+  } else {
+    alert("Fant ikke rapporten i skyen.");
+  }
+}
 
 // Initial load
 window.onload = async () => {
@@ -184,7 +257,16 @@ window.onload = async () => {
   await updateGenerateButtonState();
 };
 
-function populateWeekSelect(reports) { /* ... */ }
+function populateWeekSelect(reports) {
+  const sel = document.getElementById('weekSelect');
+  sel.innerHTML = '<option value="">Velg uke...</option>';
+  reports.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.title;
+    sel.appendChild(opt);
+  });
+}
 
 async function loadSavedReport() {
   const id = document.getElementById('weekSelect').value;
@@ -224,14 +306,57 @@ async function loadSavedReport() {
   const locked = !!report.locked;
   document.getElementById('edit-btn').style.display = 'block';
   document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
-  document.getElementById('delete-btn').style.display = locked ? 'block' : 'none'; // Delete vises alltid for låste
+  document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
 
   await updateGenerateButtonState();
 }
 
-function renderTable(id, cars) { /* ... unchanged ... */ }
+function renderTable(id, cars) {
+  const table = document.getElementById(id);
+  table.innerHTML = '';
+  if (!cars.length) {
+    table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler denne uken</td></tr>';
+    return;
+  }
 
-// Generate (unchanged except stronger duplicate check)
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Merke</th>
+        <th>Modell</th>
+        <th>År</th>
+        <th>Høyeste bud</th>
+        <th>AR laveste estimat</th>
+        <th>Diff NOK</th>
+        <th>Diff %</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${cars.map(car => {
+        const bud = parseFloat(car.ColumnE) || 0;
+        const ar = car['AR laveste estimat_raw'] || 0;
+        const diffNOK = bud - ar;
+        const diffPct = ar > 0 ? ((bud - ar) / ar * 100) : 0;
+        const diffNOKStr = diffNOK.toLocaleString('nb-NO');
+        const diffPctStr = diffPct.toFixed(1) + ' %';
+        const pctClass = diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '');
+        return `
+          <tr>
+            <td>${car.Merke}</td>
+            <td>${car.Modell}</td>
+            <td>${car.År}</td>
+            <td>${bud.toLocaleString('nb-NO') || '-'}</td>
+            <td>${ar.toLocaleString('nb-NO') || '-'}</td>
+            <td>${diffNOK ? diffNOKStr : '-'}</td>
+            <td class="${pctClass}">${ar > 0 ? diffPctStr : '-'}</td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  `;
+}
+
+// Generate – dynamic full ISO week
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
@@ -261,13 +386,12 @@ async function generateNewReport() {
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
-    const year = startDate.getFullYear();
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
+    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
 
     const reports = await fetchReports();
-    // Streng duplikat-sjekk: samme år + uke
-    if (reports.some(r => r.title.includes(`uke ${weekNum}`) && r.title.includes(year.toString()))) {
-      alert(`Rapport for uke ${weekNum} (${year}) finnes allerede.`);
+    if (reports.some(r => r.title === title)) {
+      alert('Rapport for denne uken finnes allerede.');
       return;
     }
 
@@ -352,7 +476,28 @@ async function generateNewReport() {
   }
 }
 
-function generateCommentary(sold, returned) { /* unchanged */ }
+function generateCommentary(sold, returned) {
+  const stats = arr => {
+    if (!arr.length) return {n:0, avg:0};
+    const sum = arr.reduce((s,c) => s + (c['AR laveste estimat_raw']||0), 0);
+    return { n: arr.length, avg: Math.round(sum / arr.length).toLocaleString('nb-NO') };
+  };
+  const s = stats(sold);
+  const r = stats(returned);
+  return `
+    <h3>Fakta – siste fullførte uke (man–søn)</h3>
+    <div style="margin: 24px 0 12px 0;">
+      <strong>Solgte biler</strong><br>
+      Totalt: ${s.n} biler<br>
+      Gjennomsnitt AR laveste estimat: ${s.avg} kr
+    </div>
+    <div style="margin: 32px 0 12px 0;">
+      <strong>Returnerte biler</strong><br>
+      Totalt: ${r.n} biler<br>
+      Gjennomsnitt AR laveste estimat: ${r.avg} kr
+    </div>
+  `;
+}
 
 // Check generate button state
 async function updateGenerateButtonState() {
