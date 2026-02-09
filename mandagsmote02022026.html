@@ -3,40 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v16</title>
+  <title>Mandagsrapport – Peasy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; }
-    .container { max-width: 1440px; margin: 0 auto; padding: 40px 24px; }
-    h1 { font-weight: 900; font-size: 2.4rem; letter-spacing: -0.7px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
-    .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-    button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; background: #004225; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
-    button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
-    button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
+      color: #004225;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    h1 {
+      font-weight: 900;
+      font-size: 2.4rem;
+      letter-spacing: -0.7px;
+      margin-bottom: 8px;
+      background: linear-gradient(to right, #004225, #006644);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      background: #004225;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,66,37,0.06);
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      box-shadow: 0 3px 10px rgba(0,66,37,0.14);
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.75;
+    }
     button#edit-btn { background: #006644; }
     button.danger { background: #c62828; }
-    .commentary, #historical-section { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
-    .user-comment { margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(130,191,210,0.2); }
-    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
-    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
-    th { background: rgba(130,191,210,0.05); font-weight: 700; }
-    tfoot td { font-weight: 700; background: rgba(130,191,210,0.08); }
+    .commentary {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(130,191,210, 0.10);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+    .user-comment {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(130,191,210,0.2);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(130,191,210, 0.10);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+      margin-bottom: 40px;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(130,191,210, 0.10);
+    }
+    th {
+      background: rgba(130,191,210,0.05);
+      font-weight: 700;
+    }
+    tfoot td {
+      font-weight: 700;
+      background: rgba(130,191,210,0.08);
+    }
     .highlight-negative { color: #d32f2f; font-weight: 600; }
     .highlight-positive { color: #2e7d32; font-weight: 600; }
     .highlight-zero { color: #555; font-weight: 600; }
-    #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 24px 0; }
-    .section-title { font-size: 1.3rem; margin: 32px 0 16px; font-weight: 700; }
+    #loading {
+      font-style: italic;
+      opacity: 0.75;
+      text-align: center;
+      font-size: 1rem;
+      margin: 24px 0;
+    }
+    .section-title {
+      font-size: 1.3rem;
+      margin: 32px 0 16px;
+      font-weight: 700;
+    }
     #report-content { display: none; }
-    .timestamp { font-size: 0.92rem; opacity: 0.8; margin-bottom: 16px; }
-    .no-data { text-align: center; color: #777; font-style: italic; margin: 20px 0; }
-    textarea { width: 100%; min-height: 180px; padding: 12px; border-radius: 8px; border: 1px solid rgba(130,191,210,0.3); background: white; font-family: inherit; font-size: 1.05rem; line-height: 1.6; }
-    .logo-container { text-align: center; margin-bottom: 28px; }
-    .logo { max-width: 220px; height: auto; display: block; margin: 0 auto; opacity: 0.92; filter: grayscale(0.15) saturate(0.92); transition: opacity 0.3s ease; }
+    .timestamp {
+      font-size: 0.92rem;
+      opacity: 0.8;
+      margin-bottom: 16px;
+    }
+    .no-data {
+      text-align: center;
+      color: #777;
+      font-style: italic;
+      margin: 20px 0;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(130,191,210,0.3);
+      background: white;
+      font-family: inherit;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo {
+      max-width: 220px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      opacity: 0.92;
+      filter: grayscale(0.15) saturate(0.92);
+      transition: opacity 0.3s ease;
+    }
     .logo:hover { opacity: 1; }
-    @media (max-width: 768px) { .logo { max-width: 180px; } .logo-container { margin-bottom: 20px; } }
-    #version-info { position: fixed; bottom: 0.75rem; right: 1rem; font-size: 0.75rem; color: #777; opacity: 0.65; pointer-events: none; z-index: 10; }
+    @media (max-width: 768px) {
+      .logo { max-width: 180px; }
+      .logo-container { margin-bottom: 20px; }
+    }
+    #version-info {
+      position: fixed;
+      bottom: 0.75rem;
+      right: 1rem;
+      font-size: 0.75rem;
+      color: #777;
+      opacity: 0.65;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #historical-section {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(130,191,210, 0.10);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 420px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .chart-wrapper canvas {
+      max-height: 420px !important;
+    }
   </style>
 </head>
 <body>
@@ -57,12 +205,8 @@
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
   </div>
 
-  <div id="historical-section" style="display:none;">
-    <div class="section-title">Historisk trend – gjennomsnittlig diff % (Bud vs AR laveste estimat)</div>
-    <canvas id="trend-chart" height="110"></canvas>
-  </div>
-
   <div id="loading" style="display:none;">Laster...</div>
+
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="commentary"></div>
@@ -76,9 +220,19 @@
     </div>
   </div>
 
-  <div id="version-info">v16 • sist oppdatert 09.02.2026</div>
+  <!-- Historical trend – placed below tables -->
+  <div id="historical-section" style="display:none;">
+    <div class="section-title">Historisk trend – gjennomsnittlig diff % (Bud vs AR laveste estimat)</div>
+    <div class="chart-wrapper">
+      <canvas id="trend-chart"></canvas>
+    </div>
+  </div>
 
-  <!-- Modals (unchanged) -->
+  <div id="version-info">
+    v17 • sist oppdatert 09.02.2026
+  </div>
+
+  <!-- Modals -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h3>Kommentar før låsing (valgfritt)</h3>
@@ -127,7 +281,6 @@ function cleanNum(str) {
   let s = String(str).replace(/[\s\u00A0]/g, '').replace(/\u2212/g, '-').replace(/[^\d.-]/g, '');
   return parseFloat(s) || 0;
 }
-
 function getISOWeek(date) {
   const d = new Date(date);
   d.setHours(0,0,0,0);
@@ -136,7 +289,6 @@ function getISOWeek(date) {
   const days = Math.floor((d - yearStart) / 86400000);
   return Math.ceil((days + 1) / 7);
 }
-
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -164,7 +316,6 @@ async function fetchReports() {
     return [];
   }
 }
-
 async function saveReports(reports) {
   try {
     const res = await fetch(API_URL, {
@@ -180,7 +331,7 @@ async function saveReports(reports) {
   }
 }
 
-// Historisk trend chart
+// Historisk chart
 async function renderHistoricalChart() {
   const reports = await fetchReports();
   if (reports.length < 2) {
@@ -212,17 +363,43 @@ async function renderHistoricalChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Solgte biler – gj.snitt diff %', data: soldPct, borderColor: '#2e7d32', backgroundColor: 'rgba(46,125,50,0.08)', tension: 0.3, borderWidth: 3 },
-        { label: 'Returnerte biler – gj.snitt diff %', data: returnedPct, borderColor: '#d32f2f', backgroundColor: 'rgba(211,47,47,0.08)', tension: 0.3, borderWidth: 3 }
+        {
+          label: 'Solgte biler – gj.snitt diff %',
+          data: soldPct,
+          borderColor: '#2e7d32',
+          backgroundColor: 'rgba(46, 125, 50, 0.08)',
+          tension: 0.3,
+          borderWidth: 3,
+          pointRadius: 4
+        },
+        {
+          label: 'Returnerte biler – gj.snitt diff %',
+          data: returnedPct,
+          borderColor: '#d32f2f',
+          backgroundColor: 'rgba(211, 47, 47, 0.08)',
+          tension: 0.3,
+          borderWidth: 3,
+          pointRadius: 4
+        }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
+      plugins: {
+        legend: { position: 'top', align: 'start' },
+        tooltip: { mode: 'index', intersect: false }
+      },
       scales: {
-        y: { title: { display: true, text: 'Gjennomsnittlig diff %' }, suggestedMin: -20, suggestedMax: 20 },
-        x: { grid: { display: false } }
+        y: {
+          title: { display: true, text: 'Gjennomsnittlig diff %' },
+          suggestedMin: -15,
+          suggestedMax: 15,
+          grid: { color: 'rgba(130,191,210,0.15)' }
+        },
+        x: {
+          grid: { display: false }
+        }
       }
     }
   });
@@ -255,6 +432,7 @@ async function loadSavedReport() {
   const id = document.getElementById('weekSelect').value;
   if (!id) {
     document.getElementById('report-content').style.display = 'none';
+    document.getElementById('historical-section').style.display = 'none';
     document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
     await updateGenerateButtonState();
     await renderHistoricalChart();
@@ -274,7 +452,11 @@ async function loadSavedReport() {
 
   let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   if (report.userComment) {
-    html += `<div class="user-comment"><h3>Kommentar til rapporten</h3><div style="white-space: pre-wrap; line-height:1.6;">${report.userComment.replace(/\n/g, '<br>')}</div></div>`;
+    html += `
+      <div class="user-comment">
+        <h3>Kommentar til rapporten</h3>
+        <div style="white-space: pre-wrap; line-height:1.6;">${report.userComment.replace(/\n/g, '<br>')}</div>
+      </div>`;
   }
   document.getElementById('commentary').innerHTML = html;
 
@@ -334,13 +516,13 @@ function renderTable(id, cars) {
     </tfoot>`;
 }
 
+// Generer ny rapport
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   if (btn.disabled) return;
   btn.disabled = true;
   document.getElementById('loading').textContent = 'Genererer...';
   document.getElementById('loading').style.display = 'block';
-
   try {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     const res = await fetch(url);
@@ -350,7 +532,6 @@ async function generateNewReport() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
     const headers = data[0].map(h => (h || '').trim());
-
     const col = {
       Merke: headers.indexOf('Merke'),
       Modell: headers.indexOf('Modell'),
@@ -360,20 +541,17 @@ async function generateNewReport() {
       'Solgt på': headers.indexOf('Solgt på'),
       Returnert: headers.findIndex(h => h?.includes('Returnert'))
     };
-
     const startDate = getMostRecentCompletedWeekStart();
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
     const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
-
     const reports = await fetchReports();
     if (reports.some(r => r.title === title)) {
       alert('Rapport for denne uken finnes allerede.');
       return;
     }
-
     const soldCars = [], returnedCars = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -384,7 +562,6 @@ async function generateNewReport() {
       };
       const soldDate = parseDate(row[col['Solgt på']]);
       const retDate = parseDate(row[col.Returnert]);
-
       let arLowest = 0;
       const arRange = row[col['Endelig AR verdi']] || '';
       if (arRange.includes('-')) {
@@ -392,11 +569,9 @@ async function generateNewReport() {
       } else {
         arLowest = parseFloat(arRange) || 0;
       }
-
       const bud = parseFloat(row[col.Bud] || 0);
       const diffNok = bud - arLowest;
       const diffPct = arLowest ? (diffNok / arLowest * 100) : 0;
-
       const car = {
         Merke: row[col.Merke] || '-',
         Modell: row[col.Modell] || '-',
@@ -406,13 +581,10 @@ async function generateNewReport() {
         'Diff NOK_raw': diffNok,
         'Diff %_raw': diffPct
       };
-
       if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
       if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
     }
-
     const commentaryHtml = generateCommentary(soldCars, returnedCars);
-
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
@@ -426,15 +598,11 @@ async function generateNewReport() {
       locked: false,
       lockComment: ''
     };
-
     await saveCurrentReport();
-
     const updatedReports = await fetchReports();
     populateWeekSelect(updatedReports);
     document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
-    await renderHistoricalChart();
-
     alert('Rapport generert og lagret i skyen!');
   } catch (err) {
     console.error(err);
@@ -469,7 +637,8 @@ function generateCommentary(sold, returned) {
   return `
     <h3>Fakta – forrige fullførte uke (man–søn)</h3>
     <div style="margin: 24px 0 12px 0;">
-      <strong>Solgte biler</strong><br>Totalt: ${s.n} biler
+      <strong>Solgte biler</strong><br>
+      Totalt: ${s.n} biler
     </div>
     <ul style="margin: 8px 0 32px 24px; line-height: 1.6; list-style-type: disc; color: #004225;">
       <li>Under estimat: ${s.u} biler</li>
@@ -480,7 +649,8 @@ function generateCommentary(sold, returned) {
       </li>
     </ul>
     <div style="margin: 32px 0 12px 0;">
-      <strong>Returnerte biler</strong><br>Totalt: ${r.n} biler
+      <strong>Returnerte biler</strong><br>
+      Totalt: ${r.n} biler
     </div>
     <div style="margin-bottom: 24px; color: #004225; font-weight: 500;">
       Gjennomsnittlig diff: ${r.avgN.toLocaleString('nb-NO')} kr (${r.avgP}%)
@@ -508,7 +678,7 @@ async function updateGenerateButtonState() {
   btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
 
-// Brukerens egen kommentar
+// Rediger egen kommentar
 function editUserComment() {
   if (!currentReport) return;
   const div = document.getElementById('commentary');
@@ -545,11 +715,9 @@ async function saveUserComment() {
 function showLockCommentModal() {
   document.getElementById('lock-comment-modal').style.display = 'flex';
 }
-
 function closeLockModal() {
   document.getElementById('lock-comment-modal').style.display = 'none';
 }
-
 async function confirmLockWithComment() {
   const comment = document.getElementById('lock-comment-text').value.trim();
   if (currentReport) {
@@ -566,20 +734,16 @@ async function confirmLockWithComment() {
 function showDeleteConfirm() {
   document.getElementById('delete-modal').style.display = 'flex';
 }
-
 function closeDeleteModal() {
   document.getElementById('delete-modal').style.display = 'none';
 }
-
 function promptPasswordForDelete() {
   closeDeleteModal();
   document.getElementById('password-prompt').style.display = 'block';
 }
-
 function closePasswordPrompt() {
   document.getElementById('password-prompt').style.display = 'none';
 }
-
 async function checkDeletePassword() {
   if (document.getElementById('password-input').value === DELETE_PASSWORD) {
     let reports = await fetchReports();
