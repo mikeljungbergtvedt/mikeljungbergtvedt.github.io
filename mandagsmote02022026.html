@@ -6,62 +6,101 @@
   <title>Mandagsrapport – Peasy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --peasy-green:    #004225;
-      --peasy-green-d:  #00351a;
-      --peasy-green-l:  #006644;
-      --peasy-yellow:   #FFCC33;
-      --peasy-support:  #82bfd2;
-      --bg-light:       #f8fafc;
-    }
-
     body {
       font-family: 'Inter', system-ui, sans-serif;
       margin: 0; padding: 0;
-      background: linear-gradient(135deg, #f8fafc 0%, #e8f0f5 100%);
-      color: var(--peasy-green);
+      background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
+      color: #004225;
       min-height: 100vh;
-      line-height: 1.6;
+      line-height: 1.5;
     }
-
-    .container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 32px 16px;
+    .container { max-width: 1440px; margin: 0 auto; padding: 32px 16px; }
+    h1 {
+      font-weight: 900;
+      font-size: 2.2rem;
+      letter-spacing: -0.6px;
+      margin-bottom: 6px;
+      background: linear-gradient(to right, #004225, #006644);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
     }
-
-    .hero {
-      text-align: center;
-      margin-bottom: 40px;
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 32px;
+      align-items: center;
     }
-
-    .logo {
-      max-width: 240px;
-      height: auto;
-      margin-bottom: 24px;
+   
+    button {
+      padding: 9px 18px;
+      font-size: 0.94rem;
+      font-weight: 500;
+      border-radius: 8px;
+      border: 1px solid rgba(0,66,37,0.6);
+      background: rgba(0,66,37,0.48);
+      color: white;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,66,37,0.14);
     }
+    button:hover:not(:disabled) {
+      background: rgba(0,66,37,0.82);
+      border-color: #004225;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,66,37,0.22);
+    }
+    button:disabled {
+      background: rgba(0,66,37,0.22);
+      border-color: rgba(0,66,37,0.3);
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    button#edit-btn { background: rgba(0,34,20,0.52); }
+    button#edit-btn:hover:not(:disabled) { background: rgba(0,34,20,0.84); }
+    button#lock-btn { background: rgba(0,66,37,0.52); }
+    button#lock-btn:hover:not(:disabled) { background: rgba(0,66,37,0.84); }
+    .commentary, table {
+      background: rgba(255,255,255,0.93);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(130,191,210,0.07);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,66,37,0.05);
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+    table { padding: 0; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.07); }
+    th { background: rgba(130,191,210,0.04); font-weight: 600; }
+    .positive { color: #2e7d32; }
+    .negative { color: #c62828; }
+    #loading { font-style: italic; opacity: 0.8; text-align: center; margin: 24px 0; }
+    .section-title { font-size: 1.3rem; margin: 32px 0 14px; font-weight: 600; }
+    #report-content { display: none; }
+    .timestamp { font-size: 0.92rem; opacity: 0.82; margin-bottom: 20px; }
+    .no-data { text-align: center; color: #777; font-style: italic; padding: 40px; }
+    .logo-container { text-align: center; margin-bottom: 28px; }
+    .logo { max-width: 220px; height: auto; opacity: 0.93; transition: opacity 0.3s; }
+    .logo:hover { opacity: 1; }
 
-    .hero-charts {
+    /* Klokker øverst */
+    .hero-clocks {
       display: flex;
       justify-content: center;
-      gap: 64px;
+      gap: 60px;
       margin: 16px 0 32px;
       flex-wrap: wrap;
     }
-
     .clock {
       width: 140px;
       height: 140px;
       position: relative;
     }
-
-    .clock canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
+    .clock canvas { width: 100% !important; height: 100% !important; }
     .clock-value {
       position: absolute;
       top: 50%;
@@ -69,194 +108,98 @@
       transform: translate(-50%, -50%);
       font-size: 1.4rem;
       font-weight: 700;
-      color: var(--peasy-green);
+      color: #004225;
       text-align: center;
     }
-
     .clock-label {
       margin-top: 12px;
       font-size: 0.95rem;
       font-weight: 500;
-      color: var(--peasy-green);
+      color: #004225;
       opacity: 0.9;
-    }
-
-    h1 {
-      font-weight: 900;
-      font-size: 2.4rem;
-      letter-spacing: -0.8px;
-      margin: 0 0 8px;
-      background: linear-gradient(to right, var(--peasy-green), var(--peasy-green-l));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 40px;
-      justify-content: center;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 0.96rem;
-      font-weight: 500;
-      border-radius: 8px;
-      border: 1px solid rgba(0,66,37,0.6);
-      background: rgba(0,66,37,0.45);
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      min-width: 150px;
-      box-shadow: 0 2px 8px rgba(0,66,37,0.15);
-    }
-
-    button:hover:not(:disabled) {
-      background: rgba(0,66,37,0.80);
-      border-color: var(--peasy-green);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(0,66,37,0.25);
-    }
-
-    button:disabled {
-      background: rgba(0,66,37,0.20);
-      border-color: rgba(0,66,37,0.3);
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    .section-title {
-      font-size: 1.35rem;
-      font-weight: 700;
-      margin: 40px 0 16px;
-      color: var(--peasy-green);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,66,37,0.06);
-      margin-bottom: 32px;
-    }
-
-    th, td {
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid rgba(130,191,210,0.12);
-    }
-
-    th {
-      background: rgba(130,191,210,0.05);
-      font-weight: 600;
-    }
-
-    .positive { color: #006644; }
-    .negative { color: #c62828; }
-
-    .chart-container {
-      height: 360px;
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 16px rgba(0,66,37,0.06);
-      margin-bottom: 40px;
+      text-align: center;
     }
 
     #version-info {
       position: fixed;
-      bottom: 16px;
-      right: 20px;
-      font-size: 0.82rem;
-      color: #666;
-      opacity: 0.7;
+      bottom: 14px;
+      right: 18px;
+      font-size: 0.78rem;
+      color: #555;
+      opacity: 0.68;
       pointer-events: none;
+      z-index: 10;
     }
-
     @media (max-width: 768px) {
-      .hero-charts { gap: 40px; }
+      .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+      button { width: 100%; }
+      h1 { font-size: 1.95rem; }
+      .hero-clocks { gap: 40px; }
       .clock { width: 120px; height: 120px; }
       .clock-value { font-size: 1.25rem; }
-      .controls { flex-direction: column; }
-      button { width: 100%; }
-      h1 { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
-
 <div class="container">
-  <div class="hero">
-    <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
-
-    <div class="hero-charts">
-      <div>
-        <div class="clock">
-          <canvas id="clockSold"></canvas>
-          <div class="clock-value" id="soldAvg">–</div>
-        </div>
-        <div class="clock-label">Solgte – snitt % avvik (alle låste)</div>
-      </div>
-
-      <div>
-        <div class="clock">
-          <canvas id="clockReturned"></canvas>
-          <div class="clock-value" id="returnedAvg">–</div>
-        </div>
-        <div class="clock-label">Returnerte – snitt % avvik (alle låste)</div>
-      </div>
-    </div>
-
-    <h1>Mandagsrapport – Peasy</h1>
+  <div class="logo-container">
+    <img src="Peasy_Logo_ORG.png" alt="Peasy logo" class="logo">
   </div>
 
-  <p style="text-align:center; opacity:0.8; margin-bottom:40px;">
-    Rapporter lagres i skyen – synlig for alle som åpner denne filen.
-  </p>
+  <!-- To klokker øverst – samlet for alle låste uker -->
+  <div class="hero-clocks">
+    <div>
+      <div class="clock">
+        <canvas id="clockSold"></canvas>
+        <div class="clock-value" id="soldAvgValue">–</div>
+      </div>
+      <div class="clock-label">Solgte – snitt % avvik (alle låste)</div>
+    </div>
+
+    <div>
+      <div class="clock">
+        <canvas id="clockReturned"></canvas>
+        <div class="clock-value" id="returnedAvgValue">–</div>
+      </div>
+      <div class="clock-label">Returnerte – snitt % avvik (alle låste)</div>
+    </div>
+  </div>
+
+  <h1>Mandagsrapport – Peasy</h1>
+  <p style="opacity:0.82; margin-bottom:32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
 
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
     </select>
     <button id="generate-btn" onclick="generateNewReport()">Generer rapport for siste fullførte uke</button>
-    <button id="edit-btn"   onclick="editUserComment()"   style="display:none;">Rediger egen kommentar</button>
-    <button id="lock-btn"   onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
+    <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
+    <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
   </div>
 
-  <div id="loading" style="display:none; text-align:center; font-style:italic; margin:32px 0;">Laster...</div>
+  <div id="loading" style="display:none;">Laster rapport…</div>
 
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="commentary"></div>
-
     <div id="sold-section">
       <div class="section-title">Solgte biler</div>
       <table id="sold-table"></table>
     </div>
-
     <div id="returned-section">
       <div class="section-title">Returnerte biler</div>
       <table id="returned-table"></table>
     </div>
-
-    <div class="section-title">Snitt % avvik per låst uke</div>
-    <div class="chart-container">
-      <canvas id="deviationChart"></canvas>
-    </div>
   </div>
 
-  <div id="version-info">v20 • snitt avvik graf + hero klokker • 09.02.2026</div>
+  <div id="version-info">v18 • 2 klokker øverst • 09.02.2026</div>
 
   <!-- Lås-modal -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; justify-content:center; align-items:center;">
     <div style="background:#fff; padding:28px; border-radius:12px; width:92%; max-width:520px; box-shadow:0 10px 30px rgba(0,0,0,0.22);">
       <h3>Kommentar før låsing (valgfritt)</h3>
       <textarea id="lock-comment-text" placeholder="Skriv en kort begrunnelse eller kommentar..." style="width:100%; height:110px; margin:12px 0 16px; padding:10px; border:1px solid #d0d0d0; border-radius:6px; resize:vertical;"></textarea>
-      <div style="text-align:right; margin-top:16px;">
+      <div style="text-align:right;">
         <button onclick="closeLockModal()" style="background:#888; margin-right:12px;">Avbryt</button>
         <button onclick="confirmLockWithComment()">Lås inn rapport</button>
       </div>
@@ -266,19 +209,19 @@
 
 <script>
 // ────────────────────────────────────────────────
-// KONFIGURASJON
-const BIN_ID     = '6981aa3dae596e708f0d773b';
+// KONFIGURASJON (som før)
+const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS    = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
 
 let currentReport = null;
-let deviationChart = null;
+let headers = [];
 let clockSoldChart = null;
 let clockReturnedChart = null;
 
-// ─── Hjelpefunksjoner ────────────────────────────────────────
+// ─── Hjelpefunksjoner (som før) ──────────────────────────────
 function findColumn(patterns) {
   const clean = h => String(h||'').trim().replace(/\s+/g,' ').toLowerCase();
   const lowers = headers.map(clean);
@@ -291,7 +234,6 @@ function findColumn(patterns) {
   }
   return -1;
 }
-
 function getISOWeek(d) {
   d = new Date(d);
   d.setHours(0,0,0,0);
@@ -300,13 +242,23 @@ function getISOWeek(d) {
   const days = Math.floor((d - yStart) / 86400000);
   return Math.ceil((days + 1) / 7);
 }
-
+function getMostRecentCompletedWeekStart() {
+  const today = new Date();
+  let dow = today.getDay() || 7;
+  const daysBack = dow === 1 ? 7 : dow - 1;
+  const end = new Date(today);
+  end.setDate(today.getDate() - daysBack);
+  end.setHours(0,0,0,0);
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  start.setHours(0,0,0,0);
+  return start;
+}
 function parseDate(str) {
   if (!str) return null;
   const m = String(str).trim().match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   return m ? new Date(m[3], m[2]-1, m[1]) : null;
 }
-
 async function fetchReports() {
   try {
     const r = await fetch(API_URL);
@@ -317,7 +269,6 @@ async function fetchReports() {
     return [];
   }
 }
-
 async function saveReports(reports) {
   try {
     await fetch(API_URL, {
@@ -329,52 +280,266 @@ async function saveReports(reports) {
     console.error(err);
   }
 }
+function populateWeekSelect(reports) {
+  const sel = document.getElementById('weekSelect');
+  sel.innerHTML = '<option value="">Velg uke...</option>';
+  reports.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.title;
+    sel.appendChild(opt);
+  });
+}
+async function loadSavedReport() {
+  const id = document.getElementById('weekSelect').value;
+  if (!id) {
+    document.getElementById('report-content').style.display = 'none';
+    document.querySelectorAll('#edit-btn, #lock-btn').forEach(el => el.style.display = 'none');
+    await updateGenerateButtonState();
+    return;
+  }
+  const reports = await fetchReports();
+  const rep = reports.find(r => r.id === id);
+  if (!rep) return;
+  currentReport = rep;
+  let ts = `Opprettet: ${rep.created}`;
+  if (rep.edited) ts += ` • Sist endret: ${rep.edited}`;
+  if (rep.locked && rep.lockComment) ts += ` • Låst med: "${rep.lockComment}"`;
+  document.getElementById('timestamp').textContent = ts;
+  let html = rep.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
+  if (rep.userComment) {
+    html += `<div style="margin-top:24px;border-top:1px solid #eee;padding-top:16px;">
+      <strong>Kommentar fra teamet:</strong><br>
+      <div style="white-space:pre-wrap;">${rep.userComment.replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }
+  document.getElementById('commentary').innerHTML = html;
+  renderTable('sold-table', rep.soldCars || []);
+  renderTable('returned-table', rep.returnedCars || []);
+  document.getElementById('sold-section').style.display = rep.soldCars?.length ? 'block' : 'none';
+  document.getElementById('returned-section').style.display = rep.returnedCars?.length ? 'block' : 'none';
+  document.getElementById('report-content').style.display = 'block';
+  const locked = !!rep.locked;
+  document.getElementById('edit-btn').style.display = 'inline-block';
+  document.getElementById('lock-btn').style.display = locked ? 'none' : 'inline-block';
+  await updateGenerateButtonState();
 
-// ─── Hero-klokker (samlet snitt alle låste uker) ─────────────
+  // Oppdater klokkene – dette stopper IKKE lasting
+  updateHeroClocks();
+}
+function renderTable(id, cars) {
+  const t = document.getElementById(id);
+  t.innerHTML = '';
+  if (!cars.length) {
+    t.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler denne uken</td></tr>';
+    return;
+  }
+  t.innerHTML = `
+    <thead>
+      <tr>
+        <th>Merke</th><th>Modell</th><th>År</th>
+        <th>Høyeste bud</th><th>AR laveste</th>
+        <th>Diff NOK</th><th>Diff %</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${cars.map(car => {
+        const bud = Number(car.ColumnE) || 0;
+        const ar = Number(car['AR laveste estimat_raw']) || 0;
+        const diffNOK = bud - ar;
+        const diffPct = ar > 0 ? (diffNOK / ar * 100) : 0;
+        const cls = diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '');
+        return `
+          <tr>
+            <td>${car.Merke || '-'}</td>
+            <td>${car.Modell || '-'}</td>
+            <td>${car.År || '-'}</td>
+            <td>${bud.toLocaleString('nb-NO') || '-'}</td>
+            <td>${ar.toLocaleString('nb-NO') || '-'}</td>
+            <td>${diffNOK ? diffNOK.toLocaleString('nb-NO') : '-'}</td>
+            <td class="${cls}">${ar > 0 ? diffPct.toFixed(1)+' %' : '-'}</td>
+          </tr>`;
+      }).join('')}
+    </tbody>`;
+}
+async function generateNewReport() {
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    headers = data[0].map(h => String(h||'').trim());
+    const col = {
+      Merke: findColumn(['Merke']),
+      Modell: findColumn(['Modell']),
+      År: findColumn(['År','Årgang']),
+      'Endelig AR verdi': findColumn(['Endelig AR verdi','AR verdi','Laveste','Endelig']),
+      'Solgt på': findColumn(['Solgt på','Solgt']),
+      Returnert: findColumn(['Returnert','Returnert på'])
+    };
+    const start = getMostRecentCompletedWeekStart();
+    const end = new Date(start); end.setDate(start.getDate()+7);
+    const week = getISOWeek(start);
+    const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+    const now = new Date().toLocaleString('nb-NO',{dateStyle:'short',timeStyle:'short'});
+    const reports = await fetchReports();
+    if (reports.some(r => r.title === title)) {
+      alert('Rapport for denne uken finnes allerede.');
+      return;
+    }
+    const sold = [], returned = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const soldDate = parseDate(row[col['Solgt på']]);
+      const retDate = parseDate(row[col.Returnert]);
+      if (!soldDate && !retDate) continue;
+      let arStr = String(row[col['Endelig AR verdi']] || '').trim();
+      let arVal = 0;
+      if (arStr.includes('-')) {
+        arVal = parseFloat(arStr.split('-')[0].trim().replace(/\s/g,'').replace(',','.')) || 0;
+      } else {
+        arVal = parseFloat(arStr.replace(/\s/g,'').replace(',','.')) || 0;
+      }
+      const car = {
+        Merke: row[col.Merke] || '-',
+        Modell: row[col.Modell] || '-',
+        År: row[col.År] || '-',
+        ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',
+        'AR laveste estimat_raw': arVal
+      };
+      if (soldDate && soldDate >= start && soldDate < end) sold.push(car);
+      if (retDate && retDate >= start && retDate < end) returned.push(car);
+    }
+    const commHtml = `
+      <h3>Fakta – siste fullførte uke (man–søn)</h3>
+      <div style="margin:24px 0 12px;">
+        <strong>Solgte biler</strong><br>
+        Antall: ${sold.length} stk<br>
+        Snitt AR laveste: ${sold.length ? Math.round(sold.reduce((s,c)=>s+c['AR laveste estimat_raw'],0)/sold.length).toLocaleString('nb-NO')+' kr' : '-'}
+      </div>
+      <div style="margin:24px 0 12px;">
+        <strong>Returnerte biler</strong><br>
+        Antall: ${returned.length} stk<br>
+        Snitt AR laveste: ${returned.length ? Math.round(returned.reduce((s,c)=>s+c['AR laveste estimat_raw'],0)/returned.length).toLocaleString('nb-NO')+' kr' : '-'}
+      </div>`;
+    const newRep = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      title,
+      created: now,
+      edited: null,
+      commentary: commHtml,
+      userComment: '',
+      soldCars: sold,
+      returnedCars: returned,
+      locked: false,
+      lockComment: ''
+    };
+    const updated = [...reports, newRep];
+    await saveReports(updated);
+    populateWeekSelect(updated);
+    document.getElementById('weekSelect').value = newRep.id;
+    await loadSavedReport();
+    alert(`Generert for uke ${week}\nSolgte: ${sold.length}\nReturnerte: ${returned.length}`);
+  } catch (err) {
+    console.error(err);
+    alert('Kunne ikke generere rapport – sjekk konsoll.');
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    btn.disabled = false;
+    await updateGenerateButtonState();
+  }
+}
+async function updateGenerateButtonState() {
+  const btn = document.getElementById('generate-btn');
+  const start = getMostRecentCompletedWeekStart();
+  const week = getISOWeek(start);
+  const year = start.getFullYear();
+  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+  const reports = await fetchReports();
+  const exists = reports.some(r => r.title.includes(`uke ${week}`) && r.title.includes(year.toString()));
+  btn.disabled = exists;
+}
+// ─── Lås / kommentar ────────────────────────────────────────
+function showLockCommentModal() {
+  document.getElementById('lock-comment-modal').style.display = 'flex';
+}
+function closeLockModal() {
+  document.getElementById('lock-comment-modal').style.display = 'none';
+}
+async function confirmLockWithComment() {
+  const txt = document.getElementById('lock-comment-text').value.trim();
+  if (!currentReport) return;
+  currentReport.locked = true;
+  currentReport.lockComment = txt;
+  currentReport.edited = new Date().toLocaleString('nb-NO',{dateStyle:'short',timeStyle:'short'});
+  const reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx !== -1) {
+    reports[idx] = currentReport;
+    await saveReports(reports);
+  }
+  await loadSavedReport();
+  closeLockModal();
+  alert("Rapporten er nå låst.");
+}
+// ─── Rediger kommentar (placeholder) ────────────────────────
+function editUserComment() {
+  alert("Funksjon for å redigere kommentar er ikke implementert ennå.");
+}
+
+// ─── Klokke-funksjon – kjøres etter lasting ─────────────────
 async function updateHeroClocks() {
   const reports = await fetchReports();
-  const locked = reports.filter(r => r.locked);
+  const locked = reports.filter(r => r && r.locked === true);
 
-  let soldPctSum = 0, soldCount = 0;
-  let retPctSum  = 0, retCount  = 0;
+  let soldDiffSum = 0, soldArSum = 0, soldCount = 0;
+  let retDiffSum  = 0, retArSum  = 0, retCount  = 0;
 
   locked.forEach(r => {
-    if (r.soldCars?.length) {
-      const diffSum = r.soldCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
-      const arSum   = r.soldCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
-      if (arSum > 0) {
-        const pct = diffSum / arSum * 100;
-        soldPctSum += pct * r.soldCars.length;
-        soldCount += r.soldCars.length;
+    // Robust mot manglende arrays
+    (Array.isArray(r.soldCars) ? r.soldCars : []).forEach(c => {
+      const bud = Number(c?.ColumnE) || 0;
+      const ar  = Number(c?.['AR laveste estimat_raw']) || 0;
+      if (ar > 0) {
+        soldDiffSum += bud - ar;
+        soldArSum += ar;
+        soldCount++;
       }
-    }
-    if (r.returnedCars?.length) {
-      const diffSum = r.returnedCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
-      const arSum   = r.returnedCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
-      if (arSum > 0) {
-        const pct = diffSum / arSum * 100;
-        retPctSum += pct * r.returnedCars.length;
-        retCount += r.returnedCars.length;
+    });
+
+    (Array.isArray(r.returnedCars) ? r.returnedCars : []).forEach(c => {
+      const bud = Number(c?.ColumnE) || 0;
+      const ar  = Number(c?.['AR laveste estimat_raw']) || 0;
+      if (ar > 0) {
+        retDiffSum += bud - ar;
+        retArSum += ar;
+        retCount++;
       }
-    }
+    });
   });
 
-  const soldAvg = soldCount > 0 ? soldPctSum / soldCount : 0;
-  const retAvg  = retCount  > 0 ? retPctSum  / retCount  : 0;
+  const soldPct = soldCount > 0 ? (soldDiffSum / soldArSum * 100) : 0;
+  const retPct  = retCount  > 0 ? (retDiffSum / retArSum * 100) : 0;
 
-  document.getElementById('soldAvg').textContent    = soldCount > 0 ? soldAvg.toFixed(1) + '%' : '–';
-  document.getElementById('returnedAvg').textContent = retCount  > 0 ? retAvg.toFixed(1)  + '%' : '–';
+  document.getElementById('soldAvgValue').textContent    = soldCount > 0 ? soldPct.toFixed(1) + '%' : '–';
+  document.getElementById('returnedAvgValue').textContent = retCount  > 0 ? retPct.toFixed(1)  + '%' : '–';
 
-  const soldColor = soldAvg >= 0 ? '#004225' : '#c62828';
-  const retColor  = retAvg  >= 0 ? '#004225' : '#c62828';
+  const getColor = pct => pct >= 0 ? '#004225' : '#c62828';
 
+  // Solgte klokke
   if (clockSoldChart) clockSoldChart.destroy();
   clockSoldChart = new Chart(document.getElementById('clockSold'), {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [Math.abs(soldAvg), 100 - Math.abs(soldAvg)],
-        backgroundColor: [soldColor, 'rgba(0,66,37,0.14)'],
+        data: [Math.abs(soldPct), 100 - Math.abs(soldPct)],
+        backgroundColor: [getColor(soldPct), 'rgba(0,66,37,0.12)'],
         borderWidth: 0,
         cutout: '78%'
       }]
@@ -385,13 +550,14 @@ async function updateHeroClocks() {
     }
   });
 
+  // Returnerte klokke
   if (clockReturnedChart) clockReturnedChart.destroy();
   clockReturnedChart = new Chart(document.getElementById('clockReturned'), {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [Math.abs(retAvg), 100 - Math.abs(retAvg)],
-        backgroundColor: [retColor, 'rgba(0,66,37,0.14)'],
+        data: [Math.abs(retPct), 100 - Math.abs(retPct)],
+        backgroundColor: [getColor(retPct), 'rgba(0,66,37,0.12)'],
         borderWidth: 0,
         cutout: '78%'
       }]
@@ -403,122 +569,7 @@ async function updateHeroClocks() {
   });
 }
 
-// ─── Linjegraf – snitt % avvik per låst uke ──────────────────
-async function updateLineChart() {
-  const reports = await fetchReports();
-  const locked = reports.filter(r => r.locked)
-                        .sort((a,b) => new Date(a.created) - new Date(b.created));
-
-  const ctx = document.getElementById('deviationChart');
-  const notice = document.getElementById('chart-notice');
-
-  if (locked.length < 1) {
-    if (deviationChart) deviationChart.destroy();
-    ctx.style.display = 'none';
-    notice.style.display = 'block';
-    return;
-  }
-
-  ctx.style.display = 'block';
-  notice.style.display = 'none';
-
-  const labels = locked.map(r => r.title.replace('Mandag ', '').replace(' – uke ', ' w'));
-
-  const soldData = locked.map(r => {
-    if (!r.soldCars?.length) return null;
-    const dSum = r.soldCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
-    const aSum = r.soldCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
-    return aSum > 0 ? (dSum / aSum * 100) : null;
-  });
-
-  const retData = locked.map(r => {
-    if (!r.returnedCars?.length) return null;
-    const dSum = r.returnedCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
-    const aSum = r.returnedCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
-    return aSum > 0 ? (dSum / aSum * 100) : null;
-  });
-
-  if (deviationChart) deviationChart.destroy();
-
-  deviationChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Solgte – snitt % avvik',
-          data: soldData,
-          borderColor: '#004225',
-          backgroundColor: 'rgba(0,66,37,0.15)',
-          tension: 0.25,
-          pointRadius: 5,
-          pointHoverRadius: 8,
-          spanGaps: true
-        },
-        {
-          label: 'Returnerte – snitt % avvik',
-          data: retData,
-          borderColor: '#2e7d32',
-          backgroundColor: 'rgba(46,125,50,0.12)',
-          tension: 0.25,
-          pointRadius: 5,
-          pointHoverRadius: 8,
-          spanGaps: true
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        y: {
-          title: { display: true, text: '% avvik (bud vs AR laveste)' },
-          suggestedMin: -30,
-          suggestedMax: 30,
-          grid: { color: 'rgba(0,0,0,0.06)' }
-        },
-        x: { grid: { display: false } }
-      }
-    }
-  });
-}
-
-// ─── Kall oppdateringene på relevante steder ─────────────────
-async function loadSavedReport() {
-  // ... din eksisterende kode ...
-
-  await updateGenerateButtonState();
-  await updateHeroClocks();
-  await updateLineChart();
-}
-
-async function generateNewReport() {
-  // ... din eksisterende kode ...
-
-  await saveReports(updated);
-  populateWeekSelect(updated);
-  document.getElementById('weekSelect').value = newRep.id;
-  await loadSavedReport();
-  await updateHeroClocks();
-  await updateLineChart();
-
-  // ... alert og finally ...
-}
-
-async function confirmLockWithComment() {
-  // ... din eksisterende kode ...
-
-  await saveReports(reports);
-  await loadSavedReport();
-  await updateHeroClocks();
-  await updateLineChart();
-
-  closeLockModal();
-  alert("Rapporten er nå låst.");
-}
-
-// Initial lasting
+// Initial kall – last klokker når siden starter
 window.onload = async () => {
   const reps = await fetchReports();
   populateWeekSelect(reps);
@@ -527,11 +578,8 @@ window.onload = async () => {
     await loadSavedReport();
   }
   await updateGenerateButtonState();
-  await updateHeroClocks();
-  await updateLineChart();
+  await updateHeroClocks();  // Klokker lastes trygt
 };
-
-// ... resten av funksjonene dine (renderTable, editUserComment, etc.) behold uendret
 </script>
 </body>
 </html>
