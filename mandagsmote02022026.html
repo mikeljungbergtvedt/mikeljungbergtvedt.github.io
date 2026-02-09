@@ -1,567 +1,537 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peasy Verdsettelsesverktøy</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mandagsrapport – Peasy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --peasy-green: #004225;
-      --peasy-yellow: #FFCC33;
-      --peasy-yellow-hover: #FFD966;
-      --finn-blue: #0063fb;
-      --finn-blue-hover: #0050d4;
-      --light-bg: #F2F7F9;
-      --card-bg: rgba(255,255,255,0.96);
+      --peasy-green:    #004225;
+      --peasy-green-d:  #00351a;
+      --peasy-green-l:  #006644;
+      --peasy-yellow:   #FFCC33;
+      --peasy-support:  #82bfd2;
+      --bg-light:       #f8fafc;
     }
-    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Inter', sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, var(--light-bg) 0%, #E8F0F5 100%);
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #f8fafc 0%, #e8f0f5 100%);
       color: var(--peasy-green);
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.6;
     }
-    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
-    .header { text-align: center; margin-bottom: 3rem; }
-    h1 { font-weight: 900; font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -0.8px; margin: 0 0 0.5rem; }
-    h2 { font-weight: 700; font-size: clamp(1.5rem, 4vw, 1.75rem); margin: 3rem 0 1.25rem; }
-    .card { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid rgba(130,191,210,0.12); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,66,37,0.06); padding: clamp(1.5rem, 4vw, 2rem); margin-bottom: 2.5rem; position:relative; }
-    label { display: block; margin: 1.25rem 0 0.5rem; font-weight: 600; font-size: 1.05rem; }
-    input { padding: 0.875rem 1rem; font-size: 1rem; border: 1px solid rgba(130,191,210,0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
-    input:focus { border-color: var(--peasy-green); outline: none; box-shadow: 0 0 0 3px rgba(0,66,37,0.12); }
-    button, #finnLink {
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      max-width: 240px;
+      height: auto;
+      margin-bottom: 24px;
+    }
+
+    .hero-charts {
+      display: flex;
+      justify-content: center;
+      gap: 64px;
+      margin: 16px 0 32px;
+      flex-wrap: wrap;
+    }
+
+    .clock {
+      width: 140px;
+      height: 140px;
+      position: relative;
+    }
+
+    .clock canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .clock-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--peasy-green);
+      text-align: center;
+    }
+
+    .clock-label {
+      margin-top: 12px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--peasy-green);
+      opacity: 0.9;
+    }
+
+    h1 {
+      font-weight: 900;
+      font-size: 2.4rem;
+      letter-spacing: -0.8px;
+      margin: 0 0 8px;
+      background: linear-gradient(to right, var(--peasy-green), var(--peasy-green-l));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 40px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 0.96rem;
       font-weight: 500;
       border-radius: 8px;
+      border: 1px solid rgba(0,66,37,0.6);
+      background: rgba(0,66,37,0.45);
+      color: white;
       cursor: pointer;
-      transition: all 0.25s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      display: inline-block;
-      text-decoration: none;
-      margin: 1rem 0;
-      width: 100%;
-      max-width: 320px;
-      text-align: center;
+      transition: all 0.2s ease;
+      min-width: 150px;
+      box-shadow: 0 2px 8px rgba(0,66,37,0.15);
     }
-    button { background: var(--peasy-yellow); color: var(--peasy-green); border: none; }
-    button:hover { background: var(--peasy-yellow-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-    #finnLink { background: var(--finn-blue); color: white; }
-    #finnLink:hover, #finnLink:focus { background: var(--finn-blue-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,99,251,0.3); }
-    table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.95rem; }
-    th, td { border: 1px solid rgba(130,191,210,0.25); padding: 0.75rem; text-align: left; }
-    th { background: rgba(130,191,210,0.08); font-weight: 600; }
-    td:nth-child(5), th:nth-child(5) { text-align: right; min-width: 130px; }
-    td:nth-child(7), th:nth-child(7) { text-align: center; min-width: 140px; padding: 8px 6px; }
-    td:nth-child(8), th:nth-child(8) { text-align: center; min-width: 100px; font-weight: 500; }
-    .red { color: #d32f2f; font-weight: bold; }
-    .step, .likely { margin: 1rem 0; padding: 1rem; background: rgba(255,255,255,0.7); border-left: 5px solid var(--peasy-green); border-radius: 8px; }
-    .likely { font-weight: 700; font-size: 1.25rem; background: rgba(0,66,37,0.05); }
-    #copyBtn { background: var(--peasy-yellow); color: var(--peasy-green); font-weight: 500; padding: 0.875rem 1.75rem; font-size: 1.1rem; border-radius: 8px; margin: 1.75rem auto 0.75rem; display: block; min-width: 260px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    #copyBtn:hover { background: var(--peasy-yellow-hover); }
-    #searchPending { width: 100%; max-width: 400px; margin: 1rem 0 1.5rem; }
-    .guidelines { font-size: 0.95rem; color: #555; margin: 1.25rem 0 2rem; padding: 1.25rem; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
-    .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; padding: 8px 12px; border-radius: 6px; transition: background 0.2s; }
-    .guidelines-header:hover { background: rgba(0,66,37,0.08); }
-    .guidelines-toggle { font-size: 18px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,66,37,0.08); transition: background 0.2s; }
-    .guidelines-header:hover .guidelines-toggle { background: rgba(0,66,37,0.15); }
-    .guidelines-content { display: none; margin-top: 0.75rem; line-height: 1.6; }
-    .guidelines-content li { margin-bottom: 4px; }
-    .empty-message {
-      text-align: center;
-      padding: 2rem;
-      font-size: 1.2rem;
+
+    button:hover:not(:disabled) {
+      background: rgba(0,66,37,0.80);
+      border-color: var(--peasy-green);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0,66,37,0.25);
+    }
+
+    button:disabled {
+      background: rgba(0,66,37,0.20);
+      border-color: rgba(0,66,37,0.3);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 40px 0 16px;
       color: var(--peasy-green);
-      background: rgba(255,204,51,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
       border-radius: 12px;
-      margin: 2rem 0;
-      animation: fadeIn 1s ease-in;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,66,37,0.06);
+      margin-bottom: 32px;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(130,191,210,0.12);
     }
+
+    th {
+      background: rgba(130,191,210,0.05);
+      font-weight: 600;
+    }
+
+    .positive { color: #006644; }
+    .negative { color: #c62828; }
+
+    .chart-container {
+      height: 360px;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,66,37,0.06);
+      margin-bottom: 40px;
+    }
+
     #version-info {
       position: fixed;
-      bottom: 12px;
-      right: 16px;
-      font-size: 0.8rem;
-      color: #555;
-      background: rgba(255,255,255,0.9);
-      padding: 4px 10px;
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      z-index: 100;
+      bottom: 16px;
+      right: 20px;
+      font-size: 0.82rem;
+      color: #666;
+      opacity: 0.7;
       pointer-events: none;
     }
-    #toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 66, 37, 0.92);
-      color: white;
-      padding: 12px 28px;
-      border-radius: 10px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-      z-index: 2000;
-      opacity: 0;
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      pointer-events: none;
-      font-weight: 500;
-      font-size: 1.05rem;
-    }
-    #toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(-10px);
-    }
+
     @media (max-width: 768px) {
-      .container { padding: 1.5rem 1rem; }
-      h1 { font-size: 2.2rem; }
-      h2 { font-size: 1.5rem; margin: 2rem 0 1rem; }
-      .card { padding: 1.5rem; }
-      button, #finnLink, #copyBtn { width: 100%; padding: 0.7rem 1rem; font-size: 0.95rem; }
-      table { font-size: 0.9rem; }
-      th, td { padding: 0.6rem; }
-      #searchPending { max-width: 100%; }
+      .hero-charts { gap: 40px; }
+      .clock { width: 120px; height: 120px; }
+      .clock-value { font-size: 1.25rem; }
+      .controls { flex-direction: column; }
+      button { width: 100%; }
+      h1 { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header"><h1>Verdsettelsesverktøy</h1></div>
 
-    <button onclick="loadAndShowPending()">Oppdater ventende leads</button>
-    <input type="text" id="searchPending" placeholder="Søk i alle kolonner (regnr, merke, modell, år, km...)" oninput="filterPendingTable()">
+<div class="container">
+  <div class="hero">
+    <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
 
-    <div id="pending" class="card">
-      <h2>Ventende leads</h2>
-      <p id="pendingCount">Laster ventende leads...</p>
-
-      <div style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:-1;">
-        <div id="avgStandCircle" style="width:100px; height:100px; background:var(--peasy-green); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:28px; font-weight:bold;">
-          <div id="avgStand">-</div>
+    <div class="hero-charts">
+      <div>
+        <div class="clock">
+          <canvas id="clockSold"></canvas>
+          <div class="clock-value" id="soldAvg">–</div>
         </div>
+        <div class="clock-label">Solgte – snitt % avvik (alle låste)</div>
       </div>
 
-      <div style="overflow-x: auto;" id="tableContainer">
-        <table id="pendingTable">
-          <thead>
-            <tr>
-              <th>RegNr</th>
-              <th>Merke</th>
-              <th>Modell</th>
-              <th>År</th>
-              <th>KM</th>
-              <th>SD mottatt på</th>
-              <th style="text-align:center; min-width:140px;">Tid igjen (h:mm)</th>
-              <th>Ståtid (h:mm)</th>
-              <th>Status</th>
-              <th>Postnr/Sted</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div>
+        <div class="clock">
+          <canvas id="clockReturned"></canvas>
+          <div class="clock-value" id="returnedAvg">–</div>
+        </div>
+        <div class="clock-label">Returnerte – snitt % avvik (alle låste)</div>
       </div>
     </div>
 
-    <hr>
+    <h1>Mandagsrapport – Peasy</h1>
+  </div>
 
-    <h2>Verdikalkulator</h2>
+  <p style="text-align:center; opacity:0.8; margin-bottom:40px;">
+    Rapporter lagres i skyen – synlig for alle som åpner denne filen.
+  </p>
 
-    <div class="guidelines">
-      <div class="guidelines-header" onclick="toggleGuidelines()">
-        <strong>Retningslinjer</strong>
-        <span class="guidelines-toggle">+</span>
-      </div>
-      <div class="guidelines-content" style="display:none;">
-        • Finn nøyaktig årgang, merke, modell, batteri/motorstørrelse m.m.<br>
-        • Søk på Finn.no – sorter <strong>lavest til høyest pris</strong><br>
-        • Ta hensyn til farge der det er mulig<br>
-          – Hvite biler → sammenlign mest med hvite<br>
-          – Svarte biler → sammenlign mest med svarte<br>
-          – Andre farger → fritt valg<br>
-        • Ved flere treff → ta <strong>gjennomsnitt</strong> av de <strong>3–5 billigeste</strong> sammenlignbare<br>
-        <strong>Anbefalt KM-spenn i søket:</strong><br>
-        • Under 50 000 km → ±10 000 km<br>
-        • 50 000 – 100 000 km → ±20 000 km<br>
-        • Over 100 000 km → ±30 000 km
-      </div>
+  <div class="controls">
+    <select id="weekSelect" onchange="loadSavedReport()">
+      <option value="">Velg uke...</option>
+    </select>
+    <button id="generate-btn" onclick="generateNewReport()">Generer rapport for siste fullførte uke</button>
+    <button id="edit-btn"   onclick="editUserComment()"   style="display:none;">Rediger egen kommentar</button>
+    <button id="lock-btn"   onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
+  </div>
+
+  <div id="loading" style="display:none; text-align:center; font-style:italic; margin:32px 0;">Laster...</div>
+
+  <div id="report-content" style="display:none;">
+    <div id="timestamp" class="timestamp"></div>
+    <div id="commentary" class="commentary"></div>
+
+    <div id="sold-section">
+      <div class="section-title">Solgte biler</div>
+      <table id="sold-table"></table>
     </div>
 
-    <form id="valForm" class="card">
-      <label>RegNr:</label><input type="text" id="regnr" disabled>
-      <label>Merke:</label><input type="text" id="make" required>
-      <label>Modell:</label><input type="text" id="model" required>
-      <label>År:</label><input type="number" id="year" required min="1900" max="2030">
-      <label>KM stand:</label><input type="number" id="kmstand" placeholder="Fra kolonne W eller angi manuelt">
-      <label>Finn pris ex omreg:</label>
-      <input type="text" id="finn_avg" required placeholder="Lim inn fra Finn-søk (f.eks. 249 000)">
-      <small id="priceReminder" style="color: #d32f2f; font-weight: 500; display: none; margin-top: 6px; font-size: 0.95rem;">
-        ← Ny bil valgt – husk å taste inn oppdatert Finn-pris!
-      </small>
-      <label>Margin %:</label><input type="number" id="margin" value="12" min="0" step="0.5">
-      <label>Tillegg %:</label><input type="number" id="tillegg" value="0" min="0" step="0.5">
-      <label>Motivasjon %:</label><input type="number" id="motivation" value="3" min="0" step="0.5">
-      <button type="button" onclick="calculateValuation()">Beregn & vis steg</button>
-      <div id="finnSearchLink">
-        <a href="#" id="finnLink" target="_blank" rel="noopener noreferrer">
-          Åpne søk på FINN →
-        </a>
+    <div id="returned-section">
+      <div class="section-title">Returnerte biler</div>
+      <table id="returned-table"></table>
+    </div>
+
+    <div class="section-title">Snitt % avvik per låst uke</div>
+    <div class="chart-container">
+      <canvas id="deviationChart"></canvas>
+    </div>
+  </div>
+
+  <div id="version-info">v20 • snitt avvik graf + hero klokker • 09.02.2026</div>
+
+  <!-- Lås-modal -->
+  <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:28px; border-radius:12px; width:92%; max-width:520px; box-shadow:0 10px 30px rgba(0,0,0,0.22);">
+      <h3>Kommentar før låsing (valgfritt)</h3>
+      <textarea id="lock-comment-text" placeholder="Skriv en kort begrunnelse eller kommentar..." style="width:100%; height:110px; margin:12px 0 16px; padding:10px; border:1px solid #d0d0d0; border-radius:6px; resize:vertical;"></textarea>
+      <div style="text-align:right; margin-top:16px;">
+        <button onclick="closeLockModal()" style="background:#888; margin-right:12px;">Avbryt</button>
+        <button onclick="confirmLockWithComment()">Lås inn rapport</button>
       </div>
-    </form>
-
-    <div id="output" class="card"></div>
+    </div>
   </div>
+</div>
 
-  <div id="toast"></div>
+<script>
+// ────────────────────────────────────────────────
+// KONFIGURASJON
+const BIN_ID     = '6981aa3dae596e708f0d773b';
+const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
+const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const HEADERS    = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+// ────────────────────────────────────────────────
 
-  <div id="version-info">
-    v1.5.7 • sist oppdatert 09.02.2026
-  </div>
+let currentReport = null;
+let deviationChart = null;
+let clockSoldChart = null;
+let clockReturnedChart = null;
 
-  <script>
-    let data = [];
-    let headers = [];
+// ─── Hjelpefunksjoner ────────────────────────────────────────
+function findColumn(patterns) {
+  const clean = h => String(h||'').trim().replace(/\s+/g,' ').toLowerCase();
+  const lowers = headers.map(clean);
+  for (let pat of patterns) {
+    pat = pat.trim().replace(/\s+/g,' ').toLowerCase();
+    let idx = lowers.indexOf(pat);
+    if (idx !== -1) return idx;
+    idx = lowers.findIndex(h => h.includes(pat));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
 
-    function formatKm(val) {
-      if (val == null || val === '' || val === '-') return '-';
-      let num;
-      if (typeof val === 'number') {
-        num = val;
-      } else {
-        let str = String(val).trim()
-          .replace(/\s*km\s*/gi, '')
-          .replace(/\s+/g, '')
-          .replace(/[^0-9-]/g, '');
-        num = parseInt(str, 10);
-      }
-      if (isNaN(num) || num <= 0) return '-';
-      return num.toLocaleString('nb-NO') + ' km';
-    }
+function getISOWeek(d) {
+  d = new Date(d);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const yStart = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d - yStart) / 86400000);
+  return Math.ceil((days + 1) / 7);
+}
 
-    function progressBar4Hours(sdString) {
-      if (!sdString || typeof sdString !== 'string') return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
+function parseDate(str) {
+  if (!str) return null;
+  const m = String(str).trim().match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  return m ? new Date(m[3], m[2]-1, m[1]) : null;
+}
 
-      const parts = sdString.trim().split(/\s+/);
-      const datePart = parts[0];
-      const timePart = parts[1] || '00:00';
+async function fetchReports() {
+  try {
+    const r = await fetch(API_URL);
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    return j.record?.reports ?? [];
+  } catch {
+    return [];
+  }
+}
 
-      const [d, m, y] = datePart.split('.').map(Number);
-      const [h, min] = timePart.split(':').map(Number);
-
-      if (!d || !m || !y) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
-
-      const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
-      if (isNaN(sdDate.getTime())) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
-
-      const now = new Date();
-      let elapsedMinutes = 0;
-      let current = new Date(sdDate);
-
-      while (current < now) {
-        current.setMinutes(current.getMinutes() + 1);
-        const day = current.getDay();
-        const hour = current.getHours();
-
-        if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
-          elapsedMinutes++;
-        }
-      }
-
-      const remainingMinutes = 240 - elapsedMinutes;
-      const progress = Math.max(0, Math.min(elapsedMinutes / 240, 1));
-
-      let color = '#004225';
-      if (progress > 0.25) color = '#FFCC33';
-      if (progress >= 1) color = '#f44336';
-
-      const widthPercent = Math.round(progress * 100);
-      const remainingH = Math.floor(remainingMinutes / 60);
-      const remainingM = remainingMinutes % 60;
-      const remainingText = remainingMinutes > 0 ? `${remainingH}:${remainingM.toString().padStart(2, '0')}` : 'Over 4t';
-
-      return `
-        <div style="height:20px; background:#eee; border-radius:10px; overflow:hidden; position:relative;">
-          <div style="width:${widthPercent}%; height:100%; background:${color}; transition:width 0.4s ease;"></div>
-          <div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; font-weight:500;">
-            ${remainingText}
-          </div>
-        </div>
-      `;
-    }
-
-    function getHoursMinutesElapsed(sdString) {
-      if (!sdString || typeof sdString !== 'string') return 0;
-
-      const parts = sdString.trim().split(/\s+/);
-      const datePart = parts[0];
-      const timePart = parts[1] || '00:00';
-
-      const [d, m, y] = datePart.split('.').map(Number);
-      const [h, min] = timePart.split(':').map(Number);
-
-      if (!d || !m || !y) return 0;
-
-      const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
-      if (isNaN(sdDate.getTime())) return 0;
-
-      const now = new Date();
-      let elapsedMinutes = 0;
-      let current = new Date(sdDate);
-
-      while (current < now) {
-        current.setMinutes(current.getMinutes() + 1);
-        const day = current.getDay();
-        const hour = current.getHours();
-
-        if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
-          elapsedMinutes++;
-        }
-      }
-
-      return elapsedMinutes / 60;
-    }
-
-    function formatHHMM(hoursDecimal) {
-      if (hoursDecimal === 0) return '0:00';
-      const h = Math.floor(hoursDecimal);
-      const m = Math.round((hoursDecimal - h) * 60);
-      return `${h}:${m.toString().padStart(2, '0')}`;
-    }
-
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3200);
-    }
-
-    async function loadReport() {
-      const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const ab = await res.arrayBuffer();
-        const wb = XLSX.read(ab, {type: 'array'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-        headers = json[0].map(h => String(h || '').trim());
-        data = json.slice(1);
-        return true;
-      } catch (err) {
-        console.error('Failed to load report:', err);
-        return false;
-      }
-    }
-
-    function findColumn(patterns) {
-      const lowerHeaders = headers.map(h => String(h).trim().toLowerCase());
-      for (let pattern of patterns) {
-        const p = pattern.trim().toLowerCase();
-        const idx = lowerHeaders.findIndex(h => h === p);
-        if (idx !== -1) return idx;
-      }
-      for (let pattern of patterns) {
-        const p = pattern.trim().toLowerCase();
-        const idx = lowerHeaders.findIndex(h => h.includes(p));
-        if (idx !== -1) return idx;
-      }
-      return -1;
-    }
-
-    async function loadAndShowPending() {
-      const countEl = document.getElementById('pendingCount');
-      countEl.textContent = "Laster ventende leads...";
-
-      const success = await loadReport();
-      if (!success) {
-        countEl.textContent = "Kunne ikke laste leads – prøv å oppdatere";
-        return false;
-      }
-
-      const sdCol = findColumn(['SD mottatt på', 'SD mottatt']);
-      const arCol = findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']);
-      const statusCol = findColumn(['Status']);
-      const regCol = findColumn(['RegNr', 'Reg nr', 'Regnr']);
-      const merkeCol = findColumn(['Merke']);
-      const modellCol = findColumn(['Modell']);
-      const yearCol = findColumn(['År', 'Årgang']);
-      const postCol = findColumn(['Postnr']);
-      const stedCol = findColumn(['Sted']);
-      const kmCol = findColumn(['KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand']);
-
-      let pending = data.filter(row => {
-        const sdVal = String(row[sdCol] || '').trim();
-        let arVal = String(row[arCol] || '').trim();
-        const statusVal = String(row[statusCol] || '').trim().toLowerCase();
-        if (['-', '–', '—', ''].includes(arVal)) arVal = '';
-        const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
-        return sdVal !== '' && arVal === '' && isRelevant;
-      });
-
-      pending.sort((a, b) => {
-        const ta = getHoursMinutesElapsed(a[sdCol]);
-        const tb = getHoursMinutesElapsed(b[sdCol]);
-        return tb - ta;
-      });
-
-      countEl.textContent = `Fant ${pending.length} ventende leads`;
-
-      const tbody = document.querySelector('#pendingTable tbody');
-      tbody.innerHTML = '';
-
-      pending.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', () => {
-          fillFormFromRow(row);
-          showToast('Bil lagt til kalkulator');
-        });
-
-        const kmDisplay = formatKm(row[kmCol]);
-        const standTidDecimal = getHoursMinutesElapsed(row[sdCol]);
-        const standTidDisplay = standTidDecimal === 0 ? '0:00' : formatHHMM(standTidDecimal);
-
-        tr.innerHTML = `
-          <td>${row[regCol] || '-'}</td>
-          <td>${row[merkeCol] || '-'}</td>
-          <td>${row[modellCol]|| '-'}</td>
-          <td>${row[yearCol] || '-'}</td>
-          <td style="text-align:right">${kmDisplay}</td>
-          <td>${row[sdCol] || '-'}</td>
-          <td>${progressBar4Hours(row[sdCol])}</td>
-          <td style="text-align:center; font-weight:500;">${standTidDisplay}</td>
-          <td>${row[statusCol]|| '-'}</td>
-          <td>${row[postCol]||''} ${row[stedCol]||''}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      if (pending.length === 0) {
-        const tableContainer = document.getElementById('tableContainer');
-        tableContainer.innerHTML = `
-          <div class="empty-message">
-            <h3>Alle leads priset! 🎉</h3>
-            <p>Godt jobba! Ta en kaffe? ☕</p>
-          </div>
-        `;
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#004225', '#FFCC33', '#ffffff']
-        });
-      }
-
-      const totalStand = pending.reduce((sum, row) => sum + getHoursMinutesElapsed(row[sdCol]), 0);
-      const avgStand = pending.length ? (totalStand / pending.length) : 0;
-      const avgDisplay = formatHHMM(avgStand);
-
-      const circle = document.getElementById('avgStandCircle');
-      const number = document.getElementById('avgStand');
-
-      number.textContent = avgDisplay;
-
-      let bgColor = '#004225';
-      if (avgStand > 1) bgColor = '#FFCC33';
-      if (avgStand > 4) bgColor = '#f44336';
-      circle.style.background = bgColor;
-
-      return true;
-    }
-
-    function parseFinnPrice(str) {
-      if (!str) return 0;
-      return parseFloat(
-        str.replace(/\s+/g, '')
-           .replace(/\u00A0/g, '')
-           .replace(/[^0-9.,-]/g, '')
-           .replace(',', '.')
-      ) || 0;
-    }
-
-    function updateFinnLink() {
-      const make = document.getElementById('make').value.trim();
-      const model = document.getElementById('model').value.trim();
-      const year = parseInt(document.getElementById('year').value) || 0;
-      const km = parseInt(document.getElementById('kmstand').value) || 0;
-      const container = document.getElementById('finnSearchLink');
-      const link = document.getElementById('finnLink');
-      if (!make || !model || year < 1900 || year > 2030) {
-        container.style.display = 'none';
-        return;
-      }
-      let mileage = '';
-      if (km > 0) {
-        let delta = km < 50000 ? 10000 : km <= 100000 ? 20000 : 30000;
-        mileage = `&mileage_from=${Math.max(0, km - delta)}&mileage_to=${km + delta}`;
-      }
-      const q = encodeURIComponent(`${make} ${model}`);
-      const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
-      link.href = url;
-      container.style.display = 'block';
-    }
-
-    function fillFormFromRow(row) {
-      const idx = {
-        reg: findColumn(['RegNr', 'Reg nr', 'Regnr']),
-        make: findColumn(['Merke']),
-        model: findColumn(['Modell']),
-        year: findColumn(['År', 'Årgang']),
-        km: findColumn(['KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand'])
-      };
-      const kmRaw = row[idx.km];
-      const kmFormatted = formatKm(kmRaw);
-      const kmNumber = kmFormatted === '-' ? '' : parseInt(kmFormatted.replace(/\s/g, '').replace('km', '')) || '';
-      document.getElementById('regnr').value = row[idx.reg] || '';
-      document.getElementById('make').value = String(row[idx.make] || '').trim();
-      document.getElementById('model').value = String(row[idx.model] || '').trim();
-      document.getElementById('year').value = row[idx.year] || '';
-      document.getElementById('kmstand').value = kmNumber;
-      document.getElementById('finn_avg').value = '';
-      document.getElementById('output').innerHTML = '';
-      const reminder = document.getElementById('priceReminder');
-      reminder.style.display = 'block';
-      const finnInput = document.getElementById('finn_avg');
-      const hideReminder = () => { reminder.style.display = 'none'; };
-      finnInput.addEventListener('input', hideReminder, { once: true });
-      updateFinnLink();
-    }
-
-    function filterPendingTable() {
-      const filter = document.getElementById('searchPending').value.toUpperCase().trim();
-      document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
-        const rowText = Array.from(row.cells)
-          .map(cell => cell.textContent.toUpperCase().trim())
-          .join(' ');
-        row.style.display = rowText.includes(filter) ? '' : 'none';
-      });
-    }
-
-    function toggleGuidelines() {
-      const content = document.querySelector('.guidelines-content');
-      const toggle = document.querySelector('.guidelines-toggle');
-      const isHidden = content.style.display !== 'block';
-      content.style.display = isHidden ? 'block' : 'none';
-      toggle.textContent = isHidden ? '−' : '+';
-    }
-
-    ['make','model','year','kmstand'].forEach(id => {
-      document.getElementById(id).addEventListener('input', updateFinnLink);
+async function saveReports(reports) {
+  try {
+    await fetch(API_URL, {
+      method: 'PUT',
+      headers: HEADERS,
+      body: JSON.stringify({ reports })
     });
+  } catch (err) {
+    console.error(err);
+  }
+}
 
-    window.addEventListener('DOMContentLoaded', () => {
-      document.querySelector('.guidelines-content').style.display = 'none';
-      document.querySelector('.guidelines-toggle').textContent = '+';
-      loadAndShowPending();
-    });
-  </script>
+// ─── Hero-klokker (samlet snitt alle låste uker) ─────────────
+async function updateHeroClocks() {
+  const reports = await fetchReports();
+  const locked = reports.filter(r => r.locked);
+
+  let soldPctSum = 0, soldCount = 0;
+  let retPctSum  = 0, retCount  = 0;
+
+  locked.forEach(r => {
+    if (r.soldCars?.length) {
+      const diffSum = r.soldCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
+      const arSum   = r.soldCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
+      if (arSum > 0) {
+        const pct = diffSum / arSum * 100;
+        soldPctSum += pct * r.soldCars.length;
+        soldCount += r.soldCars.length;
+      }
+    }
+    if (r.returnedCars?.length) {
+      const diffSum = r.returnedCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
+      const arSum   = r.returnedCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
+      if (arSum > 0) {
+        const pct = diffSum / arSum * 100;
+        retPctSum += pct * r.returnedCars.length;
+        retCount += r.returnedCars.length;
+      }
+    }
+  });
+
+  const soldAvg = soldCount > 0 ? soldPctSum / soldCount : 0;
+  const retAvg  = retCount  > 0 ? retPctSum  / retCount  : 0;
+
+  document.getElementById('soldAvg').textContent    = soldCount > 0 ? soldAvg.toFixed(1) + '%' : '–';
+  document.getElementById('returnedAvg').textContent = retCount  > 0 ? retAvg.toFixed(1)  + '%' : '–';
+
+  const soldColor = soldAvg >= 0 ? '#004225' : '#c62828';
+  const retColor  = retAvg  >= 0 ? '#004225' : '#c62828';
+
+  if (clockSoldChart) clockSoldChart.destroy();
+  clockSoldChart = new Chart(document.getElementById('clockSold'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [Math.abs(soldAvg), 100 - Math.abs(soldAvg)],
+        backgroundColor: [soldColor, 'rgba(0,66,37,0.14)'],
+        borderWidth: 0,
+        cutout: '78%'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+
+  if (clockReturnedChart) clockReturnedChart.destroy();
+  clockReturnedChart = new Chart(document.getElementById('clockReturned'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [Math.abs(retAvg), 100 - Math.abs(retAvg)],
+        backgroundColor: [retColor, 'rgba(0,66,37,0.14)'],
+        borderWidth: 0,
+        cutout: '78%'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+}
+
+// ─── Linjegraf – snitt % avvik per låst uke ──────────────────
+async function updateLineChart() {
+  const reports = await fetchReports();
+  const locked = reports.filter(r => r.locked)
+                        .sort((a,b) => new Date(a.created) - new Date(b.created));
+
+  const ctx = document.getElementById('deviationChart');
+  const notice = document.getElementById('chart-notice');
+
+  if (locked.length < 1) {
+    if (deviationChart) deviationChart.destroy();
+    ctx.style.display = 'none';
+    notice.style.display = 'block';
+    return;
+  }
+
+  ctx.style.display = 'block';
+  notice.style.display = 'none';
+
+  const labels = locked.map(r => r.title.replace('Mandag ', '').replace(' – uke ', ' w'));
+
+  const soldData = locked.map(r => {
+    if (!r.soldCars?.length) return null;
+    const dSum = r.soldCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
+    const aSum = r.soldCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
+    return aSum > 0 ? (dSum / aSum * 100) : null;
+  });
+
+  const retData = locked.map(r => {
+    if (!r.returnedCars?.length) return null;
+    const dSum = r.returnedCars.reduce((s,c) => s + (Number(c.ColumnE||0) - Number(c['AR laveste estimat_raw']||0)), 0);
+    const aSum = r.returnedCars.reduce((s,c) => s + Number(c['AR laveste estimat_raw']||0), 0);
+    return aSum > 0 ? (dSum / aSum * 100) : null;
+  });
+
+  if (deviationChart) deviationChart.destroy();
+
+  deviationChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Solgte – snitt % avvik',
+          data: soldData,
+          borderColor: '#004225',
+          backgroundColor: 'rgba(0,66,37,0.15)',
+          tension: 0.25,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          spanGaps: true
+        },
+        {
+          label: 'Returnerte – snitt % avvik',
+          data: retData,
+          borderColor: '#2e7d32',
+          backgroundColor: 'rgba(46,125,50,0.12)',
+          tension: 0.25,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          spanGaps: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        y: {
+          title: { display: true, text: '% avvik (bud vs AR laveste)' },
+          suggestedMin: -30,
+          suggestedMax: 30,
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ─── Kall oppdateringene på relevante steder ─────────────────
+async function loadSavedReport() {
+  // ... din eksisterende kode ...
+
+  await updateGenerateButtonState();
+  await updateHeroClocks();
+  await updateLineChart();
+}
+
+async function generateNewReport() {
+  // ... din eksisterende kode ...
+
+  await saveReports(updated);
+  populateWeekSelect(updated);
+  document.getElementById('weekSelect').value = newRep.id;
+  await loadSavedReport();
+  await updateHeroClocks();
+  await updateLineChart();
+
+  // ... alert og finally ...
+}
+
+async function confirmLockWithComment() {
+  // ... din eksisterende kode ...
+
+  await saveReports(reports);
+  await loadSavedReport();
+  await updateHeroClocks();
+  await updateLineChart();
+
+  closeLockModal();
+  alert("Rapporten er nå låst.");
+}
+
+// Initial lasting
+window.onload = async () => {
+  const reps = await fetchReports();
+  populateWeekSelect(reps);
+  if (reps.length) {
+    document.getElementById('weekSelect').value = reps.at(-1).id;
+    await loadSavedReport();
+  }
+  await updateGenerateButtonState();
+  await updateHeroClocks();
+  await updateLineChart();
+};
+
+// ... resten av funksjonene dine (renderTable, editUserComment, etc.) behold uendret
+</script>
 </body>
 </html>
