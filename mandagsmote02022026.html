@@ -172,7 +172,7 @@
           – Hvite biler → sammenlign mest med hvite<br>
           – Svarte biler → sammenlign mest med svarte<br>
           – Andre farger → fritt valg<br>
-        • Ved flere treff → ta <strong>gjennomsnitt</strong> av de <strong>3–5 billigste</strong> sammenlignbare<br>
+        • Ved flere treff → ta <strong>gjennomsnitt</strong> av de <strong>3–5 billigeste</strong> sammenlignbare<br>
         <strong>Anbefalt KM-spenn i søket:</strong><br>
         • Under 50 000 km → ±10 000 km<br>
         • 50 000 – 100 000 km → ±20 000 km<br>
@@ -502,6 +502,88 @@
       const hideReminder = () => { reminder.style.display = 'none'; };
       finnInput.addEventListener('input', hideReminder, { once: true });
       updateFinnLink();
+    }
+
+    function calculateValuation() {
+      const finnStr = document.getElementById('finn_avg').value.trim();
+      const finn = parseFinnPrice(finnStr);
+      if (finnStr !== '' && finn <= 0) {
+        alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
+        return;
+      }
+      const margin = parseFloat(document.getElementById('margin').value) / 100 || 0;
+      const tillegg = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
+      const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
+      const spread = 0.05;
+      let midpoint = finn * (1 - margin - tillegg);
+      midpoint += midpoint * motivation;
+      const low = midpoint * (1 - spread);
+      const high = midpoint * (1 + spread);
+      const specs = {
+        make: document.getElementById('make').value.trim(),
+        model: document.getElementById('model').value.trim(),
+        year: parseInt(document.getElementById('year').value) || 0
+      };
+      const hist = getHistoricalComps(specs);
+      const likely_bid = low * (1 + hist.var_pct / 100);
+      const copyText = [
+        `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
+        `${specs.make} ${specs.model} ${specs.year}`,
+        "",
+        `Base (Finn pris ex omreg): ${finn.toLocaleString('nb-NO')} kr`,
+        `Etter margin ${margin*100}% + tillegg ${tillegg*100}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr`,
+        `Etter motivasjon ${motivation*100}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
+        `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr`,
+        `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr`,
+        `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
+        `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
+      ].join('\n');
+      const output = document.getElementById('output');
+      output.innerHTML = `
+        <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
+        <div class="step">1. Base (Finn pris ex omreg): <strong>${finn.toLocaleString('nb-NO')} kr</strong></div>
+        <div class="step">2. Etter margin ${margin*100}% + tillegg ${tillegg*100}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
+        <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
+        <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
+        <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
+        <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
+        <button id="copyBtn">Kopier full beregning til ERP</button>
+        <div id="copyFeedback"></div>
+        <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
+        <table>
+          <thead><tr>
+            <th>RegNr</th>
+            <th>Merke/Modell/År</th>
+            <th>Bud</th>
+            <th>Lavt estimat</th>
+            <th class="red">Varians %</th>
+            <th>Solgt</th>
+          </tr></thead>
+          <tbody>${
+            hist.comps.map(c => `
+              <tr>
+                <td>${c.regnr}</td>
+                <td>${c.make} ${c.model} ${c.year}</td>
+                <td>${c.bud.toLocaleString('nb-NO')}</td>
+                <td>${c.low.toLocaleString('nb-NO')}</td>
+                <td class="red">${c.variance.toFixed(1)}%</td>
+                <td>${c.sold}</td>
+              </tr>
+            `).join('')
+          }</tbody>
+        </table>
+      `;
+      document.getElementById('copyBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(copyText).then(() => {
+          const fb = document.getElementById('copyFeedback');
+          fb.textContent = '✓ Kopiert til utklippstavlen!';
+          fb.style.color = '#004225';
+          setTimeout(() => { fb.textContent = ''; }, 4000);
+        }).catch(err => {
+          console.error(err);
+          alert('Kopiering mislyktes – marker teksten manuelt');
+        });
+      });
     }
 
     function filterPendingTable() {
