@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mandagsrapport – Peasy</title>
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="icon" href="data:,">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -195,7 +195,7 @@
   </div>
 </div>
 
-<div id="version-info">v24 • precomputed % for chart + left-aligned symmetric layout • 2026</div>
+<div id="version-info">v25 • added Gjennomsnitt % avvik in fact box • 2026</div>
 
 <!-- Lås-modal -->
 <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; justify-content:center; align-items:center;">
@@ -223,7 +223,7 @@ let clockSoldChart = null;
 let clockReturnedChart = null;
 let deviationTrendChart = null;
 
-// ── Helper: calculate weighted % the same way as table ──────────────────────
+// ── Helper: weighted % same as table ───────────────────────────────────────
 function calculateWeightedPct(cars) {
   let totalDiff = 0;
   let totalAR = 0;
@@ -365,22 +365,35 @@ async function loadSavedReport() {
 
   currentReport = rep;
 
-  // Pre-compute percentages (important for old reports too)
-  rep.computedSoldPct     = calculateWeightedPct(rep.soldCars || []);
-  rep.computedReturnedPct = calculateWeightedPct(rep.returnedCars || []);
+  // Pre-compute percentages (for chart and for fact box)
+  const soldPct = calculateWeightedPct(rep.soldCars || []);
+  const retPct  = calculateWeightedPct(rep.returnedCars || []);
+  rep.computedSoldPct     = soldPct;
+  rep.computedReturnedPct = retPct;
 
   let ts = `Opprettet: ${rep.created}`;
   if (rep.edited) ts += ` • Sist endret: ${rep.edited}`;
   if (rep.locked && rep.lockComment) ts += ` • Låst med: "${rep.lockComment}"`;
   document.getElementById('timestamp').textContent = ts;
 
+  // Build / enrich commentary with % deviation
   let html = rep.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
-  if (rep.userComment) {
-    html += `<div style="margin-top:24px;border-top:1px solid #eee;padding-top:16px;">
-      <strong>Kommentar fra teamet:</strong><br>
-      <div style="white-space:pre-wrap;">${rep.userComment.replace(/\n/g,'<br>')}</div>
-    </div>`;
+
+  // If old report without % line → add it dynamically
+  if (!html.includes('Gjennomsnitt % avvik')) {
+    const soldARAvg = rep.soldCars?.length 
+      ? Math.round(rep.soldCars.reduce((s,c) => s + Number(String(c['AR laveste estimat_raw'])||'0'), 0) / rep.soldCars.length).toLocaleString('nb-NO') + ' kr'
+      : '-';
+    const retARAvg = rep.returnedCars?.length 
+      ? Math.round(rep.returnedCars.reduce((s,c) => s + Number(String(c['AR laveste estimat_raw'])||'0'), 0) / rep.returnedCars.length).toLocaleString('nb-NO') + ' kr'
+      : '-';
+
+    html = html.replace(
+      /(<strong>Solgte biler<\/strong><br>Totalt: \d+ biler?<br>Gjennomsnitt AR laveste estimat: [^<]+ kr)/,
+      `$1<br>Gjennomsnitt % avvik: ${soldPct !== null ? soldPct.toFixed(1) + ' %' : '-'}</div><div style="margin:24px 0 12px;"><strong>Returnerte biler</strong><br>Totalt: ${rep.returnedCars?.length || 0} biler<br>Gjennomsnitt AR laveste estimat: ${retARAvg}<br>Gjennomsnitt % avvik: ${retPct !== null ? retPct.toFixed(1) + ' %' : '-'}`
+    );
   }
+
   document.getElementById('commentary').innerHTML = html;
 
   renderTable('sold-table', rep.soldCars || []);
@@ -451,18 +464,32 @@ async function generateNewReport() {
       if (soldDate && soldDate >= start && soldDate < end) sold.push(car);
       if (retDate && retDate >= start && retDate < end) returned.push(car);
     }
+
+    const soldPct = calculateWeightedPct(sold);
+    const retPct  = calculateWeightedPct(returned);
+
+    const soldARAvg = sold.length 
+      ? Math.round(sold.reduce((s,c) => s + Number(String(c['AR laveste estimat_raw'])||'0'), 0) / sold.length).toLocaleString('nb-NO') + ' kr'
+      : '-';
+    const retARAvg = returned.length 
+      ? Math.round(returned.reduce((s,c) => s + Number(String(c['AR laveste estimat_raw'])||'0'), 0) / returned.length).toLocaleString('nb-NO') + ' kr'
+      : '-';
+
     const commHtml = `
       <h3>Fakta – siste fullførte uke (man–søn)</h3>
       <div style="margin:24px 0 12px;">
         <strong>Solgte biler</strong><br>
-        Antall: ${sold.length} stk<br>
-        Snitt AR laveste: ${sold.length ? Math.round(sold.reduce((s,c)=>s+c['AR laveste estimat_raw'],0)/sold.length).toLocaleString('nb-NO')+' kr' : '-'}
+        Totalt: ${sold.length} biler<br>
+        Gjennomsnitt AR laveste estimat: ${soldARAvg}<br>
+        Gjennomsnitt % avvik: ${soldPct !== null ? soldPct.toFixed(1) + ' %' : '-'}
       </div>
       <div style="margin:24px 0 12px;">
         <strong>Returnerte biler</strong><br>
-        Antall: ${returned.length} stk<br>
-        Snitt AR laveste: ${returned.length ? Math.round(returned.reduce((s,c)=>s+c['AR laveste estimat_raw'],0)/returned.length).toLocaleString('nb-NO')+' kr' : '-'}
+        Totalt: ${returned.length} biler<br>
+        Gjennomsnitt AR laveste estimat: ${retARAvg}<br>
+        Gjennomsnitt % avvik: ${retPct !== null ? retPct.toFixed(1) + ' %' : '-'}
       </div>`;
+
     const newRep = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
@@ -476,8 +503,8 @@ async function generateNewReport() {
       lockComment: '',
       weekNr: weekNr,
       year: year,
-      computedSoldPct: calculateWeightedPct(sold),
-      computedReturnedPct: calculateWeightedPct(returned)
+      computedSoldPct: soldPct,
+      computedReturnedPct: retPct
     };
     const updated = [...reports, newRep];
     await saveReports(updated);
@@ -511,6 +538,7 @@ async function updateDeviationTrendChart() {
     .sort((a,b) => a.year - b.year || a.weekNr - b.weekNr);
 
   const labels = locked.map(r => {
+    if (!r.weekNr) return 'Uke ?';
     const shortYear = r.year !== locked[0]?.year ? ` '${String(r.year).slice(-2)}` : '';
     return `Uke ${r.weekNr}${shortYear}`;
   });
@@ -520,6 +548,16 @@ async function updateDeviationTrendChart() {
 
   const ctx = document.getElementById('deviationTrendChart').getContext('2d');
   if (deviationTrendChart) deviationTrendChart.destroy();
+
+  if (locked.length === 0) {
+    ctx.font = '16px Inter, sans-serif';
+    ctx.fillStyle = '#777';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Ingen låste rapporter ennå – graf vises etter låsing', 
+                 ctx.canvas.width / 2, ctx.canvas.height / 2);
+    return;
+  }
 
   deviationTrendChart = new Chart(ctx, {
     type: 'line',
@@ -558,6 +596,15 @@ async function updateDeviationTrendChart() {
         }
       },
       scales: {
+        x: {
+          ticks: {
+            autoSkip: false,
+            maxRotation: 45,
+            minRotation: 0,
+            font: { size: 13 },
+            padding: 12
+          }
+        },
         y: {
           title: { display: true, text: '% avvik fra AR laveste' },
           ticks: { callback: v => v.toFixed(1) + ' %' }
