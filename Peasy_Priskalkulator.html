@@ -223,7 +223,7 @@
   <div id="toast"></div>
 
   <div id="version-info">
-    v1.5.7 • sist oppdatert 09.02.2026
+    v1.5.8 • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -539,20 +539,14 @@
       const idx = {
         bud: findColumn(['Bud']),
         low: findColumn(['Endelig AR verdi', 'Laveste']),
-        make: findColumn(['Merke']),
-        model: findColumn(['Modell']),
-        year: findColumn(['År']),
         sold: findColumn(['Solgt på']),
-        reg: findColumn(['RegNr']),
       };
       const now = new Date();
       const thirtyDaysAgo = new Date(now);
       thirtyDaysAgo.setDate(now.getDate() - 30);
       const comps = data.filter(row => {
-        const m = String(row[idx.make] || '').trim().toLowerCase();
-        const mo = String(row[idx.model] || '').trim().toLowerCase();
-        const y = parseInt(row[idx.year]) || 0;
         const bud = parseFloat(row[idx.bud]) || 0;
+        const low = parseFloat(row[idx.low]) || 0;
         let soldDate;
         try {
           const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
@@ -560,29 +554,16 @@
         } catch {
           soldDate = new Date(0);
         }
-        return m === specs.make.toLowerCase() &&
-               mo === specs.model.toLowerCase() &&
-               y >= specs.year - 1 && y <= specs.year + 1 &&
-               bud > 0 &&
-               soldDate >= thirtyDaysAgo && !isNaN(soldDate);
+        return bud > 0 && low > 0 && soldDate >= thirtyDaysAgo && !isNaN(soldDate);
       }).map(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const low = parseFloat(row[idx.low]) || bud;
         const variance = low > 0 ? ((bud - low) / low * 100) : 0;
-        return {
-          regnr: row[idx.reg] || '-',
-          make: row[idx.make] || '',
-          model: row[idx.model] || '',
-          year: row[idx.year] || '',
-          bud,
-          low,
-          variance,
-          sold: row[idx.sold] || '-'
-        };
+        return { variance };
       });
-      if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+      if (comps.length === 0) return { var_pct: 0, count: 0 }; // bedre fallback: 0 %
       const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
-      return { var_pct, count: comps.length, comps };
+      return { var_pct, count: comps.length };
     }
 
     function calculateValuation() {
