@@ -58,12 +58,10 @@
       border-radius: 12px;
       box-shadow: 0 4px 18px rgba(0,66,37,0.06);
       margin-bottom: 36px;
-    }
-    .fact-box, table, .chart-container {
       width: 100%;
-      max-width: 860px;
-      margin-left: auto;
-      margin-right: auto;
+      max-width: 100%;          /* changed */
+      margin-left: 0;           /* changed */
+      margin-right: 0;          /* changed */
     }
     .fact-box { padding: 28px 32px; }
     table {
@@ -82,18 +80,18 @@
       font-size: 1.4rem;
       font-weight: 700;
       margin: 48px 0 18px;
-      text-align: center;
+      text-align: left;          /* changed – was center */
       color: #004225;
     }
     .chart-container {
       padding: 24px 20px 10px;
       height: 380px;
     }
-    .timestamp { 
-      font-size: 0.94rem; 
-      opacity: 0.82; 
-      text-align: center; 
-      margin: 0 0 32px; 
+    .timestamp {
+      font-size: 0.94rem;
+      opacity: 0.82;
+      text-align: left;          /* changed – was center */
+      margin: 0 0 32px;
     }
     .logo-container { text-align: center; margin-bottom: 32px; }
     .logo { max-width: 240px; height: auto; }
@@ -142,12 +140,10 @@
   </style>
 </head>
 <body>
-
 <div class="container">
   <div class="logo-container">
     <img src="Peasy_Logo_ORG.png" alt="Peasy logo" class="logo">
   </div>
-
   <div class="hero-clocks">
     <div>
       <div class="clock"><canvas id="clockSold"></canvas><div class="clock-value" id="soldAvgValue">–</div></div>
@@ -158,10 +154,8 @@
       <div class="clock-label">Returnerte – snitt % avvik (alle låste)</div>
     </div>
   </div>
-
   <h1>Mandagsrapport – Peasy</h1>
   <p style="text-align:center; opacity:0.85; margin-bottom:40px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
-
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
@@ -170,30 +164,24 @@
     <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
   </div>
-
   <div id="loading" style="display:none;">Laster rapport…</div>
-
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="fact-box"></div>
-
     <div id="sold-section" style="display:none;">
       <div class="section-title">Solgte biler</div>
       <table id="sold-table"></table>
     </div>
-
     <div id="returned-section" style="display:none;">
       <div class="section-title">Returnerte biler</div>
       <table id="returned-table"></table>
     </div>
-
     <div class="chart-container">
       <canvas id="deviationTrendChart"></canvas>
     </div>
   </div>
 </div>
-
-<div id="version-info">v21 • ISO-uke på graf + ekte bin-lagring • 2025-2026</div>
+<div id="version-info">v22 • diag logs uke 5/6 + left/right alignment tweaks • 2025-2026</div>
 
 <!-- Lås-modal -->
 <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; justify-content:center; align-items:center;">
@@ -335,18 +323,14 @@ async function loadSavedReport() {
     document.querySelectorAll('#edit-btn, #lock-btn').forEach(el => el.style.display = 'none');
     return;
   }
-
   const reports = await fetchReports();
   const rep = reports.find(r => r.id === id);
   if (!rep) return;
-
   currentReport = rep;
-
   let ts = `Opprettet: ${rep.created}`;
   if (rep.edited) ts += ` • Sist endret: ${rep.edited}`;
   if (rep.locked && rep.lockComment) ts += ` • Låst med: "${rep.lockComment}"`;
   document.getElementById('timestamp').textContent = ts;
-
   let html = rep.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   if (rep.userComment) {
     html += `<div style="margin-top:24px;border-top:1px solid #eee;padding-top:16px;">
@@ -355,17 +339,13 @@ async function loadSavedReport() {
     </div>`;
   }
   document.getElementById('commentary').innerHTML = html;
-
   renderTable('sold-table', rep.soldCars || []);
   renderTable('returned-table', rep.returnedCars || []);
-
   document.getElementById('sold-section').style.display = rep.soldCars?.length ? 'block' : 'none';
   document.getElementById('returned-section').style.display = rep.returnedCars?.length ? 'block' : 'none';
-
   document.getElementById('report-content').style.display = 'block';
   document.getElementById('edit-btn').style.display = 'inline-block';
   document.getElementById('lock-btn').style.display = rep.locked ? 'none' : 'inline-block';
-
   await updateHeroClocks();
   await updateDeviationTrendChart();
 }
@@ -374,7 +354,6 @@ async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
   document.getElementById('loading').style.display = 'block';
-
   try {
     const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
     const res = await fetch(url);
@@ -384,7 +363,6 @@ async function generateNewReport() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     const headers = data[0].map(h => String(h||'').trim());
-
     const col = {
       Merke: findColumn(['Merke'], headers),
       Modell: findColumn(['Modell'], headers),
@@ -393,28 +371,23 @@ async function generateNewReport() {
       'Solgt på': findColumn(['Solgt på','Solgt'], headers),
       Returnert: findColumn(['Returnert','Returnert på'], headers)
     };
-
     const start = getMostRecentCompletedWeekStart();
     const end = new Date(start); end.setDate(start.getDate()+7);
     const weekNr = getISOWeek(start);
     const year = start.getFullYear();
     const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${weekNr}`;
-
     const now = new Date().toLocaleString('nb-NO',{dateStyle:'short',timeStyle:'short'});
     const reports = await fetchReports();
-
     if (reports.some(r => r.title === title)) {
       alert('Rapport for denne uken finnes allerede.');
       return;
     }
-
     const sold = [], returned = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       const soldDate = parseDate(row[col['Solgt på']]);
       const retDate = parseDate(row[col.Returnert]);
       if (!soldDate && !retDate) continue;
-
       let arStr = String(row[col['Endelig AR verdi']] || '').trim();
       let arVal = 0;
       if (arStr.includes('-')) {
@@ -422,7 +395,6 @@ async function generateNewReport() {
       } else {
         arVal = parseFloat(arStr.replace(/\s/g,'').replace(',','.')) || 0;
       }
-
       const car = {
         Merke: row[col.Merke] || '-',
         Modell: row[col.Modell] || '-',
@@ -430,11 +402,9 @@ async function generateNewReport() {
         ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',
         'AR laveste estimat_raw': arVal
       };
-
       if (soldDate && soldDate >= start && soldDate < end) sold.push(car);
       if (retDate && retDate >= start && retDate < end) returned.push(car);
     }
-
     const commHtml = `
       <h3>Fakta – siste fullførte uke (man–søn)</h3>
       <div style="margin:24px 0 12px;">
@@ -447,7 +417,6 @@ async function generateNewReport() {
         Antall: ${returned.length} stk<br>
         Snitt AR laveste: ${returned.length ? Math.round(returned.reduce((s,c)=>s+c['AR laveste estimat_raw'],0)/returned.length).toLocaleString('nb-NO')+' kr' : '-'}
       </div>`;
-
     const newRep = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
@@ -459,16 +428,14 @@ async function generateNewReport() {
       returnedCars: returned,
       locked: false,
       lockComment: '',
-      weekNr: weekNr,          // ← lagres for sortering/graf
+      weekNr: weekNr,
       year: year
     };
-
     const updated = [...reports, newRep];
     await saveReports(updated);
     populateWeekSelect(updated);
     document.getElementById('weekSelect').value = newRep.id;
     await loadSavedReport();
-
     alert(`Generert for uke ${weekNr}\nSolgte: ${sold.length}\nReturnerte: ${returned.length}`);
   } catch (err) {
     console.error(err);
@@ -503,26 +470,80 @@ async function updateDeviationTrendChart() {
   const retData = [];
 
   locked.forEach(r => {
+    // ── Only log diagnostic info for week 5 and 6 ────────────────────────
+    const isDiagWeek = r.weekNr === 5 || r.weekNr === 6;
+    if (isDiagWeek) {
+      console.group(`DIAG – Uke ${r.weekNr} (${r.year}) – ID: ${r.id}`);
+    }
+
+    // Sold
     let sDiff = 0, sAR = 0, sCount = 0;
+    const soldDetails = [];
     (r.soldCars || []).forEach(c => {
       const bud = Number(c.ColumnE) || 0;
-      const ar  = Number(c['AR laveste estimat_raw']) || 0;
-      if (ar > 0) { sDiff += bud - ar; sAR += ar; sCount++; }
+      const ar = Number(c['AR laveste estimat_raw']) || 0;
+      if (ar > 0) {
+        const diff = bud - ar;
+        sDiff += diff;
+        sAR += ar;
+        sCount++;
+        if (isDiagWeek) {
+          soldDetails.push(
+            `${c.Merke || '?'} ${c.Modell || '?'} (${c.År || '?'}) | ` +
+            `bud: ${bud.toLocaleString('nb-NO')} | AR: ${ar.toLocaleString('nb-NO')} | ` +
+            `diff: ${diff.toLocaleString('nb-NO')} (${((diff/ar)*100).toFixed(1)}%)`
+          );
+        }
+      }
     });
-    soldData.push(sCount ? (sDiff / sAR * 100) : null);
+    const soldPct = sCount ? (sDiff / sAR * 100) : null;
+    if (isDiagWeek) {
+      console.log(`Solgte: ${sCount} gyldige biler → ${soldPct !== null ? soldPct.toFixed(2) + '%' : 'ingen gyldige'}`);
+      if (soldDetails.length) {
+        console.log("Solgte biler som teller:");
+        soldDetails.forEach(line => console.log("  • " + line));
+      } else {
+        console.log("Ingen solgte biler med AR > 0.");
+      }
+    }
+    soldData.push(soldPct);
 
+    // Returned
     let rDiff = 0, rAR = 0, rCount = 0;
+    const retDetails = [];
     (r.returnedCars || []).forEach(c => {
       const bud = Number(c.ColumnE) || 0;
-      const ar  = Number(c['AR laveste estimat_raw']) || 0;
-      if (ar > 0) { rDiff += bud - ar; rAR += ar; rCount++; }
+      const ar = Number(c['AR laveste estimat_raw']) || 0;
+      if (ar > 0) {
+        const diff = bud - ar;
+        rDiff += diff;
+        rAR += ar;
+        rCount++;
+        if (isDiagWeek) {
+          retDetails.push(
+            `${c.Merke || '?'} ${c.Modell || '?'} (${c.År || '?'}) | ` +
+            `bud: ${bud.toLocaleString('nb-NO')} | AR: ${ar.toLocaleString('nb-NO')} | ` +
+            `diff: ${diff.toLocaleString('nb-NO')} (${((diff/ar)*100).toFixed(1)}%)`
+          );
+        }
+      }
     });
-    retData.push(rCount ? (rDiff / rAR * 100) : null);
+    const retPct = rCount ? (rDiff / rAR * 100) : null;
+    if (isDiagWeek) {
+      console.log(`Returnerte: ${rCount} gyldige biler → ${retPct !== null ? retPct.toFixed(2) + '%' : 'ingen gyldige'}`);
+      if (retDetails.length) {
+        console.log("Returnerte biler som teller:");
+        retDetails.forEach(line => console.log("  • " + line));
+      } else {
+        console.log("Ingen returnerte biler med AR > 0.");
+      }
+      console.groupEnd();
+    }
+    retData.push(retPct);
   });
 
   const ctx = document.getElementById('deviationTrendChart').getContext('2d');
   if (deviationTrendChart) deviationTrendChart.destroy();
-
   deviationTrendChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -570,7 +591,6 @@ async function updateHeroClocks() {
   const locked = reports.filter(r => r.locked);
   let soldDiffSum = 0, soldArSum = 0, soldCount = 0;
   let retDiffSum = 0, retArSum = 0, retCount = 0;
-
   locked.forEach(r => {
     (r.soldCars || []).forEach(c => {
       const bud = Number(c?.ColumnE) || 0;
@@ -591,10 +611,8 @@ async function updateHeroClocks() {
       }
     });
   });
-
   const soldPct = soldCount > 0 ? (soldDiffSum / soldArSum * 100) : 0;
   const retPct = retCount > 0 ? (retDiffSum / retArSum * 100) : 0;
-
   document.getElementById('soldAvgValue').textContent = soldCount > 0 ? soldPct.toFixed(1) + '%' : '–';
   document.getElementById('returnedAvgValue').textContent = retCount > 0 ? retPct.toFixed(1) + '%' : '–';
 
@@ -652,7 +670,6 @@ async function confirmLockWithComment() {
   closeLockModal();
   alert("Rapporten er nå låst.");
 }
-
 function editUserComment() {
   alert("Rediger kommentar-funksjon ikke implementert ennå.");
 }
