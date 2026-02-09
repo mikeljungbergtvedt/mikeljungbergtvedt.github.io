@@ -143,7 +143,6 @@
       font-size: 1.05rem;
       line-height: 1.6;
     }
-
     /* ─── Logo (samme stil som på de andre sidene) ─── */
     .logo-container {
       text-align: center;
@@ -169,7 +168,6 @@
         margin-bottom: 20px;
       }
     }
-
     /* ─── Sticky versjonsnummer – ren tekst, ingen bakgrunn (samme som de andre) ─── */
     #version-info {
       position: fixed;
@@ -189,7 +187,6 @@
   <div class="logo-container">
     <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
   </div>
-
   <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
   <div class="controls">
@@ -214,12 +211,10 @@
       <table id="returned-table"></table>
     </div>
   </div>
-
   <!-- Sticky versjonsnummer lagt til her (nederst i containeren) -->
   <div id="version-info">
     v15 • sist oppdatert 05.02.2026
   </div>
-
   <!-- Lås-modal -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
@@ -250,7 +245,6 @@
     <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575; color:white;">Avbryt</button>
   </div>
 </div>
-
 <script>
 // ────────────────────────────────────────────────
 // KONFIGURASJON
@@ -277,15 +271,29 @@ function getISOWeek(date) {
 }
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
-  const dayOfWeek = today.getDay() || 7;
-  let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
-  const endPrev = new Date(today);
-  endPrev.setDate(today.getDate() - daysBack);
-  endPrev.setHours(0,0,0,0);
-  const startPrev = new Date(endPrev);
-  startPrev.setDate(endPrev.getDate() - 6);
-  startPrev.setHours(0,0,0,0);
-  return startPrev;
+  today.setHours(0, 0, 0, 0);
+
+  const dayOfWeek = today.getDay();           // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+  let daysBackToSunday;
+  if (dayOfWeek === 1) {
+    // Monday: go back only to yesterday (Sunday)
+    daysBackToSunday = 1;
+  } else if (dayOfWeek === 0) {
+    // Sunday: the week is still ongoing → go back to previous Sunday
+    daysBackToSunday = 7;
+  } else {
+    // Tue–Sat: go back to the most recent Sunday
+    daysBackToSunday = dayOfWeek;
+  }
+
+  const endOfPrevWeek = new Date(today);
+  endOfPrevWeek.setDate(today.getDate() - daysBackToSunday);
+
+  const startOfPrevWeek = new Date(endOfPrevWeek);
+  startOfPrevWeek.setDate(endOfPrevWeek.getDate() - 6);
+
+  return startOfPrevWeek;
 }
 // JSONBin
 async function fetchReports() {
