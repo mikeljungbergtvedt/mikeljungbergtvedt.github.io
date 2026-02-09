@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CSV Trakt – Peasy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%);
+      color: #004225;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    h1 {
+      font-weight: 900;
+      font-size: 2.4rem;
+      letter-spacing: -0.7px;
+      margin-bottom: 8px;
+      background: linear-gradient(to right, #004225, #006644);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+    .subtitle {
+      opacity: 0.8;
+      margin-bottom: 32px;
+      color: #004225;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo {
+      max-width: 220px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      opacity: 0.92;
+      filter: grayscale(0.15) saturate(0.92);
+      transition: opacity 0.3s ease;
+    }
+    .logo:hover { opacity: 1; }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    button, select {
+      padding: 10px 20px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      background: #004225;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover { background: #006644; transform: translateY(-1px); }
+    button:disabled { background: #aaa; cursor: not-allowed; opacity: 0.75; transform: none; }
+    .upload-area {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 2px dashed rgba(130,191,210, 0.30);
+      border-radius: 14px;
+      padding: 48px 24px;
+      text-align: center;
+      transition: all 0.2s;
+      cursor: pointer;
+      margin-bottom: 32px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+    }
+    .upload-area:hover {
+      border-color: #006644;
+      background: rgba(255,255,255,0.95);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(130,191,210, 0.10);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+      overflow: hidden;
+    }
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(130,191,210, 0.10);
+    }
+    th {
+      background: rgba(130,191,210,0.05);
+      font-weight: 700;
+      color: #004225;
+    }
+    .dropoff-high { color: #c62828; font-weight: 700; }
+    .dropoff-med  { color: #e65100; font-weight: 600; }
+    .dropoff-low  { color: #2e7d32; font-weight: 500; }
+    #loading, .status {
+      text-align: center;
+      margin: 24px 0;
+      font-style: italic;
+      opacity: 0.8;
+    }
+    #version-info {
+      position: fixed;
+      bottom: 0.75rem;
+      right: 1rem;
+      font-size: 0.75rem;
+      color: #777;
+      opacity: 0.65;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo-container">
+    <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
+  </div>
+
+  <h1>CSV Trakt – Peasy</h1>
+  <p class="subtitle">Last opp GA4-funnel CSV → se drop-off → lagre i skyen → del lenke</p>
+
+  <div class="controls">
+    <select id="fileSelect">
+      <option value="">Velg tidligere lagret fil...</option>
+    </select>
+    <button onclick="document.getElementById('fileInput').click()">Last opp CSV</button>
+    <input type="file" id="fileInput" accept=".csv" style="display:none">
+    <button onclick="clearCurrent()" style="background:#757575;">Tøm visning</button>
+  </div>
+
+  <div id="upload-area" class="upload-area">
+    <p style="font-size:1.1rem; font-weight:600; margin-bottom:12px;">Dra CSV-fil hit eller klikk for å velge</p>
+    <p style="opacity:0.8;">Støtter GA4 Traktutforskning-export (Trinn, Enhetskategori, Avbruddsfrekvens osv.)</p>
+  </div>
+
+  <div id="file-name" style="font-weight:600; margin:16px 0; min-height:1.5em;"></div>
+  <div id="loading">Velg eller last opp en fil for å starte...</div>
+
+  <table id="resultTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Trinn</th>
+        <th>Enhetskategori</th>
+        <th>Drop-off %</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <div id="version-info">v0.5 – matcher Mandagsrapport-stil</div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────
+// Samme JSONBin-oppsett som i mandagsrapporten din
+const BIN_ID     = '6981aa3dae596e708f0d773b';
+const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
+const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const HEADERS    = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
+// ────────────────────────────────────────────────
+
+let currentData = null;
+
+// Drag & drop + klikk
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('click', () => document.getElementById('fileInput').click());
+
+['dragover', 'dragenter'].forEach(evt => uploadArea.addEventListener(evt, e => {
+  e.preventDefault(); uploadArea.style.borderColor = '#006644'; uploadArea.style.background = 'rgba(255,255,255,0.95)';
+}));
+['dragleave', 'drop'].forEach(evt => uploadArea.addEventListener(evt, e => {
+  e.preventDefault(); uploadArea.style.borderColor = 'rgba(130,191,210, 0.30)'; uploadArea.style.background = 'rgba(255, 255, 255, 0.88)';
+}));
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+});
+
+function processFile(file) {
+  if (!file.name.endsWith('.csv')) return alert('Velg en .csv-fil');
+  
+  document.getElementById('loading').textContent = 'Behandler filen...';
+  document.getElementById('file-name').textContent = `Behandler: ${file.name}`;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: results => {
+      currentData = results.data.filter(row => row.Trinn); // fjern tomme
+      renderTable();
+      document.getElementById('loading').textContent = '';
+      document.getElementById('file-name').textContent = `Viser: ${file.name} (${currentData.length} rader)`;
+      if (confirm('Lagre denne filen i skyen? (synlig for alle med lenken)')) {
+        saveFile(file.name, currentData);
+      }
+    },
+    error: err => {
+      console.error(err);
+      document.getElementById('loading').textContent = 'Feil ved lesing av CSV';
+    }
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  currentData.forEach(row => {
+    const drop = parseFloat((row.Avbruddsfrekvens || row['Avbruddsfrekvens'] || '0').replace(/[^0-9.]/g,'')) || 0;
+    let cls = drop > 50 ? 'dropoff-high' : drop > 25 ? 'dropoff-med' : 'dropoff-low';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.Trinn || '-'}</td>
+      <td>${row.Enhetskategori || 'Totalt'}</td>
+      <td class="${cls}">${drop.toFixed(1)} %</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('resultTable').style.display = currentData.length ? 'table' : 'none';
+}
+
+async function saveFile(filename, data) {
+  // Samme logikk som i mandagsrapport – tilpasset etter behov
+  alert('Lagring til JSONBin ikke fullstendig implementert her ennå – kopier koden fra mandagsrapporten og tilpass saveReports-logikken.');
+  // → Kopier fetchReports / saveReports fra din originale kode og bruk {files: [...]} eller lignende struktur
+}
+
+function clearCurrent() {
+  currentData = null;
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('loading').textContent = 'Velg eller last opp en fil...';
+  document.getElementById('tableBody').innerHTML = '';
+  document.getElementById('resultTable').style.display = 'none';
+}
+
+// Valgfritt: last tidligere filer fra bin (kopier populateWeekSelect-logikken fra mandagsrapport)
+window.addEventListener('load', () => {
+  // Her kan du legge inn fetchReports() og populate select hvis ønskelig
+});
+</script>
+</body>
+</html>
