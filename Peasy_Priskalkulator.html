@@ -212,7 +212,7 @@
   </div>
   <div id="toast"></div>
   <div id="version-info">
-    v1.5.9 • sist oppdatert 09.02.2026
+    v1.6.2 • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -375,7 +375,7 @@
       pending.sort((a, b) => {
         const ta = getHoursMinutesElapsed(a[sdCol]);
         const tb = getHoursMinutesElapsed(b[sdCol]);
-        return tb - ta; // nyeste først (mest tid igjen først)
+        return tb - ta;
       });
       countEl.textContent = `Fant ${pending.length} ventende leads`;
       const tbody = document.querySelector('#pendingTable tbody');
@@ -505,7 +505,38 @@
       const thirtyDaysAgo = new Date(now);
       thirtyDaysAgo.setDate(now.getDate() - 30);
 
-      const comps = data.filter(row => {
+      // Market-wide (used for variance adjustment)
+      const marketRows = data.filter(row => {
+        const bud = parseFloat(row[idx.bud]) || 0;
+        const low = parseFloat(row[idx.low]) || 0;
+        let soldDate;
+        try {
+          const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
+          soldDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+        } catch {
+          soldDate = new Date(0);
+        }
+        return (
+          bud > 0 &&
+          low > 0 &&
+          soldDate >= thirtyDaysAgo &&
+          !isNaN(soldDate.getTime())
+        );
+      });
+
+      const marketVariances = marketRows.map(row => {
+        const bud = parseFloat(row[idx.bud]) || 0;
+        const low = parseFloat(row[idx.low]) || bud;
+        return low > 0 ? ((bud - low) / low * 100) : 0;
+      });
+
+      let market_var_pct = 0;
+      if (marketVariances.length > 0) {
+        market_var_pct = marketVariances.reduce((sum, v) => sum + v, 0) / marketVariances.length;
+      }
+
+      // Same make/model (only for display/reference)
+      const modelRows = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const low = parseFloat(row[idx.low]) || 0;
         let soldDate;
@@ -541,12 +572,12 @@
         };
       });
 
-      let var_pct = 0;
-      if (comps.length > 0) {
-        var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
-      }
-
-      return { var_pct, count: comps.length, comps };
+      return {
+        var_pct: market_var_pct,
+        market_count: marketRows.length,
+        same_count: modelRows.length,
+        comps: modelRows
+      };
     }
 
     function calculateValuation() {
@@ -586,8 +617,8 @@
         `Etter motivasjon ${motivation*100}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
         `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr`,
         `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr`,
-        `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
-        `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
+        `Sannsynlig akseptert (justert med markedsvarians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
+        `Historisk markedsvarians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.market_count} solgte biler – alle merker/modeller siste 30 dager)`
       ].join('\n');
 
       const output = document.getElementById('output');
@@ -597,13 +628,13 @@
         <div class="step">2. Etter margin ${margin*100}% + tillegg ${tillegg*100}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
         <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
         <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
+        <div class="step likely">Sannsynlig akseptert (markedsvarians justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
+        <div class="step"><strong class="red">Historisk markedsvarians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.market_count} solgte biler – alle merker/modeller siste 30 dager)</div>
         <button id="copyBtn">Kopier full beregning til ERP</button>
         <div id="copyFeedback"></div>
 
-        <h4>Historiske sammenlignbare (${hist.count} stk siste 30 dager)</h4>
-        ${hist.count > 0 ? `
+        <h4>Sammenlignbare biler samme merke/modell (${hist.same_count} stk siste 30 dager – kun referanse)</h4>
+        ${hist.same_count > 0 ? `
           <table>
             <thead>
               <tr>
