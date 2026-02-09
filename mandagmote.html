@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v15 (uten bud/diff)</title>
+  <title>Mandagsrapport – Peasy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -110,7 +110,7 @@
 // KONFIGURASJON
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123";
+const DELETE_PASSWORD = "slett123"; // Change this to your own secure password!
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 
@@ -450,7 +450,22 @@ function generateCommentary(sold, returned) {
 function editUserComment() { alert("Rediger kommentar ikke implementert."); }
 function showLockCommentModal() { document.getElementById('lock-comment-modal').style.display = 'flex'; }
 function closeLockModal() { document.getElementById('lock-comment-modal').style.display = 'none'; }
-async function confirmLockWithComment() { alert("Låsing ikke implementert"); closeLockModal(); }
+async function confirmLockWithComment() {
+  const comment = document.getElementById('lock-comment-text').value.trim();
+  currentReport.locked = true;
+  currentReport.lockComment = comment;
+  const reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx !== -1) {
+    reports[idx] = currentReport;
+    await saveReports(reports);
+  }
+  document.getElementById('timestamp').textContent += ` • Låst med: "${comment}"`;
+  document.getElementById('lock-btn').style.display = 'none';
+  document.getElementById('delete-btn').style.display = 'block';
+  closeLockModal();
+  alert("Rapport låst inn!");
+}
 function showDeleteConfirm() { document.getElementById('delete-modal').style.display = 'flex'; }
 function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; }
 function promptPasswordForDelete() { document.getElementById('password-prompt').style.display = 'block'; }
@@ -458,11 +473,18 @@ function closePasswordPrompt() { document.getElementById('password-prompt').styl
 async function checkDeletePassword() {
   const pw = document.getElementById('password-input').value;
   if (pw === DELETE_PASSWORD) {
-    alert("Sletting ikke implementert.");
-    closePasswordPrompt(); closeDeleteModal();
+    const reports = await fetchReports();
+    const idx = reports.findIndex(r => r.id === currentReport.id);
+    if (idx !== -1) {
+      reports.splice(idx, 1);
+      await saveReports(reports);
+      alert("Rapport slettet!");
+      location.reload();
+    }
   } else {
     alert("Feil passord");
   }
+  closePasswordPrompt();
 }
 </script>
 </body>
