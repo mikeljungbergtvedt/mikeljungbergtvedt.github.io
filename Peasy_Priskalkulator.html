@@ -212,7 +212,7 @@
   </div>
   <div id="toast"></div>
   <div id="version-info">
-    v1.6.4 • sist oppdatert 09.02.2026
+    v1.6.4-diagnostic • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -505,10 +505,17 @@
       const sixtyDaysAgo = new Date(now);
       sixtyDaysAgo.setDate(now.getDate() - 60);
 
-      // Market-wide comps for variance calculation (60 days)
+      // ── Market-wide comps for variance ───────────────────────────────
       const marketRows = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
-        const low = parseFloat(row[idx.low]) || 0;
+        const lowStr = String(row[idx.low] || '').trim();
+        let low = 0;
+        if (lowStr.includes('-')) {
+          const parts = lowStr.split('-').map(p => parseFloat(p.trim()));
+          low = !isNaN(parts[0]) ? parts[0] : 0;  // Use FIRST number = low end of range
+        } else {
+          low = parseFloat(lowStr) || 0;
+        }
         let soldDate;
         try {
           const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
@@ -521,19 +528,38 @@
 
       const marketVariances = marketRows.map(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
-        const low = parseFloat(row[idx.low]) || bud;
-        // IMPORTANT: variance = (bud - low) / low * 100
-        // positive = bud > low estimate (sold higher than estimated)
-        // negative = bud < low estimate (sold lower than estimated)
-        return low > 0 ? ((bud - low) / low * 100) : 0;
+        const lowStr = String(row[idx.low] || '').trim();
+        let low = bud; // fallback
+        if (lowStr.includes('-')) {
+          const parts = lowStr.split('-').map(p => parseFloat(p.trim()));
+          low = !isNaN(parts[0]) ? parts[0] : bud;  // low end of range
+        } else {
+          low = parseFloat(lowStr) || bud;
+        }
+        const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+
+        // ── DIAGNOSTIC LOG ──────────────────────────────────────────────
+        console.log(
+          `Market variance row: RegNr=${row[idx.reg] || 'no reg'} | ` +
+          `Sold=${row[idx.sold] || 'no date'} | ` +
+          `Bud=${bud} | ` +
+          `Low=${low} (from "${lowStr}") | ` +
+          `Variance=${variance.toFixed(1)}%`
+        );
+
+        return variance;
       });
 
       let market_var_pct = 0;
       if (marketVariances.length > 0) {
-        market_var_pct = marketVariances.reduce((a, b) => a + b, 0) / marketVariances.length;
+        market_var_pct = marketVariances.reduce((sum, v) => sum + v, 0) / marketVariances.length;
+        console.log(`Total qualifying sold cars: ${marketVariances.length}`);
+        console.log(`Average market variance: ${market_var_pct.toFixed(1)}%`);
+      } else {
+        console.log('No sold cars with both Bud > 0 and valid Low estimate in last 60 days.');
       }
 
-      // Model-specific comps (only for table / reference)
+      // ── Model-specific comps (reference table only) ──────────────────
       const modelRows = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const low = parseFloat(row[idx.low]) || 0;
@@ -600,10 +626,8 @@
       const likely_bid = low * (1 + hist.var_pct / 100);
 
       // Dynamic variance text
-      let varianceText;
-      if (Math.abs(hist.var_pct) < 0.01) {
-        varianceText = 'nøyaktig lik lavt estimat';
-      } else {
+      let varianceText = 'nøyaktig lik lavt estimat';
+      if (Math.abs(hist.var_pct) > 0.01) {
         const direction = hist.var_pct > 0 ? 'over' : 'under';
         const absPct = Math.abs(hist.var_pct).toFixed(1);
         varianceText = `${absPct}% ${direction} lavt estimat`;
