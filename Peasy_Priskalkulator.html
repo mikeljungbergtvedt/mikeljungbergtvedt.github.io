@@ -136,20 +136,16 @@
 <body>
   <div class="container">
     <div class="header"><h1>Verdsettelsesverktøy</h1></div>
-
     <button onclick="loadAndShowPending()">Oppdater ventende leads</button>
     <input type="text" id="searchPending" placeholder="Søk i alle kolonner (regnr, merke, modell, år, km...)" oninput="filterPendingTable()">
-
     <div id="pending" class="card">
       <h2>Ventende leads</h2>
       <p id="pendingCount">Laster ventende leads...</p>
-
       <div style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:-1;">
         <div id="avgStandCircle" style="width:100px; height:100px; background:var(--peasy-green); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:28px; font-weight:bold;">
           <div id="avgStand">-</div>
         </div>
       </div>
-
       <div style="overflow-x: auto;" id="tableContainer">
         <table id="pendingTable">
           <thead>
@@ -170,11 +166,8 @@
         </table>
       </div>
     </div>
-
     <hr>
-
     <h2>Verdikalkulator</h2>
-
     <div class="guidelines">
       <div class="guidelines-header" onclick="toggleGuidelines()">
         <strong>Retningslinjer</strong>
@@ -194,7 +187,6 @@
         • Over 100 000 km → ±30 000 km
       </div>
     </div>
-
     <form id="valForm" class="card">
       <label>RegNr:</label><input type="text" id="regnr" disabled>
       <label>Merke:</label><input type="text" id="make" required>
@@ -216,14 +208,11 @@
         </a>
       </div>
     </form>
-
     <div id="output" class="card"></div>
   </div>
-
   <div id="toast"></div>
-
   <div id="version-info">
-    v1.5.8 • sist oppdatert 09.02.2026
+    v1.5.9 • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -248,45 +237,34 @@
 
     function progressBar4Hours(sdString) {
       if (!sdString || typeof sdString !== 'string') return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
-
       const parts = sdString.trim().split(/\s+/);
       const datePart = parts[0];
       const timePart = parts[1] || '00:00';
-
       const [d, m, y] = datePart.split('.').map(Number);
       const [h, min] = timePart.split(':').map(Number);
-
       if (!d || !m || !y) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
-
       const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
       if (isNaN(sdDate.getTime())) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
-
       const now = new Date();
       let elapsedMinutes = 0;
       let current = new Date(sdDate);
-
       while (current < now) {
         current.setMinutes(current.getMinutes() + 1);
         const day = current.getDay();
         const hour = current.getHours();
-
         if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
           elapsedMinutes++;
         }
       }
-
       const remainingMinutes = 240 - elapsedMinutes;
       const progress = Math.max(0, Math.min(elapsedMinutes / 240, 1));
-
       let color = '#004225';
       if (progress > 0.25) color = '#FFCC33';
       if (progress >= 1) color = '#f44336';
-
       const widthPercent = Math.round(progress * 100);
       const remainingH = Math.floor(remainingMinutes / 60);
       const remainingM = remainingMinutes % 60;
       const remainingText = remainingMinutes > 0 ? `${remainingH}:${remainingM.toString().padStart(2, '0')}` : 'Over 4t';
-
       return `
         <div style="height:20px; background:#eee; border-radius:10px; overflow:hidden; position:relative;">
           <div style="width:${widthPercent}%; height:100%; background:${color}; transition:width 0.4s ease;"></div>
@@ -299,33 +277,25 @@
 
     function getHoursMinutesElapsed(sdString) {
       if (!sdString || typeof sdString !== 'string') return 0;
-
       const parts = sdString.trim().split(/\s+/);
       const datePart = parts[0];
       const timePart = parts[1] || '00:00';
-
       const [d, m, y] = datePart.split('.').map(Number);
       const [h, min] = timePart.split(':').map(Number);
-
       if (!d || !m || !y) return 0;
-
       const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
       if (isNaN(sdDate.getTime())) return 0;
-
       const now = new Date();
       let elapsedMinutes = 0;
       let current = new Date(sdDate);
-
       while (current < now) {
         current.setMinutes(current.getMinutes() + 1);
         const day = current.getDay();
         const hour = current.getHours();
-
         if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
           elapsedMinutes++;
         }
       }
-
       return elapsedMinutes / 60;
     }
 
@@ -379,13 +349,11 @@
     async function loadAndShowPending() {
       const countEl = document.getElementById('pendingCount');
       countEl.textContent = "Laster ventende leads...";
-
       const success = await loadReport();
       if (!success) {
         countEl.textContent = "Kunne ikke laste leads – prøv å oppdatere";
         return false;
       }
-
       const sdCol = findColumn(['SD mottatt på', 'SD mottatt']);
       const arCol = findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']);
       const statusCol = findColumn(['Status']);
@@ -396,7 +364,6 @@
       const postCol = findColumn(['Postnr']);
       const stedCol = findColumn(['Sted']);
       const kmCol = findColumn(['KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand']);
-
       let pending = data.filter(row => {
         const sdVal = String(row[sdCol] || '').trim();
         let arVal = String(row[arCol] || '').trim();
@@ -405,18 +372,14 @@
         const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
         return sdVal !== '' && arVal === '' && isRelevant;
       });
-
       pending.sort((a, b) => {
         const ta = getHoursMinutesElapsed(a[sdCol]);
         const tb = getHoursMinutesElapsed(b[sdCol]);
-        return tb - ta;
+        return tb - ta; // nyeste først (mest tid igjen først)
       });
-
       countEl.textContent = `Fant ${pending.length} ventende leads`;
-
       const tbody = document.querySelector('#pendingTable tbody');
       tbody.innerHTML = '';
-
       pending.forEach(row => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
@@ -424,11 +387,9 @@
           fillFormFromRow(row);
           showToast('Bil lagt til kalkulator');
         });
-
         const kmDisplay = formatKm(row[kmCol]);
         const standTidDecimal = getHoursMinutesElapsed(row[sdCol]);
         const standTidDisplay = standTidDecimal === 0 ? '0:00' : formatHHMM(standTidDecimal);
-
         tr.innerHTML = `
           <td>${row[regCol] || '-'}</td>
           <td>${row[merkeCol] || '-'}</td>
@@ -443,7 +404,6 @@
         `;
         tbody.appendChild(tr);
       });
-
       if (pending.length === 0) {
         const tableContainer = document.getElementById('tableContainer');
         tableContainer.innerHTML = `
@@ -459,21 +419,16 @@
           colors: ['#004225', '#FFCC33', '#ffffff']
         });
       }
-
       const totalStand = pending.reduce((sum, row) => sum + getHoursMinutesElapsed(row[sdCol]), 0);
       const avgStand = pending.length ? (totalStand / pending.length) : 0;
       const avgDisplay = formatHHMM(avgStand);
-
       const circle = document.getElementById('avgStandCircle');
       const number = document.getElementById('avgStand');
-
       number.textContent = avgDisplay;
-
       let bgColor = '#004225';
       if (avgStand > 1) bgColor = '#FFCC33';
       if (avgStand > 4) bgColor = '#f44336';
       circle.style.background = bgColor;
-
       return true;
     }
 
@@ -537,13 +492,19 @@
 
     function getHistoricalComps(specs) {
       const idx = {
-        bud: findColumn(['Bud']),
-        low: findColumn(['Endelig AR verdi', 'Laveste']),
-        sold: findColumn(['Solgt på']),
+        bud:   findColumn(['Bud']),
+        low:   findColumn(['Endelig AR verdi', 'Laveste', 'AR verdi']),
+        sold:  findColumn(['Solgt på']),
+        reg:   findColumn(['RegNr', 'Reg nr', 'Regnr']),
+        make:  findColumn(['Merke']),
+        model: findColumn(['Modell']),
+        year:  findColumn(['År', 'Årgang']),
       };
+
       const now = new Date();
       const thirtyDaysAgo = new Date(now);
       thirtyDaysAgo.setDate(now.getDate() - 30);
+
       const comps = data.filter(row => {
         const bud = parseFloat(row[idx.bud]) || 0;
         const low = parseFloat(row[idx.low]) || 0;
@@ -554,16 +515,38 @@
         } catch {
           soldDate = new Date(0);
         }
-        return bud > 0 && low > 0 && soldDate >= thirtyDaysAgo && !isNaN(soldDate);
+        const makeMatch  = String(row[idx.make]  || '').trim().toLowerCase() === specs.make.toLowerCase();
+        const modelMatch = String(row[idx.model] || '').trim().toLowerCase() === specs.model.toLowerCase();
+        return (
+          bud > 0 &&
+          low > 0 &&
+          soldDate >= thirtyDaysAgo &&
+          !isNaN(soldDate.getTime()) &&
+          makeMatch &&
+          modelMatch
+        );
       }).map(row => {
-        const bud = parseFloat(row[idx.bud]) || 0;
-        const low = parseFloat(row[idx.low]) || bud;
+        const bud  = parseFloat(row[idx.bud])  || 0;
+        const low  = parseFloat(row[idx.low])  || bud;
         const variance = low > 0 ? ((bud - low) / low * 100) : 0;
-        return { variance };
+        return {
+          regnr:   row[idx.reg]   || '-',
+          make:    row[idx.make]  || '',
+          model:   row[idx.model] || '',
+          year:    row[idx.year]  || '-',
+          bud,
+          low,
+          variance,
+          sold:    row[idx.sold]  || '-'
+        };
       });
-      if (comps.length === 0) return { var_pct: 0, count: 0 }; // bedre fallback: 0 %
-      const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
-      return { var_pct, count: comps.length };
+
+      let var_pct = 0;
+      if (comps.length > 0) {
+        var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
+      }
+
+      return { var_pct, count: comps.length, comps };
     }
 
     function calculateValuation() {
@@ -573,21 +556,27 @@
         alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
         return;
       }
-      const margin = parseFloat(document.getElementById('margin').value) / 100 || 0;
-      const tillegg = parseFloat(document.getElementById('tillegg').value) / 100 || 0;
+
+      const margin    = parseFloat(document.getElementById('margin').value)    / 100 || 0;
+      const tillegg   = parseFloat(document.getElementById('tillegg').value)   / 100 || 0;
       const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
       const spread = 0.05;
+
       let midpoint = finn * (1 - margin - tillegg);
       midpoint += midpoint * motivation;
-      const low = midpoint * (1 - spread);
+
+      const low  = midpoint * (1 - spread);
       const high = midpoint * (1 + spread);
+
       const specs = {
-        make: document.getElementById('make').value.trim(),
+        make:  document.getElementById('make').value.trim(),
         model: document.getElementById('model').value.trim(),
-        year: parseInt(document.getElementById('year').value) || 0
+        year:  parseInt(document.getElementById('year').value) || 0
       };
+
       const hist = getHistoricalComps(specs);
       const likely_bid = low * (1 + hist.var_pct / 100);
+
       const copyText = [
         `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
         `${specs.make} ${specs.model} ${specs.year}`,
@@ -600,6 +589,7 @@
         `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
         `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
       ].join('\n');
+
       const output = document.getElementById('output');
       output.innerHTML = `
         <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
@@ -611,30 +601,40 @@
         <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
         <button id="copyBtn">Kopier full beregning til ERP</button>
         <div id="copyFeedback"></div>
-        <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
-        <table>
-          <thead><tr>
-            <th>RegNr</th>
-            <th>Merke/Modell/År</th>
-            <th>Bud</th>
-            <th>Lavt estimat</th>
-            <th class="red">Varians %</th>
-            <th>Solgt</th>
-          </tr></thead>
-          <tbody>${
-            hist.comps.map(c => `
+
+        <h4>Historiske sammenlignbare (${hist.count} stk siste 30 dager)</h4>
+        ${hist.count > 0 ? `
+          <table>
+            <thead>
               <tr>
-                <td>${c.regnr}</td>
-                <td>${c.make} ${c.model} ${c.year}</td>
-                <td>${c.bud.toLocaleString('nb-NO')}</td>
-                <td>${c.low.toLocaleString('nb-NO')}</td>
-                <td class="red">${c.variance.toFixed(1)}%</td>
-                <td>${c.sold}</td>
+                <th>RegNr</th>
+                <th>Merke/Modell/År</th>
+                <th>Bud</th>
+                <th>Lavt estimat</th>
+                <th class="red">Varians %</th>
+                <th>Solgt</th>
               </tr>
-            `).join('')
-          }</tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${hist.comps.map(c => `
+                <tr>
+                  <td>${c.regnr}</td>
+                  <td>${c.make} ${c.model} ${c.year}</td>
+                  <td>${c.bud.toLocaleString('nb-NO')}</td>
+                  <td>${c.low.toLocaleString('nb-NO')}</td>
+                  <td class="red">${c.variance.toFixed(1)}%</td>
+                  <td>${c.sold}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `
+          <p style="font-style:italic; color:#666;">
+            Ingen solgte eksemplarer av ${specs.make} ${specs.model} funnet de siste 30 dagene.
+          </p>
+        `}
       `;
+
       document.getElementById('copyBtn').addEventListener('click', () => {
         navigator.clipboard.writeText(copyText).then(() => {
           const fb = document.getElementById('copyFeedback');
