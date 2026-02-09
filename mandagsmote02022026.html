@@ -26,11 +26,11 @@
       min-height: 100vh;
       line-height: 1.5;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
     .header { text-align: center; margin-bottom: 3rem; }
     h1 { font-weight: 900; font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -0.8px; margin: 0 0 0.5rem; }
     h2 { font-weight: 700; font-size: clamp(1.5rem, 4vw, 1.75rem); margin: 3rem 0 1.25rem; }
-    .card { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid rgba(130,191,210,0.12); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,66,37,0.06); padding: clamp(1.5rem, 4vw, 2rem); margin-bottom: 2.5rem; }
+    .card { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid rgba(130,191,210,0.12); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,66,37,0.06); padding: clamp(1.5rem, 4vw, 2rem); margin-bottom: 2.5rem; position:relative; }
     label { display: block; margin: 1.25rem 0 0.5rem; font-weight: 600; font-size: 1.05rem; }
     input { padding: 0.875rem 1rem; font-size: 1rem; border: 1px solid rgba(130,191,210,0.4); border-radius: 10px; width: 100%; transition: all 0.2s; }
     input:focus { border-color: var(--peasy-green); outline: none; box-shadow: 0 0 0 3px rgba(0,66,37,0.12); }
@@ -57,26 +57,26 @@
     th, td { border: 1px solid rgba(130,191,210,0.25); padding: 0.75rem; text-align: left; }
     th { background: rgba(130,191,210,0.08); font-weight: 600; }
     td:nth-child(5), th:nth-child(5) { text-align: right; min-width: 130px; }
+    td:nth-child(7), th:nth-child(7) { text-align: center; min-width: 140px; padding: 8px 6px; }
+    td:nth-child(8), th:nth-child(8) { text-align: center; min-width: 100px; font-weight: 500; }
     .red { color: #d32f2f; font-weight: bold; }
     .step, .likely { margin: 1rem 0; padding: 1rem; background: rgba(255,255,255,0.7); border-left: 5px solid var(--peasy-green); border-radius: 8px; }
     .likely { font-weight: 700; font-size: 1.25rem; background: rgba(0,66,37,0.05); }
     #copyBtn { background: var(--peasy-yellow); color: var(--peasy-green); font-weight: 500; padding: 0.875rem 1.75rem; font-size: 1.1rem; border-radius: 8px; margin: 1.75rem auto 0.75rem; display: block; min-width: 260px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
     #copyBtn:hover { background: var(--peasy-yellow-hover); }
-    #searchReg { width: 100%; max-width: 320px; margin: 1rem 0 1.5rem; }
-    .guidelines { font-size: 0.95rem; color: #555; margin: 1.25rem 0 2rem; padding: 1.25rem; background: rgba(130,191,210,0.05); border-radius: 10px; border: 1px solid rgba(130,191,210,0.2); }
-    .guidelines-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-    .guidelines-content { display: none; margin-top: 0.75rem; line-height: 1.6; }
-    .guidelines-toggle { font-size: 1.3rem; font-weight: bold; }
-    #copyFeedback { color: var(--peasy-green); font-weight: 500; text-align: center; margin: 0.5rem 0; min-height: 1.3em; }
+    #searchPending { width: 100%; max-width: 400px; margin: 1rem 0 1.5rem; }
     #version-info {
       position: fixed;
-      bottom: 0.75rem;
-      right: 1rem;
-      font-size: 0.75rem;
-      color: #777;
-      opacity: 0.65;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.8rem;
+      color: #555;
+      background: rgba(255,255,255,0.9);
+      padding: 4px 10px;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      z-index: 100;
       pointer-events: none;
-      z-index: 10;
     }
     #toast {
       position: fixed;
@@ -107,6 +107,7 @@
       button, #finnLink, #copyBtn { width: 100%; padding: 0.7rem 1rem; font-size: 0.95rem; }
       table { font-size: 0.9rem; }
       th, td { padding: 0.6rem; }
+      #searchPending { max-width: 100%; }
     }
   </style>
 </head>
@@ -115,11 +116,19 @@
     <div class="header"><h1>Verdsettelsesverktøy</h1></div>
 
     <button onclick="loadAndShowPending()">Oppdater ventende leads</button>
-    <input type="text" id="searchReg" placeholder="Søk RegNr..." oninput="filterPendingTable()">
+    <input type="text" id="searchPending" placeholder="Søk i alle kolonner (regnr, merke, modell, år, km...)" oninput="filterPendingTable()">
 
     <div id="pending" class="card">
       <h2>Ventende leads</h2>
       <p id="pendingCount">Laster ventende leads...</p>
+
+      <div style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:-1;">
+        <div id="gaugeBg" style="width:120px; height:120px; border-radius:50%; opacity:0.5; filter:blur(20px); background:conic-gradient(from 180deg at 50% 50%, #4ade80 0%, #fbbf24 50%, #ef4444 100%);"></div>
+        <div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;">
+          <div id="avgStand" style="font-size:32px; font-weight:bold; color:#004225;">-</div>
+        </div>
+      </div>
+
       <div style="overflow-x: auto;">
         <table id="pendingTable">
           <thead>
@@ -130,6 +139,8 @@
               <th>År</th>
               <th>KM</th>
               <th>SD mottatt på</th>
+              <th style="text-align:center; min-width:140px;">Frist-progress</th>
+              <th>Ståtid (h:mm)</th>
               <th>Status</th>
               <th>Postnr/Sted</th>
             </tr>
@@ -191,7 +202,7 @@
   <div id="toast"></div>
 
   <div id="version-info">
-    v1.3.9 • sist oppdatert 09.02.2026
+    v1.5.1 • sist oppdatert 09.02.2026
   </div>
 
   <script>
@@ -200,23 +211,102 @@
 
     function formatKm(val) {
       if (val == null || val === '' || val === '-') return '-';
-
       let num;
-
       if (typeof val === 'number') {
         num = val;
       } else {
-        // Try to clean string
         let str = String(val).trim()
           .replace(/\s*km\s*/gi, '')
           .replace(/\s+/g, '')
           .replace(/[^0-9-]/g, '');
         num = parseInt(str, 10);
       }
-
       if (isNaN(num) || num <= 0) return '-';
-
       return num.toLocaleString('nb-NO') + ' km';
+    }
+
+    function progressBar4Hours(sdString) {
+      if (!sdString || typeof sdString !== 'string') return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
+
+      const parts = sdString.trim().split(/\s+/);
+      const datePart = parts[0];
+      const timePart = parts[1] || '00:00';
+
+      const [d, m, y] = datePart.split('.').map(Number);
+      const [h, min] = timePart.split(':').map(Number);
+
+      if (!d || !m || !y) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
+
+      const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
+      if (isNaN(sdDate.getTime())) return '<div style="height:20px;background:#eee;border-radius:10px;"></div>';
+
+      const now = new Date();
+      let elapsedHours = 0;
+      let current = new Date(sdDate);
+
+      while (current < now) {
+        current.setHours(current.getHours() + 1);
+        const day = current.getDay();
+        const hour = current.getHours();
+
+        if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
+          elapsedHours++;
+        }
+      }
+
+      const progress = Math.min(elapsedHours / 4, 1);
+      const hue = 120 * (1 - progress); // 120° grønn → 0° rød
+      const color = `hsl(${hue}, 100%, 50%)`;
+
+      const widthPercent = Math.round(progress * 100);
+
+      return `
+        <div style="height:20px; background:#eee; border-radius:10px; overflow:hidden; position:relative;">
+          <div style="width:${widthPercent}%; height:100%; background:${color}; transition:width 0.4s ease;"></div>
+          <div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; text-shadow:0 0 3px #000; font-weight:600;">
+            ${widthPercent < 12 ? '' : widthPercent + '%'}
+          </div>
+        </div>
+      `;
+    }
+
+    function getHoursMinutesElapsed(sdString) {
+      if (!sdString || typeof sdString !== 'string') return 0;
+
+      const parts = sdString.trim().split(/\s+/);
+      const datePart = parts[0];
+      const timePart = parts[1] || '00:00';
+
+      const [d, m, y] = datePart.split('.').map(Number);
+      const [h, min] = timePart.split(':').map(Number);
+
+      if (!d || !m || !y) return 0;
+
+      const sdDate = new Date(y, m - 1, d, h || 0, min || 0);
+      if (isNaN(sdDate.getTime())) return 0;
+
+      const now = new Date();
+      let elapsedMinutes = 0;
+      let current = new Date(sdDate);
+
+      while (current < now) {
+        current.setMinutes(current.getMinutes() + 1);
+        const day = current.getDay();
+        const hour = current.getHours();
+
+        if (day >= 1 && day <= 5 && hour >= 8 && hour <= 16) {
+          elapsedMinutes++;
+        }
+      }
+
+      return elapsedMinutes / 60;
+    }
+
+    function formatHHMM(hoursDecimal) {
+      if (hoursDecimal === 0) return '0:00';
+      const h = Math.floor(hoursDecimal);
+      const m = Math.round((hoursDecimal - h) * 60);
+      return `${h}:${m.toString().padStart(2, '0')}`;
     }
 
     function showToast(message) {
@@ -237,7 +327,6 @@
         const json = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
         headers = json[0].map(h => String(h || '').trim());
         data = json.slice(1);
-        console.log(`Loaded ${data.length} rows. Headers:`, headers);
         return true;
       } catch (err) {
         console.error('Failed to load report:', err);
@@ -247,21 +336,16 @@
 
     function findColumn(patterns) {
       const lowerHeaders = headers.map(h => String(h).trim().toLowerCase());
-
-      // Try exact match first
       for (let pattern of patterns) {
         const p = pattern.trim().toLowerCase();
         const idx = lowerHeaders.findIndex(h => h === p);
         if (idx !== -1) return idx;
       }
-
-      // Then partial match
       for (let pattern of patterns) {
         const p = pattern.trim().toLowerCase();
         const idx = lowerHeaders.findIndex(h => h.includes(p));
         if (idx !== -1) return idx;
       }
-
       return -1;
     }
 
@@ -275,47 +359,30 @@
         return false;
       }
 
-      const sdCol     = findColumn(['SD mottatt på', 'SD mottatt']);
-      const arCol     = findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']);
+      const sdCol = findColumn(['SD mottatt på', 'SD mottatt']);
+      const arCol = findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste']);
       const statusCol = findColumn(['Status']);
-      const regCol    = findColumn(['RegNr', 'Reg nr', 'Regnr']);
-      const merkeCol  = findColumn(['Merke']);
+      const regCol = findColumn(['RegNr', 'Reg nr', 'Regnr']);
+      const merkeCol = findColumn(['Merke']);
       const modellCol = findColumn(['Modell']);
-      const yearCol   = findColumn(['År', 'Årgang']);
-      const postCol   = findColumn(['Postnr']);
-      const stedCol   = findColumn(['Sted']);
-
-      // ────────────────────────────────────────────────
-      // KM column – improved detection
-      const kmCol = findColumn([
-        'KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde',
-        'Km stand', 'Kilometerstand', 'Stand km', 'Stand'
-      ]);
-
-      console.log("KM column → index:", kmCol, 
-                  "header:", kmCol >= 0 ? headers[kmCol] : "NOT FOUND");
-
-      if (kmCol === -1) {
-        console.warn("Could not find KM column. Available headers:", headers);
-      }
+      const yearCol = findColumn(['År', 'Årgang']);
+      const postCol = findColumn(['Postnr']);
+      const stedCol = findColumn(['Sted']);
+      const kmCol = findColumn(['KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand']);
 
       let pending = data.filter(row => {
         const sdVal = String(row[sdCol] || '').trim();
         let arVal = String(row[arCol] || '').trim();
         const statusVal = String(row[statusCol] || '').trim().toLowerCase();
-
         if (['-', '–', '—', ''].includes(arVal)) arVal = '';
-
-        const isRelevant = statusVal.includes('endelig estimat') || 
-                          statusVal.includes('sd mottatt');
-
+        const isRelevant = statusVal.includes('endelig estimat') || statusVal.includes('sd mottatt');
         return sdVal !== '' && arVal === '' && isRelevant;
       });
 
       pending.sort((a, b) => {
-        const da = new Date(a[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
-        const db = new Date(b[sdCol]?.split('.').reverse().join('-') || '1900-01-01');
-        return da - db;
+        const ta = getHoursMinutesElapsed(a[sdCol]);
+        const tb = getHoursMinutesElapsed(b[sdCol]);
+        return tb - ta;
       });
 
       countEl.textContent = `Fant ${pending.length} ventende leads`;
@@ -323,12 +390,7 @@
       const tbody = document.querySelector('#pendingTable tbody');
       tbody.innerHTML = '';
 
-      pending.forEach((row, i) => {
-        if (i === 0) {
-          console.log("First pending row KM raw:", row[kmCol], 
-                      "type:", typeof row[kmCol]);
-        }
-
+      pending.forEach(row => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
         tr.addEventListener('click', () => {
@@ -337,19 +399,29 @@
         });
 
         const kmDisplay = formatKm(row[kmCol]);
+        const standTidDecimal = getHoursMinutesElapsed(row[sdCol]);
+        const standTidDisplay = standTidDecimal === 0 ? '0:00' : formatHHMM(standTidDecimal);
 
         tr.innerHTML = `
-          <td>${row[regCol]   || '-'}</td>
+          <td>${row[regCol] || '-'}</td>
           <td>${row[merkeCol] || '-'}</td>
           <td>${row[modellCol]|| '-'}</td>
-          <td>${row[yearCol]  || '-'}</td>
+          <td>${row[yearCol] || '-'}</td>
           <td style="text-align:right">${kmDisplay}</td>
-          <td>${row[sdCol]    || '-'}</td>
+          <td>${row[sdCol] || '-'}</td>
+          <td>${progressBar4Hours(row[sdCol])}</td>
+          <td style="text-align:center; font-weight:500;">${standTidDisplay}</td>
           <td>${row[statusCol]|| '-'}</td>
           <td>${row[postCol]||''} ${row[stedCol]||''}</td>
         `;
         tbody.appendChild(tr);
       });
+
+      const totalStand = pending.reduce((sum, row) => sum + getHoursMinutesElapsed(row[sdCol]), 0);
+      const avgStand = pending.length ? (totalStand / pending.length) : 0;
+      const avgDisplay = formatHHMM(avgStand);
+
+      document.getElementById('avgStand').textContent = avgDisplay;
 
       return true;
     }
@@ -365,222 +437,60 @@
     }
 
     function updateFinnLink() {
-      const make  = document.getElementById('make').value.trim();
+      const make = document.getElementById('make').value.trim();
       const model = document.getElementById('model').value.trim();
-      const year  = parseInt(document.getElementById('year').value) || 0;
-      const km    = parseInt(document.getElementById('kmstand').value) || 0;
-
+      const year = parseInt(document.getElementById('year').value) || 0;
+      const km = parseInt(document.getElementById('kmstand').value) || 0;
       const container = document.getElementById('finnSearchLink');
       const link = document.getElementById('finnLink');
-
       if (!make || !model || year < 1900 || year > 2030) {
         container.style.display = 'none';
         return;
       }
-
       let mileage = '';
       if (km > 0) {
         let delta = km < 50000 ? 10000 : km <= 100000 ? 20000 : 30000;
         mileage = `&mileage_from=${Math.max(0, km - delta)}&mileage_to=${km + delta}`;
       }
-
       const q = encodeURIComponent(`${make} ${model}`);
       const url = `https://www.finn.no/mobility/search/car?q=${q}&registration_class=1&sales_form=1&sort=PRICE_ASC&year_from=${year}&year_to=${year}${mileage}`;
-
       link.href = url;
       container.style.display = 'block';
     }
 
     function fillFormFromRow(row) {
       const idx = {
-        reg:   findColumn(['RegNr', 'Reg nr', 'Regnr']),
-        make:  findColumn(['Merke']),
+        reg: findColumn(['RegNr', 'Reg nr', 'Regnr']),
+        make: findColumn(['Merke']),
         model: findColumn(['Modell']),
-        year:  findColumn(['År', 'Årgang']),
-        km:    findColumn(['KM', 'Km', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand'])
+        year: findColumn(['År', 'Årgang']),
+        km: findColumn(['KM', 'Km', 'K.M', 'Kilometer', 'Kjørelengde', 'Km stand', 'Kilometerstand', 'Stand'])
       };
-
       const kmRaw = row[idx.km];
       const kmFormatted = formatKm(kmRaw);
-      const kmNumber = kmFormatted === '-' ? '' : 
-                       parseInt(kmFormatted.replace(/\s/g, '').replace('km', '')) || '';
-
-      document.getElementById('regnr').value    = row[idx.reg]   || '';
-      document.getElementById('make').value     = String(row[idx.make]  || '').trim();
-      document.getElementById('model').value    = String(row[idx.model] || '').trim();
-      document.getElementById('year').value     = row[idx.year]  || '';
-      document.getElementById('kmstand').value  = kmNumber;
+      const kmNumber = kmFormatted === '-' ? '' : parseInt(kmFormatted.replace(/\s/g, '').replace('km', '')) || '';
+      document.getElementById('regnr').value = row[idx.reg] || '';
+      document.getElementById('make').value = String(row[idx.make] || '').trim();
+      document.getElementById('model').value = String(row[idx.model] || '').trim();
+      document.getElementById('year').value = row[idx.year] || '';
+      document.getElementById('kmstand').value = kmNumber;
       document.getElementById('finn_avg').value = '';
-
       document.getElementById('output').innerHTML = '';
-
       const reminder = document.getElementById('priceReminder');
       reminder.style.display = 'block';
-
       const finnInput = document.getElementById('finn_avg');
-      const hideReminder = () => {
-        reminder.style.display = 'none';
-        finnInput.removeEventListener('input', hideReminder);
-      };
+      const hideReminder = () => { reminder.style.display = 'none'; };
       finnInput.addEventListener('input', hideReminder, { once: true });
-
       updateFinnLink();
     }
 
-    function getHistoricalComps(specs) {
-      const idx = {
-        bud:   findColumn(['Bud']),
-        low:   findColumn(['Endelig AR verdi', 'Laveste']),
-        make:  findColumn(['Merke']),
-        model: findColumn(['Modell']),
-        year:  findColumn(['År']),
-        sold:  findColumn(['Solgt på']),
-        reg:   findColumn(['RegNr']),
-      };
-
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now);
-      thirtyDaysAgo.setDate(now.getDate() - 30);
-
-      const comps = data.filter(row => {
-        const m  = String(row[idx.make]  || '').trim().toLowerCase();
-        const mo = String(row[idx.model] || '').trim().toLowerCase();
-        const y  = parseInt(row[idx.year]) || 0;
-        const bud = parseFloat(row[idx.bud]) || 0;
-
-        let soldDate;
-        try {
-          const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
-          soldDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
-        } catch {
-          soldDate = new Date(0);
-        }
-
-        return m === specs.make.toLowerCase() &&
-               mo === specs.model.toLowerCase() &&
-               y >= specs.year - 1 && y <= specs.year + 1 &&
-               bud > 0 &&
-               soldDate >= thirtyDaysAgo && !isNaN(soldDate);
-      }).map(row => {
-        const bud = parseFloat(row[idx.bud]) || 0;
-        const low = parseFloat(row[idx.low]) || bud;
-        const variance = low > 0 ? ((bud - low) / low * 100) : 0;
-        return {
-          regnr: row[idx.reg] || '-',
-          make: row[idx.make] || '',
-          model: row[idx.model] || '',
-          year: row[idx.year] || '',
-          bud,
-          low,
-          variance,
-          sold: row[idx.sold] || '-'
-        };
-      });
-
-      if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
-
-      const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
-      return { var_pct, count: comps.length, comps };
-    }
-
-    function calculateValuation() {
-      const finnStr = document.getElementById('finn_avg').value.trim();
-      const finn = parseFinnPrice(finnStr);
-
-      if (finnStr !== '' && finn <= 0) {
-        alert('Ugyldig pris i "Finn pris ex omreg" – skriv kun tall (f.eks. 249000 eller 249 000)');
-        return;
-      }
-
-      const margin    = parseFloat(document.getElementById('margin').value)    / 100 || 0;
-      const tillegg   = parseFloat(document.getElementById('tillegg').value)   / 100 || 0;
-      const motivation = parseFloat(document.getElementById('motivation').value) / 100 || 0;
-      const spread = 0.05;
-
-      let midpoint = finn * (1 - margin - tillegg);
-      midpoint += midpoint * motivation;
-
-      const low  = midpoint * (1 - spread);
-      const high = midpoint * (1 + spread);
-
-      const specs = {
-        make:  document.getElementById('make').value.trim(),
-        model: document.getElementById('model').value.trim(),
-        year:  parseInt(document.getElementById('year').value) || 0
-      };
-
-      const hist = getHistoricalComps(specs);
-      const likely_bid = low * (1 + hist.var_pct / 100);
-
-      const copyText = [
-        `Verdsettelse for ${document.getElementById('regnr').value || 'ukjent'}`,
-        `${specs.make} ${specs.model} ${specs.year}`,
-        "",
-        `Base (Finn pris ex omreg): ${finn.toLocaleString('nb-NO')} kr`,
-        `Etter margin ${margin*100}% + tillegg ${tillegg*100}%: ${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr`,
-        `Etter motivasjon ${motivation*100}%: ${Math.round(midpoint).toLocaleString('nb-NO')} kr (midtpunkt)`,
-        `Fra (midtpunkt -5%): ${Math.round(low).toLocaleString('nb-NO')} kr`,
-        `Til (midtpunkt +5%): ${Math.round(high).toLocaleString('nb-NO')} kr`,
-        `Sannsynlig akseptert (hist varians ${hist.var_pct.toFixed(1)}%): ${Math.round(likely_bid).toLocaleString('nb-NO')} kr`,
-        `Historisk varians: ${hist.var_pct.toFixed(1)}% (basert på ${hist.count} solgte biler siste 30 dager)`
-      ].join('\n');
-
-      const output = document.getElementById('output');
-      output.innerHTML = `
-        <h3>Beregningstrinn (100% basert på Finn – ingen blanding med historikk)</h3>
-        <div class="step">1. Base (Finn pris ex omreg): <strong>${finn.toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step">2. Etter margin ${margin*100}% + tillegg ${tillegg*100}%: <strong>${Math.round(finn * (1 - margin - tillegg)).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step">3. Etter motivasjon ${motivation*100}%: <strong>${Math.round(midpoint).toLocaleString('nb-NO')} kr</strong> ← midtpunkt</div>
-        <div class="step">4. ±5% spredning rundt midtpunkt:<br><strong>Fra: ${Math.round(low).toLocaleString('nb-NO')} kr</strong><br><strong>Til: ${Math.round(high).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step likely">Sannsynlig akseptert (historisk justering): <strong>${Math.round(likely_bid).toLocaleString('nb-NO')} kr</strong></div>
-        <div class="step"><strong class="red">Historisk varians: ${hist.var_pct.toFixed(1)}% under lavt estimat</strong><br>(basert på ${hist.count} solgte biler siste 30 dager)</div>
-
-        <button id="copyBtn">Kopier full beregning til ERP</button>
-        <div id="copyFeedback"></div>
-
-        <h4>Historiske sammenlignbare (kun referanse – ${hist.count})</h4>
-        <table>
-          <thead><tr>
-            <th>RegNr</th>
-            <th>Merke/Modell/År</th>
-            <th>Bud</th>
-            <th>Lavt estimat</th>
-            <th class="red">Varians %</th>
-            <th>Solgt</th>
-          </tr></thead>
-          <tbody>${
-            hist.comps.map(c => `
-              <tr>
-                <td>${c.regnr}</td>
-                <td>${c.make} ${c.model} ${c.year}</td>
-                <td>${c.bud.toLocaleString('nb-NO')}</td>
-                <td>${c.low.toLocaleString('nb-NO')}</td>
-                <td class="red">${c.variance.toFixed(1)}%</td>
-                <td>${c.sold}</td>
-              </tr>
-            `).join('')
-          }</tbody>
-        </table>
-      `;
-
-      document.getElementById('copyBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(copyText).then(() => {
-          const fb = document.getElementById('copyFeedback');
-          fb.textContent = '✓ Kopiert til utklippstavlen!';
-          fb.style.color = '#004225';
-          setTimeout(() => { fb.textContent = ''; }, 4000);
-        }).catch(err => {
-          console.error(err);
-          alert('Kopiering mislyktes – marker teksten manuelt');
-        });
-      });
-    }
-
     function filterPendingTable() {
-      const filter = document.getElementById('searchReg').value.toUpperCase().trim();
+      const filter = document.getElementById('searchPending').value.toUpperCase().trim();
       document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
-        const reg = row.cells[0]?.textContent?.toUpperCase() || '';
-        row.style.display = reg.includes(filter) ? '' : 'none';
+        const rowText = Array.from(row.cells)
+          .map(cell => cell.textContent.toUpperCase().trim())
+          .join(' ');
+        row.style.display = rowText.includes(filter) ? '' : 'none';
       });
     }
 
