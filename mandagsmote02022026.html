@@ -165,7 +165,7 @@
         <strong>Retningslinjer</strong>
         <span class="guidelines-toggle">+</span>
       </div>
-      <div class="guidelines-content">
+      <div class="guidelines-content" style="display:none;">
         • Finn nøyaktig årgang, merke, modell, batteri/motorstørrelse m.m.<br>
         • Søk på Finn.no – sorter <strong>lavest til høyest pris</strong><br>
         • Ta hensyn til farge der det er mulig<br>
@@ -504,6 +504,56 @@
       updateFinnLink();
     }
 
+    function getHistoricalComps(specs) {
+      const idx = {
+        bud: findColumn(['Bud']),
+        low: findColumn(['Endelig AR verdi', 'Laveste']),
+        make: findColumn(['Merke']),
+        model: findColumn(['Modell']),
+        year: findColumn(['År']),
+        sold: findColumn(['Solgt på']),
+        reg: findColumn(['RegNr']),
+      };
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      const comps = data.filter(row => {
+        const m = String(row[idx.make] || '').trim().toLowerCase();
+        const mo = String(row[idx.model] || '').trim().toLowerCase();
+        const y = parseInt(row[idx.year]) || 0;
+        const bud = parseFloat(row[idx.bud]) || 0;
+        let soldDate;
+        try {
+          const [d,m,y] = String(row[idx.sold] || '').split(' ')[0].split('.');
+          soldDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+        } catch {
+          soldDate = new Date(0);
+        }
+        return m === specs.make.toLowerCase() &&
+               mo === specs.model.toLowerCase() &&
+               y >= specs.year - 1 && y <= specs.year + 1 &&
+               bud > 0 &&
+               soldDate >= thirtyDaysAgo && !isNaN(soldDate);
+      }).map(row => {
+        const bud = parseFloat(row[idx.bud]) || 0;
+        const low = parseFloat(row[idx.low]) || bud;
+        const variance = low > 0 ? ((bud - low) / low * 100) : 0;
+        return {
+          regnr: row[idx.reg] || '-',
+          make: row[idx.make] || '',
+          model: row[idx.model] || '',
+          year: row[idx.year] || '',
+          bud,
+          low,
+          variance,
+          sold: row[idx.sold] || '-'
+        };
+      });
+      if (comps.length === 0) return { var_pct: -4, count: 0, comps: [] };
+      const var_pct = comps.reduce((sum, c) => sum + c.variance, 0) / comps.length;
+      return { var_pct, count: comps.length, comps };
+    }
+
     function calculateValuation() {
       const finnStr = document.getElementById('finn_avg').value.trim();
       const finn = parseFinnPrice(finnStr);
@@ -609,6 +659,8 @@
     });
 
     window.addEventListener('DOMContentLoaded', () => {
+      document.querySelector('.guidelines-content').style.display = 'none';
+      document.querySelector('.guidelines-toggle').textContent = '+';
       loadAndShowPending();
     });
   </script>
