@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy v15 (sky-lagring + egen kommentar)</title>
+  <title>Mandagsrapport – Peasy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     body {
       font-family: 'Inter', system-ui, sans-serif;
@@ -28,13 +29,6 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       display: inline-block;
-    }
-    .version {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #006644;
-      margin-left: 16px;
-      vertical-align: super;
     }
     .controls {
       display: flex;
@@ -143,7 +137,6 @@
       font-size: 1.05rem;
       line-height: 1.6;
     }
-    /* ─── Logo (samme stil som på de andre sidene) ─── */
     .logo-container {
       text-align: center;
       margin-bottom: 28px;
@@ -157,18 +150,11 @@
       filter: grayscale(0.15) saturate(0.92);
       transition: opacity 0.3s ease;
     }
-    .logo:hover {
-      opacity: 1;
-    }
+    .logo:hover { opacity: 1; }
     @media (max-width: 768px) {
-      .logo {
-        max-width: 180px;
-      }
-      .logo-container {
-        margin-bottom: 20px;
-      }
+      .logo { max-width: 180px; }
+      .logo-container { margin-bottom: 20px; }
     }
-    /* ─── Sticky versjonsnummer – ren tekst, ingen bakgrunn (samme som de andre) ─── */
     #version-info {
       position: fixed;
       bottom: 0.75rem;
@@ -179,16 +165,36 @@
       pointer-events: none;
       z-index: 10;
     }
+    #historical-section {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(130,191,210, 0.10);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,66,37,0.05);
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 420px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .chart-wrapper canvas {
+      max-height: 420px !important;
+    }
   </style>
 </head>
 <body>
 <div class="container">
-  <!-- Logo lagt til her -->
   <div class="logo-container">
     <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
   </div>
-  <h1>Mandagsrapport – Peasy<span class="version">v15</span></h1>
+  <h1>Mandagsrapport – Peasy</h1>
   <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
+
   <div class="controls">
     <select id="weekSelect" onchange="loadSavedReport()">
       <option value="">Velg uke...</option>
@@ -198,7 +204,9 @@
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
   </div>
+
   <div id="loading" style="display:none;">Laster...</div>
+
   <div id="report-content" style="display:none;">
     <div id="timestamp" class="timestamp"></div>
     <div id="commentary" class="commentary"></div>
@@ -211,11 +219,20 @@
       <table id="returned-table"></table>
     </div>
   </div>
-  <!-- Sticky versjonsnummer lagt til her (nederst i containeren) -->
-  <div id="version-info">
-    v15 • sist oppdatert 05.02.2026
+
+  <!-- Historical trend – placed below tables -->
+  <div id="historical-section" style="display:none;">
+    <div class="section-title">Historisk trend – gjennomsnittlig diff % (Bud vs AR laveste estimat)</div>
+    <div class="chart-wrapper">
+      <canvas id="trend-chart"></canvas>
+    </div>
   </div>
-  <!-- Lås-modal -->
+
+  <div id="version-info">
+    v17 • sist oppdatert 09.02.2026
+  </div>
+
+  <!-- Modals -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h3>Kommentar før låsing (valgfritt)</h3>
@@ -226,7 +243,7 @@
       </div>
     </div>
   </div>
-  <!-- Slett-bekreftelse -->
+
   <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:32px; border-radius:16px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h3>Sikker på sletting?</h3>
@@ -237,7 +254,7 @@
       </div>
     </div>
   </div>
-  <!-- Passord for sletting -->
+
   <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1100; text-align:center;">
     <h3>Passord kreves</h3>
     <input type="password" id="password-input" placeholder="Passord" style="padding:12px; font-size:1.1rem; width:220px; margin:16px auto; display:block;">
@@ -245,16 +262,19 @@
     <button onclick="closePasswordPrompt()" style="margin-left:16px; background:#757575; color:white;">Avbryt</button>
   </div>
 </div>
+
 <script>
 // ────────────────────────────────────────────────
 // KONFIGURASJON
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123"; // ← BYTT UT MED DITT EGET HEMMELIGE PASSORD!
+const DELETE_PASSWORD = "slett123";
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 // ────────────────────────────────────────────────
 let currentReport = null;
+let chartInstance = null;
+
 // Hjelpefunksjoner
 function cleanNum(str) {
   if (!str) return 0;
@@ -272,29 +292,18 @@ function getISOWeek(date) {
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const dayOfWeek = today.getDay();           // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
+  const dayOfWeek = today.getDay();
   let daysBackToSunday;
-  if (dayOfWeek === 1) {
-    // Monday: go back only to yesterday (Sunday)
-    daysBackToSunday = 1;
-  } else if (dayOfWeek === 0) {
-    // Sunday: the week is still ongoing → go back to previous Sunday
-    daysBackToSunday = 7;
-  } else {
-    // Tue–Sat: go back to the most recent Sunday
-    daysBackToSunday = dayOfWeek;
-  }
-
+  if (dayOfWeek === 1) daysBackToSunday = 1;
+  else if (dayOfWeek === 0) daysBackToSunday = 7;
+  else daysBackToSunday = dayOfWeek;
   const endOfPrevWeek = new Date(today);
   endOfPrevWeek.setDate(today.getDate() - daysBackToSunday);
-
   const startOfPrevWeek = new Date(endOfPrevWeek);
   startOfPrevWeek.setDate(endOfPrevWeek.getDate() - 6);
-
   return startOfPrevWeek;
 }
+
 // JSONBin
 async function fetchReports() {
   try {
@@ -321,17 +330,93 @@ async function saveReports(reports) {
     alert("Kunne ikke lagre til skyen. Sjekk konsollen.");
   }
 }
-// Initial lasting – nyeste rapport som default
+
+// Historisk chart
+async function renderHistoricalChart() {
+  const reports = await fetchReports();
+  if (reports.length < 2) {
+    document.getElementById('historical-section').style.display = 'none';
+    return;
+  }
+
+  reports.sort((a, b) => (a.weekStart || '0000-00-00') < (b.weekStart || '0000-00-00') ? -1 : 1);
+
+  const labels = reports.map(r => r.title.replace('Mandag ', ''));
+  const soldPct = reports.map(r => {
+    if (!r.soldCars?.length) return null;
+    const sum = r.soldCars.reduce((s, c) => s + (c['Diff %_raw'] || 0), 0);
+    return parseFloat((sum / r.soldCars.length).toFixed(1));
+  });
+  const returnedPct = reports.map(r => {
+    if (!r.returnedCars?.length) return null;
+    const sum = r.returnedCars.reduce((s, c) => s + (c['Diff %_raw'] || 0), 0);
+    return parseFloat((sum / r.returnedCars.length).toFixed(1));
+  });
+
+  document.getElementById('historical-section').style.display = 'block';
+
+  if (chartInstance) chartInstance.destroy();
+
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Solgte biler – gj.snitt diff %',
+          data: soldPct,
+          borderColor: '#2e7d32',
+          backgroundColor: 'rgba(46, 125, 50, 0.08)',
+          tension: 0.3,
+          borderWidth: 3,
+          pointRadius: 4
+        },
+        {
+          label: 'Returnerte biler – gj.snitt diff %',
+          data: returnedPct,
+          borderColor: '#d32f2f',
+          backgroundColor: 'rgba(211, 47, 47, 0.08)',
+          tension: 0.3,
+          borderWidth: 3,
+          pointRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'start' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'Gjennomsnittlig diff %' },
+          suggestedMin: -15,
+          suggestedMax: 15,
+          grid: { color: 'rgba(130,191,210,0.15)' }
+        },
+        x: {
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// Initial lasting
 window.onload = async () => {
   const reports = await fetchReports();
   populateWeekSelect(reports);
   if (reports.length > 0) {
-    const newest = reports[reports.length - 1];
-    document.getElementById('weekSelect').value = newest.id;
+    document.getElementById('weekSelect').value = reports[reports.length - 1].id;
     await loadSavedReport();
   }
   await updateGenerateButtonState();
+  await renderHistoricalChart();
 };
+
 function populateWeekSelect(reports) {
   const sel = document.getElementById('weekSelect');
   sel.innerHTML = '<option value="">Velg uke...</option>';
@@ -342,22 +427,29 @@ function populateWeekSelect(reports) {
     sel.appendChild(opt);
   });
 }
+
 async function loadSavedReport() {
   const id = document.getElementById('weekSelect').value;
   if (!id) {
     document.getElementById('report-content').style.display = 'none';
+    document.getElementById('historical-section').style.display = 'none';
     document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
     await updateGenerateButtonState();
+    await renderHistoricalChart();
     return;
   }
+
   const reports = await fetchReports();
   const report = reports.find(r => r.id === id);
   if (!report) return;
+
   currentReport = report;
+
   let ts = `Opprettet: ${report.created}`;
   if (report.edited) ts += ` • Sist endret: ${report.edited}`;
   if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
   document.getElementById('timestamp').textContent = ts;
+
   let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   if (report.userComment) {
     html += `
@@ -367,17 +459,22 @@ async function loadSavedReport() {
       </div>`;
   }
   document.getElementById('commentary').innerHTML = html;
+
   renderTable('sold-table', report.soldCars || []);
   renderTable('returned-table', report.returnedCars || []);
   document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
   document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
   document.getElementById('report-content').style.display = 'block';
+
   const locked = !!report.locked;
   document.getElementById('edit-btn').style.display = 'block';
   document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
   document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
+
   await updateGenerateButtonState();
+  await renderHistoricalChart();
 }
+
 function renderTable(id, cars) {
   const table = document.getElementById(id);
   table.innerHTML = '';
@@ -394,9 +491,9 @@ function renderTable(id, cars) {
     <tbody>
       ${cars.map(car => `
         <tr>
-          <td>${car.Merke}</td>
-          <td>${car.Modell}</td>
-          <td>${car.År}</td>
+          <td>${car.Merke || '-'}</td>
+          <td>${car.Modell || '-'}</td>
+          <td>${car.År || '-'}</td>
           <td>${car['AR laveste estimat_raw']?.toLocaleString('nb-NO') || '-'}</td>
           <td>${car['Bud_raw']?.toLocaleString('nb-NO') || '-'}</td>
           <td class="${car['Diff NOK_raw'] < 0 ? 'highlight-negative' : car['Diff NOK_raw'] > 0 ? 'highlight-positive' : 'highlight-zero'}">
@@ -418,6 +515,7 @@ function renderTable(id, cars) {
       </tr>
     </tfoot>`;
 }
+
 // Generer ny rapport
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
@@ -490,6 +588,7 @@ async function generateNewReport() {
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       title,
+      weekStart: startDate.toISOString().split('T')[0],
       created: nowStr,
       edited: null,
       commentary: commentaryHtml,
@@ -513,6 +612,7 @@ async function generateNewReport() {
     btn.disabled = false;
   }
 }
+
 function generateCommentary(sold, returned) {
   const stats = arr => {
     if (!arr.length) return {n:0,u:0,o:0,z:0,avgN:0,avgP:0};
@@ -557,6 +657,7 @@ function generateCommentary(sold, returned) {
     </div>
   `;
 }
+
 async function saveCurrentReport() {
   if (!currentReport) return;
   let reports = await fetchReports();
@@ -565,6 +666,7 @@ async function saveCurrentReport() {
   else reports.push(currentReport);
   await saveReports(reports);
 }
+
 async function updateGenerateButtonState() {
   const btn = document.getElementById('generate-btn');
   const start = getMostRecentCompletedWeekStart();
@@ -575,7 +677,8 @@ async function updateGenerateButtonState() {
   btn.disabled = exists;
   btn.title = exists ? "Rapport for denne uken finnes allerede" : "";
 }
-// Rediger KUN brukerens egen kommentar
+
+// Rediger egen kommentar
 function editUserComment() {
   if (!currentReport) return;
   const div = document.getElementById('commentary');
@@ -593,9 +696,11 @@ function editUserComment() {
   div.innerHTML = html;
   document.getElementById('edit-btn').style.display = 'none';
 }
+
 function cancelUserEdit() {
   loadSavedReport();
 }
+
 async function saveUserComment() {
   const ta = document.getElementById('user-comment-textarea');
   if (!ta) return;
@@ -605,6 +710,7 @@ async function saveUserComment() {
   await saveCurrentReport();
   await loadSavedReport();
 }
+
 // Låsing
 function showLockCommentModal() {
   document.getElementById('lock-comment-modal').style.display = 'flex';
@@ -623,6 +729,7 @@ async function confirmLockWithComment() {
     await loadSavedReport();
   }
 }
+
 // Sletting
 function showDeleteConfirm() {
   document.getElementById('delete-modal').style.display = 'flex';
@@ -649,6 +756,7 @@ async function checkDeletePassword() {
     document.getElementById('report-content').style.display = 'none';
     closePasswordPrompt();
     await updateGenerateButtonState();
+    await renderHistoricalChart();
   } else {
     alert('Feil passord.');
   }
