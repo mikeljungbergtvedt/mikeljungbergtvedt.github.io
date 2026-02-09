@@ -10,7 +10,6 @@
     body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; line-height: 1.5; }
     .container { max-width: 1440px; margin: 0 auto; padding: 32px 16px; }
     h1 { font-weight: 900; font-size: 2.2rem; letter-spacing: -0.6px; margin-bottom: 6px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
-    .version { font-size: 1.3rem; font-weight: 700; color: #006644; margin-left: 12px; vertical-align: super; }
     .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; align-items: center; }
     button {
       padding: 6px 14px;
@@ -50,6 +49,37 @@
     .logo { max-width: 200px; height: auto; opacity: 0.92; transition: opacity 0.3s; }
     .logo:hover { opacity: 1; }
     #version-info { position: fixed; bottom: 12px; right: 16px; font-size: 0.75rem; color: #666; opacity: 0.7; pointer-events: none; z-index: 10; }
+
+    details.history-section {
+      margin: 24px 0;
+      background: rgba(0,102,68,0.06);
+      border: 1px solid rgba(0,102,68,0.15);
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    details.history-section summary {
+      padding: 16px 20px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      cursor: pointer;
+      background: rgba(0,102,68,0.08);
+      list-style: none;
+    }
+    details.history-section summary::-webkit-details-marker { display: none; }
+    details.history-section summary::before {
+      content: '▶';
+      margin-right: 12px;
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    details.history-section[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .history-content {
+      padding: 16px 20px;
+    }
+
     @media (max-width: 768px) {
       .controls { flex-direction: column; align-items: stretch; gap: 8px; }
       button { width: 100%; padding: 8px 16px; font-size: 0.95rem; }
@@ -72,6 +102,27 @@
       <option value="">Velg uke...</option>
     </select>
     <button id="generate-btn" onclick="generateNewReport()">Generer rapport for siste fullførte uke</button>
+
+    <!-- Collapsible historical section – starts closed -->
+    <details class="history-section">
+      <summary>Generer eldre uker (f.eks. uke 1–5 eller tidligere år)</summary>
+      <div class="history-content">
+        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:16px;">
+          <select id="yearSelect" onchange="updateManualWeekOptions()">
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <!-- Add more years if needed -->
+          </select>
+          <select id="manualWeekSelect">
+            <option value="">Velg uke...</option>
+          </select>
+          <button id="generate-manual-btn" onclick="generateReportForSelectedWeek()">Generer valgt uke</button>
+        </div>
+      </div>
+    </details>
+
     <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none;">Slett rapport</button>
@@ -96,13 +147,13 @@
     </div>
   </div>
 
-  <div id="version-info">v16 • med diff kolonner • 09.02.2026</div>
+  <div id="version-info">v18 • gj.sn. bud + diff% • historisk lukket som standard • 09.02.2026</div>
 
-  <!-- Modals -->
+  <!-- Modals unchanged -->
   <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:28px; border-radius:12px; width:90%; max-width:540px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
       <h3>Kommentar før låsing (valgfritt)</h3>
-      <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..."></textarea>
+      <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..." style="width:100%; height:100px; padding:8px; border:1px solid #ccc; border-radius:6px;"></textarea>
       <div style="margin-top:16px; text-align:right;">
         <button onclick="closeLockModal()" style="background:#757575; margin-right:12px;">Avbryt</button>
         <button onclick="confirmLockWithComment()">Lås inn</button>
@@ -131,7 +182,7 @@
 
 <script>
 // ────────────────────────────────────────────────
-// KONFIGURASJON
+// CONFIG
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
 const DELETE_PASSWORD = "slett123";
@@ -142,19 +193,20 @@ const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY
 let currentReport = null;
 let headers = [];
 
-// Helpers
+// ────────────────────────────────────────────────
+// HELPERS
 function findColumn(patterns) {
-  const cleanHeader = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  const lowerHeaders = headers.map(cleanHeader);
+  const clean = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const lowers = headers.map(clean);
   for (let p of patterns) {
-    const pattern = p.trim().replace(/\s+/g, ' ').toLowerCase();
-    const idx = lowerHeaders.findIndex(h => h === pattern);
-    if (idx !== -1) return idx;
+    const pat = p.trim().replace(/\s+/g, ' ').toLowerCase();
+    const i = lowers.findIndex(h => h === pat);
+    if (i !== -1) return i;
   }
   for (let p of patterns) {
-    const pattern = p.trim().replace(/\s+/g, ' ').toLowerCase();
-    const idx = lowerHeaders.findIndex(h => h.includes(pattern));
-    if (idx !== -1) return idx;
+    const pat = p.trim().replace(/\s+/g, ' ').toLowerCase();
+    const i = lowers.findIndex(h => h.includes(pat));
+    if (i !== -1) return i;
   }
   return -1;
 }
@@ -170,16 +222,20 @@ function getISOWeek(date) {
 
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
-  let dayOfWeek = today.getDay();
-  if (dayOfWeek === 0) dayOfWeek = 7; // Sunday = 7
-  const daysBack = dayOfWeek === 1 ? 7 : dayOfWeek - 1;
-  const endPrev = new Date(today);
-  endPrev.setDate(today.getDate() - daysBack);
-  endPrev.setHours(0,0,0,0);
-  const startPrev = new Date(endPrev);
-  startPrev.setDate(endPrev.getDate() - 6);
-  startPrev.setHours(0,0,0,0);
-  return startPrev;
+  today.setHours(0,0,0,0);
+  let isoDay = today.getDay() || 7;
+  const daysBack = isoDay;
+  const prevSunday = new Date(today);
+  prevSunday.setDate(today.getDate() - daysBack);
+  const monday = new Date(prevSunday);
+  monday.setDate(prevSunday.getDate() - 6);
+  return monday;
+}
+
+function isMidWeek() {
+  const today = new Date();
+  let isoDay = today.getDay() || 7;
+  return isoDay !== 1; // allow only Mondays
 }
 
 function parseDate(str) {
@@ -189,7 +245,8 @@ function parseDate(str) {
   return m ? new Date(m[3], m[2]-1, m[1]) : null;
 }
 
-// JSONBin
+// ────────────────────────────────────────────────
+// JSONBIN
 async function fetchReports() {
   try {
     const res = await fetch(API_URL);
@@ -216,37 +273,8 @@ async function saveReports(reports) {
   }
 }
 
-// Clear all saved reports
-async function clearAllReports() {
-  if (!confirm("Sletter ALLE lagrede rapporter permanent. Fortsett?")) return;
-  try {
-    await saveReports([]);
-    alert("Alle rapporter slettet!");
-    location.reload();
-  } catch (err) {
-    alert("Feil ved sletting: " + err.message);
-  }
-}
-
-// Force unlock
-async function forceUnlock() {
-  if (!currentReport) return alert("Ingen rapport lastet");
-  currentReport.locked = false;
-  currentReport.lockComment = '';
-  const reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx !== -1) {
-    reports[idx].locked = false;
-    reports[idx].lockComment = '';
-    await saveReports(reports);
-    await loadSavedReport();
-    alert("Rapport force-unlocked!");
-  } else {
-    alert("Fant ikke rapporten i skyen.");
-  }
-}
-
-// Initial load
+// ────────────────────────────────────────────────
+// INITIAL LOAD
 window.onload = async () => {
   const reports = await fetchReports();
   populateWeekSelect(reports);
@@ -254,6 +282,7 @@ window.onload = async () => {
     document.getElementById('weekSelect').value = reports[reports.length - 1].id;
     await loadSavedReport();
   }
+  updateManualWeekOptions();
   await updateGenerateButtonState();
 };
 
@@ -289,10 +318,7 @@ async function loadSavedReport() {
 
   let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
   if (report.userComment) {
-    html += ` <div class="user-comment">
-      <h3>Kommentar til rapporten</h3>
-      <div style="white-space: pre-wrap;">${report.userComment.replace(/\n/g, '<br>')}</div>
-    </div>`;
+    html += `<div class="user-comment"><h3>Kommentar til rapporten</h3><div style="white-space: pre-wrap;">${report.userComment.replace(/\n/g, '<br>')}</div></div>`;
   }
   document.getElementById('commentary').innerHTML = html;
 
@@ -322,13 +348,7 @@ function renderTable(id, cars) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Merke</th>
-        <th>Modell</th>
-        <th>År</th>
-        <th>Høyeste bud</th>
-        <th>AR laveste estimat</th>
-        <th>Diff NOK</th>
-        <th>Diff %</th>
+        <th>Merke</th><th>Modell</th><th>År</th><th>Høyeste bud</th><th>AR laveste estimat</th><th>Diff NOK</th><th>Diff %</th>
       </tr>
     </thead>
     <tbody>
@@ -337,9 +357,6 @@ function renderTable(id, cars) {
         const ar = car['AR laveste estimat_raw'] || 0;
         const diffNOK = bud - ar;
         const diffPct = ar > 0 ? ((bud - ar) / ar * 100) : 0;
-        const diffNOKStr = diffNOK.toLocaleString('nb-NO');
-        const diffPctStr = diffPct.toFixed(1) + ' %';
-        const pctClass = diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '');
         return `
           <tr>
             <td>${car.Merke}</td>
@@ -347,44 +364,71 @@ function renderTable(id, cars) {
             <td>${car.År}</td>
             <td>${bud.toLocaleString('nb-NO') || '-'}</td>
             <td>${ar.toLocaleString('nb-NO') || '-'}</td>
-            <td>${diffNOK ? diffNOKStr : '-'}</td>
-            <td class="${pctClass}">${ar > 0 ? diffPctStr : '-'}</td>
-          </tr>
-        `;
+            <td>${diffNOK ? diffNOK.toLocaleString('nb-NO') : '-'}</td>
+            <td class="${diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '')}">${ar > 0 ? diffPct.toFixed(1)+' %' : '-'}</td>
+          </tr>`;
       }).join('')}
-    </tbody>
+    </tbody>`;
+}
+
+// ────────────────────────────────────────────────
+// COMMENTARY – updated with avg bud + avg diff %
+function generateCommentary(sold, returned) {
+  const stats = (cars) => {
+    if (!cars.length) return { n:0, avgBud:'0', avgDiffPct:'0 %' };
+
+    let sumBud = 0;
+    let sumDiffPct = 0;
+    let countWithAR = 0;
+
+    cars.forEach(car => {
+      const bud = parseFloat(car.ColumnE) || 0;
+      sumBud += bud;
+
+      const ar = car['AR laveste estimat_raw'] || 0;
+      if (ar > 0) {
+        sumDiffPct += ((bud - ar) / ar) * 100;
+        countWithAR++;
+      }
+    });
+
+    return {
+      n: cars.length,
+      avgBud: Math.round(sumBud / cars.length).toLocaleString('nb-NO'),
+      avgDiffPct: countWithAR > 0 ? (sumDiffPct / countWithAR).toFixed(1) + ' %' : '0 %'
+    };
+  };
+
+  const s = stats(sold);
+  const r = stats(returned);
+
+  return `
+    <h3>Fakta – ${sold.length || returned.length ? 'siste valgte uke' : 'ingen data'}</h3>
+    <div style="margin: 24px 0 12px 0;">
+      <strong>Solgte biler</strong><br><br>
+      Totalt: ${s.n} biler<br><br>
+      Gjennomsnitt høyeste bud: ${s.avgBud} kr<br>
+      Gjennomsnitt diff: ${s.avgDiffPct}
+    </div>
+    <div style="margin: 32px 0 12px 0;">
+      <strong>Returnerte biler</strong><br><br>
+      Totalt: ${r.n} biler<br><br>
+      Gjennomsnitt høyeste bud: ${r.avgBud} kr<br>
+      Gjennomsnitt diff: ${r.avgDiffPct}
+    </div>
   `;
 }
 
-// Generate – dynamic full ISO week
+// ────────────────────────────────────────────────
+// LATEST WEEK GENERATION
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
   document.getElementById('loading').style.display = 'block';
 
   try {
-    const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const ab = await res.arrayBuffer();
-    const wb = XLSX.read(ab, {type: 'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-
-    headers = data[0].map(h => (h || '').trim());
-
-    const col = {
-      Merke: findColumn(['Merke']),
-      Modell: findColumn(['Modell']),
-      År: findColumn(['År', 'Årgang']),
-      'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste', 'Endelig']),
-      'Solgt på': findColumn(['Solgt på', 'Solgt']),
-      Returnert: findColumn(['Returnert', 'Returnert på'])
-    };
-
     const startDate = getMostRecentCompletedWeekStart();
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 7);
+    const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 7);
     const weekNum = getISOWeek(startDate);
     const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
     const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
@@ -395,77 +439,27 @@ async function generateNewReport() {
       return;
     }
 
-    const soldCars = [], returnedCars = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-
-      const parseDate = str => {
-        if (!str) return null;
-        const cleaned = String(str).trim().split(' ')[0];
-        const m = cleaned.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-        return m ? new Date(m[3], m[2]-1, m[1]) : null;
-      };
-
-      const soldRaw = row[col['Solgt på']];
-      const retRaw  = row[col.Returnert];
-
-      const soldDate = parseDate(soldRaw);
-      const retDate  = parseDate(retRaw);
-
-      if (!soldRaw && !retRaw) continue;
-
-      let arStr = String(row[col['Endelig AR verdi']] || '').trim();
-      let arClean = arStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
-      let arLowest = 0;
-      if (arClean.includes('-')) {
-        const lowPart = arClean.split('-')[0].trim();
-        arLowest = isNaN(parseFloat(lowPart)) ? 0 : parseFloat(lowPart);
-      } else {
-        arLowest = isNaN(parseFloat(arClean)) ? 0 : parseFloat(arClean);
-      }
-
-      const car = {
-        Merke: row[col.Merke] || '-',
-        Modell: row[col.Modell] || '-',
-        År: row[col.År] || '-',
-        ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',
-        'AR laveste estimat_raw': arLowest
-      };
-
-      if (soldDate && soldDate >= startDate && soldDate < endDate && soldRaw) {
-        soldCars.push(car);
-      }
-      if (retDate && retDate >= startDate && retDate < endDate && retRaw) {
-        returnedCars.push(car);
-      }
-    }
-
+    const data = await fetchXlsxData();
+    const { soldCars, returnedCars } = processCars(data, startDate, endDate);
     const commentaryHtml = generateCommentary(soldCars, returnedCars);
 
     currentReport = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      title,
-      created: nowStr,
-      edited: null,
-      commentary: commentaryHtml,
-      userComment: '',
-      soldCars,
-      returnedCars,
-      locked: false,
-      lockComment: ''
+      title, created: nowStr, edited: null,
+      commentary: commentaryHtml, userComment: '',
+      soldCars, returnedCars, locked: false, lockComment: ''
     };
 
-    const reportsUpdated = await fetchReports();
-    reportsUpdated.push(currentReport);
-    await saveReports(reportsUpdated);
+    let updated = await fetchReports();
+    updated.push(currentReport);
+    await saveReports(updated);
 
-    const updatedReports = await fetchReports();
-    populateWeekSelect(updatedReports);
+    updated = await fetchReports();
+    populateWeekSelect(updated);
     document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
 
-    alert(`Rapport generert for siste fullførte uke.\nSolgte: ${soldCars.length}\nReturnerte: ${returnedCars.length}`);
+    alert(`Generert!\nSolgte: ${soldCars.length}\nReturnerte: ${returnedCars.length}`);
   } catch (err) {
     console.error(err);
     alert('Feil: ' + err.message);
@@ -476,59 +470,169 @@ async function generateNewReport() {
   }
 }
 
-function generateCommentary(sold, returned) {
-  const stats = arr => {
-    if (!arr.length) return {n:0, avg:0};
-    const sum = arr.reduce((s,c) => s + (c['AR laveste estimat_raw']||0), 0);
-    return { n: arr.length, avg: Math.round(sum / arr.length).toLocaleString('nb-NO') };
-  };
-  const s = stats(sold);
-  const r = stats(returned);
-  return `
-    <h3>Fakta – siste fullførte uke (man–søn)</h3>
-    <div style="margin: 24px 0 12px 0;">
-      <strong>Solgte biler</strong><br>
-      Totalt: ${s.n} biler<br>
-      Gjennomsnitt AR laveste estimat: ${s.avg} kr
-    </div>
-    <div style="margin: 32px 0 12px 0;">
-      <strong>Returnerte biler</strong><br>
-      Totalt: ${r.n} biler<br>
-      Gjennomsnitt AR laveste estimat: ${r.avg} kr
-    </div>
-  `;
-}
+// ────────────────────────────────────────────────
+// HISTORICAL WEEK GENERATION
+async function generateReportForSelectedWeek() {
+  const year = parseInt(document.getElementById('yearSelect').value);
+  const weekStr = document.getElementById('manualWeekSelect').value;
+  if (!weekStr) return alert('Velg uke først.');
 
-// Check generate button state
-async function updateGenerateButtonState() {
-  const btn = document.getElementById('generate-btn');
-  const start = getMostRecentCompletedWeekStart();
-  const week = getISOWeek(start);
-  const year = start.getFullYear();
-  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
-  const reports = await fetchReports();
-  const exists = reports.some(r => r.title.includes(`uke ${week}`) && r.title.includes(year.toString()));
-  btn.disabled = exists;
-  btn.style.background = exists ? '#ccc' : '#006644';
-}
+  const week = parseInt(weekStr);
+  const btn = document.getElementById('generate-manual-btn');
+  btn.disabled = true;
+  document.getElementById('loading').style.display = 'block';
 
-// Call on load and after actions
-window.onload = async () => {
-  const reports = await fetchReports();
-  populateWeekSelect(reports);
-  if (reports.length > 0) {
-    document.getElementById('weekSelect').value = reports[reports.length - 1].id;
+  try {
+    let d = new Date(year, 0, 4);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + (week - 1) * 7);
+
+    const startDate = monday;
+    const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 7);
+
+    const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${week}`;
+    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+
+    const reports = await fetchReports();
+    if (reports.some(r => r.title === title)) {
+      alert('Rapport finnes allerede.');
+      return;
+    }
+
+    const data = await fetchXlsxData();
+    const { soldCars, returnedCars } = processCars(data, startDate, endDate);
+    const commentaryHtml = generateCommentary(soldCars, returnedCars);
+
+    currentReport = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      title, created: nowStr, edited: null,
+      commentary: commentaryHtml, userComment: '',
+      soldCars, returnedCars, locked: false, lockComment: ''
+    };
+
+    let updated = await fetchReports();
+    updated.push(currentReport);
+    await saveReports(updated);
+
+    updated = await fetchReports();
+    populateWeekSelect(updated);
+    document.getElementById('weekSelect').value = currentReport.id;
     await loadSavedReport();
-  }
-  await updateGenerateButtonState();
-};
 
-// Edit, lock, delete functions
+    alert(`Generert!\nUke ${week} ${year}\nSolgte: ${soldCars.length}\nReturnerte: ${returnedCars.length}`);
+  } catch (err) {
+    console.error(err);
+    alert('Feil: ' + err.message);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    btn.disabled = false;
+    await updateGenerateButtonState();
+  }
+}
+
+// Shared helpers
+async function fetchXlsxData() {
+  const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ab = await res.arrayBuffer();
+  const wb = XLSX.read(ab, {type: 'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+  headers = data[0].map(h => (h || '').trim());
+  return data;
+}
+
+function processCars(data, startDate, endDate) {
+  const col = {
+    Merke: findColumn(['Merke']),
+    Modell: findColumn(['Modell']),
+    År: findColumn(['År', 'Årgang']),
+    'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste', 'Endelig']),
+    'Solgt på': findColumn(['Solgt på', 'Solgt']),
+    Returnert: findColumn(['Returnert', 'Returnert på'])
+  };
+
+  const soldCars = [], returnedCars = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const soldRaw = row[col['Solgt på']];
+    const retRaw  = row[col.Returnert];
+    const soldDate = parseDate(soldRaw);
+    const retDate  = parseDate(retRaw);
+
+    if (!soldRaw && !retRaw) continue;
+
+    let arStr = String(row[col['Endelig AR verdi']] || '').trim();
+    let arClean = arStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
+    let arLowest = 0;
+    if (arClean.includes('-')) {
+      arLowest = parseFloat(arClean.split('-')[0].trim()) || 0;
+    } else {
+      arLowest = parseFloat(arClean) || 0;
+    }
+
+    const car = {
+      Merke: row[col.Merke] || '-',
+      Modell: row[col.Modell] || '-',
+      År: row[col.År] || '-',
+      ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',
+      'AR laveste estimat_raw': arLowest
+    };
+
+    if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
+    if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
+  }
+
+  return { soldCars, returnedCars };
+}
+
+function updateManualWeekOptions() {
+  const year = parseInt(document.getElementById('yearSelect').value);
+  const sel = document.getElementById('manualWeekSelect');
+  sel.innerHTML = '<option value="">Velg uke...</option>';
+
+  const currYear = new Date().getFullYear();
+  const maxW = (year === currYear) ? getISOWeek(new Date()) - 1 : 53;
+
+  for (let w = 1; w <= maxW; w++) {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = `Uke ${w}`;
+    sel.appendChild(opt);
+  }
+  if (sel.options.length > 1) sel.selectedIndex = 1;
+}
+
+async function updateGenerateButtonState() {
+  const latestBtn = document.getElementById('generate-btn');
+
+  let disabled = isMidWeek();
+  if (!disabled) {
+    const start = getMostRecentCompletedWeekStart();
+    const week = getISOWeek(start);
+    const year = start.getFullYear();
+    const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+    const reports = await fetchReports();
+    disabled = reports.some(r => r.title === title);
+  }
+
+  latestBtn.disabled = disabled;
+  latestBtn.style.background = disabled ? '#ccc' : '#006644';
+  latestBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+  latestBtn.title = disabled ? (isMidWeek() ? 'Kun mandager' : 'Finnes allerede') : '';
+}
+
+// ────────────────────────────────────────────────
+// STUBS / MODALS (unchanged – add real logic when needed)
 function editUserComment() { alert("Rediger kommentar ikke implementert."); }
 function showLockCommentModal() { document.getElementById('lock-comment-modal').style.display = 'flex'; }
 function closeLockModal() { document.getElementById('lock-comment-modal').style.display = 'none'; }
 async function confirmLockWithComment() {
   const comment = document.getElementById('lock-comment-text').value.trim();
+  if (!currentReport) return;
   currentReport.locked = true;
   currentReport.lockComment = comment;
   const reports = await fetchReports();
@@ -541,7 +645,7 @@ async function confirmLockWithComment() {
   document.getElementById('lock-btn').style.display = 'none';
   document.getElementById('delete-btn').style.display = 'block';
   closeLockModal();
-  alert("Rapport låst inn!");
+  alert("Låst!");
   await updateGenerateButtonState();
 }
 function showDeleteConfirm() { document.getElementById('delete-modal').style.display = 'flex'; }
@@ -550,20 +654,42 @@ function promptPasswordForDelete() { document.getElementById('password-prompt').
 function closePasswordPrompt() { document.getElementById('password-prompt').style.display = 'none'; }
 async function checkDeletePassword() {
   const pw = document.getElementById('password-input').value;
-  if (pw === DELETE_PASSWORD) {
-    const reports = await fetchReports();
-    const idx = reports.findIndex(r => r.id === currentReport.id);
-    if (idx !== -1) {
-      reports.splice(idx, 1);
-      await saveReports(reports);
-      alert("Rapport slettet!");
-      location.reload();
-    }
-  } else {
+  if (pw !== DELETE_PASSWORD || !currentReport) {
     alert("Feil passord");
+    closePasswordPrompt();
+    return;
+  }
+  const reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx !== -1) {
+    reports.splice(idx, 1);
+    await saveReports(reports);
+    alert("Slettet!");
+    location.reload();
   }
   closePasswordPrompt();
   await updateGenerateButtonState();
+}
+
+async function clearAllReports() {
+  if (!confirm("Slette ALLE rapporter?")) return;
+  await saveReports([]);
+  alert("Alle slettet.");
+  location.reload();
+}
+
+async function forceUnlock() {
+  if (!currentReport || !confirm("Force unlock?")) return;
+  currentReport.locked = false;
+  currentReport.lockComment = '';
+  const reports = await fetchReports();
+  const idx = reports.findIndex(r => r.id === currentReport.id);
+  if (idx !== -1) {
+    reports[idx] = currentReport;
+    await saveReports(reports);
+    await loadSavedReport();
+    alert("Force unlocked.");
+  }
 }
 </script>
 </body>
