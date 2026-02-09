@@ -12,13 +12,13 @@
     h1 { font-weight: 900; font-size: 2.4rem; letter-spacing: -0.7px; margin-bottom: 8px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
     .version { font-size: 1.4rem; font-weight: 700; color: #006644; margin-left: 16px; vertical-align: super; }
     .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-    button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; color: white; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
+    button { padding: 10px 20px; font-size: 0.98rem; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 1px 4px rgba(0,66,37,0.06); transition: all 0.2s ease; }
     button:hover { box-shadow: 0 3px 10px rgba(0,66,37,0.14); transform: translateY(-1px); }
     button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.75; }
+    button#generate-btn.ready { background: #2e7d32; color: white; }
+    button#generate-btn:not(.ready) { background: #757575; }
     button#edit-btn { background: #006644; }
     button.danger { background: #c62828; }
-    button.clear-all { background: #c62828; }
-    button.force-unlock { background: #ff9800; }
     .commentary { background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); padding: 24px; margin-bottom: 40px; }
     table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.88); backdrop-filter: blur(24px); border: 1px solid rgba(130,191,210,0.10); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,66,37,0.05); margin-bottom: 40px; }
     th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.10); }
@@ -55,8 +55,8 @@
     <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
     <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
     <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none; background:#c62828;">Slett rapport</button>
-    <button onclick="clearAllReports()" class="clear-all">Slett ALLE rapporter fra skyen</button>
-    <button onclick="forceUnlock()" class="force-unlock">Force unlock current</button>
+    <button onclick="clearAllReports()" style="background:#c62828; color:white;">Slett ALLE rapporter fra skyen</button>
+    <button onclick="forceUnlock()" style="background:#ff9800; color:white;">Force unlock current</button>
   </div>
 
   <div id="loading" style="display:none;">Laster...</div>
@@ -114,7 +114,7 @@
 // KONFIGURASJON
 const BIN_ID = '6981aa3dae596e708f0d773b';
 const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123"; // Change this to your own secure password if needed
+const DELETE_PASSWORD = "slett123";
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
 
@@ -150,10 +150,11 @@ function getISOWeek(date) {
 
 function getMostRecentCompletedWeekStart() {
   const today = new Date();
-  const dayOfWeek = today.getDay() || 7;
-  let daysBack = dayOfWeek === 1 ? 8 : dayOfWeek;
+  let dayOfWeek = today.getDay();
+  if (dayOfWeek === 0) dayOfWeek = 7; // Sunday
+  const daysToLastSunday = dayOfWeek - 1; // days back to Sunday
   const endPrev = new Date(today);
-  endPrev.setDate(today.getDate() - daysBack);
+  endPrev.setDate(today.getDate() - daysToLastSunday);
   endPrev.setHours(0,0,0,0);
   const startPrev = new Date(endPrev);
   startPrev.setDate(endPrev.getDate() - 6);
@@ -200,14 +201,14 @@ async function clearAllReports() {
   if (!confirm("Sletter ALLE lagrede rapporter permanent. Fortsett?")) return;
   try {
     await saveReports([]);
-    alert("Alle rapporter slettet fra skyen!");
+    alert("Alle rapporter slettet!");
     location.reload();
   } catch (err) {
-    alert("Feil ved sletting: " + err.message);
+    alert("Feil: " + err.message);
   }
 }
 
-// Force unlock current report (for stuck lock state)
+// Force unlock
 async function forceUnlock() {
   if (!currentReport) return alert("Ingen rapport lastet");
   currentReport.locked = false;
@@ -219,9 +220,9 @@ async function forceUnlock() {
     reports[idx].lockComment = '';
     await saveReports(reports);
     await loadSavedReport();
-    alert("Rapport force-unlocked!");
+    alert("Force unlocked!");
   } else {
-    alert("Fant ikke rapporten i skyen.");
+    alert("Fant ikke rapporten.");
   }
 }
 
@@ -233,6 +234,7 @@ window.onload = async () => {
     document.getElementById('weekSelect').value = reports[reports.length - 1].id;
     await loadSavedReport();
   }
+  await updateGenerateButtonState();
 };
 
 function populateWeekSelect(reports) {
@@ -284,6 +286,7 @@ async function loadSavedReport() {
   document.getElementById('edit-btn').style.display = 'block';
   document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
   document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
+  await updateGenerateButtonState();
 }
 
 function renderTable(id, cars) {
@@ -328,17 +331,27 @@ function renderTable(id, cars) {
         `;
       }).join('')}
     </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="3"><strong>Gjennomsnitt (${cars.length} biler)</strong></td>
-        <td>-</td>
-        <td>${Math.round(cars.reduce((s,c)=>s+(c['AR laveste estimat_raw']||0),0)/cars.length||0).toLocaleString('nb-NO')}</td>
-        <td colspan="2">-</td>
-      </tr>
-    </tfoot>`;
+  `;
 }
 
-// Generate – dynamic last full week
+// Update generate button state (green when week complete + no report)
+async function updateGenerateButtonState() {
+  const btn = document.getElementById('generate-btn');
+  const start = getMostRecentCompletedWeekStart();
+  const week = getISOWeek(start);
+  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
+  const reports = await fetchReports();
+  const exists = reports.some(r => r.title === title);
+  if (!exists) {
+    btn.classList.add('ready');
+    btn.disabled = false;
+  } else {
+    btn.classList.remove('ready');
+    btn.disabled = true;
+  }
+}
+
+// Generate
 async function generateNewReport() {
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
@@ -454,6 +467,7 @@ async function generateNewReport() {
   } finally {
     document.getElementById('loading').style.display = 'none';
     btn.disabled = false;
+    await updateGenerateButtonState();
   }
 }
 
@@ -480,37 +494,24 @@ function generateCommentary(sold, returned) {
   `;
 }
 
-// Clear all saved reports
-async function clearAllReports() {
-  if (!confirm("Sletter ALLE lagrede rapporter permanent. Fortsett?")) return;
-  try {
-    await saveReports([]);
-    alert("Alle rapporter slettet fra skyen!");
-    location.reload();
-  } catch (err) {
-    alert("Feil ved sletting: " + err.message);
-  }
-}
-
-// Force unlock current report
-async function forceUnlock() {
-  if (!currentReport) return alert("Ingen rapport lastet");
-  currentReport.locked = false;
-  currentReport.lockComment = '';
+// Update generate button state (green when ready)
+async function updateGenerateButtonState() {
+  const btn = document.getElementById('generate-btn');
+  const start = getMostRecentCompletedWeekStart();
+  const week = getISOWeek(start);
+  const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
   const reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx !== -1) {
-    reports[idx].locked = false;
-    reports[idx].lockComment = '';
-    await saveReports(reports);
-    await loadSavedReport();
-    alert("Rapport force-unlocked!");
+  const exists = reports.some(r => r.title === title);
+  if (!exists) {
+    btn.classList.add('ready');
+    btn.disabled = false;
   } else {
-    alert("Fant ikke rapporten i skyen.");
+    btn.classList.remove('ready');
+    btn.disabled = true;
   }
 }
 
-// Edit, lock, delete functions
+// Placeholder functions
 function editUserComment() { alert("Rediger kommentar ikke implementert."); }
 function showLockCommentModal() { document.getElementById('lock-comment-modal').style.display = 'flex'; }
 function closeLockModal() { document.getElementById('lock-comment-modal').style.display = 'none'; }
