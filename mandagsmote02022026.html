@@ -54,15 +54,6 @@
       max-height: 420px;
       margin-top: 2rem;
     }
-    .preset-btn {
-      @apply px-4 py-2 text-sm font-medium rounded-lg transition;
-    }
-    .preset-btn.active {
-      @apply bg-[#FFCC33] text-[#004225] shadow-md;
-    }
-    .preset-btn:hover:not(.active) {
-      @apply bg-gray-100;
-    }
   </style>
 </head>
 <body class="text-[#004225]">
@@ -73,27 +64,18 @@
       <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="mx-auto h-16 md:h-20 mb-4">
     </header>
 
-    <div class="date-filter card">
-      <div class="flex flex-wrap justify-center gap-3 mb-4">
-        <button class="preset-btn" onclick="setPreset(30)">30 dager</button>
-        <button class="preset-btn" onclick="setPreset(60)">60 dager</button>
-        <button class="preset-btn active" onclick="setPreset(90)">90 dager</button>
-        <button class="preset-btn" onclick="setPreset('custom')">Custom</button>
+    <div class="date-filter card flex flex-wrap justify-center gap-4 items-end">
+      <div>
+        <label class="block text-sm font-medium mb-1">Fra dato</label>
+        <input type="date" id="fromDate" class="px-4 py-2 border border-gray-300 rounded-lg">
       </div>
-
-      <div class="flex flex-wrap justify-center gap-4 items-end">
-        <div>
-          <label class="block text-sm font-medium mb-1">Fra dato</label>
-          <input type="date" id="fromDate" class="px-4 py-2 border border-gray-300 rounded-lg">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Til dato</label>
-          <input type="date" id="toDate" class="px-4 py-2 border border-gray-300 rounded-lg">
-        </div>
-        <button onclick="loadData()" class="px-6 py-2 bg-[#FFCC33] text-[#004225] font-semibold rounded-xl hover:bg-[#FFD966] transition">
-          Oppdater
-        </button>
+      <div>
+        <label class="block text-sm font-medium mb-1">Til dato</label>
+        <input type="date" id="toDate" class="px-4 py-2 border border-gray-300 rounded-lg">
       </div>
+      <button onclick="loadData()" class="px-6 py-2 bg-[#FFCC33] text-[#004225] font-semibold rounded-xl hover:bg-[#FFD966] transition">
+        Vis periode
+      </button>
     </div>
 
     <div class="flex justify-center mb-6">
@@ -103,28 +85,34 @@
     <div class="card p-8 md:p-10">
       <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall & selgerprisvillighet</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+
         <div class="text-center">
           <div class="gauge-container"><canvas id="g1"></canvas></div>
           <p class="mt-4 text-sm text-gray-600">Mottatt av SD mottatt</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v1">-</p>
         </div>
+
         <div class="text-center">
           <div class="gauge-container"><canvas id="g2"></canvas></div>
           <p class="mt-4 text-sm text-gray-600">Solgt av mottatt</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v2">-</p>
         </div>
+
         <div class="text-center">
           <div class="gauge-container"><canvas id="g3"></canvas></div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v3">-</p>
         </div>
+
         <div class="text-center">
           <div class="gauge-container"><canvas id="g4"></canvas></div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
           <p class="text-4xl font-bold text-red-600" id="v4">-</p>
         </div>
+
       </div>
 
+      <!-- Combined trend chart -->
       <h3 class="text-xl font-semibold text-center mb-4">Trend: Gj.sn. % av AR – Solgt vs Returnert per måned</h3>
       <div class="chart-container">
         <canvas id="combinedTrendChart"></canvas>
@@ -132,36 +120,20 @@
     </div>
   </div>
 
-  <div id="version-info">v1.1.5 – Dashboard – 10.02.2026</div>
+  <div id="version-info">v1.1.4 – Dashboard – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
 
-    let currentPreset = 90;
-
-    function setPreset(days) {
-      currentPreset = days;
-      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-      if (days !== 'custom') {
-        document.querySelector(`button[onclick="setPreset(${days})"]`).classList.add('active');
-      } else {
-        document.querySelector('button[onclick="setPreset(\'custom\')"]').classList.add('active');
-      }
-
+    window.addEventListener('load', () => {
       const today = new Date();
       const from = new Date(today);
-      if (days !== 'custom') {
-        from.setDate(today.getDate() - days);
-        document.getElementById('fromDate').value = from.toISOString().split('T')[0];
-        document.getElementById('toDate').value = today.toISOString().split('T')[0];
-      }
+      from.setDate(today.getDate() - 90);
+
+      document.getElementById('toDate').value = today.toISOString().split('T')[0];
+      document.getElementById('fromDate').value = from.toISOString().split('T')[0];
 
       loadData();
-    }
-
-    // Initial load with 90 days
-    window.addEventListener('load', () => {
-      setPreset(90);
     });
 
     let combinedChartInstance = null;
@@ -284,7 +256,9 @@
 
     function renderCombinedTrendChart(soldCars, returnedCars) {
       const canvas = document.getElementById('combinedTrendChart');
+      const container = canvas.parentElement;
 
+      // Prepare monthly data for both series
       const monthlySold = {};
       const monthlyRet  = {};
 
@@ -304,10 +278,11 @@
         monthlyRet[key].count++;
       });
 
+      // Get all unique months
       const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
 
       if (allMonths.length === 0) {
-        canvas.parentElement.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
+        container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
       }
 
@@ -326,6 +301,7 @@
         return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
       });
 
+      // Destroy previous chart if exists
       if (combinedChartInstance) combinedChartInstance.destroy();
 
       combinedChartInstance = new Chart(canvas, {
