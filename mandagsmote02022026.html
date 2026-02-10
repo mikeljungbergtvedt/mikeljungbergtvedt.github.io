@@ -121,7 +121,7 @@
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
     </div>
 
-    <!-- Gauges – now 6 -->
+    <!-- Gauges -->
     <div class="card p-6 md:p-10 mb-12">
       <h2 class="text-2xl md:text-3xl font-semibold text-center mb-8 md:mb-10">Nøkkeltall</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 justify-items-center">
@@ -151,11 +151,13 @@
         </div>
         <div class="text-center relative w-full max-w-[220px]">
           <div class="gauge-container mx-auto"><canvas id="g5"></canvas></div>
+          <div class="gauge-trend" id="trend5">-</div>
           <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi solgt</p>
           <p class="text-4xl font-bold text-[#004225]" id="v5">-</p>
         </div>
         <div class="text-center relative w-full max-w-[220px]">
           <div class="gauge-container mx-auto"><canvas id="g6"></canvas></div>
+          <div class="gauge-trend" id="trend6">-</div>
           <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi returnert</p>
           <p class="text-4xl font-bold text-[#004225]" id="v6">-</p>
         </div>
@@ -197,7 +199,7 @@
     </div>
   </div>
 
-  <div id="version-info">v1.4.6 – lagt til gj.sn. verdi solgt/returnert – 10.02.2026</div>
+  <div id="version-info">v1.4.7 – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -217,10 +219,20 @@
     async function loadData() {
       const status = document.getElementById('status');
       status.textContent = "Laster data...";
+
       const fromStr = document.getElementById('fromDate').value;
       const toStr = document.getElementById('toDate').value;
       const fromDate = fromStr ? new Date(fromStr) : null;
       const toDate = toStr ? new Date(toStr) : null;
+
+      // Min 30 days warning
+      let periodWarning = "";
+      if (fromDate && toDate) {
+        const daysDiff = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24));
+        if (daysDiff < 30) {
+          periodWarning = `⚠️ Perioden må være minst 30 dager (valgt: ${daysDiff} dager)`;
+        }
+      }
 
       try {
         const res = await fetch(DATA_URL);
@@ -270,16 +282,13 @@
           return new Date(y, m-1, d);
         };
 
-        const cars = dataRows.map(row => {
+        const allCars = dataRows.map(row => {
           const sdDate      = parseDate(row[idx.sd]);
           const mottattDate = parseDate(row[idx.mottatt]);
           const solgtDate   = parseDate(row[idx.solgt]);
           const retDate     = parseDate(row[idx.ret]);
           return {
-            sdDate,
-            mottattDate,
-            solgtDate,
-            retDate,
+            sdDate, mottattDate, solgtDate, retDate,
             merke: String(row[idx.merke] || '-').trim(),
             modell: String(row[idx.modell] || '-').trim(),
             ar: cleanNum(row[idx.ar]),
@@ -288,27 +297,21 @@
             solgt: row[idx.solgt] || '',
             ret: row[idx.ret] || ''
           };
-        }).filter(r => {
-          return (
-            (r.sdDate      && (!fromDate || r.sdDate >= fromDate)      && (!toDate || r.sdDate <= toDate)) ||
-            (r.mottattDate && (!fromDate || r.mottattDate >= fromDate) && (!toDate || r.mottattDate <= toDate)) ||
-            (r.solgtDate   && (!fromDate || r.solgtDate >= fromDate)   && (!toDate || r.solgtDate <= toDate)) ||
-            (r.retDate     && (!fromDate || r.retDate >= fromDate)     && (!toDate || r.retDate <= toDate))
-          );
         });
 
-        const mottattCars = cars.filter(c => c.mottatt);
-        const soldCars = cars.filter(c => c.solgt);                     // all with solgt entry
-        const returnedCars = cars.filter(c => c.ret);                   // all with ret entry
+        const carsInPeriod = allCars.filter(r => {
+          const inPeriod = (date) => date && (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
+          return inPeriod(r.sdDate) || inPeriod(r.mottattDate) || inPeriod(r.solgtDate) || inPeriod(r.retDate);
+        });
 
-        // Date-filtered for averages and bar chart
-        const soldInPeriod = cars.filter(c => c.solgtDate && (!fromDate || c.solgtDate >= fromDate) && (!toDate || c.solgtDate <= toDate));
-        const returnedInPeriod = cars.filter(c => c.retDate && (!fromDate || c.retDate >= fromDate) && (!toDate || c.retDate <= toDate));
+        const mottattInPeriod = carsInPeriod.filter(c => c.mottattDate && c.mottattDate >= (fromDate || new Date(0)) && c.mottattDate <= (toDate || new Date()));
+        const soldInPeriod    = carsInPeriod.filter(c => c.solgtDate   && c.solgtDate   >= (fromDate || new Date(0)) && c.solgtDate   <= (toDate || new Date()));
+        const returnedInPeriod = carsInPeriod.filter(c => c.retDate     && c.retDate     >= (fromDate || new Date(0)) && c.retDate     <= (toDate || new Date()));
 
-        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldInPeriod.length} solgt • ${returnedInPeriod.length} returnert`;
+        status.textContent = periodWarning || `${carsInPeriod.length} biler i perioden • ${mottattInPeriod.length} mottatt • ${soldInPeriod.length} solgt • ${returnedInPeriod.length} returnert`;
 
-        renderGauges(cars, mottattCars, soldCars, returnedCars, soldInPeriod, returnedInPeriod);
-        renderTrendChart(cars, fromDate, toDate);
+        renderGauges(carsInPeriod, mottattInPeriod, soldInPeriod, returnedInPeriod, fromDate, toDate);
+        renderTrendChart(carsInPeriod, fromDate, toDate);
         renderBarChart(soldInPeriod, returnedInPeriod, fromDate, toDate);
         renderCarTable(soldInPeriod.concat(returnedInPeriod));
       } catch (e) {
@@ -317,21 +320,20 @@
       }
     }
 
-    function renderGauges(cars, mottattCars, soldCars, returnedCars, soldInPeriod, returnedInPeriod) {
-      const pctMottatt = cars.length ? Math.round(mottattCars.length / cars.length * 100) : 0;
-      const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
+    function renderGauges(carsInPeriod, mottattInPeriod, soldInPeriod, returnedInPeriod, fromDate, toDate) {
+      const pctMottatt = carsInPeriod.length ? Math.round(mottattInPeriod.length / carsInPeriod.length * 100) : 0;
+      const pctSell = mottattInPeriod.length ? Math.round(soldInPeriod.length / mottattInPeriod.length * 100) : 0;
       let avgSoldPct = 0, avgRetPct = 0;
 
-      if (soldCars.length) {
-        const ratios = soldCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+      if (soldInPeriod.length) {
+        const ratios = soldInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgSoldPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
-      if (returnedCars.length) {
-        const ratios = returnedCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+      if (returnedInPeriod.length) {
+        const ratios = returnedInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
 
-      // New: average values (only cars in period)
       let avgSoldValue = 0;
       if (soldInPeriod.length > 0) {
         const total = soldInPeriod.reduce((sum, c) => sum + c.ar, 0);
@@ -351,22 +353,59 @@
       document.getElementById('v5').textContent = avgSoldValue.toLocaleString('no-NO') + ' kr';
       document.getElementById('v6').textContent = avgRetValue.toLocaleString('no-NO') + ' kr';
 
-      // Restore performance colors for v1 & v2
+      // Performance colors for v1 & v2
       const getGaugeColor = (pct, thresholds) => {
-        if (pct < thresholds.low) return 'rgba(220, 38, 38, 0.75)';     // red
-        if (pct < thresholds.medium) return 'rgba(255, 204, 51, 0.75)'; // yellow
-        return 'rgba(0, 66, 37, 0.75)';                                 // peasy green
+        if (pct < thresholds.low) return 'rgba(220, 38, 38, 0.75)';
+        if (pct < thresholds.medium) return 'rgba(255, 204, 51, 0.75)';
+        return 'rgba(0, 66, 37, 0.75)';
       };
 
       const colorV1 = getGaugeColor(pctMottatt, { low: 5, medium: 10 });
       const colorV2 = getGaugeColor(pctSell, { low: 65, medium: 70 });
 
-      document.getElementById('v1').style.color = colorV1.replace('0.75', '1'); // text full opacity
-      document.getElementById('v2').style.color = colorV2.replace('0.75', '1');
-      document.getElementById('v3').style.color = '#004225';
-      document.getElementById('v4').style.color = '#82bfd2';
-      document.getElementById('v5').style.color = '#004225';
-      document.getElementById('v6').style.color = '#004225';
+      // New: Trend arrow + color for v5 & v6 (this period vs previous 30 days)
+      let trend5 = '-', trend6 = '-', colorV5 = 'rgba(0, 66, 37, 0.75)', colorV6 = 'rgba(0, 66, 37, 0.75)';
+      if (fromDate) {
+        const prevFrom = new Date(fromDate);
+        prevFrom.setDate(prevFrom.getDate() - 30);
+        const prevTo = new Date(fromDate);
+        prevTo.setDate(prevTo.getDate() - 1);
+
+        // Previous period sold/returned
+        const prevSold = carsInPeriod.filter(c => c.solgtDate && c.solgtDate >= prevFrom && c.solgtDate <= prevTo);
+        const prevReturned = carsInPeriod.filter(c => c.retDate && c.retDate >= prevFrom && c.retDate <= prevTo);
+
+        let prevAvgSold = 0;
+        if (prevSold.length > 0) {
+          const total = prevSold.reduce((sum, c) => sum + c.ar, 0);
+          prevAvgSold = Math.round(total / prevSold.length);
+        }
+
+        let prevAvgRet = 0;
+        if (prevReturned.length > 0) {
+          const total = prevReturned.reduce((sum, c) => sum + c.ar, 0);
+          prevAvgRet = Math.round(total / prevReturned.length);
+        }
+
+        // Trend5 (sold)
+        if (avgSoldValue > prevAvgSold) trend5 = '↑';
+        else if (avgSoldValue < prevAvgSold) trend5 = '↓';
+        else trend5 = '–';
+
+        // Trend6 (returned)
+        if (avgRetValue > prevAvgRet) trend6 = '↑';
+        else if (avgRetValue < prevAvgRet) trend6 = '↓';
+        else trend6 = '–';
+
+        // Donut color follows arrow
+        colorV5 = trend5 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
+                  trend5 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
+                  'rgba(229, 231, 235, 0.75)'; // gray
+
+        colorV6 = trend6 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
+                  trend6 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
+                  'rgba(229, 231, 235, 0.75)';
+      }
 
       const cfg = (val, color) => ({
         type: 'doughnut',
@@ -385,8 +424,19 @@
       gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell, colorV2));
       gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
       gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
-      gauge5 = new Chart(document.getElementById('g5'), cfg(100, '#004225')); // dummy for text display
-      gauge6 = new Chart(document.getElementById('g6'), cfg(100, '#004225')); // dummy
+      gauge5 = new Chart(document.getElementById('g5'), cfg(100, colorV5));
+      gauge6 = new Chart(document.getElementById('g6'), cfg(100, colorV6));
+
+      document.getElementById('trend1').textContent = pctMottatt > 50 ? '↑' : '↓';
+      document.getElementById('trend2').textContent = pctSell > 50 ? '↑' : '↓';
+      document.getElementById('trend1').style.color = document.getElementById('trend1').textContent === '↑' ? 'green' : 'red';
+      document.getElementById('trend2').style.color = document.getElementById('trend2').textContent === '↑' ? 'green' : 'red';
+
+      // New trend arrows for v5/v6
+      document.getElementById('trend5').textContent = trend5;
+      document.getElementById('trend6').textContent = trend6;
+      document.getElementById('trend5').style.color = trend5 === '↑' ? 'green' : (trend5 === '↓' ? 'red' : '#555');
+      document.getElementById('trend6').style.color = trend6 === '↑' ? 'green' : (trend6 === '↓' ? 'red' : '#555');
     }
 
     function renderTrendChart(cars, fromDate, toDate) {
