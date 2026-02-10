@@ -45,11 +45,6 @@
       font-weight: bold;
       z-index: 10;
     }
-    .sparkline {
-      display: block;
-      margin: 8px auto 0;
-      max-width: 140px;
-    }
     #version-info {
       position: fixed;
       bottom: 12px;
@@ -133,28 +128,24 @@
           <div class="gauge-trend" id="trend1">-</div>
           <p class="mt-4 text-sm text-gray-600">Mottatt %</p>
           <p class="text-4xl font-bold" id="v1">-</p>
-          <canvas id="spark1" class="sparkline" height="30"></canvas>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g2"></canvas></div>
           <div class="gauge-trend" id="trend2">-</div>
           <p class="mt-4 text-sm text-gray-600">Solgt – Mottatt</p>
           <p class="text-4xl font-bold" id="v2">-</p>
-          <canvas id="spark2" class="sparkline" height="30"></canvas>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g3"></canvas></div>
           <div class="gauge-trend" id="trend3">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
           <p class="text-4xl font-bold text-[#004225]" id="v3">-</p>
-          <canvas id="spark3" class="sparkline" height="30"></canvas>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g4"></canvas></div>
           <div class="gauge-trend" id="trend4">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
           <p class="text-4xl font-bold text-[#82bfd2]" id="v4">-</p>
-          <canvas id="spark4" class="sparkline" height="30"></canvas>
         </div>
       </div>
     </div>
@@ -189,7 +180,7 @@
     </div>
   </div>
 
-  <div id="version-info">v1.3.7 + 7d sparkline + diagnose – 10.02.2026</div>
+  <div id="version-info">v1.3.7 – fungerende base – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -293,8 +284,8 @@
         renderCarTable(soldCars.concat(returnedCars));
 
       } catch (e) {
-        console.error("LASTE-FEIL:", e);
-        status.textContent = "Feil ved lasting – sjekk konsoll (F12)";
+        console.error(e);
+        status.textContent = "Feil ved lasting – sjekk konsoll";
       }
     }
 
@@ -338,84 +329,20 @@
       gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
       gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
 
-      // === 7-dagers sparkline + diagnose ===
-      function drawSparkline(canvasId, data, color) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-          console.log(`Sparkline canvas ${canvasId} mangler i HTML`);
-          return;
-        }
-        if (!data || data.length < 2) {
-          console.log(`Ingen data til sparkline ${canvasId} (lengde: ${data?.length || 0})`);
-          canvas.style.display = 'none';
-          return;
-        }
-        canvas.style.display = 'block';
+      const trend1 = pctMottatt > 50 ? '↑' : '↓';
+      const trend2 = pctSell > 50 ? '↑' : '↓';
+      const trend3 = avgSoldPct > 80 ? '↑' : '↓';
+      const trend4 = avgRetPct > 60 ? '↓' : '↑';
 
-        const ctx = canvas.getContext('2d');
-        canvas.width = 140;
-        canvas.height = 30;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('trend1').textContent = trend1;
+      document.getElementById('trend2').textContent = trend2;
+      document.getElementById('trend3').textContent = trend3;
+      document.getElementById('trend4').textContent = trend4;
 
-        const min = Math.min(...data);
-        const max = Math.max(...data);
-        const range = max - min || 1;
-
-        const points = data.map((val, i) => ({
-          x: i * (canvas.width / (data.length - 1)),
-          y: canvas.height - ((val - min) / range * (canvas.height - 10) + 5)
-        }));
-
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i].x, points[i].y);
-        }
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Dot på siste dag
-        ctx.beginPath();
-        ctx.arc(points[points.length-1].x, points[points.length-1].y, 3, 0, Math.PI*2);
-        ctx.fillStyle = color;
-        ctx.fill();
-
-        console.log(`Sparkline ${canvasId} tegnet med data:`, data);
-      }
-
-      // Beregn daglige verdier for siste 7 dager
-      const dailyData = { mottatt: [], sell: [], soldAR: [], retAR: [] };
-      const now = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const dayStart = new Date(now);
-        dayStart.setDate(now.getDate() - i);
-        dayStart.setHours(0,0,0,0);
-        const dayEnd = new Date(dayStart);
-        dayEnd.setDate(dayStart.getDate() + 1);
-
-        const dayCars = cars.filter(c => c.sdDate && c.sdDate >= dayStart && c.sdDate < dayEnd);
-
-        dailyData.mottatt.push(dayCars.length ? Math.round(dayCars.filter(c => c.mottatt).length / dayCars.length * 100) : 0);
-        dailyData.sell.push(dayCars.filter(c => c.mottatt).length ? Math.round(dayCars.filter(c => c.solgt).length / dayCars.filter(c => c.mottatt).length * 100) : 0);
-        dailyData.soldAR.push(dayCars.filter(c => c.solgt).length ? Math.round(dayCars.filter(c => c.solgt).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / dayCars.filter(c => c.solgt).length) : 0);
-        dailyData.retAR.push(dayCars.filter(c => c.ret).length ? Math.round(dayCars.filter(c => c.ret).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / dayCars.filter(c => c.ret).length) : 0);
-      }
-
-      // Tegn og logg
-      drawSparkline('spark1', dailyData.mottatt, '#FFCC33');
-      drawSparkline('spark2', dailyData.sell, '#FFCC33');
-      drawSparkline('spark3', dailyData.soldAR, '#004225');
-      drawSparkline('spark4', dailyData.retAR, '#82bfd2');
-
-      // Diagnose i konsoll
-      console.log("=== DIAGNOSE ===");
-      console.log("cars totalt:", cars.length);
-      console.log("Siste 7 dagers data (mottatt):", dailyData.mottatt);
-      console.log("Siste 7 dagers data (solgt):", dailyData.sell);
-      console.log("Siste 7 dagers data (solgt AR):", dailyData.soldAR);
-      console.log("Siste 7 dagers data (retur AR):", dailyData.retAR);
-      console.log("=================");
+      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : 'red';
+      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : 'red';
+      document.getElementById('trend3').style.color = trend3 === '↑' ? 'green' : 'red';
+      document.getElementById('trend4').style.color = trend4 === '↓' ? 'green' : 'red';
     }
 
     function renderCombinedTrendChart(soldCars, returnedCars) {
