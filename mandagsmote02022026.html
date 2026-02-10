@@ -121,10 +121,10 @@
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
     </div>
 
-    <!-- Gauges -->
+    <!-- Gauges – now 6 -->
     <div class="card p-6 md:p-10 mb-12">
       <h2 class="text-2xl md:text-3xl font-semibold text-center mb-8 md:mb-10">Nøkkeltall</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 justify-items-center">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 justify-items-center">
         <div class="text-center relative w-full max-w-[220px]">
           <div class="gauge-container mx-auto"><canvas id="g1"></canvas></div>
           <div class="gauge-trend" id="trend1">-</div>
@@ -148,6 +148,16 @@
           <div class="gauge-trend" id="trend4">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
           <p class="text-4xl font-bold text-[#82bfd2]" id="v4">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g5"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi solgt</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v5">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g6"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi returnert</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v6">-</p>
         </div>
       </div>
     </div>
@@ -187,16 +197,13 @@
     </div>
   </div>
 
-  <div id="version-info">v1.4.5 – 10.02.2026</div>
+  <div id="version-info">v1.4.6 – lagt til gj.sn. verdi solgt/returnert – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
     let trendChartInstance = null;
     let barChartInstance = null;
-    let gauge1 = null;
-    let gauge2 = null;
-    let gauge3 = null;
-    let gauge4 = null;
+    let gauge1 = null, gauge2 = null, gauge3 = null, gauge4 = null, gauge5 = null, gauge6 = null;
 
     window.addEventListener('load', () => {
       const today = new Date();
@@ -291,22 +298,26 @@
         });
 
         const mottattCars = cars.filter(c => c.mottatt);
-        const soldCars    = cars.filter(c => c.solgt);
-        const returnedCars = cars.filter(c => c.ret);
+        const soldCars = cars.filter(c => c.solgt);                     // all with solgt entry
+        const returnedCars = cars.filter(c => c.ret);                   // all with ret entry
 
-        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
+        // Date-filtered for averages and bar chart
+        const soldInPeriod = cars.filter(c => c.solgtDate && (!fromDate || c.solgtDate >= fromDate) && (!toDate || c.solgtDate <= toDate));
+        const returnedInPeriod = cars.filter(c => c.retDate && (!fromDate || c.retDate >= fromDate) && (!toDate || c.retDate <= toDate));
 
-        renderGauges(cars, mottattCars, soldCars, returnedCars);
+        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldInPeriod.length} solgt • ${returnedInPeriod.length} returnert`;
+
+        renderGauges(cars, mottattCars, soldCars, returnedCars, soldInPeriod, returnedInPeriod);
         renderTrendChart(cars, fromDate, toDate);
-        renderBarChart(soldCars, returnedCars, fromDate, toDate);
-        renderCarTable(soldCars.concat(returnedCars));
+        renderBarChart(soldInPeriod, returnedInPeriod, fromDate, toDate);
+        renderCarTable(soldInPeriod.concat(returnedInPeriod));
       } catch (e) {
         console.error(e);
         status.textContent = "Feil ved lasting – sjekk konsoll";
       }
     }
 
-    function renderGauges(cars, mottattCars, soldCars, returnedCars) {
+    function renderGauges(cars, mottattCars, soldCars, returnedCars, soldInPeriod, returnedInPeriod) {
       const pctMottatt = cars.length ? Math.round(mottattCars.length / cars.length * 100) : 0;
       const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
       let avgSoldPct = 0, avgRetPct = 0;
@@ -320,12 +331,27 @@
         avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
 
+      // New: average values (only cars in period)
+      let avgSoldValue = 0;
+      if (soldInPeriod.length > 0) {
+        const total = soldInPeriod.reduce((sum, c) => sum + c.ar, 0);
+        avgSoldValue = Math.round(total / soldInPeriod.length);
+      }
+
+      let avgRetValue = 0;
+      if (returnedInPeriod.length > 0) {
+        const total = returnedInPeriod.reduce((sum, c) => sum + c.ar, 0);
+        avgRetValue = Math.round(total / returnedInPeriod.length);
+      }
+
       document.getElementById('v1').textContent = pctMottatt + '%';
       document.getElementById('v2').textContent = pctSell + '%';
       document.getElementById('v3').textContent = avgSoldPct + '%';
       document.getElementById('v4').textContent = avgRetPct + '%';
+      document.getElementById('v5').textContent = avgSoldValue.toLocaleString('no-NO') + ' kr';
+      document.getElementById('v6').textContent = avgRetValue.toLocaleString('no-NO') + ' kr';
 
-      // Performance-based colors with 0.75 opacity
+      // Restore performance colors for v1 & v2
       const getGaugeColor = (pct, thresholds) => {
         if (pct < thresholds.low) return 'rgba(220, 38, 38, 0.75)';     // red
         if (pct < thresholds.medium) return 'rgba(255, 204, 51, 0.75)'; // yellow
@@ -334,6 +360,13 @@
 
       const colorV1 = getGaugeColor(pctMottatt, { low: 5, medium: 10 });
       const colorV2 = getGaugeColor(pctSell, { low: 65, medium: 70 });
+
+      document.getElementById('v1').style.color = colorV1.replace('0.75', '1'); // text full opacity
+      document.getElementById('v2').style.color = colorV2.replace('0.75', '1');
+      document.getElementById('v3').style.color = '#004225';
+      document.getElementById('v4').style.color = '#82bfd2';
+      document.getElementById('v5').style.color = '#004225';
+      document.getElementById('v6').style.color = '#004225';
 
       const cfg = (val, color) => ({
         type: 'doughnut',
@@ -345,27 +378,22 @@
       if (gauge2) gauge2.destroy();
       if (gauge3) gauge3.destroy();
       if (gauge4) gauge4.destroy();
+      if (gauge5) gauge5.destroy();
+      if (gauge6) gauge6.destroy();
 
       gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt, colorV1));
       gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell, colorV2));
       gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
       gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
-
-      const trend1 = pctMottatt > 50 ? '↑' : '↓';
-      const trend2 = pctSell > 50 ? '↑' : '↓';
-      document.getElementById('trend1').textContent = trend1;
-      document.getElementById('trend2').textContent = trend2;
-      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : 'red';
-      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : 'red';
+      gauge5 = new Chart(document.getElementById('g5'), cfg(100, '#004225')); // dummy for text display
+      gauge6 = new Chart(document.getElementById('g6'), cfg(100, '#004225')); // dummy
     }
 
     function renderTrendChart(cars, fromDate, toDate) {
       const canvas = document.getElementById('trendChart');
       const container = canvas.parentElement;
-
       const dailySM = {};
       const dailyMottatt = {};
-
       cars.forEach(c => {
         if (c.sdDate && (!fromDate || c.sdDate >= fromDate) && (!toDate || c.sdDate <= toDate)) {
           const key = c.sdDate.toISOString().slice(0,10);
@@ -376,19 +404,15 @@
           dailyMottatt[key] = (dailyMottatt[key] || 0) + 1;
         }
       });
-
       const allDays = [...new Set([...Object.keys(dailySM), ...Object.keys(dailyMottatt)])].sort();
       if (allDays.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
       }
-
       const labels = allDays.map(d => d.slice(5));
       const smData = allDays.map(d => dailySM[d] || 0);
       const mottattData = allDays.map(d => dailyMottatt[d] || 0);
-
       if (trendChartInstance) trendChartInstance.destroy();
-
       trendChartInstance = new Chart(canvas, {
         type: 'line',
         data: {
@@ -453,43 +477,34 @@
       const container = canvas.parentElement;
       const monthlySold = {};
       const monthlyRet = {};
-
       soldCars.forEach(c => {
         const activityDate = c.solgtDate;
         if (!activityDate) return;
         if (fromDate && activityDate < fromDate) return;
-        if (toDate   && activityDate > toDate) return;
-
+        if (toDate && activityDate > toDate) return;
         const key = activityDate.toISOString().slice(0,7);
         monthlySold[key] = (monthlySold[key] || 0) + 1;
       });
-
       returnedCars.forEach(c => {
         const activityDate = c.retDate;
         if (!activityDate) return;
         if (fromDate && activityDate < fromDate) return;
-        if (toDate   && activityDate > toDate) return;
-
+        if (toDate && activityDate > toDate) return;
         const key = activityDate.toISOString().slice(0,7);
         monthlyRet[key] = (monthlyRet[key] || 0) + 1;
       });
-
       const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
       if (allMonths.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til stolpe-graf i perioden</p>';
         return;
       }
-
       const labels = allMonths.map(m => {
         const [y, mth] = m.split('-');
         return `${mth}.${y.slice(2)}`;
       });
-
       const soldData = allMonths.map(m => monthlySold[m] || 0);
       const retData = allMonths.map(m => monthlyRet[m] || 0);
-
       if (barChartInstance) barChartInstance.destroy();
-
       barChartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -514,12 +529,10 @@
     function renderCarTable(cars) {
       const tbody = document.getElementById('carTableBody');
       tbody.innerHTML = '';
-
       if (cars.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
         return;
       }
-
       cars.sort((a, b) => {
         const getSortDate = car => {
           const d = car.solgt || car.ret || '';
@@ -531,18 +544,14 @@
         };
         return getSortDate(b) - getSortDate(a);
       });
-
       cars.forEach(car => {
         const pct = car.ar > 0 ? Math.round((car.bud / car.ar) * 100) : 0;
         let pctClass = 'percent-med';
         if (pct >= 90) pctClass = 'percent-high';
         else if (pct < 80) pctClass = 'percent-low';
-
         const status = car.solgt ? 'Solgt' : 'Returnert';
         const statusClass = car.solgt ? '' : 'status-returned';
-
         const activityDate = car.solgt || car.ret || '-';
-
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${car.merke}</td>
