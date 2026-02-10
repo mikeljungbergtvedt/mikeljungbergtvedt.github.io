@@ -12,7 +12,6 @@
     :root {
       --peasy-green: #004225;
       --peasy-yellow: #FFCC33;
-      --peasy-blue: #82bfd2;
       --light-bg-start: #F2F7F9;
       --light-bg-end: #E8F0F5;
       --card-bg: rgba(255,255,255,0.96);
@@ -88,11 +87,6 @@
     tr:hover {
       background: #f9fafb;
     }
-    .status-sold { color: var(--peasy-green); font-weight: 600; }
-    .status-returned { color: #dc2626; font-weight: 600; }
-    .percent-high { color: #004225; font-weight: 600; }
-    .percent-med { color: #d97706; font-weight: 600; }
-    .percent-low { color: #dc2626; font-weight: 600; }
   </style>
 </head>
 <body class="text-[#004225]">
@@ -137,13 +131,13 @@
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g3"></canvas></div>
-          <div class="gauge-trend" id="trend3">-</div> <!-- ingen pil på v3 -->
+          <div class="gauge-trend" id="trend3">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
           <p class="text-4xl font-bold text-[#004225]" id="v3">-</p>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g4"></canvas></div>
-          <div class="gauge-trend" id="trend4">-</div> <!-- ingen pil på v4 -->
+          <div class="gauge-trend" id="trend4">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
           <p class="text-4xl font-bold text-[#82bfd2]" id="v4">-</p>
         </div>
@@ -152,9 +146,14 @@
 
     <!-- Trend chart -->
     <div class="card p-8 md:p-10 mb-8">
-      <h3 class="text-xl font-semibold text-center mb-4">Trend: Gj.sn. % av AR – Solgt vs Returnert per måned</h3>
+      <h3 class="text-xl font-semibold text-center mb-4">Antall SM mottatt og mottatt per dag</h3>
       <div class="chart-container">
-        <canvas id="combinedTrendChart"></canvas>
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <h3 class="text-xl font-semibold text-center mt-10 mb-4">Solgt vs Returnert (antall per måned)</h3>
+      <div class="chart-container">
+        <canvas id="barChart"></canvas>
       </div>
     </div>
 
@@ -180,12 +179,13 @@
     </div>
   </div>
 
-  <div id="version-info">v1.3.7 – pil fjernet på v3 & v4 – 10.02.2026</div>
+  <div id="version-info">v1.3.7 – tynn gul linje 50% opacity for antall SM mottatt + mottatt per dag – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
 
-    let combinedChartInstance = null;
+    let trendChartInstance = null;
+    let barChartInstance = null;
     let gauge1 = null;
     let gauge2 = null;
     let gauge3 = null;
@@ -280,7 +280,8 @@
         status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
 
         renderGauges(cars, mottattCars, soldCars, returnedCars);
-        renderCombinedTrendChart(soldCars, returnedCars);
+        renderTrendChart(cars);
+        renderBarChart(soldCars, returnedCars);
         renderCarTable(soldCars.concat(returnedCars));
 
       } catch (e) {
@@ -319,17 +320,16 @@
         options: { cutout: '78%', plugins: { legend: {display:false}, tooltip:{enabled:false} } }
       });
 
-      if (gauge1) { gauge1.destroy(); gauge1 = null; }
-      if (gauge2) { gauge2.destroy(); gauge2 = null; }
-      if (gauge3) { gauge3.destroy(); gauge3 = null; }
-      if (gauge4) { gauge4.destroy(); gauge4 = null; }
+      if (gauge1) gauge1.destroy();
+      if (gauge2) gauge2.destroy();
+      if (gauge3) gauge3.destroy();
+      if (gauge4) gauge4.destroy();
 
       gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt, '#FFCC33'));
       gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell, '#FFCC33'));
       gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
       gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
 
-      // Kun pil på v1 og v2 (30 vs 30)
       const trend1 = pctMottatt > 50 ? '↑' : '↓';
       const trend2 = pctSell > 50 ? '↑' : '↓';
 
@@ -338,64 +338,133 @@
 
       document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : 'red';
       document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : 'red';
-
-      // v3 og v4: ingen pil
-      document.getElementById('trend3').textContent = '';
-      document.getElementById('trend4').textContent = '';
     }
 
-    function renderCombinedTrendChart(soldCars, returnedCars) {
-      const canvas = document.getElementById('combinedTrendChart');
+    function renderTrendChart(cars) {
+      const canvas = document.getElementById('trendChart');
       const container = canvas.parentElement;
-      const monthlySold = {};
-      const monthlyRet = {};
-      soldCars.forEach(c => {
-        if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
-        const key = c.sdDate.toISOString().slice(0,7);
-        if (!monthlySold[key]) monthlySold[key] = { sum: 0, count: 0 };
-        monthlySold[key].sum += (c.bud / c.ar) * 100;
-        monthlySold[key].count++;
+      const dailySM = {};
+      const dailyMottatt = {};
+
+      cars.forEach(c => {
+        if (!c.sdDate) return;
+        const key = c.sdDate.toISOString().slice(0,10); // YYYY-MM-DD
+        if (!dailySM[key]) dailySM[key] = 0;
+        if (!dailyMottatt[key]) dailyMottatt[key] = 0;
+
+        dailySM[key]++;
+        if (c.mottatt) dailyMottatt[key]++;
       });
-      returnedCars.forEach(c => {
-        if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
-        const key = c.sdDate.toISOString().slice(0,7);
-        if (!monthlyRet[key]) monthlyRet[key] = { sum: 0, count: 0 };
-        monthlyRet[key].sum += (c.bud / c.ar) * 100;
-        monthlyRet[key].count++;
-      });
-      const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
-      if (allMonths.length === 0) {
+
+      const allDays = [...new Set([...Object.keys(dailySM), ...Object.keys(dailyMottatt)])].sort();
+
+      if (allDays.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
       }
-      const labels = allMonths.map(m => {
-        const [y, mth] = m.split('-');
-        return `${mth}.${y.slice(2)}`;
-      });
-      const soldData = allMonths.map(m => {
-        const entry = monthlySold[m];
-        return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
-      });
-      const retData = allMonths.map(m => {
-        const entry = monthlyRet[m];
-        return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
-      });
-      if (combinedChartInstance) combinedChartInstance.destroy();
-      combinedChartInstance = new Chart(canvas, {
+
+      const labels = allDays.map(d => d.slice(5)); // MM-DD
+
+      const smData = allDays.map(d => dailySM[d] || 0);
+      const mottattData = allDays.map(d => dailyMottatt[d] || 0);
+
+      if (trendChartInstance) trendChartInstance.destroy();
+
+      trendChartInstance = new Chart(canvas, {
         type: 'line',
         data: {
           labels,
           datasets: [
-            { label: 'Solgt – % av AR', data: soldData, borderColor: '#004225', backgroundColor: '#004225', pointBackgroundColor: '#FFCC33', pointRadius: 5, tension: 0.3, fill: false },
-            { label: 'Returnert – % av AR', data: retData, borderColor: '#ef4444', backgroundColor: '#ef4444', pointBackgroundColor: '#FFCC33', pointBorderColor: '#ef4444', pointRadius: 5, tension: 0.3, fill: false }
+            {
+              label: 'Antall SM mottatt per dag',
+              data: smData,
+              borderColor: 'rgba(255, 204, 51, 0.5)', // gul 50% opacity
+              backgroundColor: 'rgba(255, 204, 51, 0.5)',
+              pointBackgroundColor: 'rgba(255, 204, 51, 0.5)',
+              pointBorderColor: 'rgba(255, 204, 51, 0.5)',
+              pointRadius: 3,
+              borderWidth: 1.5,
+              tension: 0.2,
+              fill: false
+            },
+            {
+              label: 'Antall mottatt per dag',
+              data: mottattData,
+              borderColor: 'rgba(0, 66, 37, 0.5)', // grønn 50% opacity
+              backgroundColor: 'rgba(0, 66, 37, 0.5)',
+              pointBackgroundColor: 'rgba(0, 66, 37, 0.5)',
+              pointBorderColor: 'rgba(0, 66, 37, 0.5)',
+              pointRadius: 3,
+              borderWidth: 1.5,
+              tension: 0.2,
+              fill: false
+            }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { min: 40, max: 110, title: { display: true, text: '% av AR' } },
-            x: { title: { display: true, text: 'Måned (SD mottatt)' } }
+            y: { beginAtZero: true, title: { display: true, text: 'Antall' } },
+            x: { title: { display: true, text: 'Dato (daglig)' } }
+          },
+          plugins: { legend: { display: true, position: 'top' } }
+        }
+      });
+    }
+
+    function renderBarChart(soldCars, returnedCars) {
+      const canvas = document.getElementById('barChart');
+      const container = canvas.parentElement;
+      const monthlySold = {};
+      const monthlyRet = {};
+
+      soldCars.forEach(c => {
+        if (!c.sdDate) return;
+        const key = c.sdDate.toISOString().slice(0,7);
+        if (!monthlySold[key]) monthlySold[key] = 0;
+        monthlySold[key]++;
+      });
+
+      returnedCars.forEach(c => {
+        if (!c.sdDate) return;
+        const key = c.sdDate.toISOString().slice(0,7);
+        if (!monthlyRet[key]) monthlyRet[key] = 0;
+        monthlyRet[key]++;
+      });
+
+      const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
+
+      if (allMonths.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til stolpe-graf</p>';
+        return;
+      }
+
+      const labels = allMonths.map(m => {
+        const [y, mth] = m.split('-');
+        return `${mth}.${y.slice(2)}`;
+      });
+
+      const soldData = allMonths.map(m => monthlySold[m] || 0);
+      const retData = allMonths.map(m => monthlyRet[m] || 0);
+
+      if (barChartInstance) barChartInstance.destroy();
+
+      barChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Solgt', data: soldData, backgroundColor: '#004225' },
+            { label: 'Returnert', data: retData, backgroundColor: '#82bfd2' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Antall biler' } },
+            x: { title: { display: true, text: 'Måned' } }
           },
           plugins: { legend: { display: true, position: 'top' } }
         }
