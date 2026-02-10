@@ -54,27 +54,6 @@
       height: 350px;
       margin-top: 2rem;
     }
-    .kpi-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1.25rem 1rem;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      min-height: 140px;
-    }
-    .kpi-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .kpi-label {
-      font-size: 1rem;
-      color: #555;
-      margin-top: 0.5rem;
-    }
-    .good { color: var(--peasy-green); }
-    .warning { color: #d97706; }
-    .danger { color: #dc2626; }
     .table-container {
       overflow-x: auto;
       margin-top: 2rem;
@@ -99,6 +78,9 @@
     }
     .status-sold { color: var(--peasy-green); font-weight: 600; }
     .status-returned { color: #dc2626; font-weight: 600; }
+    .percent-high { color: #004225; font-weight: 600; }
+    .percent-med  { color: #d97706; font-weight: 600; }
+    .percent-low  { color: #dc2626; font-weight: 600; }
   </style>
 </head>
 <body class="text-[#004225]">
@@ -125,22 +107,6 @@
 
     <div class="flex justify-center mb-6">
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
-    </div>
-
-    <!-- Heart KPI tiles -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-      <div class="kpi-card">
-        <div class="kpi-value" id="pricedSold">–</div>
-        <div class="kpi-label">Priced → Sold</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-value" id="receiptRate">–</div>
-        <div class="kpi-label">Receipt Rate</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-value" id="sellThrough">–</div>
-        <div class="kpi-label">Sell-through</div>
-      </div>
     </div>
 
     <div class="card p-8 md:p-10">
@@ -185,6 +151,7 @@
               <th>Modell</th>
               <th>Endelig AR verdi</th>
               <th>Høyeste bud</th>
+              <th>% av AR</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -195,7 +162,7 @@
 
   </div>
 
-  <div id="version-info">v1.2.2 – Dashboard med tiles & tabell – 10.02.2026</div>
+  <div id="version-info">v1.2.3 – Table sorted by most recent – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -283,31 +250,15 @@
           };
         }).filter(r => r.sdStr && r.ar > 10000 && (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && (!toDate || (r.sdDate && r.sdDate <= toDate)));
 
-        const totalPriced = cars.length;
-        const mottattCount = cars.filter(c => c.mottatt).length;
-        const soldCount = cars.filter(c => c.solgt).length;
-        const returnedCount = cars.filter(c => c.ret).length;
+        const mottattCars = cars.filter(c => c.mottatt);
+        const soldCars = cars.filter(c => c.solgt);
+        const returnedCars = cars.filter(c => c.ret);
 
-        const receiptPct = totalPriced ? Math.round((mottattCount / totalPriced) * 100) : 0;
-        const sellThroughPct = mottattCount ? Math.round((soldCount / mottattCount) * 100) : 0;
-        const pricedSoldPct = totalPriced ? Math.round((soldCount / totalPriced) * 100) : 0;
+        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
 
-        // Update heart KPI tiles
-        document.getElementById('pricedSold').textContent = pricedSoldPct + '%';
-        document.getElementById('pricedSold').className = 'kpi-value ' + (pricedSoldPct >= 18 ? 'good' : pricedSoldPct >= 12 ? 'warning' : 'danger');
-
-        document.getElementById('receiptRate').textContent = receiptPct + '%';
-        document.getElementById('receiptRate').className = 'kpi-value ' + (receiptPct >= 25 ? 'good' : receiptPct >= 18 ? 'warning' : 'danger');
-
-        document.getElementById('sellThrough').textContent = sellThroughPct + '%';
-        document.getElementById('sellThrough').className = 'kpi-value ' + (sellThroughPct >= 80 ? 'good' : sellThroughPct >= 70 ? 'warning' : 'danger');
-
-        const status = document.getElementById('status');
-        status.textContent = `${totalPriced} priced • ${mottattCount} mottatt • ${soldCount} solgt • ${returnedCount} returnert`;
-
-        renderGauges(cars, cars.filter(c => c.mottatt), cars.filter(c => c.solgt), cars.filter(c => c.ret));
-        renderCombinedTrendChart(cars.filter(c => c.solgt), cars.filter(c => c.ret));
-        renderCarTable(cars.filter(c => c.solgt || c.ret));
+        renderGauges(cars, mottattCars, soldCars, returnedCars);
+        renderCombinedTrendChart(soldCars, returnedCars);
+        renderCarTable(soldCars.concat(returnedCars));
 
       } catch (e) {
         console.error(e);
@@ -428,16 +379,10 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: {
-              min: 40,
-              max: 110,
-              title: { display: true, text: '% av AR' }
-            },
+            y: { min: 40, max: 110, title: { display: true, text: '% av AR' } },
             x: { title: { display: true, text: 'Måned (SD mottatt)' } }
           },
-          plugins: {
-            legend: { display: true, position: 'top' }
-          }
+          plugins: { legend: { display: true, position: 'top' } }
         }
       });
     }
@@ -447,17 +392,25 @@
       tbody.innerHTML = '';
 
       if (filteredCars.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
         return;
       }
 
-      filteredCars.sort((a,b) => {
-        if (a.solgt && !b.solgt) return -1;
-        if (!a.solgt && b.solgt) return 1;
-        return b.ar - a.ar;
+      // Sort by most recent activity (Solgt på or Returnert på)
+      filteredCars.sort((a, b) => {
+        const dateA = a.solgt ? a.solgt : a.ret;
+        const dateB = b.solgt ? b.solgt : b.ret;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateB.localeCompare(dateA);   // newest first
       });
 
       filteredCars.forEach(car => {
+        const pct = car.ar > 0 ? Math.round((car.bud / car.ar) * 100) : 0;
+        let pctClass = 'percent-med';
+        if (pct >= 90) pctClass = 'percent-high';
+        else if (pct < 80) pctClass = 'percent-low';
+
         const status = car.solgt ? 'Solgt' : 'Returnert';
         const statusClass = car.solgt ? 'status-sold' : 'status-returned';
 
@@ -467,6 +420,7 @@
           <td>${car.modell}</td>
           <td>${car.ar.toLocaleString('no-NO')}</td>
           <td>${car.bud.toLocaleString('no-NO')}</td>
+          <td class="${pctClass}">${pct}%</td>
           <td class="${statusClass}">${status}</td>
         `;
         tbody.appendChild(tr);
