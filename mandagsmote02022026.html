@@ -50,13 +50,65 @@
       padding: 1rem;
       margin-bottom: 1.5rem;
     }
+    .chart-container {
+      height: 350px;
+      margin-top: 2rem;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      min-height: 140px;
+    }
+    .kpi-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      font-size: 1rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+    .good { color: var(--peasy-green); }
+    .warning { color: #d97706; }
+    .danger { color: #dc2626; }
+    .table-container {
+      overflow-x: auto;
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: var(--peasy-green);
+      color: white;
+      font-weight: 600;
+    }
+    tr:hover {
+      background: #f9fafb;
+    }
+    .status-sold { color: var(--peasy-green); font-weight: 600; }
+    .status-returned { color: #dc2626; font-weight: 600; }
   </style>
 </head>
 <body class="text-[#004225]">
+
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
     <header class="text-center mb-8">
       <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="mx-auto h-16 md:h-20 mb-4">
     </header>
+
     <div class="date-filter card flex flex-wrap justify-center gap-4 items-end">
       <div>
         <label class="block text-sm font-medium mb-1">Fra dato</label>
@@ -70,9 +122,27 @@
         Vis periode
       </button>
     </div>
+
     <div class="flex justify-center mb-6">
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
     </div>
+
+    <!-- Heart KPI tiles -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+      <div class="kpi-card">
+        <div class="kpi-value" id="pricedSold">–</div>
+        <div class="kpi-label">Priced → Sold</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="receiptRate">–</div>
+        <div class="kpi-label">Receipt Rate</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="sellThrough">–</div>
+        <div class="kpi-label">Sell-through</div>
+      </div>
+    </div>
+
     <div class="card p-8 md:p-10">
       <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall & selgerprisvillighet</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
@@ -97,13 +167,35 @@
           <p class="text-4xl font-bold text-red-600" id="v4">-</p>
         </div>
       </div>
+
       <h3 class="text-xl font-semibold text-center mb-4">Trend: Gj.sn. % av AR – Solgt vs Returnert per måned</h3>
-      <div class="chart-container" style="height: 350px;">
+      <div class="chart-container">
         <canvas id="combinedTrendChart"></canvas>
       </div>
     </div>
+
+    <!-- Car table -->
+    <div class="card p-8 md:p-10 mt-8">
+      <h3 class="text-xl font-semibold text-center mb-6">Biler i perioden (kun solgt eller returnert)</h3>
+      <div class="table-container">
+        <table id="carTable">
+          <thead>
+            <tr>
+              <th>Merke</th>
+              <th>Modell</th>
+              <th>Endelig AR verdi</th>
+              <th>Høyeste bud</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="carTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
-  <div id="version-info">v1.1.5 – Dashboard – 10.02.2026</div>
+
+  <div id="version-info">v1.2.2 – Dashboard med tiles & tabell – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -152,9 +244,11 @@
 
         const idx = {
           sd: findCol(['SD mottatt på']),
+          merke: findCol(['Merke']),
+          modell: findCol(['Modell']),
           ar: findCol(['Endelig AR verdi']),
-          mottatt: findCol(['Mottatt']),
           bud: findCol(['Høyeste bud']),
+          mottatt: findCol(['Mottatt']),
           solgt: findCol(['Solgt på']),
           ret: findCol(['Returnert på'])
         };
@@ -179,22 +273,41 @@
           return {
             sdStr: row[idx.sd] || '',
             sdDate,
+            merke: String(row[idx.merke] || '-').trim(),
+            modell: String(row[idx.modell] || '-').trim(),
             ar: cleanNum(row[idx.ar]),
-            mottatt: row[idx.mottatt] || '',
             bud: cleanNum(row[idx.bud]),
+            mottatt: row[idx.mottatt] || '',
             solgt: row[idx.solgt] || '',
             ret: row[idx.ret] || ''
           };
         }).filter(r => r.sdStr && r.ar > 10000 && (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && (!toDate || (r.sdDate && r.sdDate <= toDate)));
 
-        const mottattCars = cars.filter(c => c.mottatt);
-        const soldCars = cars.filter(c => c.solgt);
-        const returnedCars = cars.filter(c => c.ret);
+        const totalPriced = cars.length;
+        const mottattCount = cars.filter(c => c.mottatt).length;
+        const soldCount = cars.filter(c => c.solgt).length;
+        const returnedCount = cars.filter(c => c.ret).length;
 
-        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
+        const receiptPct = totalPriced ? Math.round((mottattCount / totalPriced) * 100) : 0;
+        const sellThroughPct = mottattCount ? Math.round((soldCount / mottattCount) * 100) : 0;
+        const pricedSoldPct = totalPriced ? Math.round((soldCount / totalPriced) * 100) : 0;
 
-        renderGauges(cars, mottattCars, soldCars, returnedCars);
-        renderCombinedTrendChart(soldCars, returnedCars);
+        // Update heart KPI tiles
+        document.getElementById('pricedSold').textContent = pricedSoldPct + '%';
+        document.getElementById('pricedSold').className = 'kpi-value ' + (pricedSoldPct >= 18 ? 'good' : pricedSoldPct >= 12 ? 'warning' : 'danger');
+
+        document.getElementById('receiptRate').textContent = receiptPct + '%';
+        document.getElementById('receiptRate').className = 'kpi-value ' + (receiptPct >= 25 ? 'good' : receiptPct >= 18 ? 'warning' : 'danger');
+
+        document.getElementById('sellThrough').textContent = sellThroughPct + '%';
+        document.getElementById('sellThrough').className = 'kpi-value ' + (sellThroughPct >= 80 ? 'good' : sellThroughPct >= 70 ? 'warning' : 'danger');
+
+        const status = document.getElementById('status');
+        status.textContent = `${totalPriced} priced • ${mottattCount} mottatt • ${soldCount} solgt • ${returnedCount} returnert`;
+
+        renderGauges(cars, cars.filter(c => c.mottatt), cars.filter(c => c.solgt), cars.filter(c => c.ret));
+        renderCombinedTrendChart(cars.filter(c => c.solgt), cars.filter(c => c.ret));
+        renderCarTable(cars.filter(c => c.solgt || c.ret));
 
       } catch (e) {
         console.error(e);
@@ -210,12 +323,12 @@
 
       if (soldCars.length) {
         const ratios = soldCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
-        avgSoldPct = Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length);
+        avgSoldPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
 
       if (returnedCars.length) {
         const ratios = returnedCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
-        avgRetPct = Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length);
+        avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
 
       document.getElementById('v1').textContent = pctMottatt + '%';
@@ -326,6 +439,37 @@
             legend: { display: true, position: 'top' }
           }
         }
+      });
+    }
+
+    function renderCarTable(filteredCars) {
+      const tbody = document.getElementById('carTableBody');
+      tbody.innerHTML = '';
+
+      if (filteredCars.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
+        return;
+      }
+
+      filteredCars.sort((a,b) => {
+        if (a.solgt && !b.solgt) return -1;
+        if (!a.solgt && b.solgt) return 1;
+        return b.ar - a.ar;
+      });
+
+      filteredCars.forEach(car => {
+        const status = car.solgt ? 'Solgt' : 'Returnert';
+        const statusClass = car.solgt ? 'status-sold' : 'status-returned';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${car.merke}</td>
+          <td>${car.modell}</td>
+          <td>${car.ar.toLocaleString('no-NO')}</td>
+          <td>${car.bud.toLocaleString('no-NO')}</td>
+          <td class="${statusClass}">${status}</td>
+        `;
+        tbody.appendChild(tr);
       });
     }
   </script>
