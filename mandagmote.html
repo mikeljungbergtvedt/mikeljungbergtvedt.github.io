@@ -1,696 +1,620 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peasy Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline@3.2.0/dist/chartjs-plugin-trendline.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #F2F7F9 0%, #E8F0F5 100%); color: #004225; min-height: 100vh; line-height: 1.5; }
-    .container { max-width: 1440px; margin: 0 auto; padding: 32px 16px; }
-    h1 { font-weight: 900; font-size: 2.2rem; letter-spacing: -0.6px; margin-bottom: 6px; background: linear-gradient(to right, #004225, #006644); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; }
-    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; align-items: center; }
-    button {
-      padding: 6px 14px;
-      font-size: 0.92rem;
-      font-weight: 500;
-      border-radius: 6px;
-      border: 1px solid #004225;
-      background: #006644;
-      color: white;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease;
-      min-width: 120px;
-      text-align: center;
+    :root {
+      --peasy-green: #004225;
+      --peasy-yellow: #FFCC33;
+      --light-bg-start: #F2F7F9;
+      --light-bg-end: #E8F0F5;
+      --card-bg: rgba(255,255,255,0.96);
     }
-    button:hover:not(:disabled) { background: #008c5a; border-color: #006644; }
-    button:disabled { background: #ccc; border-color: #aaa; cursor: not-allowed; opacity: 0.65; }
-    button#edit-btn { background: #004225; }
-    button#edit-btn:hover:not(:disabled) { background: #005533; }
-    button#lock-btn { background: #2e7d32; }
-    button#lock-btn:hover:not(:disabled) { background: #388e3c; }
-    button.danger, button.clear-all { background: #c62828; border-color: #b71c1c; }
-    button.danger:hover:not(:disabled), button.clear-all:hover:not(:disabled) { background: #d32f2f; }
-    button.force-unlock { background: #ff9800; border-color: #f57c00; }
-    button.force-unlock:hover:not(:disabled) { background: #ffb300; }
-    .commentary { background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); border: 1px solid rgba(130,191,210,0.08); border-radius: 12px; box-shadow: 0 4px 16px rgba(0,66,37,0.04); padding: 20px; margin-bottom: 32px; }
-    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); border: 1px solid rgba(130,191,210,0.08); border-radius: 12px; box-shadow: 0 4px 16px rgba(0,66,37,0.04); margin-bottom: 32px; }
-    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(130,191,210,0.08); }
-    th { background: rgba(130,191,210,0.04); font-weight: 600; }
-    .positive { color: #2e7d32; }
-    .negative { color: #c62828; }
-    #loading { font-style: italic; opacity: 0.75; text-align: center; font-size: 1rem; margin: 20px 0; }
-    .section-title { font-size: 1.25rem; margin: 28px 0 12px; font-weight: 600; }
-    #report-content { display: none; }
-    .timestamp { font-size: 0.9rem; opacity: 0.8; margin-bottom: 16px; }
-    .no-data { text-align: center; color: #888; font-style: italic; margin: 40px 0; }
-    .logo-container { text-align: center; margin-bottom: 24px; }
-    .logo { max-width: 200px; height: auto; opacity: 0.92; transition: opacity 0.3s; }
-    .logo:hover { opacity: 1; }
-    #version-info { position: fixed; bottom: 12px; right: 16px; font-size: 0.75rem; color: #666; opacity: 0.7; pointer-events: none; z-index: 10; }
-
-    details.history-section {
-      margin: 24px 0;
-      background: rgba(0,102,68,0.06);
-      border: 1px solid rgba(0,102,68,0.15);
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, var(--light-bg-start) 0%, var(--light-bg-end) 100%);
+      color: var(--peasy-green);
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(0,66,37,0.08);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,66,37,0.06);
+    }
+    .gauge-container {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+    }
+    .gauge-trend {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: bold;
+      z-index: 10;
+    }
+    #version-info {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.8rem;
+      color: #555;
+      padding: 4px 10px;
+      pointer-events: none;
+    }
+    .date-filter {
+      background: rgba(255,255,255,0.7);
       border-radius: 12px;
-      padding: 0;
-      overflow: hidden;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
     }
-    details.history-section summary {
-      padding: 16px 20px;
+    .chart-container {
+      height: 350px;
+      margin-top: 2rem;
+    }
+    .table-container {
+      overflow-x: auto;
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: var(--peasy-green);
+      color: white;
       font-weight: 600;
-      font-size: 1.1rem;
-      cursor: pointer;
-      background: rgba(0,102,68,0.08);
-      list-style: none;
+      font-size: 0.95rem;
     }
-    details.history-section summary::-webkit-details-marker { display: none; }
-    details.history-section summary::before {
-      content: '▶';
-      margin-right: 12px;
-      display: inline-block;
-      transition: transform 0.2s;
+    tr:hover {
+      background: #f9fafb;
     }
-    details.history-section[open] summary::before {
-      transform: rotate(90deg);
+    .status-returned {
+      color: #dc2626;
+      font-weight: 500;
     }
-    .history-content {
-      padding: 16px 20px;
-    }
-
-    @media (max-width: 768px) {
-      .controls { flex-direction: column; align-items: stretch; gap: 8px; }
-      button { width: 100%; padding: 8px 16px; font-size: 0.95rem; }
-      h1 { font-size: 1.9rem; }
-      .container { padding: 24px 16px; }
-      #version-info { bottom: 8px; right: 12px; font-size: 0.7rem; }
-    }
+    .percent-high { color: #16a34a; font-weight: 600; }
+    .percent-med  { color: #ca8a04; font-weight: 500; }
+    .percent-low  { color: #dc2626; font-weight: 500; }
   </style>
 </head>
-<body>
-<div class="container">
-  <div class="logo-container">
-    <img src="Peasy_Logo_ORG.png" alt="Peasy" class="logo">
-  </div>
-  <h1>Mandagsrapport – Peasy</h1>
-  <p style="opacity: 0.8; margin-bottom: 32px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
+<body class="text-[#004225]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <header class="text-center mb-8">
+      <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="mx-auto h-16 md:h-20 mb-4">
+    </header>
 
-  <div class="controls">
-    <select id="weekSelect" onchange="loadSavedReport()">
-      <option value="">Velg uke...</option>
-    </select>
-    <button id="generate-btn" onclick="generateNewReport()">Generer rapport for siste fullførte uke</button>
+    <div class="date-filter card flex flex-wrap justify-center gap-4 items-end">
+      <div>
+        <label class="block text-sm font-medium mb-1">Fra dato</label>
+        <input type="date" id="fromDate" class="px-4 py-2 border border-gray-300 rounded-lg">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Til dato</label>
+        <input type="date" id="toDate" class="px-4 py-2 border border-gray-300 rounded-lg">
+      </div>
+      <button onclick="loadData()" class="px-6 py-2 bg-[#FFCC33] text-[#004225] font-semibold rounded-xl hover:bg-[#FFD966] transition">
+        Vis periode
+      </button>
+    </div>
 
-    <!-- Collapsible historical section – starts closed -->
-    <details class="history-section">
-      <summary>Generer eldre uker (f.eks. uke 1–5 eller tidligere år)</summary>
-      <div class="history-content">
-        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:16px;">
-          <select id="yearSelect" onchange="updateManualWeekOptions()">
-            <option value="2026" selected>2026</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
-            <!-- Add more years if needed -->
-          </select>
-          <select id="manualWeekSelect">
-            <option value="">Velg uke...</option>
-          </select>
-          <button id="generate-manual-btn" onclick="generateReportForSelectedWeek()">Generer valgt uke</button>
+    <div class="flex justify-center mb-6">
+      <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
+    </div>
+
+    <!-- Gauges -->
+    <div class="card p-6 md:p-10 mb-12">
+      <h2 class="text-2xl md:text-3xl font-semibold text-center mb-8 md:mb-10">Nøkkeltall</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 justify-items-center">
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g1"></canvas></div>
+          <div class="gauge-trend" id="trend1">-</div>
+          <p class="mt-4 text-sm text-gray-600">Priset - Mottatt (<5 rød, <10 gul, >10 grønn)</p>
+          <p class="text-4xl font-bold" id="v1">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g2"></canvas></div>
+          <div class="gauge-trend" id="trend2">-</div>
+          <p class="mt-4 text-sm text-gray-600">Solgt – Mottatt (<65 rød, <70 gul, >70 grønn)</p>
+          <p class="text-4xl font-bold" id="v2">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g3"></canvas></div>
+          <div class="gauge-trend" id="trend3">-</div>
+          <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v3">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g4"></canvas></div>
+          <div class="gauge-trend" id="trend4">-</div>
+          <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
+          <p class="text-4xl font-bold text-[#82bfd2]" id="v4">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g5"></canvas></div>
+          <div class="gauge-trend" id="trend5">-</div>
+          <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi solgt</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v5">-</p>
+        </div>
+        <div class="text-center relative w-full max-w-[220px]">
+          <div class="gauge-container mx-auto"><canvas id="g6"></canvas></div>
+          <div class="gauge-trend" id="trend6">-</div>
+          <p class="mt-4 text-sm text-gray-600">Gj.sn. verdi returnert</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v6">-</p>
         </div>
       </div>
-    </details>
-
-    <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
-    <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
-    <button id="delete-btn" onclick="showDeleteConfirm()" style="display:none;">Slett rapport</button>
-    <button onclick="clearAllReports()" class="clear-all">Slett ALLE rapporter fra skyen</button>
-    <button onclick="forceUnlock()" class="force-unlock">Force unlock current</button>
-  </div>
-
-  <div id="loading" style="display:none;">Laster...</div>
-
-  <div id="report-content" style="display:none;">
-    <div id="timestamp" class="timestamp"></div>
-    <div id="commentary" class="commentary"></div>
-
-    <div id="sold-section">
-      <div class="section-title">Solgte biler</div>
-      <table id="sold-table"></table>
     </div>
 
-    <div id="returned-section">
-      <div class="section-title">Returnerte biler</div>
-      <table id="returned-table"></table>
+    <!-- Charts -->
+    <div class="card p-6 md:p-10 mb-8">
+      <h3 class="text-xl font-semibold text-center mb-4">Antall SM mottatt og mottatt per dag</h3>
+      <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <h3 class="text-xl font-semibold text-center mt-10 mb-4">Solgt vs Returnert (antall per måned)</h3>
+      <div class="chart-container">
+        <canvas id="barChart"></canvas>
+      </div>
     </div>
-  </div>
 
-  <div id="version-info">v18 • gj.sn. bud + diff% • historisk lukket som standard • 09.02.2026</div>
-
-  <!-- Modals unchanged -->
-  <div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:28px; border-radius:12px; width:90%; max-width:540px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-      <h3>Kommentar før låsing (valgfritt)</h3>
-      <textarea id="lock-comment-text" placeholder="Skriv en kommentar eller begrunnelse..." style="width:100%; height:100px; padding:8px; border:1px solid #ccc; border-radius:6px;"></textarea>
-      <div style="margin-top:16px; text-align:right;">
-        <button onclick="closeLockModal()" style="background:#757575; margin-right:12px;">Avbryt</button>
-        <button onclick="confirmLockWithComment()">Lås inn</button>
+    <!-- Car table -->
+    <div class="card p-6 md:p-10">
+      <h3 class="text-lg font-medium text-gray-800 text-center mb-4">Biler i perioden (kun solgt eller returnert)</h3>
+      <div class="table-container overflow-x-auto">
+        <table id="carTable" class="min-w-full">
+          <thead>
+            <tr>
+              <th>Merke</th>
+              <th>Modell</th>
+              <th>Endelig AR verdi</th>
+              <th>Høyeste bud</th>
+              <th>% av AR</th>
+              <th>Dato</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="carTableBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:28px; border-radius:12px; text-align:center; max-width:360px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-      <h3>Sikker på sletting?</h3>
-      <p>Rapporten blir borte for alle brukere.</p>
-      <div style="margin-top:20px;">
-        <button onclick="promptPasswordForDelete()" style="background:#c62828; color:white;">Ja, slett</button>
-        <button onclick="closeDeleteModal()" style="margin-left:16px; background:#757575; color:white;">Nei</button>
-      </div>
-    </div>
-  </div>
+  <div id="version-info">v1.4.7 – 10.02.2026</div>
 
-  <div id="password-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:28px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.2); z-index:1100; text-align:center;">
-    <h3>Passord kreves</h3>
-    <input type="password" id="password-input" placeholder="Passord" style="padding:10px; font-size:1rem; width:200px; margin:12px auto; display:block; border:1px solid #ccc; border-radius:6px;">
-    <button onclick="checkDeletePassword()" style="background:#c62828; color:white;">Bekreft</button>
-    <button onclick="closePasswordPrompt()" style="margin-left:12px; background:#757575; color:white;">Avbryt</button>
-  </div>
-</div>
+  <script>
+    const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
+    let trendChartInstance = null;
+    let barChartInstance = null;
+    let gauge1 = null, gauge2 = null, gauge3 = null, gauge4 = null, gauge5 = null, gauge6 = null;
 
-<script>
-// ────────────────────────────────────────────────
-// CONFIG
-const BIN_ID = '6981aa3dae596e708f0d773b';
-const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const DELETE_PASSWORD = "slett123";
-const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
-
-// ────────────────────────────────────────────────
-let currentReport = null;
-let headers = [];
-
-// ────────────────────────────────────────────────
-// HELPERS
-function findColumn(patterns) {
-  const clean = h => String(h || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  const lowers = headers.map(clean);
-  for (let p of patterns) {
-    const pat = p.trim().replace(/\s+/g, ' ').toLowerCase();
-    const i = lowers.findIndex(h => h === pat);
-    if (i !== -1) return i;
-  }
-  for (let p of patterns) {
-    const pat = p.trim().replace(/\s+/g, ' ').toLowerCase();
-    const i = lowers.findIndex(h => h.includes(pat));
-    if (i !== -1) return i;
-  }
-  return -1;
-}
-
-function getISOWeek(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d - yearStart) / 86400000);
-  return Math.ceil((days + 1) / 7);
-}
-
-function getMostRecentCompletedWeekStart() {
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  let isoDay = today.getDay() || 7;
-  const daysBack = isoDay;
-  const prevSunday = new Date(today);
-  prevSunday.setDate(today.getDate() - daysBack);
-  const monday = new Date(prevSunday);
-  monday.setDate(prevSunday.getDate() - 6);
-  return monday;
-}
-
-function isMidWeek() {
-  const today = new Date();
-  let isoDay = today.getDay() || 7;
-  return isoDay !== 1; // allow only Mondays
-}
-
-function parseDate(str) {
-  if (!str) return null;
-  const cleaned = String(str).trim().split(' ')[0];
-  const m = cleaned.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  return m ? new Date(m[3], m[2]-1, m[1]) : null;
-}
-
-// ────────────────────────────────────────────────
-// JSONBIN
-async function fetchReports() {
-  try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    return json.record?.reports ?? [];
-  } catch (err) {
-    console.error(err);
-    return [];
-  }
-}
-
-async function saveReports(reports) {
-  try {
-    const res = await fetch(API_URL, {
-      method: 'PUT',
-      headers: HEADERS,
-      body: JSON.stringify({ reports })
+    window.addEventListener('load', () => {
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(today.getDate() - 90);
+      document.getElementById('toDate').value = today.toISOString().split('T')[0];
+      document.getElementById('fromDate').value = from.toISOString().split('T')[0];
+      loadData();
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch (err) {
-    console.error(err);
-    alert("Lagring feilet – sjekk konsoll.");
-  }
-}
 
-// ────────────────────────────────────────────────
-// INITIAL LOAD
-window.onload = async () => {
-  const reports = await fetchReports();
-  populateWeekSelect(reports);
-  if (reports.length > 0) {
-    document.getElementById('weekSelect').value = reports[reports.length - 1].id;
-    await loadSavedReport();
-  }
-  updateManualWeekOptions();
-  await updateGenerateButtonState();
-};
+    async function loadData() {
+      const status = document.getElementById('status');
+      status.textContent = "Laster data...";
 
-function populateWeekSelect(reports) {
-  const sel = document.getElementById('weekSelect');
-  sel.innerHTML = '<option value="">Velg uke...</option>';
-  reports.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id;
-    opt.textContent = r.title;
-    sel.appendChild(opt);
-  });
-}
+      const fromStr = document.getElementById('fromDate').value;
+      const toStr = document.getElementById('toDate').value;
+      const fromDate = fromStr ? new Date(fromStr) : null;
+      const toDate = toStr ? new Date(toStr) : null;
 
-async function loadSavedReport() {
-  const id = document.getElementById('weekSelect').value;
-  if (!id) {
-    document.getElementById('report-content').style.display = 'none';
-    document.querySelectorAll('#edit-btn, #lock-btn, #delete-btn').forEach(el => el.style.display = 'none');
-    await updateGenerateButtonState();
-    return;
-  }
-  const reports = await fetchReports();
-  const report = reports.find(r => r.id === id);
-  if (!report) return;
-
-  currentReport = report;
-
-  let ts = `Opprettet: ${report.created}`;
-  if (report.edited) ts += ` • Sist endret: ${report.edited}`;
-  if (report.locked && report.lockComment) ts += ` • Låst med: "${report.lockComment}"`;
-  document.getElementById('timestamp').textContent = ts;
-
-  let html = report.commentary || '<p style="color:#777;">Ingen fakta generert.</p>';
-  if (report.userComment) {
-    html += `<div class="user-comment"><h3>Kommentar til rapporten</h3><div style="white-space: pre-wrap;">${report.userComment.replace(/\n/g, '<br>')}</div></div>`;
-  }
-  document.getElementById('commentary').innerHTML = html;
-
-  renderTable('sold-table', report.soldCars || []);
-  renderTable('returned-table', report.returnedCars || []);
-
-  document.getElementById('sold-section').style.display = report.soldCars?.length ? 'block' : 'none';
-  document.getElementById('returned-section').style.display = report.returnedCars?.length ? 'block' : 'none';
-  document.getElementById('report-content').style.display = 'block';
-
-  const locked = !!report.locked;
-  document.getElementById('edit-btn').style.display = 'block';
-  document.getElementById('lock-btn').style.display = locked ? 'none' : 'block';
-  document.getElementById('delete-btn').style.display = locked ? 'block' : 'none';
-
-  await updateGenerateButtonState();
-}
-
-function renderTable(id, cars) {
-  const table = document.getElementById(id);
-  table.innerHTML = '';
-  if (!cars.length) {
-    table.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler denne uken</td></tr>';
-    return;
-  }
-
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Merke</th><th>Modell</th><th>År</th><th>Høyeste bud</th><th>AR laveste estimat</th><th>Diff NOK</th><th>Diff %</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${cars.map(car => {
-        const bud = parseFloat(car.ColumnE) || 0;
-        const ar = car['AR laveste estimat_raw'] || 0;
-        const diffNOK = bud - ar;
-        const diffPct = ar > 0 ? ((bud - ar) / ar * 100) : 0;
-        return `
-          <tr>
-            <td>${car.Merke}</td>
-            <td>${car.Modell}</td>
-            <td>${car.År}</td>
-            <td>${bud.toLocaleString('nb-NO') || '-'}</td>
-            <td>${ar.toLocaleString('nb-NO') || '-'}</td>
-            <td>${diffNOK ? diffNOK.toLocaleString('nb-NO') : '-'}</td>
-            <td class="${diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '')}">${ar > 0 ? diffPct.toFixed(1)+' %' : '-'}</td>
-          </tr>`;
-      }).join('')}
-    </tbody>`;
-}
-
-// ────────────────────────────────────────────────
-// COMMENTARY – updated with avg bud + avg diff %
-function generateCommentary(sold, returned) {
-  const stats = (cars) => {
-    if (!cars.length) return { n:0, avgBud:'0', avgDiffPct:'0 %' };
-
-    let sumBud = 0;
-    let sumDiffPct = 0;
-    let countWithAR = 0;
-
-    cars.forEach(car => {
-      const bud = parseFloat(car.ColumnE) || 0;
-      sumBud += bud;
-
-      const ar = car['AR laveste estimat_raw'] || 0;
-      if (ar > 0) {
-        sumDiffPct += ((bud - ar) / ar) * 100;
-        countWithAR++;
+      // Min 30 days warning
+      let periodWarning = "";
+      if (fromDate && toDate) {
+        const daysDiff = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24));
+        if (daysDiff < 30) {
+          periodWarning = `⚠️ Perioden må være minst 30 dager (valgt: ${daysDiff} dager)`;
+        }
       }
-    });
 
-    return {
-      n: cars.length,
-      avgBud: Math.round(sumBud / cars.length).toLocaleString('nb-NO'),
-      avgDiffPct: countWithAR > 0 ? (sumDiffPct / countWithAR).toFixed(1) + ' %' : '0 %'
-    };
-  };
+      try {
+        const res = await fetch(DATA_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ab = await res.arrayBuffer();
+        const wb = XLSX.read(ab, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const headers = json[0].map(h => String(h || '').trim());
+        const dataRows = json.slice(1);
 
-  const s = stats(sold);
-  const r = stats(returned);
+        function findCol(patterns) {
+          const lower = headers.map(h => h.toLowerCase());
+          for (let p of patterns) {
+            let idx = lower.findIndex(h => h === p.toLowerCase());
+            if (idx !== -1) return idx;
+            idx = lower.findIndex(h => h.includes(p.toLowerCase()));
+            if (idx !== -1) return idx;
+          }
+          return -1;
+        }
 
-  return `
-    <h3>Fakta – ${sold.length || returned.length ? 'siste valgte uke' : 'ingen data'}</h3>
-    <div style="margin: 24px 0 12px 0;">
-      <strong>Solgte biler</strong><br><br>
-      Totalt: ${s.n} biler<br><br>
-      Gjennomsnitt høyeste bud: ${s.avgBud} kr<br>
-      Gjennomsnitt diff: ${s.avgDiffPct}
-    </div>
-    <div style="margin: 32px 0 12px 0;">
-      <strong>Returnerte biler</strong><br><br>
-      Totalt: ${r.n} biler<br><br>
-      Gjennomsnitt høyeste bud: ${r.avgBud} kr<br>
-      Gjennomsnitt diff: ${r.avgDiffPct}
-    </div>
-  `;
-}
+        const idx = {
+          sd: findCol(['SD mottatt på']),
+          merke: findCol(['Merke']),
+          modell: findCol(['Modell']),
+          ar: findCol(['Endelig AR verdi']),
+          bud: findCol(['Høyeste bud']),
+          mottatt: findCol(['Mottatt']),
+          solgt: findCol(['Solgt på']),
+          ret: findCol(['Returnert på'])
+        };
 
-// ────────────────────────────────────────────────
-// LATEST WEEK GENERATION
-async function generateNewReport() {
-  const btn = document.getElementById('generate-btn');
-  btn.disabled = true;
-  document.getElementById('loading').style.display = 'block';
+        const cleanNum = str => {
+          if (!str || str === '-' || str === '') return 0;
+          let s = String(str).replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+          if (s.includes('-')) s = s.split('-')[0];
+          return parseFloat(s) || 0;
+        };
 
-  try {
-    const startDate = getMostRecentCompletedWeekStart();
-    const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 7);
-    const weekNum = getISOWeek(startDate);
-    const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${weekNum}`;
-    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+        const parseDate = str => {
+          if (!str) return null;
+          const parts = String(str).trim().split(/\s+/)[0].split('.');
+          if (parts.length !== 3) return null;
+          const [d, m, y] = parts.map(Number);
+          if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+          return new Date(y, m-1, d);
+        };
 
-    const reports = await fetchReports();
-    if (reports.some(r => r.title === title)) {
-      alert('Rapport for denne uken finnes allerede.');
-      return;
+        const allCars = dataRows.map(row => {
+          const sdDate      = parseDate(row[idx.sd]);
+          const mottattDate = parseDate(row[idx.mottatt]);
+          const solgtDate   = parseDate(row[idx.solgt]);
+          const retDate     = parseDate(row[idx.ret]);
+          return {
+            sdDate, mottattDate, solgtDate, retDate,
+            merke: String(row[idx.merke] || '-').trim(),
+            modell: String(row[idx.modell] || '-').trim(),
+            ar: cleanNum(row[idx.ar]),
+            bud: cleanNum(row[idx.bud]),
+            mottatt: row[idx.mottatt] || '',
+            solgt: row[idx.solgt] || '',
+            ret: row[idx.ret] || ''
+          };
+        });
+
+        const carsInPeriod = allCars.filter(r => {
+          const inPeriod = (date) => date && (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
+          return inPeriod(r.sdDate) || inPeriod(r.mottattDate) || inPeriod(r.solgtDate) || inPeriod(r.retDate);
+        });
+
+        const mottattInPeriod = carsInPeriod.filter(c => c.mottattDate && c.mottattDate >= (fromDate || new Date(0)) && c.mottattDate <= (toDate || new Date()));
+        const soldInPeriod    = carsInPeriod.filter(c => c.solgtDate   && c.solgtDate   >= (fromDate || new Date(0)) && c.solgtDate   <= (toDate || new Date()));
+        const returnedInPeriod = carsInPeriod.filter(c => c.retDate     && c.retDate     >= (fromDate || new Date(0)) && c.retDate     <= (toDate || new Date()));
+
+        status.textContent = periodWarning || `${carsInPeriod.length} biler i perioden • ${mottattInPeriod.length} mottatt • ${soldInPeriod.length} solgt • ${returnedInPeriod.length} returnert`;
+
+        renderGauges(carsInPeriod, mottattInPeriod, soldInPeriod, returnedInPeriod, fromDate, toDate);
+        renderTrendChart(carsInPeriod, fromDate, toDate);
+        renderBarChart(soldInPeriod, returnedInPeriod, fromDate, toDate);
+        renderCarTable(soldInPeriod.concat(returnedInPeriod));
+      } catch (e) {
+        console.error(e);
+        status.textContent = "Feil ved lasting – sjekk konsoll";
+      }
     }
 
-    const data = await fetchXlsxData();
-    const { soldCars, returnedCars } = processCars(data, startDate, endDate);
-    const commentaryHtml = generateCommentary(soldCars, returnedCars);
+    function renderGauges(carsInPeriod, mottattInPeriod, soldInPeriod, returnedInPeriod, fromDate, toDate) {
+      const pctMottatt = carsInPeriod.length ? Math.round(mottattInPeriod.length / carsInPeriod.length * 100) : 0;
+      const pctSell = mottattInPeriod.length ? Math.round(soldInPeriod.length / mottattInPeriod.length * 100) : 0;
+      let avgSoldPct = 0, avgRetPct = 0;
 
-    currentReport = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      title, created: nowStr, edited: null,
-      commentary: commentaryHtml, userComment: '',
-      soldCars, returnedCars, locked: false, lockComment: ''
-    };
+      if (soldInPeriod.length) {
+        const ratios = soldInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+        avgSoldPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
+      }
+      if (returnedInPeriod.length) {
+        const ratios = returnedInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+        avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
+      }
 
-    let updated = await fetchReports();
-    updated.push(currentReport);
-    await saveReports(updated);
+      let avgSoldValue = 0;
+      if (soldInPeriod.length > 0) {
+        const total = soldInPeriod.reduce((sum, c) => sum + c.ar, 0);
+        avgSoldValue = Math.round(total / soldInPeriod.length);
+      }
 
-    updated = await fetchReports();
-    populateWeekSelect(updated);
-    document.getElementById('weekSelect').value = currentReport.id;
-    await loadSavedReport();
+      let avgRetValue = 0;
+      if (returnedInPeriod.length > 0) {
+        const total = returnedInPeriod.reduce((sum, c) => sum + c.ar, 0);
+        avgRetValue = Math.round(total / returnedInPeriod.length);
+      }
 
-    alert(`Generert!\nSolgte: ${soldCars.length}\nReturnerte: ${returnedCars.length}`);
-  } catch (err) {
-    console.error(err);
-    alert('Feil: ' + err.message);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-    btn.disabled = false;
-    await updateGenerateButtonState();
-  }
-}
+      document.getElementById('v1').textContent = pctMottatt + '%';
+      document.getElementById('v2').textContent = pctSell + '%';
+      document.getElementById('v3').textContent = avgSoldPct + '%';
+      document.getElementById('v4').textContent = avgRetPct + '%';
+      document.getElementById('v5').textContent = avgSoldValue.toLocaleString('no-NO') + ' kr';
+      document.getElementById('v6').textContent = avgRetValue.toLocaleString('no-NO') + ' kr';
 
-// ────────────────────────────────────────────────
-// HISTORICAL WEEK GENERATION
-async function generateReportForSelectedWeek() {
-  const year = parseInt(document.getElementById('yearSelect').value);
-  const weekStr = document.getElementById('manualWeekSelect').value;
-  if (!weekStr) return alert('Velg uke først.');
+      // Performance colors for v1 & v2
+      const getGaugeColor = (pct, thresholds) => {
+        if (pct < thresholds.low) return 'rgba(220, 38, 38, 0.75)';
+        if (pct < thresholds.medium) return 'rgba(255, 204, 51, 0.75)';
+        return 'rgba(0, 66, 37, 0.75)';
+      };
 
-  const week = parseInt(weekStr);
-  const btn = document.getElementById('generate-manual-btn');
-  btn.disabled = true;
-  document.getElementById('loading').style.display = 'block';
+      const colorV1 = getGaugeColor(pctMottatt, { low: 5, medium: 10 });
+      const colorV2 = getGaugeColor(pctSell, { low: 65, medium: 70 });
 
-  try {
-    let d = new Date(year, 0, 4);
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    const monday = new Date(d);
-    monday.setDate(d.getDate() + (week - 1) * 7);
+      // New: Trend arrow + color for v5 & v6 (this period vs previous 30 days)
+      let trend5 = '-', trend6 = '-', colorV5 = 'rgba(0, 66, 37, 0.75)', colorV6 = 'rgba(0, 66, 37, 0.75)';
+      if (fromDate) {
+        const prevFrom = new Date(fromDate);
+        prevFrom.setDate(prevFrom.getDate() - 30);
+        const prevTo = new Date(fromDate);
+        prevTo.setDate(prevTo.getDate() - 1);
 
-    const startDate = monday;
-    const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 7);
+        // Previous period sold/returned
+        const prevSold = carsInPeriod.filter(c => c.solgtDate && c.solgtDate >= prevFrom && c.solgtDate <= prevTo);
+        const prevReturned = carsInPeriod.filter(c => c.retDate && c.retDate >= prevFrom && c.retDate <= prevTo);
 
-    const title = `Mandag ${startDate.toLocaleDateString('nb-NO')} – uke ${week}`;
-    const nowStr = new Date().toLocaleString('nb-NO', {dateStyle: 'short', timeStyle: 'short'});
+        let prevAvgSold = 0;
+        if (prevSold.length > 0) {
+          const total = prevSold.reduce((sum, c) => sum + c.ar, 0);
+          prevAvgSold = Math.round(total / prevSold.length);
+        }
 
-    const reports = await fetchReports();
-    if (reports.some(r => r.title === title)) {
-      alert('Rapport finnes allerede.');
-      return;
+        let prevAvgRet = 0;
+        if (prevReturned.length > 0) {
+          const total = prevReturned.reduce((sum, c) => sum + c.ar, 0);
+          prevAvgRet = Math.round(total / prevReturned.length);
+        }
+
+        // Trend5 (sold)
+        if (avgSoldValue > prevAvgSold) trend5 = '↑';
+        else if (avgSoldValue < prevAvgSold) trend5 = '↓';
+        else trend5 = '–';
+
+        // Trend6 (returned)
+        if (avgRetValue > prevAvgRet) trend6 = '↑';
+        else if (avgRetValue < prevAvgRet) trend6 = '↓';
+        else trend6 = '–';
+
+        // Donut color follows arrow
+        colorV5 = trend5 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
+                  trend5 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
+                  'rgba(229, 231, 235, 0.75)'; // gray
+
+        colorV6 = trend6 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
+                  trend6 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
+                  'rgba(229, 231, 235, 0.75)';
+      }
+
+      const cfg = (val, color) => ({
+        type: 'doughnut',
+        data: { datasets: [{ data: [val, 100-val], backgroundColor: [color, '#e5e7eb'], borderWidth: 0, circumference: 270, rotation: 225 }] },
+        options: { cutout: '78%', plugins: { legend: {display:false}, tooltip:{enabled:false} } }
+      });
+
+      if (gauge1) gauge1.destroy();
+      if (gauge2) gauge2.destroy();
+      if (gauge3) gauge3.destroy();
+      if (gauge4) gauge4.destroy();
+      if (gauge5) gauge5.destroy();
+      if (gauge6) gauge6.destroy();
+
+      gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt, colorV1));
+      gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell, colorV2));
+      gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
+      gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
+      gauge5 = new Chart(document.getElementById('g5'), cfg(100, colorV5));
+      gauge6 = new Chart(document.getElementById('g6'), cfg(100, colorV6));
+
+      document.getElementById('trend1').textContent = pctMottatt > 50 ? '↑' : '↓';
+      document.getElementById('trend2').textContent = pctSell > 50 ? '↑' : '↓';
+      document.getElementById('trend1').style.color = document.getElementById('trend1').textContent === '↑' ? 'green' : 'red';
+      document.getElementById('trend2').style.color = document.getElementById('trend2').textContent === '↑' ? 'green' : 'red';
+
+      // New trend arrows for v5/v6
+      document.getElementById('trend5').textContent = trend5;
+      document.getElementById('trend6').textContent = trend6;
+      document.getElementById('trend5').style.color = trend5 === '↑' ? 'green' : (trend5 === '↓' ? 'red' : '#555');
+      document.getElementById('trend6').style.color = trend6 === '↑' ? 'green' : (trend6 === '↓' ? 'red' : '#555');
     }
 
-    const data = await fetchXlsxData();
-    const { soldCars, returnedCars } = processCars(data, startDate, endDate);
-    const commentaryHtml = generateCommentary(soldCars, returnedCars);
-
-    currentReport = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      title, created: nowStr, edited: null,
-      commentary: commentaryHtml, userComment: '',
-      soldCars, returnedCars, locked: false, lockComment: ''
-    };
-
-    let updated = await fetchReports();
-    updated.push(currentReport);
-    await saveReports(updated);
-
-    updated = await fetchReports();
-    populateWeekSelect(updated);
-    document.getElementById('weekSelect').value = currentReport.id;
-    await loadSavedReport();
-
-    alert(`Generert!\nUke ${week} ${year}\nSolgte: ${soldCars.length}\nReturnerte: ${returnedCars.length}`);
-  } catch (err) {
-    console.error(err);
-    alert('Feil: ' + err.message);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-    btn.disabled = false;
-    await updateGenerateButtonState();
-  }
-}
-
-// Shared helpers
-async function fetchXlsxData() {
-  const url = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ab = await res.arrayBuffer();
-  const wb = XLSX.read(ab, {type: 'array'});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
-  headers = data[0].map(h => (h || '').trim());
-  return data;
-}
-
-function processCars(data, startDate, endDate) {
-  const col = {
-    Merke: findColumn(['Merke']),
-    Modell: findColumn(['Modell']),
-    År: findColumn(['År', 'Årgang']),
-    'Endelig AR verdi': findColumn(['Endelig AR verdi', 'AR verdi', 'Laveste', 'Endelig']),
-    'Solgt på': findColumn(['Solgt på', 'Solgt']),
-    Returnert: findColumn(['Returnert', 'Returnert på'])
-  };
-
-  const soldCars = [], returnedCars = [];
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const soldRaw = row[col['Solgt på']];
-    const retRaw  = row[col.Returnert];
-    const soldDate = parseDate(soldRaw);
-    const retDate  = parseDate(retRaw);
-
-    if (!soldRaw && !retRaw) continue;
-
-    let arStr = String(row[col['Endelig AR verdi']] || '').trim();
-    let arClean = arStr.replace(/\s/g, '').replace(/\u00A0/g, '').replace(',', '.');
-    let arLowest = 0;
-    if (arClean.includes('-')) {
-      arLowest = parseFloat(arClean.split('-')[0].trim()) || 0;
-    } else {
-      arLowest = parseFloat(arClean) || 0;
+    function renderTrendChart(cars, fromDate, toDate) {
+      const canvas = document.getElementById('trendChart');
+      const container = canvas.parentElement;
+      const dailySM = {};
+      const dailyMottatt = {};
+      cars.forEach(c => {
+        if (c.sdDate && (!fromDate || c.sdDate >= fromDate) && (!toDate || c.sdDate <= toDate)) {
+          const key = c.sdDate.toISOString().slice(0,10);
+          dailySM[key] = (dailySM[key] || 0) + 1;
+        }
+        if (c.mottattDate && (!fromDate || c.mottattDate >= fromDate) && (!toDate || c.mottattDate <= toDate)) {
+          const key = c.mottattDate.toISOString().slice(0,10);
+          dailyMottatt[key] = (dailyMottatt[key] || 0) + 1;
+        }
+      });
+      const allDays = [...new Set([...Object.keys(dailySM), ...Object.keys(dailyMottatt)])].sort();
+      if (allDays.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
+        return;
+      }
+      const labels = allDays.map(d => d.slice(5));
+      const smData = allDays.map(d => dailySM[d] || 0);
+      const mottattData = allDays.map(d => dailyMottatt[d] || 0);
+      if (trendChartInstance) trendChartInstance.destroy();
+      trendChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Antall SM mottatt per dag',
+              data: smData,
+              borderColor: 'rgba(255, 204, 51, 0.5)',
+              backgroundColor: 'rgba(255, 204, 51, 0.5)',
+              pointBackgroundColor: 'rgba(255, 204, 51, 0.5)',
+              pointBorderColor: 'rgba(255, 204, 51, 0.5)',
+              pointRadius: 3,
+              borderWidth: 1.5,
+              tension: 0.2,
+              fill: false,
+              trendlineLinear: {
+                colorMin: "rgba(130, 191, 210, 0.75)",
+                colorMax: "rgba(130, 191, 210, 0.75)",
+                lineStyle: "solid",
+                width: 2.5,
+                projection: true
+              }
+            },
+            {
+              label: 'Antall mottatt per dag',
+              data: mottattData,
+              borderColor: 'rgba(0, 66, 37, 0.5)',
+              backgroundColor: 'rgba(0, 66, 37, 0.5)',
+              pointBackgroundColor: 'rgba(0, 66, 37, 0.5)',
+              pointBorderColor: 'rgba(0, 66, 37, 0.5)',
+              pointRadius: 3,
+              borderWidth: 1.5,
+              tension: 0.2,
+              fill: false,
+              trendlineLinear: {
+                colorMin: "rgba(0, 66, 37, 0.75)",
+                colorMax: "rgba(0, 66, 37, 0.75)",
+                lineStyle: "solid",
+                width: 2.5,
+                projection: true
+              }
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Antall' } },
+            x: { title: { display: true, text: 'Dato (daglig)' } }
+          },
+          plugins: {
+            legend: { display: true, position: 'top' }
+          }
+        }
+      });
     }
 
-    const car = {
-      Merke: row[col.Merke] || '-',
-      Modell: row[col.Modell] || '-',
-      År: row[col.År] || '-',
-      ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',
-      'AR laveste estimat_raw': arLowest
-    };
+    function renderBarChart(soldCars, returnedCars, fromDate, toDate) {
+      const canvas = document.getElementById('barChart');
+      const container = canvas.parentElement;
+      const monthlySold = {};
+      const monthlyRet = {};
+      soldCars.forEach(c => {
+        const activityDate = c.solgtDate;
+        if (!activityDate) return;
+        if (fromDate && activityDate < fromDate) return;
+        if (toDate && activityDate > toDate) return;
+        const key = activityDate.toISOString().slice(0,7);
+        monthlySold[key] = (monthlySold[key] || 0) + 1;
+      });
+      returnedCars.forEach(c => {
+        const activityDate = c.retDate;
+        if (!activityDate) return;
+        if (fromDate && activityDate < fromDate) return;
+        if (toDate && activityDate > toDate) return;
+        const key = activityDate.toISOString().slice(0,7);
+        monthlyRet[key] = (monthlyRet[key] || 0) + 1;
+      });
+      const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
+      if (allMonths.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til stolpe-graf i perioden</p>';
+        return;
+      }
+      const labels = allMonths.map(m => {
+        const [y, mth] = m.split('-');
+        return `${mth}.${y.slice(2)}`;
+      });
+      const soldData = allMonths.map(m => monthlySold[m] || 0);
+      const retData = allMonths.map(m => monthlyRet[m] || 0);
+      if (barChartInstance) barChartInstance.destroy();
+      barChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Solgt', data: soldData, backgroundColor: '#004225' },
+            { label: 'Returnert', data: retData, backgroundColor: '#82bfd2' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Antall biler' } },
+            x: { title: { display: true, text: 'Måned' } }
+          },
+          plugins: { legend: { display: true, position: 'top' } }
+        }
+      });
+    }
 
-    if (soldDate && soldDate >= startDate && soldDate < endDate) soldCars.push(car);
-    if (retDate && retDate >= startDate && retDate < endDate) returnedCars.push(car);
-  }
-
-  return { soldCars, returnedCars };
-}
-
-function updateManualWeekOptions() {
-  const year = parseInt(document.getElementById('yearSelect').value);
-  const sel = document.getElementById('manualWeekSelect');
-  sel.innerHTML = '<option value="">Velg uke...</option>';
-
-  const currYear = new Date().getFullYear();
-  const maxW = (year === currYear) ? getISOWeek(new Date()) - 1 : 53;
-
-  for (let w = 1; w <= maxW; w++) {
-    const opt = document.createElement('option');
-    opt.value = w;
-    opt.textContent = `Uke ${w}`;
-    sel.appendChild(opt);
-  }
-  if (sel.options.length > 1) sel.selectedIndex = 1;
-}
-
-async function updateGenerateButtonState() {
-  const latestBtn = document.getElementById('generate-btn');
-
-  let disabled = isMidWeek();
-  if (!disabled) {
-    const start = getMostRecentCompletedWeekStart();
-    const week = getISOWeek(start);
-    const year = start.getFullYear();
-    const title = `Mandag ${start.toLocaleDateString('nb-NO')} – uke ${week}`;
-    const reports = await fetchReports();
-    disabled = reports.some(r => r.title === title);
-  }
-
-  latestBtn.disabled = disabled;
-  latestBtn.style.background = disabled ? '#ccc' : '#006644';
-  latestBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
-  latestBtn.title = disabled ? (isMidWeek() ? 'Kun mandager' : 'Finnes allerede') : '';
-}
-
-// ────────────────────────────────────────────────
-// STUBS / MODALS (unchanged – add real logic when needed)
-function editUserComment() { alert("Rediger kommentar ikke implementert."); }
-function showLockCommentModal() { document.getElementById('lock-comment-modal').style.display = 'flex'; }
-function closeLockModal() { document.getElementById('lock-comment-modal').style.display = 'none'; }
-async function confirmLockWithComment() {
-  const comment = document.getElementById('lock-comment-text').value.trim();
-  if (!currentReport) return;
-  currentReport.locked = true;
-  currentReport.lockComment = comment;
-  const reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx !== -1) {
-    reports[idx] = currentReport;
-    await saveReports(reports);
-  }
-  document.getElementById('timestamp').textContent += ` • Låst med: "${comment}"`;
-  document.getElementById('lock-btn').style.display = 'none';
-  document.getElementById('delete-btn').style.display = 'block';
-  closeLockModal();
-  alert("Låst!");
-  await updateGenerateButtonState();
-}
-function showDeleteConfirm() { document.getElementById('delete-modal').style.display = 'flex'; }
-function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; }
-function promptPasswordForDelete() { document.getElementById('password-prompt').style.display = 'block'; }
-function closePasswordPrompt() { document.getElementById('password-prompt').style.display = 'none'; }
-async function checkDeletePassword() {
-  const pw = document.getElementById('password-input').value;
-  if (pw !== DELETE_PASSWORD || !currentReport) {
-    alert("Feil passord");
-    closePasswordPrompt();
-    return;
-  }
-  const reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx !== -1) {
-    reports.splice(idx, 1);
-    await saveReports(reports);
-    alert("Slettet!");
-    location.reload();
-  }
-  closePasswordPrompt();
-  await updateGenerateButtonState();
-}
-
-async function clearAllReports() {
-  if (!confirm("Slette ALLE rapporter?")) return;
-  await saveReports([]);
-  alert("Alle slettet.");
-  location.reload();
-}
-
-async function forceUnlock() {
-  if (!currentReport || !confirm("Force unlock?")) return;
-  currentReport.locked = false;
-  currentReport.lockComment = '';
-  const reports = await fetchReports();
-  const idx = reports.findIndex(r => r.id === currentReport.id);
-  if (idx !== -1) {
-    reports[idx] = currentReport;
-    await saveReports(reports);
-    await loadSavedReport();
-    alert("Force unlocked.");
-  }
-}
-</script>
+    function renderCarTable(cars) {
+      const tbody = document.getElementById('carTableBody');
+      tbody.innerHTML = '';
+      if (cars.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
+        return;
+      }
+      cars.sort((a, b) => {
+        const getSortDate = car => {
+          const d = car.solgt || car.ret || '';
+          if (!d) return new Date(0);
+          const parts = d.trim().split(/\s+/)[0].split('.');
+          if (parts.length !== 3) return new Date(0);
+          const [day, month, year] = parts.map(Number);
+          return new Date(year, month - 1, day);
+        };
+        return getSortDate(b) - getSortDate(a);
+      });
+      cars.forEach(car => {
+        const pct = car.ar > 0 ? Math.round((car.bud / car.ar) * 100) : 0;
+        let pctClass = 'percent-med';
+        if (pct >= 90) pctClass = 'percent-high';
+        else if (pct < 80) pctClass = 'percent-low';
+        const status = car.solgt ? 'Solgt' : 'Returnert';
+        const statusClass = car.solgt ? '' : 'status-returned';
+        const activityDate = car.solgt || car.ret || '-';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${car.merke}</td>
+          <td>${car.modell}</td>
+          <td>${car.ar.toLocaleString('no-NO')}</td>
+          <td>${car.bud.toLocaleString('no-NO')}</td>
+          <td class="${pctClass}">${pct}%</td>
+          <td>${activityDate}</td>
+          <td class="${statusClass}">${status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
 </body>
 </html>
