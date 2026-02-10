@@ -70,9 +70,9 @@
     }
     table {
       width: 100%;
-      min-width: 600px; /* sikrer responsiv scrolling på mobil */
+      min-width: 600px;
       border-collapse: collapse;
-      font-size: 0.875rem; /* mindre font på hele tabellen */
+      font-size: 0.875rem;
     }
     th, td {
       padding: 10px 14px;
@@ -83,7 +83,7 @@
       background: var(--peasy-green);
       color: white;
       font-weight: 600;
-      font-size: 0.95rem; /* litt større på header for lesbarhet */
+      font-size: 0.95rem;
     }
     tr:hover {
       background: #f9fafb;
@@ -180,7 +180,7 @@
     </div>
   </div>
 
-  <div id="version-info">v1.3.6 – Tabell mindre font + responsive + piler trailing 30d – 10.02.2026</div>
+  <div id="version-info">v1.3.7 – Piler relativ endring siste 30 dager – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -329,17 +329,29 @@
       gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
       gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
 
-      // Pil-logikk: trailing 30 dager sammenligning
+      // Pil-logikk: relativ endring siste 30 dager vs 30–60 dager tilbake
       const now = new Date();
-      const endPrev = new Date(now);
-      endPrev.setDate(now.getDate() - 30);
+      const endCurrent = now;
+      const startCurrent = new Date(endCurrent);
+      startCurrent.setDate(endCurrent.getDate() - 30);
+
+      const endPrev = new Date(startCurrent);
       const startPrev = new Date(endPrev);
       startPrev.setDate(endPrev.getDate() - 30);
 
-      const prevCars = cars.filter(c => c.sdDate && c.sdDate >= startPrev && c.sdDate < endPrev);
+      const currentCars = cars.filter(c => c.sdDate && c.sdDate >= startCurrent && c.sdDate <= endCurrent);
+      const prevCars = cars.filter(c => c.sdDate && c.sdDate >= startPrev && c.sdDate < startCurrent);
+
+      const currentMottatt = currentCars.length ? Math.round(currentCars.filter(c => c.mottatt).length / currentCars.length * 100) : 0;
       const prevMottatt = prevCars.length ? Math.round(prevCars.filter(c => c.mottatt).length / prevCars.length * 100) : null;
+
+      const currentSell = currentCars.filter(c => c.mottatt).length ? Math.round(currentCars.filter(c => c.solgt).length / currentCars.filter(c => c.mottatt).length * 100) : 0;
       const prevSell = prevCars.filter(c => c.mottatt).length ? Math.round(prevCars.filter(c => c.solgt).length / prevCars.filter(c => c.mottatt).length * 100) : null;
+
+      const currentSoldAR = currentCars.filter(c => c.solgt).length ? Math.round(currentCars.filter(c => c.solgt).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / currentCars.filter(c => c.solgt).length) : 0;
       const prevSoldAR = prevCars.filter(c => c.solgt).length ? Math.round(prevCars.filter(c => c.solgt).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / prevCars.filter(c => c.solgt).length) : null;
+
+      const currentRetAR = currentCars.filter(c => c.ret).length ? Math.round(currentCars.filter(c => c.ret).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / currentCars.filter(c => c.ret).length) : 0;
       const prevRetAR = prevCars.filter(c => c.ret).length ? Math.round(prevCars.filter(c => c.ret).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / prevCars.filter(c => c.ret).length) : null;
 
       const getTrend = (curr, prev, isLowerBetter = false) => {
@@ -349,20 +361,15 @@
         return better ? '↑' : '↓';
       };
 
-      const trend1 = getTrend(pctMottatt, prevMottatt);
-      const trend2 = getTrend(pctSell, prevSell);
-      const trend3 = getTrend(avgSoldPct, prevSoldAR);
-      const trend4 = getTrend(avgRetPct, prevRetAR, true); // lavere bedre for returnert
+      document.getElementById('trend1').textContent = getTrend(currentMottatt, prevMottatt);
+      document.getElementById('trend2').textContent = getTrend(currentSell, prevSell);
+      document.getElementById('trend3').textContent = getTrend(currentSoldAR, prevSoldAR);
+      document.getElementById('trend4').textContent = getTrend(currentRetAR, prevRetAR, true); // lavere bedre for retur
 
-      document.getElementById('trend1').textContent = trend1;
-      document.getElementById('trend2').textContent = trend2;
-      document.getElementById('trend3').textContent = trend3;
-      document.getElementById('trend4').textContent = trend4;
-
-      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : (trend1 === '↓' ? 'red' : 'gray');
-      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : (trend2 === '↓' ? 'red' : 'gray');
-      document.getElementById('trend3').style.color = trend3 === '↑' ? 'green' : (trend3 === '↓' ? 'red' : 'gray');
-      document.getElementById('trend4').style.color = trend4 === '↑' ? 'green' : (trend4 === '↓' ? 'red' : 'gray');
+      document.getElementById('trend1').style.color = document.getElementById('trend1').textContent === '↑' ? 'green' : (document.getElementById('trend1').textContent === '↓' ? 'red' : 'gray');
+      document.getElementById('trend2').style.color = document.getElementById('trend2').textContent === '↑' ? 'green' : (document.getElementById('trend2').textContent === '↓' ? 'red' : 'gray');
+      document.getElementById('trend3').style.color = document.getElementById('trend3').textContent === '↑' ? 'green' : (document.getElementById('trend3').textContent === '↓' ? 'red' : 'gray');
+      document.getElementById('trend4').style.color = document.getElementById('trend4').textContent === '↑' ? 'green' : (document.getElementById('trend4').textContent === '↓' ? 'red' : 'gray');
     }
 
     function renderCombinedTrendChart(soldCars, returnedCars) {
