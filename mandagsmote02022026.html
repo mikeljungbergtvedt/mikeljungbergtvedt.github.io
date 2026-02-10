@@ -1,353 +1,379 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mandagsrapport – Peasy</title>
-  <link rel="icon" href="data:,">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peasy Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#F2F7F9 0%,#E8F0F5 100%); color:#004225; line-height:1.6; }
-    .container { max-width:1440px; margin:0 auto; padding:32px 48px; }
-    h1 { font-weight:900; font-size:2.35rem; letter-spacing:-0.7px; margin:0 0 8px; background:linear-gradient(to right,#004225,#006644); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    .controls { display:flex; flex-wrap:wrap; gap:16px; margin:28px 0 40px; align-items:center; }
-    button, select { padding:10px 20px; font-size:0.96rem; font-weight:500; border-radius:8px; border:1px solid rgba(0,66,37,0.55); background:rgba(0,66,37,0.5); color:white; cursor:pointer; transition:all 0.18s ease; min-width:160px; box-shadow:0 2px 8px rgba(0,66,37,0.15); }
-    button:hover:not(:disabled) { background:rgba(0,66,37,0.85); transform:translateY(-1px); }
-    button:disabled { opacity:0.5; cursor:not-allowed; background:#ccc; }
-    select { background:white; color:#004225; }
-    .fact-box, .chart-container, #sold-section, #returned-section { 
-      background:rgba(255,255,255,0.94); backdrop-filter:blur(20px); 
-      border:1px solid rgba(130,191,210,0.12); border-radius:12px; 
-      box-shadow:0 4px 20px rgba(0,66,37,0.08); margin-bottom:40px; 
-      width:100%; max-width:1200px; margin-left:0; margin-right:auto; 
+    :root {
+      --peasy-green: #004225;
+      --peasy-yellow: #FFCC33;
+      --light-bg-start: #F2F7F9;
+      --light-bg-end: #E8F0F5;
+      --card-bg: rgba(255,255,255,0.96);
     }
-    .fact-box { padding:32px; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:14px 20px; text-align:left; border-bottom:1px solid rgba(130,191,210,0.12); }
-    th { background:rgba(130,191,210,0.06); font-weight:600; }
-    .positive { color:#2e7d32; font-weight:550; }
-    .negative { color:#c62828; font-weight:550; }
-    .section-title { font-size:1.45rem; font-weight:700; margin:52px 0 20px; text-align:left; color:#004225; }
-    .chart-container { padding:28px 24px 12px; height:420px; }
-    .timestamp { font-size:0.95rem; opacity:0.8; text-align:left; margin:0 0 36px; }
-    .logo-container { text-align:center; margin-bottom:36px; }
-    .logo { max-width:260px; height:auto; }
-    .hero-clocks { display:flex; justify-content:center; gap:80px; margin:28px 0 52px; flex-wrap:wrap; }
-    .clock { width:160px; height:160px; position:relative; }
-    .clock canvas { width:100% !important; height:100% !important; }
-    .clock-value { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.65rem; font-weight:800; color:#004225; }
-    .clock-label { margin-top:16px; font-size:1rem; font-weight:500; opacity:0.9; text-align:center; }
-    #loading, .no-data { text-align:center; padding:80px 0; color:#666; font-style:italic; }
-    #version-info { position:fixed; bottom:14px; right:20px; font-size:0.8rem; color:#777; opacity:0.7; display:flex; align-items:center; gap:12px; }
-    #version-info a { font-size:0.75rem; color:#aaa; text-decoration:none; }
-    #version-info a:hover { color:#c62828; text-decoration:underline; }
-    @media (max-width:900px) { .container { padding:24px 20px; } .fact-box, .chart-container { max-width:100%; margin-left:0; margin-right:0; } .chart-container { height:360px; } }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, var(--light-bg-start) 0%, var(--light-bg-end) 100%);
+      color: var(--peasy-green);
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(0,66,37,0.08);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,66,37,0.06);
+    }
+    .gauge-container {
+      position: relative;
+      width: 148px;
+      height: 148px;
+      margin: 0 auto;
+    }
+    #version-info {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.8rem;
+      color: #555;
+      padding: 4px 10px;
+      pointer-events: none;
+    }
+    .date-filter {
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .chart-container {
+      max-height: 420px;
+      margin-top: 2rem;
+    }
+    .preset-btn {
+      @apply px-4 py-2 text-sm font-medium rounded-lg transition;
+    }
+    .preset-btn.active {
+      @apply bg-[#FFCC33] text-[#004225] shadow-md;
+    }
+    .preset-btn:hover:not(.active) {
+      @apply bg-gray-100;
+    }
   </style>
 </head>
-<body>
-<div class="container">
-  <div class="logo-container"><img src="Peasy_Logo_ORG.png" alt="Peasy logo" class="logo"></div>
+<body class="text-[#004225]">
 
-  <div class="hero-clocks">
-    <div><div class="clock"><canvas id="clockSold"></canvas><div class="clock-value" id="soldAvgValue">–</div></div><div class="clock-label">Solgte – snitt % avvik (alle låste)</div></div>
-    <div><div class="clock"><canvas id="clockReturned"></canvas><div class="clock-value" id="returnedAvgValue">–</div></div><div class="clock-label">Returnerte – snitt % avvik (alle låste)</div></div>
-  </div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-  <h1>Mandagsrapport – Peasy</h1>
-  <p style="text-align:center; opacity:0.85; margin-bottom:40px;">Rapporter lagres i skyen – synlig for alle som åpner denne filen.</p>
+    <header class="text-center mb-8">
+      <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="mx-auto h-16 md:h-20 mb-4">
+    </header>
 
-  <div class="controls">
-    <select id="weekSelect" onchange="loadSavedReport()"><option value="">Velg uke...</option></select>
-    <button id="generate-btn" onclick="generateNewReport()">Generer rapport for siste fullførte uke</button>
-    <button id="edit-btn" onclick="editUserComment()" style="display:none;">Rediger egen kommentar</button>
-    <button id="lock-btn" onclick="showLockCommentModal()" style="display:none;">Lås inn rapport</button>
-  </div>
+    <div class="date-filter card">
+      <div class="flex flex-wrap justify-center gap-3 mb-4">
+        <button class="preset-btn" onclick="setPreset(30)">30 dager</button>
+        <button class="preset-btn" onclick="setPreset(60)">60 dager</button>
+        <button class="preset-btn active" onclick="setPreset(90)">90 dager</button>
+        <button class="preset-btn" onclick="setPreset('custom')">Custom</button>
+      </div>
 
-  <div id="loading" style="display:none;">Laster rapport…</div>
+      <div class="flex flex-wrap justify-center gap-4 items-end">
+        <div>
+          <label class="block text-sm font-medium mb-1">Fra dato</label>
+          <input type="date" id="fromDate" class="px-4 py-2 border border-gray-300 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Til dato</label>
+          <input type="date" id="toDate" class="px-4 py-2 border border-gray-300 rounded-lg">
+        </div>
+        <button onclick="loadData()" class="px-6 py-2 bg-[#FFCC33] text-[#004225] font-semibold rounded-xl hover:bg-[#FFD966] transition">
+          Oppdater
+        </button>
+      </div>
+    </div>
 
-  <div id="report-content" style="display:none;">
-    <div id="timestamp" class="timestamp"></div>
-    <div id="commentary" class="fact-box"></div>
-    <div id="sold-section" style="display:none;"><div class="section-title">Solgte biler</div><table id="sold-table"></table></div>
-    <div id="returned-section" style="display:none;"><div class="section-title">Returnerte biler</div><table id="returned-table"></table></div>
-    <div class="chart-container"><canvas id="deviationTrendChart"></canvas></div>
-  </div>
-</div>
+    <div class="flex justify-center mb-6">
+      <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
+    </div>
 
-<div id="version-info">
-  v26.3 • fikset parsing + klokker + graf + alignment
-  <a href="#" onclick="triggerReset(); return false;">Reset (dev)</a>
-</div>
+    <div class="card p-8 md:p-10">
+      <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall & selgerprisvillighet</h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <div class="text-center">
+          <div class="gauge-container"><canvas id="g1"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">Mottatt av SD mottatt</p>
+          <p class="text-4xl font-bold text-[#FFCC33]" id="v1">-</p>
+        </div>
+        <div class="text-center">
+          <div class="gauge-container"><canvas id="g2"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">Solgt av mottatt</p>
+          <p class="text-4xl font-bold text-[#FFCC33]" id="v2">-</p>
+        </div>
+        <div class="text-center">
+          <div class="gauge-container"><canvas id="g3"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
+          <p class="text-4xl font-bold text-[#FFCC33]" id="v3">-</p>
+        </div>
+        <div class="text-center">
+          <div class="gauge-container"><canvas id="g4"></canvas></div>
+          <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
+          <p class="text-4xl font-bold text-red-600" id="v4">-</p>
+        </div>
+      </div>
 
-<!-- Lås-modal -->
-<div id="lock-comment-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; justify-content:center; align-items:center;">
-  <div style="background:#fff; padding:28px; border-radius:12px; width:92%; max-width:520px; box-shadow:0 10px 30px rgba(0,0,0,0.22);">
-    <h3>Kommentar før låsing (valgfritt)</h3>
-    <textarea id="lock-comment-text" placeholder="Skriv en kort begrunnelse eller kommentar..." style="width:100%; height:110px; margin:12px 0 16px; padding:10px; border:1px solid #d0d0d0; border-radius:6px; resize:vertical;"></textarea>
-    <div style="text-align:right;">
-      <button onclick="closeLockModal()" style="background:#888; margin-right:12px;">Avbryt</button>
-      <button onclick="confirmLockWithComment()">Lås inn rapport</button>
+      <h3 class="text-xl font-semibold text-center mb-4">Trend: Gj.sn. % av AR – Solgt vs Returnert per måned</h3>
+      <div class="chart-container">
+        <canvas id="combinedTrendChart"></canvas>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-// ────────────────────────────────────────────────
-// KONFIGURASJON
-const BIN_ID = '6981aa3dae596e708f0d773b';
-const MASTER_KEY = '$2a$10$rBlUQ2a25wMoTJmNRu9hkuX5aB/DVZh9EhrM75Ek1nUAdvvILtuy.';
-const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY };
-// ────────────────────────────────────────────────
+  <div id="version-info">v1.1.5 – Dashboard – 10.02.2026</div>
 
-let currentReport = null;
-let clockSoldChart = null;
-let clockReturnedChart = null;
-let deviationTrendChart = null;
+  <script>
+    const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
 
-// Robust number parser – this fixes EVERYTHING
-function safeNumber(val) {
-  if (val == null || val === '') return 0;
-  return Number(String(val).trim().replace(/\s+/g, '').replace(',', '.')) || 0;
-}
+    let currentPreset = 90;
 
-// Weighted % – single source of truth
-function calculateWeightedPct(cars) {
-  let diffSum = 0, arSum = 0, count = 0;
-  cars.forEach(c => {
-    const bud = safeNumber(c.ColumnE);
-    const ar  = safeNumber(c['AR laveste estimat_raw']);
-    if (ar > 0) {
-      diffSum += bud - ar;
-      arSum += ar;
-      count++;
+    function setPreset(days) {
+      currentPreset = days;
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      if (days !== 'custom') {
+        document.querySelector(`button[onclick="setPreset(${days})"]`).classList.add('active');
+      } else {
+        document.querySelector('button[onclick="setPreset(\'custom\')"]').classList.add('active');
+      }
+
+      const today = new Date();
+      const from = new Date(today);
+      if (days !== 'custom') {
+        from.setDate(today.getDate() - days);
+        document.getElementById('fromDate').value = from.toISOString().split('T')[0];
+        document.getElementById('toDate').value = today.toISOString().split('T')[0];
+      }
+
+      loadData();
     }
-  });
-  return count ? (diffSum / arSum * 100) : null;
-}
 
-// Reset dev link
-function triggerReset() {
-  if (!confirm("Sletter ALLE rapporter permanent.\nSikker?")) return;
-  if (!confirm("SISTE – ingenting kan gjenopprettes!")) return;
-  fetch(API_URL, { method:'PUT', headers:HEADERS, body:JSON.stringify({reports:[]}) })
-    .then(() => { alert("Slettet. Laster på nytt."); location.reload(); })
-    .catch(err => { console.error(err); alert("Feil ved sletting."); });
-}
+    // Initial load with 90 days
+    window.addEventListener('load', () => {
+      setPreset(90);
+    });
 
-// ... (keep findColumn, getISOWeek, getMostRecentCompletedWeekStart, parseDate, fetchReports, saveReports, populateWeekSelect as before)
+    let combinedChartInstance = null;
 
-// renderTable with safeNumber
-function renderTable(id, cars) {
-  const t = document.getElementById(id);
-  t.innerHTML = '';
-  if (!cars?.length) {
-    t.innerHTML = '<tr><td colspan="7" class="no-data">Ingen biler denne uken</td></tr>';
-    return;
-  }
-  t.innerHTML = `
-    <thead><tr>
-      <th>Merke</th><th>Modell</th><th>År</th>
-      <th>Høyeste bud</th><th>AR laveste</th>
-      <th>Diff NOK</th><th>Diff %</th>
-    </tr></thead>
-    <tbody>${cars.map(car => {
-      const bud = safeNumber(car.ColumnE);
-      const ar = safeNumber(car['AR laveste estimat_raw']);
-      const diffNOK = bud - ar;
-      const diffPct = ar > 0 ? (diffNOK / ar * 100) : 0;
-      const cls = diffPct > 0 ? 'positive' : (diffPct < 0 ? 'negative' : '');
-      return `<tr>
-        <td>${car.Merke || '-'}</td>
-        <td>${car.Modell || '-'}</td>
-        <td>${car.År || '-'}</td>
-        <td>${bud.toLocaleString('nb-NO') || '-'}</td>
-        <td>${ar.toLocaleString('nb-NO') || '-'}</td>
-        <td>${diffNOK ? diffNOK.toLocaleString('nb-NO') : '-'}</td>
-        <td class="${cls}">${ar > 0 ? diffPct.toFixed(1)+' %' : '-'}</td>
-      </tr>`;
-    }).join('')}</tbody>`;
-}
+    async function loadData() {
+      const status = document.getElementById('status');
+      status.textContent = "Laster data...";
 
-// loadSavedReport – fresh fact box + precompute
-async function loadSavedReport() {
-  const id = document.getElementById('weekSelect').value;
-  if (!id) return;
-  const reports = await fetchReports();
-  const rep = reports.find(r => r.id === id);
-  if (!rep) return;
+      const fromStr = document.getElementById('fromDate').value;
+      const toStr   = document.getElementById('toDate').value;
+      const fromDate = fromStr ? new Date(fromStr) : null;
+      const toDate   = toStr   ? new Date(toStr)   : null;
 
-  currentReport = rep;
+      try {
+        const res = await fetch(DATA_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ab = await res.arrayBuffer();
+        const wb = XLSX.read(ab, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-  const soldPct = calculateWeightedPct(rep.soldCars || []);
-  const retPct = calculateWeightedPct(rep.returnedCars || []);
+        const headers = json[0].map(h => String(h || '').trim());
+        const dataRows = json.slice(1);
 
-  const soldARAvg = rep.soldCars?.length 
-    ? Math.round(rep.soldCars.reduce((s,c) => s + safeNumber(c['AR laveste estimat_raw']), 0) / rep.soldCars.length).toLocaleString('nb-NO') + ' kr'
-    : '-';
-  const retARAvg = rep.returnedCars?.length 
-    ? Math.round(rep.returnedCars.reduce((s,c) => s + safeNumber(c['AR laveste estimat_raw']), 0) / rep.returnedCars.length).toLocaleString('nb-NO') + ' kr'
-    : '-';
+        function findCol(patterns) {
+          const lower = headers.map(h => h.toLowerCase());
+          for (let p of patterns) {
+            let idx = lower.findIndex(h => h === p.toLowerCase());
+            if (idx !== -1) return idx;
+            idx = lower.findIndex(h => h.includes(p.toLowerCase()));
+            if (idx !== -1) return idx;
+          }
+          return -1;
+        }
 
-  const commHtml = `
-    <h3>Fakta – siste fullførte uke (man–søn)</h3>
-    <div style="margin:24px 0 12px;">
-      <strong>Solgte biler</strong><br>
-      Totalt: ${rep.soldCars.length} biler<br>
-      Gjennomsnitt AR laveste estimat: ${soldARAvg}<br>
-      Gjennomsnitt % avvik: ${soldPct !== null ? soldPct.toFixed(1) + ' %' : '-'}
-    </div>
-    <div style="margin:24px 0 12px;">
-      <strong>Returnerte biler</strong><br>
-      Totalt: ${rep.returnedCars.length} biler<br>
-      Gjennomsnitt AR laveste estimat: ${retARAvg}<br>
-      Gjennomsnitt % avvik: ${retPct !== null ? retPct.toFixed(1) + ' %' : '-'}
-    </div>`;
+        const idx = {
+          sd: findCol(['SD mottatt på']),
+          ar: findCol(['Endelig AR verdi']),
+          mottatt: findCol(['Mottatt']),
+          bud: findCol(['Høyeste bud']),
+          solgt: findCol(['Solgt på']),
+          ret: findCol(['Returnert på'])
+        };
 
-  document.getElementById('commentary').innerHTML = commHtml;
+        const cleanNum = str => {
+          if (!str || str === '-' || str === '') return 0;
+          let s = String(str).replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+          if (s.includes('-')) s = s.split('-')[0];
+          return parseFloat(s) || 0;
+        };
 
-  renderTable('sold-table', rep.soldCars || []);
-  renderTable('returned-table', rep.returnedCars || []);
+        const parseDate = str => {
+          if (!str) return null;
+          const parts = String(str).trim().split(/\s+/)[0].split('.');
+          if (parts.length !== 3) return null;
+          const [d, m, y] = parts.map(Number);
+          return new Date(y, m-1, d);
+        };
 
-  document.getElementById('sold-section').style.display = rep.soldCars?.length ? 'block' : 'none';
-  document.getElementById('returned-section').style.display = rep.returnedCars?.length ? 'block' : 'none';
-  document.getElementById('report-content').style.display = 'block';
-  document.getElementById('edit-btn').style.display = 'inline-block';
-  document.getElementById('lock-btn').style.display = rep.locked ? 'none' : 'inline-block';
+        const cars = dataRows.map(row => {
+          const sdDate = parseDate(row[idx.sd]);
+          return {
+            sdStr: row[idx.sd] || '',
+            sdDate,
+            ar: cleanNum(row[idx.ar]),
+            mottatt: row[idx.mottatt] || '',
+            bud: cleanNum(row[idx.bud]),
+            solgt: row[idx.solgt] || '',
+            ret: row[idx.ret] || ''
+          };
+        }).filter(r => r.sdStr && r.ar > 10000 && (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && (!toDate || (r.sdDate && r.sdDate <= toDate)));
 
-  rep.computedSoldPct = soldPct;
-  rep.computedReturnedPct = retPct;
+        const mottattCars = cars.filter(c => c.mottatt);
+        const soldCars    = cars.filter(c => c.solgt);
+        const returnedCars = cars.filter(c => c.ret);
 
-  await updateHeroClocks();
-  await updateDeviationTrendChart();
-}
+        status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
 
-// generateNewReport (keep your existing – just ensure safeNumber in parsing)
+        renderGauges(cars, mottattCars, soldCars, returnedCars);
+        renderCombinedTrendChart(soldCars, returnedCars);
 
-async function generateNewReport() {
-  // ... your existing code ...
-  // In the loop, use safeNumber for consistency:
-  const car = {
-    Merke: row[col.Merke] || '-',
-    Modell: row[col.Modell] || '-',
-    År: row[col.År] || '-',
-    ColumnE: row[4] != null && row[4] !== '' ? String(row[4]).trim() : '-',  // already string
-    'AR laveste estimat_raw': arVal
-  };
-  // ... rest ...
-  const soldPct = calculateWeightedPct(sold);
-  const retPct = calculateWeightedPct(returned);
-  // ... save newRep with computedSoldPct and computedReturnedPct ...
-}
-
-// updateDeviationTrendChart – use pre-computed
-async function updateDeviationTrendChart() {
-  const reports = await fetchReports();
-  const locked = reports.filter(r => r.locked).sort((a,b) => a.year - b.year || a.weekNr - b.weekNr);
-
-  const labels = locked.map(r => {
-    const short = r.year !== locked[0]?.year ? ` '${String(r.year).slice(-2)}` : '';
-    return `Uke ${r.weekNr}${short}`;
-  });
-
-  const soldData = locked.map(r => r.computedSoldPct ?? null);
-  const retData = locked.map(r => r.computedReturnedPct ?? null);
-
-  const ctx = document.getElementById('deviationTrendChart').getContext('2d');
-  if (deviationTrendChart) deviationTrendChart.destroy();
-
-  if (locked.length === 0) {
-    ctx.font = '16px Inter';
-    ctx.fillStyle = '#777';
-    ctx.textAlign = 'center';
-    ctx.fillText('Ingen låste rapporter ennå', ctx.canvas.width/2, ctx.canvas.height/2);
-    return;
-  }
-
-  deviationTrendChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: 'Solgte – % avvik', data: soldData, borderColor: '#006644', backgroundColor: 'rgba(0,102,68,0.15)', tension:0.25, pointRadius:5, pointHoverRadius:9 },
-      { label: 'Returnerte – % avvik', data: retData, borderColor: '#c62828', backgroundColor: 'rgba(198,40,40,0.12)', tension:0.25, pointRadius:5, pointHoverRadius:9 }
-    ] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', labels: { font: { size: 14 } } },
-        title: { display: true, text: 'Utvikling i % avvik per ISO-uke (låste rapporter)', font: { size: 17 } }
-      },
-      scales: {
-        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0, font: { size: 13 }, padding: 12 } },
-        y: { title: { display: true, text: '% avvik fra AR laveste' }, ticks: { callback: v => v.toFixed(1) + ' %' } }
+      } catch (e) {
+        console.error(e);
+        status.textContent = "Feil ved lasting – sjekk konsoll";
       }
     }
-  });
-}
 
-// updateHeroClocks with safeNumber
-async function updateHeroClocks() {
-  const reports = await fetchReports();
-  const locked = reports.filter(r => r.locked);
-  let soldDiffSum = 0, soldArSum = 0, soldCount = 0;
-  let retDiffSum = 0, retArSum = 0, retCount = 0;
-  locked.forEach(r => {
-    (r.soldCars || []).forEach(c => {
-      const bud = safeNumber(c.ColumnE);
-      const ar  = safeNumber(c['AR laveste estimat_raw']);
-      if (ar > 0) {
-        soldDiffSum += bud - ar;
-        soldArSum += ar;
-        soldCount++;
+    function renderGauges(cars, mottattCars, soldCars, returnedCars) {
+      const pctMottatt = cars.length ? Math.round(mottattCars.length / cars.length * 100) : 0;
+      const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
+
+      let avgSoldPct = 0, avgRetPct = 0;
+
+      if (soldCars.length) {
+        const ratios = soldCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+        avgSoldPct = Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length);
       }
-    });
-    (r.returnedCars || []).forEach(c => {
-      const bud = safeNumber(c.ColumnE);
-      const ar  = safeNumber(c['AR laveste estimat_raw']);
-      if (ar > 0) {
-        retDiffSum += bud - ar;
-        retArSum += ar;
-        retCount++;
+
+      if (returnedCars.length) {
+        const ratios = returnedCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
+        avgRetPct = Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length);
       }
-    });
-  });
-  const soldPct = soldCount > 0 ? (soldDiffSum / soldArSum * 100) : 0;
-  const retPct = retCount > 0 ? (retDiffSum / retArSum * 100) : 0;
-  document.getElementById('soldAvgValue').textContent = soldCount > 0 ? soldPct.toFixed(1) + '%' : '–';
-  document.getElementById('returnedAvgValue').textContent = retCount > 0 ? retPct.toFixed(1) + '%' : '–';
 
-  const getColor = pct => pct >= 0 ? '#006644' : '#c62828';
+      document.getElementById('v1').textContent = pctMottatt + '%';
+      document.getElementById('v2').textContent = pctSell + '%';
+      document.getElementById('v3').textContent = avgSoldPct + '%';
+      document.getElementById('v4').textContent = avgRetPct + '%';
 
-  if (clockSoldChart) clockSoldChart.destroy();
-  clockSoldChart = new Chart(document.getElementById('clockSold'), {
-    type: 'doughnut',
-    data: { datasets: [{ data: [Math.abs(soldPct), 100 - Math.abs(soldPct)], backgroundColor: [getColor(soldPct), 'rgba(0,102,68,0.12)'], borderWidth: 0, cutout: '78%' }] },
-    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-  });
+      const cfg = (val, color = '#FFCC33') => ({
+        type: 'doughnut',
+        data: { datasets: [{ data: [val, 100-val], backgroundColor: [color, '#e5e7eb'], borderWidth: 0, circumference: 270, rotation: 225 }] },
+        options: { cutout: '78%', plugins: { legend: {display:false}, tooltip:{enabled:false} } }
+      });
 
-  if (clockReturnedChart) clockReturnedChart.destroy();
-  clockReturnedChart = new Chart(document.getElementById('clockReturned'), {
-    type: 'doughnut',
-    data: { datasets: [{ data: [Math.abs(retPct), 100 - Math.abs(retPct)], backgroundColor: [getColor(retPct), 'rgba(0,102,68,0.12)'], borderWidth: 0, cutout: '78%' }] },
-    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-  });
-}
+      new Chart(document.getElementById('g1'), cfg(pctMottatt));
+      new Chart(document.getElementById('g2'), cfg(pctSell));
+      new Chart(document.getElementById('g3'), cfg(avgSoldPct));
+      new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
+    }
 
-// ... keep lock modal functions, editUserComment, window.onload as before
+    function renderCombinedTrendChart(soldCars, returnedCars) {
+      const canvas = document.getElementById('combinedTrendChart');
 
-window.onload = async () => {
-  const reps = await fetchReports();
-  populateWeekSelect(reps);
-  if (reps.length) {
-    document.getElementById('weekSelect').value = reps.at(-1)?.id || '';
-    await loadSavedReport();
-  }
-  await updateGenerateButtonState();
-  await updateHeroClocks();
-  await updateDeviationTrendChart();
-};
-</script>
+      const monthlySold = {};
+      const monthlyRet  = {};
+
+      soldCars.forEach(c => {
+        if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
+        const key = c.sdDate.toISOString().slice(0,7);
+        if (!monthlySold[key]) monthlySold[key] = { sum: 0, count: 0 };
+        monthlySold[key].sum += (c.bud / c.ar) * 100;
+        monthlySold[key].count++;
+      });
+
+      returnedCars.forEach(c => {
+        if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
+        const key = c.sdDate.toISOString().slice(0,7);
+        if (!monthlyRet[key]) monthlyRet[key] = { sum: 0, count: 0 };
+        monthlyRet[key].sum += (c.bud / c.ar) * 100;
+        monthlyRet[key].count++;
+      });
+
+      const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
+
+      if (allMonths.length === 0) {
+        canvas.parentElement.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
+        return;
+      }
+
+      const labels = allMonths.map(m => {
+        const [y, mth] = m.split('-');
+        return `${mth}.${y.slice(2)}`;
+      });
+
+      const soldData = allMonths.map(m => {
+        const entry = monthlySold[m];
+        return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
+      });
+
+      const retData = allMonths.map(m => {
+        const entry = monthlyRet[m];
+        return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
+      });
+
+      if (combinedChartInstance) combinedChartInstance.destroy();
+
+      combinedChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Solgt – % av AR',
+              data: soldData,
+              borderColor: '#004225',
+              backgroundColor: '#004225',
+              pointBackgroundColor: '#FFCC33',
+              pointBorderColor: '#004225',
+              pointRadius: 5,
+              tension: 0.3,
+              fill: false
+            },
+            {
+              label: 'Returnert – % av AR',
+              data: retData,
+              borderColor: '#ef4444',
+              backgroundColor: '#ef4444',
+              pointBackgroundColor: '#FFCC33',
+              pointBorderColor: '#ef4444',
+              pointRadius: 5,
+              tension: 0.3,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: 40,
+              max: 110,
+              title: { display: true, text: '% av AR' }
+            },
+            x: { title: { display: true, text: 'Måned (SD mottatt)' } }
+          },
+          plugins: {
+            legend: { display: true, position: 'top' }
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>
