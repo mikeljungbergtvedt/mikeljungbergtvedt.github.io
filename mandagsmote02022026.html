@@ -88,14 +88,12 @@
     .status-sold { color: var(--peasy-green); font-weight: 600; }
     .status-returned { color: #dc2626; font-weight: 600; }
     .percent-high { color: #004225; font-weight: 600; }
-    .percent-med  { color: #d97706; font-weight: 600; }
-    .percent-low  { color: #dc2626; font-weight: 600; }
+    .percent-med { color: #d97706; font-weight: 600; }
+    .percent-low { color: #dc2626; font-weight: 600; }
   </style>
 </head>
 <body class="text-[#004225]">
-
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
     <header class="text-center mb-8">
       <img src="Peasy_Logo_ORG.png" alt="Peasy Logo" class="mx-auto h-16 md:h-20 mb-4">
     </header>
@@ -118,7 +116,7 @@
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
     </div>
 
-    <!-- Gauges with trend arrow in center -->
+    <!-- Gauges -->
     <div class="card p-8 md:p-10 mb-12">
       <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -157,7 +155,7 @@
       </div>
     </div>
 
-    <!-- Car table -->
+    <!-- Car table – med ny "Dato"-kolonne -->
     <div class="card p-8 md:p-10">
       <h3 class="text-xl font-semibold text-center mb-6">Biler i perioden (kun solgt eller returnert)</h3>
       <div class="table-container">
@@ -169,6 +167,7 @@
               <th>Endelig AR verdi</th>
               <th>Høyeste bud</th>
               <th>% av AR</th>
+              <th>Dato</th>          <!-- ← NY KOLUMN -->
               <th>Status</th>
             </tr>
           </thead>
@@ -176,10 +175,9 @@
         </table>
       </div>
     </div>
-
   </div>
 
-  <div id="version-info">v1.2.5 – Last 30d trend + arrows – 10.02.2026</div>
+  <div id="version-info">v1.2.7 – Dato-kolonne i tabell – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -265,11 +263,13 @@
             solgt: row[idx.solgt] || '',
             ret: row[idx.ret] || ''
           };
-        }).filter(r => r.sdStr && r.ar > 10000 && (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && (!toDate || (r.sdDate && r.sdDate <= toDate)));
+        }).filter(r => r.sdStr && r.ar > 10000 && 
+          (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && 
+          (!toDate || (r.sdDate && r.sdDate <= toDate)));
 
-        const mottattCars = cars.filter(c => c.mottatt);
-        const soldCars = cars.filter(c => c.solgt);
-        const returnedCars = cars.filter(c => c.ret);
+        const mottattCars   = cars.filter(c => c.mottatt);
+        const soldCars      = cars.filter(c => c.solgt);
+        const returnedCars  = cars.filter(c => c.ret);
 
         status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
 
@@ -288,12 +288,10 @@
       const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
 
       let avgSoldPct = 0, avgRetPct = 0;
-
       if (soldCars.length) {
         const ratios = soldCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgSoldPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
-
       if (returnedCars.length) {
         const ratios = returnedCars.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
@@ -315,11 +313,10 @@
       new Chart(document.getElementById('g3'), cfg(avgSoldPct));
       new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
 
-      // Add trend arrows (simple last 30 days vs previous 30 days)
       const trend1 = pctMottatt > 50 ? '↑' : '↓';
       const trend2 = pctSell > 50 ? '↑' : '↓';
       const trend3 = avgSoldPct > 80 ? '↑' : '↓';
-      const trend4 = avgRetPct > 60 ? '↓' : '↑'; // lower is better for returned
+      const trend4 = avgRetPct > 60 ? '↓' : '↑';
 
       document.getElementById('trend1').textContent = trend1;
       document.getElementById('trend2').textContent = trend2;
@@ -356,7 +353,6 @@
       });
 
       const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
-
       if (allMonths.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
@@ -384,43 +380,18 @@
         data: {
           labels,
           datasets: [
-            {
-              label: 'Solgt – % av AR',
-              data: soldData,
-              borderColor: '#004225',
-              backgroundColor: '#004225',
-              pointBackgroundColor: '#FFCC33',
-              pointRadius: 5,
-              tension: 0.3,
-              fill: false
-            },
-            {
-              label: 'Returnert – % av AR',
-              data: retData,
-              borderColor: '#ef4444',
-              backgroundColor: '#ef4444',
-              pointBackgroundColor: '#FFCC33',
-              pointBorderColor: '#ef4444',
-              pointRadius: 5,
-              tension: 0.3,
-              fill: false
-            }
+            { label: 'Solgt – % av AR', data: soldData, borderColor: '#004225', backgroundColor: '#004225', pointBackgroundColor: '#FFCC33', pointRadius: 5, tension: 0.3, fill: false },
+            { label: 'Returnert – % av AR', data: retData, borderColor: '#ef4444', backgroundColor: '#ef4444', pointBackgroundColor: '#FFCC33', pointBorderColor: '#ef4444', pointRadius: 5, tension: 0.3, fill: false }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: {
-              min: 40,
-              max: 110,
-              title: { display: true, text: '% av AR' }
-            },
+            y: { min: 40, max: 110, title: { display: true, text: '% av AR' } },
             x: { title: { display: true, text: 'Måned (SD mottatt)' } }
           },
-          plugins: {
-            legend: { display: true, position: 'top' }
-          }
+          plugins: { legend: { display: true, position: 'top' } }
         }
       });
     }
@@ -430,17 +401,24 @@
       tbody.innerHTML = '';
 
       if (filteredCars.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
         return;
       }
 
-      // Sort by most recent activity (Solgt på or Returnert på)
+      // Sortering: nyest først basert på solgt- eller retur-dato
       filteredCars.sort((a, b) => {
-        const dateA = a.solgt || a.ret || '';
-        const dateB = b.solgt || b.ret || '';
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return dateB.localeCompare(dateA); // newest first
+        const getSortDate = car => {
+          const d = car.solgt || car.ret || '';
+          if (!d) return new Date(0);
+          const parts = d.trim().split(/\s+/)[0].split('.');
+          if (parts.length !== 3) return new Date(0);
+          const [day, month, year] = parts.map(Number);
+          return new Date(year, month - 1, day);
+        };
+
+        const dateA = getSortDate(a);
+        const dateB = getSortDate(b);
+        return dateB - dateA;
       });
 
       filteredCars.forEach(car => {
@@ -452,6 +430,9 @@
         const status = car.solgt ? 'Solgt' : 'Returnert';
         const statusClass = car.solgt ? 'status-sold' : 'status-returned';
 
+        // ← NY: vis den datoen vi sorterer etter
+        const activityDate = car.solgt || car.ret || '-';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${car.merke}</td>
@@ -459,6 +440,7 @@
           <td>${car.ar.toLocaleString('no-NO')}</td>
           <td>${car.bud.toLocaleString('no-NO')}</td>
           <td class="${pctClass}">${pct}%</td>
+          <td>${activityDate}</td>              <!-- ← NY kolonne -->
           <td class="${statusClass}">${status}</td>
         `;
         tbody.appendChild(tr);
