@@ -155,7 +155,7 @@
       </div>
     </div>
 
-    <!-- Car table – med ny "Dato"-kolonne -->
+    <!-- Car table -->
     <div class="card p-8 md:p-10">
       <h3 class="text-xl font-semibold text-center mb-6">Biler i perioden (kun solgt eller returnert)</h3>
       <div class="table-container">
@@ -167,7 +167,7 @@
               <th>Endelig AR verdi</th>
               <th>Høyeste bud</th>
               <th>% av AR</th>
-              <th>Dato</th>          <!-- ← NY KOLUMN -->
+              <th>Dato</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -177,10 +177,17 @@
     </div>
   </div>
 
-  <div id="version-info">v1.2.7 – Dato-kolonne i tabell – 10.02.2026</div>
+  <div id="version-info">v1.2.8 – Fix: Canvas already in use (destroy gauges) – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
+
+    // Globale chart-instanser – slik at vi kan destruere dem før ny lasting
+    let combinedChartInstance = null;
+    let gauge1 = null;
+    let gauge2 = null;
+    let gauge3 = null;
+    let gauge4 = null;
 
     window.addEventListener('load', () => {
       const today = new Date();
@@ -190,8 +197,6 @@
       document.getElementById('fromDate').value = from.toISOString().split('T')[0];
       loadData();
     });
-
-    let combinedChartInstance = null;
 
     async function loadData() {
       const status = document.getElementById('status');
@@ -285,7 +290,7 @@
 
     function renderGauges(cars, mottattCars, soldCars, returnedCars) {
       const pctMottatt = cars.length ? Math.round(mottattCars.length / cars.length * 100) : 0;
-      const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
+      const pctSell    = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
 
       let avgSoldPct = 0, avgRetPct = 0;
       if (soldCars.length) {
@@ -308,11 +313,19 @@
         options: { cutout: '78%', plugins: { legend: {display:false}, tooltip:{enabled:false} } }
       });
 
-      new Chart(document.getElementById('g1'), cfg(pctMottatt));
-      new Chart(document.getElementById('g2'), cfg(pctSell));
-      new Chart(document.getElementById('g3'), cfg(avgSoldPct));
-      new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
+      // Destroy gamle gauge-instanser før vi lager nye
+      if (gauge1) { gauge1.destroy(); gauge1 = null; }
+      if (gauge2) { gauge2.destroy(); gauge2 = null; }
+      if (gauge3) { gauge3.destroy(); gauge3 = null; }
+      if (gauge4) { gauge4.destroy(); gauge4 = null; }
 
+      // Opprett nye charts
+      gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt));
+      gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell));
+      gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct));
+      gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
+
+      // Trend-piler
       const trend1 = pctMottatt > 50 ? '↑' : '↓';
       const trend2 = pctSell > 50 ? '↑' : '↓';
       const trend3 = avgSoldPct > 80 ? '↑' : '↓';
@@ -373,7 +386,11 @@
         return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
       });
 
-      if (combinedChartInstance) combinedChartInstance.destroy();
+      // Destroy gammel trend-chart hvis den finnes
+      if (combinedChartInstance) {
+        combinedChartInstance.destroy();
+        combinedChartInstance = null;
+      }
 
       combinedChartInstance = new Chart(canvas, {
         type: 'line',
@@ -405,7 +422,6 @@
         return;
       }
 
-      // Sortering: nyest først basert på solgt- eller retur-dato
       filteredCars.sort((a, b) => {
         const getSortDate = car => {
           const d = car.solgt || car.ret || '';
@@ -429,8 +445,6 @@
 
         const status = car.solgt ? 'Solgt' : 'Returnert';
         const statusClass = car.solgt ? 'status-sold' : 'status-returned';
-
-        // ← NY: vis den datoen vi sorterer etter
         const activityDate = car.solgt || car.ret || '-';
 
         const tr = document.createElement('tr');
@@ -440,7 +454,7 @@
           <td>${car.ar.toLocaleString('no-NO')}</td>
           <td>${car.bud.toLocaleString('no-NO')}</td>
           <td class="${pctClass}">${pct}%</td>
-          <td>${activityDate}</td>              <!-- ← NY kolonne -->
+          <td>${activityDate}</td>
           <td class="${statusClass}">${status}</td>
         `;
         tbody.appendChild(tr);
