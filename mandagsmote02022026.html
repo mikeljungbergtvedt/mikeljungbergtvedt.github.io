@@ -12,6 +12,7 @@
     :root {
       --peasy-green: #004225;
       --peasy-yellow: #FFCC33;
+      --peasy-blue: #82bfd2;
       --light-bg-start: #F2F7F9;
       --light-bg-end: #E8F0F5;
       --card-bg: rgba(255,255,255,0.96);
@@ -40,7 +41,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: bold;
       z-index: 10;
     }
@@ -69,11 +70,12 @@
     }
     table {
       width: 100%;
+      min-width: 600px; /* sikrer responsiv scrolling på mobil */
       border-collapse: collapse;
-      font-size: 0.95rem;
+      font-size: 0.875rem; /* mindre font på hele tabellen */
     }
     th, td {
-      padding: 12px 16px;
+      padding: 10px 14px;
       text-align: left;
       border-bottom: 1px solid #e5e7eb;
     }
@@ -81,6 +83,7 @@
       background: var(--peasy-green);
       color: white;
       font-weight: 600;
+      font-size: 0.95rem; /* litt større på header for lesbarhet */
     }
     tr:hover {
       background: #f9fafb;
@@ -123,26 +126,26 @@
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g1"></canvas></div>
           <div class="gauge-trend" id="trend1">-</div>
-          <p class="mt-4 text-sm text-gray-600">Mottatt %</p>
-          <p class="text-4xl font-bold text-[#FFCC33]" id="v1">-</p>
+          <p class="mt-4 text-sm text-gray-600">Priset – Mottatt</p>
+          <p class="text-4xl font-bold" id="v1">-</p>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g2"></canvas></div>
           <div class="gauge-trend" id="trend2">-</div>
-          <p class="mt-4 text-sm text-gray-600">Solgt av mottatt %</p>
-          <p class="text-4xl font-bold text-[#FFCC33]" id="v2">-</p>
+          <p class="mt-4 text-sm text-gray-600">Solgt – Mottatt</p>
+          <p class="text-4xl font-bold" id="v2">-</p>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g3"></canvas></div>
           <div class="gauge-trend" id="trend3">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
-          <p class="text-4xl font-bold text-[#FFCC33]" id="v3">-</p>
+          <p class="text-4xl font-bold text-[#004225]" id="v3">-</p>
         </div>
         <div class="text-center relative">
           <div class="gauge-container"><canvas id="g4"></canvas></div>
           <div class="gauge-trend" id="trend4">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
-          <p class="text-4xl font-bold text-red-600" id="v4">-</p>
+          <p class="text-4xl font-bold text-[#82bfd2]" id="v4">-</p>
         </div>
       </div>
     </div>
@@ -157,9 +160,9 @@
 
     <!-- Car table -->
     <div class="card p-8 md:p-10">
-      <h3 class="text-xl font-semibold text-center mb-6">Biler i perioden (kun solgt eller returnert)</h3>
-      <div class="table-container">
-        <table id="carTable">
+      <h3 class="text-lg font-medium text-gray-800 text-center mb-4">Biler i perioden (kun solgt eller returnert)</h3>
+      <div class="table-container overflow-x-auto">
+        <table id="carTable" class="min-w-full">
           <thead>
             <tr>
               <th>Merke</th>
@@ -177,12 +180,11 @@
     </div>
   </div>
 
-  <div id="version-info">v1.2.8 – Fix: Canvas already in use (destroy gauges) – 10.02.2026</div>
+  <div id="version-info">v1.3.6 – Tabell mindre font + responsive + piler trailing 30d – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
 
-    // Globale chart-instanser – slik at vi kan destruere dem før ny lasting
     let combinedChartInstance = null;
     let gauge1 = null;
     let gauge2 = null;
@@ -258,7 +260,6 @@
         const cars = dataRows.map(row => {
           const sdDate = parseDate(row[idx.sd]);
           return {
-            sdStr: row[idx.sd] || '',
             sdDate,
             merke: String(row[idx.merke] || '-').trim(),
             modell: String(row[idx.modell] || '-').trim(),
@@ -268,13 +269,13 @@
             solgt: row[idx.solgt] || '',
             ret: row[idx.ret] || ''
           };
-        }).filter(r => r.sdStr && r.ar > 10000 && 
-          (!fromDate || (r.sdDate && r.sdDate >= fromDate)) && 
+        }).filter(r => r.ar > 10000 &&
+          (!fromDate || (r.sdDate && r.sdDate >= fromDate)) &&
           (!toDate || (r.sdDate && r.sdDate <= toDate)));
 
-        const mottattCars   = cars.filter(c => c.mottatt);
-        const soldCars      = cars.filter(c => c.solgt);
-        const returnedCars  = cars.filter(c => c.ret);
+        const mottattCars = cars.filter(c => c.mottatt);
+        const soldCars = cars.filter(c => c.solgt);
+        const returnedCars = cars.filter(c => c.ret);
 
         status.textContent = `${cars.length} biler i perioden • ${mottattCars.length} mottatt • ${soldCars.length} solgt • ${returnedCars.length} returnert`;
 
@@ -290,7 +291,7 @@
 
     function renderGauges(cars, mottattCars, soldCars, returnedCars) {
       const pctMottatt = cars.length ? Math.round(mottattCars.length / cars.length * 100) : 0;
-      const pctSell    = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
+      const pctSell = mottattCars.length ? Math.round(soldCars.length / mottattCars.length * 100) : 0;
 
       let avgSoldPct = 0, avgRetPct = 0;
       if (soldCars.length) {
@@ -307,48 +308,68 @@
       document.getElementById('v3').textContent = avgSoldPct + '%';
       document.getElementById('v4').textContent = avgRetPct + '%';
 
-      const cfg = (val, color = '#FFCC33') => ({
+      document.getElementById('v1').style.color = '#FFCC33';
+      document.getElementById('v2').style.color = '#FFCC33';
+      document.getElementById('v3').style.color = '#004225';
+      document.getElementById('v4').style.color = '#82bfd2';
+
+      const cfg = (val, color) => ({
         type: 'doughnut',
         data: { datasets: [{ data: [val, 100-val], backgroundColor: [color, '#e5e7eb'], borderWidth: 0, circumference: 270, rotation: 225 }] },
         options: { cutout: '78%', plugins: { legend: {display:false}, tooltip:{enabled:false} } }
       });
 
-      // Destroy gamle gauge-instanser før vi lager nye
       if (gauge1) { gauge1.destroy(); gauge1 = null; }
       if (gauge2) { gauge2.destroy(); gauge2 = null; }
       if (gauge3) { gauge3.destroy(); gauge3 = null; }
       if (gauge4) { gauge4.destroy(); gauge4 = null; }
 
-      // Opprett nye charts
-      gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt));
-      gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell));
-      gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct));
-      gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
+      gauge1 = new Chart(document.getElementById('g1'), cfg(pctMottatt, '#FFCC33'));
+      gauge2 = new Chart(document.getElementById('g2'), cfg(pctSell, '#FFCC33'));
+      gauge3 = new Chart(document.getElementById('g3'), cfg(avgSoldPct, '#004225'));
+      gauge4 = new Chart(document.getElementById('g4'), cfg(avgRetPct, '#82bfd2'));
 
-      // Trend-piler
-      const trend1 = pctMottatt > 50 ? '↑' : '↓';
-      const trend2 = pctSell > 50 ? '↑' : '↓';
-      const trend3 = avgSoldPct > 80 ? '↑' : '↓';
-      const trend4 = avgRetPct > 60 ? '↓' : '↑';
+      // Pil-logikk: trailing 30 dager sammenligning
+      const now = new Date();
+      const endPrev = new Date(now);
+      endPrev.setDate(now.getDate() - 30);
+      const startPrev = new Date(endPrev);
+      startPrev.setDate(endPrev.getDate() - 30);
+
+      const prevCars = cars.filter(c => c.sdDate && c.sdDate >= startPrev && c.sdDate < endPrev);
+      const prevMottatt = prevCars.length ? Math.round(prevCars.filter(c => c.mottatt).length / prevCars.length * 100) : null;
+      const prevSell = prevCars.filter(c => c.mottatt).length ? Math.round(prevCars.filter(c => c.solgt).length / prevCars.filter(c => c.mottatt).length * 100) : null;
+      const prevSoldAR = prevCars.filter(c => c.solgt).length ? Math.round(prevCars.filter(c => c.solgt).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / prevCars.filter(c => c.solgt).length) : null;
+      const prevRetAR = prevCars.filter(c => c.ret).length ? Math.round(prevCars.filter(c => c.ret).reduce((sum, c) => sum + (c.bud / c.ar * 100), 0) / prevCars.filter(c => c.ret).length) : null;
+
+      const getTrend = (curr, prev, isLowerBetter = false) => {
+        if (prev === null || prev === 0) return '–';
+        if (curr === prev) return '–';
+        const better = isLowerBetter ? (curr < prev) : (curr > prev);
+        return better ? '↑' : '↓';
+      };
+
+      const trend1 = getTrend(pctMottatt, prevMottatt);
+      const trend2 = getTrend(pctSell, prevSell);
+      const trend3 = getTrend(avgSoldPct, prevSoldAR);
+      const trend4 = getTrend(avgRetPct, prevRetAR, true); // lavere bedre for returnert
 
       document.getElementById('trend1').textContent = trend1;
       document.getElementById('trend2').textContent = trend2;
       document.getElementById('trend3').textContent = trend3;
       document.getElementById('trend4').textContent = trend4;
 
-      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : 'red';
-      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : 'red';
-      document.getElementById('trend3').style.color = trend3 === '↑' ? 'green' : 'red';
-      document.getElementById('trend4').style.color = trend4 === '↓' ? 'green' : 'red';
+      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : (trend1 === '↓' ? 'red' : 'gray');
+      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : (trend2 === '↓' ? 'red' : 'gray');
+      document.getElementById('trend3').style.color = trend3 === '↑' ? 'green' : (trend3 === '↓' ? 'red' : 'gray');
+      document.getElementById('trend4').style.color = trend4 === '↑' ? 'green' : (trend4 === '↓' ? 'red' : 'gray');
     }
 
     function renderCombinedTrendChart(soldCars, returnedCars) {
       const canvas = document.getElementById('combinedTrendChart');
       const container = canvas.parentElement;
-
       const monthlySold = {};
       const monthlyRet = {};
-
       soldCars.forEach(c => {
         if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
         const key = c.sdDate.toISOString().slice(0,7);
@@ -356,7 +377,6 @@
         monthlySold[key].sum += (c.bud / c.ar) * 100;
         monthlySold[key].count++;
       });
-
       returnedCars.forEach(c => {
         if (!c.sdDate || c.ar <= 0 || c.bud <= 0) return;
         const key = c.sdDate.toISOString().slice(0,7);
@@ -364,34 +384,24 @@
         monthlyRet[key].sum += (c.bud / c.ar) * 100;
         monthlyRet[key].count++;
       });
-
       const allMonths = [...new Set([...Object.keys(monthlySold), ...Object.keys(monthlyRet)])].sort();
       if (allMonths.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
       }
-
       const labels = allMonths.map(m => {
         const [y, mth] = m.split('-');
         return `${mth}.${y.slice(2)}`;
       });
-
       const soldData = allMonths.map(m => {
         const entry = monthlySold[m];
         return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
       });
-
       const retData = allMonths.map(m => {
         const entry = monthlyRet[m];
         return entry && entry.count >= 3 ? Math.round(entry.sum / entry.count) : null;
       });
-
-      // Destroy gammel trend-chart hvis den finnes
-      if (combinedChartInstance) {
-        combinedChartInstance.destroy();
-        combinedChartInstance = null;
-      }
-
+      if (combinedChartInstance) combinedChartInstance.destroy();
       combinedChartInstance = new Chart(canvas, {
         type: 'line',
         data: {
@@ -416,12 +426,10 @@
     function renderCarTable(filteredCars) {
       const tbody = document.getElementById('carTableBody');
       tbody.innerHTML = '';
-
       if (filteredCars.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-600">Ingen solgte eller returnerte biler i perioden</td></tr>';
         return;
       }
-
       filteredCars.sort((a, b) => {
         const getSortDate = car => {
           const d = car.solgt || car.ret || '';
@@ -431,22 +439,18 @@
           const [day, month, year] = parts.map(Number);
           return new Date(year, month - 1, day);
         };
-
         const dateA = getSortDate(a);
         const dateB = getSortDate(b);
         return dateB - dateA;
       });
-
       filteredCars.forEach(car => {
         const pct = car.ar > 0 ? Math.round((car.bud / car.ar) * 100) : 0;
         let pctClass = 'percent-med';
         if (pct >= 90) pctClass = 'percent-high';
         else if (pct < 80) pctClass = 'percent-low';
-
         const status = car.solgt ? 'Solgt' : 'Returnert';
         const statusClass = car.solgt ? 'status-sold' : 'status-returned';
         const activityDate = car.solgt || car.ret || '-';
-
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${car.merke}</td>
