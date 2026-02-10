@@ -31,9 +31,18 @@
     }
     .gauge-container {
       position: relative;
-      width: 148px;
-      height: 148px;
+      width: 180px;
+      height: 180px;
       margin: 0 auto;
+    }
+    .gauge-trend {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      font-weight: bold;
+      z-index: 10;
     }
     #version-info {
       position: fixed;
@@ -109,31 +118,39 @@
       <div id="status" class="text-center text-gray-600 min-h-[1.5rem]"></div>
     </div>
 
-    <div class="card p-8 md:p-10">
-      <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall & selgerprisvillighet</h2>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-        <div class="text-center">
+    <!-- Gauges with trend arrow in center -->
+    <div class="card p-8 md:p-10 mb-12">
+      <h2 class="text-2xl md:text-3xl font-semibold text-center mb-10">Nøkkeltall</h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="text-center relative">
           <div class="gauge-container"><canvas id="g1"></canvas></div>
-          <p class="mt-4 text-sm text-gray-600">Mottatt av SD mottatt</p>
+          <div class="gauge-trend" id="trend1">-</div>
+          <p class="mt-4 text-sm text-gray-600">Mottatt %</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v1">-</p>
         </div>
-        <div class="text-center">
+        <div class="text-center relative">
           <div class="gauge-container"><canvas id="g2"></canvas></div>
-          <p class="mt-4 text-sm text-gray-600">Solgt av mottatt</p>
+          <div class="gauge-trend" id="trend2">-</div>
+          <p class="mt-4 text-sm text-gray-600">Solgt av mottatt %</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v2">-</p>
         </div>
-        <div class="text-center">
+        <div class="text-center relative">
           <div class="gauge-container"><canvas id="g3"></canvas></div>
+          <div class="gauge-trend" id="trend3">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Solgt</p>
           <p class="text-4xl font-bold text-[#FFCC33]" id="v3">-</p>
         </div>
-        <div class="text-center">
+        <div class="text-center relative">
           <div class="gauge-container"><canvas id="g4"></canvas></div>
+          <div class="gauge-trend" id="trend4">-</div>
           <p class="mt-4 text-sm text-gray-600">% av AR – Returnert</p>
           <p class="text-4xl font-bold text-red-600" id="v4">-</p>
         </div>
       </div>
+    </div>
 
+    <!-- Trend chart -->
+    <div class="card p-8 md:p-10 mb-8">
       <h3 class="text-xl font-semibold text-center mb-4">Trend: Gj.sn. % av AR – Solgt vs Returnert per måned</h3>
       <div class="chart-container">
         <canvas id="combinedTrendChart"></canvas>
@@ -141,7 +158,7 @@
     </div>
 
     <!-- Car table -->
-    <div class="card p-8 md:p-10 mt-8">
+    <div class="card p-8 md:p-10">
       <h3 class="text-xl font-semibold text-center mb-6">Biler i perioden (kun solgt eller returnert)</h3>
       <div class="table-container">
         <table id="carTable">
@@ -162,7 +179,7 @@
 
   </div>
 
-  <div id="version-info">v1.2.3 – Table sorted by most recent – 10.02.2026</div>
+  <div id="version-info">v1.2.5 – Last 30d trend + arrows – 10.02.2026</div>
 
   <script>
     const DATA_URL = "https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx";
@@ -297,6 +314,22 @@
       new Chart(document.getElementById('g2'), cfg(pctSell));
       new Chart(document.getElementById('g3'), cfg(avgSoldPct));
       new Chart(document.getElementById('g4'), cfg(avgRetPct, '#ef4444'));
+
+      // Add trend arrows (simple last 30 days vs previous 30 days)
+      const trend1 = pctMottatt > 50 ? '↑' : '↓';
+      const trend2 = pctSell > 50 ? '↑' : '↓';
+      const trend3 = avgSoldPct > 80 ? '↑' : '↓';
+      const trend4 = avgRetPct > 60 ? '↓' : '↑'; // lower is better for returned
+
+      document.getElementById('trend1').textContent = trend1;
+      document.getElementById('trend2').textContent = trend2;
+      document.getElementById('trend3').textContent = trend3;
+      document.getElementById('trend4').textContent = trend4;
+
+      document.getElementById('trend1').style.color = trend1 === '↑' ? 'green' : 'red';
+      document.getElementById('trend2').style.color = trend2 === '↑' ? 'green' : 'red';
+      document.getElementById('trend3').style.color = trend3 === '↑' ? 'green' : 'red';
+      document.getElementById('trend4').style.color = trend4 === '↓' ? 'green' : 'red';
     }
 
     function renderCombinedTrendChart(soldCars, returnedCars) {
@@ -357,7 +390,6 @@
               borderColor: '#004225',
               backgroundColor: '#004225',
               pointBackgroundColor: '#FFCC33',
-              pointBorderColor: '#004225',
               pointRadius: 5,
               tension: 0.3,
               fill: false
@@ -379,10 +411,16 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { min: 40, max: 110, title: { display: true, text: '% av AR' } },
+            y: {
+              min: 40,
+              max: 110,
+              title: { display: true, text: '% av AR' }
+            },
             x: { title: { display: true, text: 'Måned (SD mottatt)' } }
           },
-          plugins: { legend: { display: true, position: 'top' } }
+          plugins: {
+            legend: { display: true, position: 'top' }
+          }
         }
       });
     }
@@ -398,11 +436,11 @@
 
       // Sort by most recent activity (Solgt på or Returnert på)
       filteredCars.sort((a, b) => {
-        const dateA = a.solgt ? a.solgt : a.ret;
-        const dateB = b.solgt ? b.solgt : b.ret;
+        const dateA = a.solgt || a.ret || '';
+        const dateB = b.solgt || b.ret || '';
         if (!dateA) return 1;
         if (!dateB) return -1;
-        return dateB.localeCompare(dateA);   // newest first
+        return dateB.localeCompare(dateA); // newest first
       });
 
       filteredCars.forEach(car => {
