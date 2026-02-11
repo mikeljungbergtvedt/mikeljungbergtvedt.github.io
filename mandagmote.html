@@ -93,8 +93,8 @@
       font-weight: 500;
     }
     .percent-high { color: #16a34a; font-weight: 600; }
-    .percent-med  { color: #ca8a04; font-weight: 500; }
-    .percent-low  { color: #dc2626; font-weight: 500; }
+    .percent-med { color: #ca8a04; font-weight: 500; }
+    .percent-low { color: #dc2626; font-weight: 500; }
   </style>
 </head>
 <body class="text-[#004225]">
@@ -166,12 +166,12 @@
 
     <!-- Charts -->
     <div class="card p-6 md:p-10 mb-8">
-      <h3 class="text-xl font-semibold text-center mb-4">Antall SM mottatt og mottatt per dag</h3>
+      <h3 class="text-xl font-semibold text-center mb-4">Registrert / mottatt daglig</h3>
       <div class="chart-container">
         <canvas id="trendChart"></canvas>
       </div>
 
-      <h3 class="text-xl font-semibold text-center mt-10 mb-4">Solgt vs Returnert</h3>
+      <h3 class="text-xl font-semibold text-center mt-10 mb-4">Solgt / Returnert</h3>
       <div class="chart-container">
         <canvas id="barChart"></canvas>
       </div>
@@ -179,7 +179,7 @@
 
     <!-- Car table -->
     <div class="card p-6 md:p-10">
-      <h3 class="text-lg font-medium text-gray-800 text-center mb-4">Biler i perioden (kun solgt eller returnert)</h3>
+      <h3 class="text-lg font-medium text-gray-800 text-center mb-4">Solgt / returnert i perioden</h3>
       <div class="table-container overflow-x-auto">
         <table id="carTable" class="min-w-full">
           <thead>
@@ -219,13 +219,11 @@
     async function loadData() {
       const status = document.getElementById('status');
       status.textContent = "Laster data...";
-
       const fromStr = document.getElementById('fromDate').value;
       const toStr = document.getElementById('toDate').value;
       const fromDate = fromStr ? new Date(fromStr) : null;
       const toDate = toStr ? new Date(toStr) : null;
 
-      // Min 30 days warning
       let periodWarning = "";
       if (fromDate && toDate) {
         const daysDiff = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24));
@@ -275,11 +273,12 @@
 
         const parseDate = str => {
           if (!str) return null;
-          const parts = String(str).trim().split(/\s+/)[0].split('.');
+          const s = String(str).trim().split(/\s+/)[0];
+          const parts = s.split('.');
           if (parts.length !== 3) return null;
-          const [d, m, y] = parts.map(Number);
-          if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
-          return new Date(y, m-1, d);
+          let [day, month, year] = parts.map(Number);
+          if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+          return new Date(year, month - 1, day, 12, 0, 0);
         };
 
         const allCars = dataRows.map(row => {
@@ -305,8 +304,8 @@
         });
 
         const mottattInPeriod = carsInPeriod.filter(c => c.mottattDate && c.mottattDate >= (fromDate || new Date(0)) && c.mottattDate <= (toDate || new Date()));
-        const soldInPeriod    = carsInPeriod.filter(c => c.solgtDate   && c.solgtDate   >= (fromDate || new Date(0)) && c.solgtDate   <= (toDate || new Date()));
-        const returnedInPeriod = carsInPeriod.filter(c => c.retDate     && c.retDate     >= (fromDate || new Date(0)) && c.retDate     <= (toDate || new Date()));
+        const soldInPeriod = carsInPeriod.filter(c => c.solgtDate && c.solgtDate >= (fromDate || new Date(0)) && c.solgtDate <= (toDate || new Date()));
+        const returnedInPeriod = carsInPeriod.filter(c => c.retDate && c.retDate >= (fromDate || new Date(0)) && c.retDate <= (toDate || new Date()));
 
         status.textContent = periodWarning || `${carsInPeriod.length} biler i perioden • ${mottattInPeriod.length} mottatt • ${soldInPeriod.length} solgt • ${returnedInPeriod.length} returnert`;
 
@@ -324,7 +323,6 @@
       const pctMottatt = carsInPeriod.length ? Math.round(mottattInPeriod.length / carsInPeriod.length * 100) : 0;
       const pctSell = mottattInPeriod.length ? Math.round(soldInPeriod.length / mottattInPeriod.length * 100) : 0;
       let avgSoldPct = 0, avgRetPct = 0;
-
       if (soldInPeriod.length) {
         const ratios = soldInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgSoldPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
@@ -333,19 +331,16 @@
         const ratios = returnedInPeriod.map(c => c.ar > 0 ? (c.bud / c.ar) * 100 : 0).filter(r => r > 0);
         avgRetPct = ratios.length ? Math.round(ratios.reduce((a,b)=>a+b,0) / ratios.length) : 0;
       }
-
       let avgSoldValue = 0;
       if (soldInPeriod.length > 0) {
         const total = soldInPeriod.reduce((sum, c) => sum + c.ar, 0);
         avgSoldValue = Math.round(total / soldInPeriod.length);
       }
-
       let avgRetValue = 0;
       if (returnedInPeriod.length > 0) {
         const total = returnedInPeriod.reduce((sum, c) => sum + c.ar, 0);
         avgRetValue = Math.round(total / returnedInPeriod.length);
       }
-
       document.getElementById('v1').textContent = pctMottatt + '%';
       document.getElementById('v2').textContent = pctSell + '%';
       document.getElementById('v3').textContent = avgSoldPct + '%';
@@ -353,17 +348,14 @@
       document.getElementById('v5').textContent = avgSoldValue.toLocaleString('no-NO') + ' kr';
       document.getElementById('v6').textContent = avgRetValue.toLocaleString('no-NO') + ' kr';
 
-      // Performance colors for v1 & v2
       const getGaugeColor = (pct, thresholds) => {
         if (pct < thresholds.low) return 'rgba(220, 38, 38, 0.75)';
         if (pct < thresholds.medium) return 'rgba(255, 204, 51, 0.75)';
         return 'rgba(0, 66, 37, 0.75)';
       };
-
       const colorV1 = getGaugeColor(pctMottatt, { low: 5, medium: 10 });
       const colorV2 = getGaugeColor(pctSell, { low: 65, medium: 70 });
 
-      // New: Trend arrow + color for v5 & v6 (this period vs previous 30 days)
       let trend5 = '-', trend6 = '-', colorV5 = 'rgba(0, 66, 37, 0.75)', colorV6 = 'rgba(0, 66, 37, 0.75)';
       if (fromDate) {
         const prevFrom = new Date(fromDate);
@@ -371,7 +363,6 @@
         const prevTo = new Date(fromDate);
         prevTo.setDate(prevTo.getDate() - 1);
 
-        // Previous period sold/returned
         const prevSold = carsInPeriod.filter(c => c.solgtDate && c.solgtDate >= prevFrom && c.solgtDate <= prevTo);
         const prevReturned = carsInPeriod.filter(c => c.retDate && c.retDate >= prevFrom && c.retDate <= prevTo);
 
@@ -387,21 +378,17 @@
           prevAvgRet = Math.round(total / prevReturned.length);
         }
 
-        // Trend5 (sold)
         if (avgSoldValue > prevAvgSold) trend5 = '↑';
         else if (avgSoldValue < prevAvgSold) trend5 = '↓';
         else trend5 = '–';
 
-        // Trend6 (returned)
         if (avgRetValue > prevAvgRet) trend6 = '↑';
         else if (avgRetValue < prevAvgRet) trend6 = '↓';
         else trend6 = '–';
 
-        // Donut color follows arrow
         colorV5 = trend5 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
                   trend5 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
-                  'rgba(229, 231, 235, 0.75)'; // gray
-
+                  'rgba(229, 231, 235, 0.75)';
         colorV6 = trend6 === '↑' ? 'rgba(0, 66, 37, 0.75)' :
                   trend6 === '↓' ? 'rgba(220, 38, 38, 0.75)' :
                   'rgba(229, 231, 235, 0.75)';
@@ -432,7 +419,6 @@
       document.getElementById('trend1').style.color = document.getElementById('trend1').textContent === '↑' ? 'green' : 'red';
       document.getElementById('trend2').style.color = document.getElementById('trend2').textContent === '↑' ? 'green' : 'red';
 
-      // New trend arrows for v5/v6
       document.getElementById('trend5').textContent = trend5;
       document.getElementById('trend6').textContent = trend6;
       document.getElementById('trend5').style.color = trend5 === '↑' ? 'green' : (trend5 === '↓' ? 'red' : '#555');
@@ -444,32 +430,43 @@
       const container = canvas.parentElement;
       const dailySM = {};
       const dailyMottatt = {};
+
       cars.forEach(c => {
         if (c.sdDate && (!fromDate || c.sdDate >= fromDate) && (!toDate || c.sdDate <= toDate)) {
-          const key = c.sdDate.toISOString().slice(0,10);
+          const d = c.sdDate;
+          const key = d.getFullYear() + '-' +
+                      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                      String(d.getDate()).padStart(2, '0');
           dailySM[key] = (dailySM[key] || 0) + 1;
         }
         if (c.mottattDate && (!fromDate || c.mottattDate >= fromDate) && (!toDate || c.mottattDate <= toDate)) {
-          const key = c.mottattDate.toISOString().slice(0,10);
+          const d = c.mottattDate;
+          const key = d.getFullYear() + '-' +
+                      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                      String(d.getDate()).padStart(2, '0');
           dailyMottatt[key] = (dailyMottatt[key] || 0) + 1;
         }
       });
+
       const allDays = [...new Set([...Object.keys(dailySM), ...Object.keys(dailyMottatt)])].sort();
       if (allDays.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-600 py-8">Ingen data til trendvisning</p>';
         return;
       }
+
       const labels = allDays.map(d => d.slice(5));
       const smData = allDays.map(d => dailySM[d] || 0);
       const mottattData = allDays.map(d => dailyMottatt[d] || 0);
+
       if (trendChartInstance) trendChartInstance.destroy();
+
       trendChartInstance = new Chart(canvas, {
         type: 'line',
         data: {
           labels,
           datasets: [
             {
-              label: 'Antall SM mottatt per dag',
+              label: 'Registrert / mottatt daglig',
               data: smData,
               borderColor: 'rgba(255, 204, 51, 0.5)',
               backgroundColor: 'rgba(255, 204, 51, 0.5)',
@@ -488,7 +485,7 @@
               }
             },
             {
-              label: 'Antall mottatt per dag',
+              label: 'Registrert / mottatt daglig',
               data: mottattData,
               borderColor: 'rgba(0, 66, 37, 0.5)',
               backgroundColor: 'rgba(0, 66, 37, 0.5)',
