@@ -6,6 +6,7 @@
 <title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --green:   #004225;
@@ -217,7 +218,9 @@ function daysBetween(a, b) {
 
 function daysAgo(d) {
   if (!d) return '–';
-  const n = Math.floor((Date.now() - new Date(d)) / 86400000);
+  const pd = parseDate(d);
+  if (!pd || isNaN(pd)) return '–';
+  const n = Math.floor((Date.now() - pd) / 86400000);
   if (n === 0) return 'I dag';
   if (n === 1) return 'I går';
   return `${n}d siden`;
@@ -408,6 +411,7 @@ function render(data) {
       <div class="dial-value" style="color:${avgGapSolgt>=0?'#2E7D32':'#C62828'}">${avgGapSolgt!==null?(avgGapSolgt>0?'+':'')+avgGapSolgt.toFixed(1):'–'}<span style="font-size:14px">%</span></div>
       <div class="dial-unit">Bud vs Pris lav (solgt)</div>
       <div class="dial-sub">Prisnøyaktighet</div>
+      <div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: ${data.sold.length?Math.round(data.sold.filter(c=>c.t>0).reduce((a,c)=>a+c.t,0)/data.sold.filter(c=>c.t>0).length/1000)+'k kr':'–'}</div>
       <div class="target-tag">Dynamisk X%</div>
     </div>
     <div class="dial-card on-target">
@@ -457,8 +461,15 @@ function render(data) {
   opsHtml += `</div>`;
 
   // Recently sold / returned
-  const recentSold = [...data.sold].sort((a,b)=>new Date(b.sDate)-new Date(a.sDate)).slice(0,8);
-  const recentRet  = [...data.returned].sort((a,b)=>new Date(b.vDate)-new Date(a.vDate)).slice(0,8);
+  const cutoff30 = Date.now() - 30*24*60*60*1000;
+  const recentSold = [...data.sold]
+    .filter(c => { const d=parseDate(c.sDate); return d && d>=cutoff30; })
+    .sort((a,b)=>(parseDate(b.sDate)||0)-(parseDate(a.sDate)||0))
+    .slice(0,15);
+  const recentRet = [...data.returned]
+    .filter(c => { const d=parseDate(c.vDate); return d && d>=cutoff30; })
+    .sort((a,b)=>(parseDate(b.vDate)||0)-(parseDate(a.vDate)||0))
+    .slice(0,15);
 
   opsHtml += `
   <div class="section-label">Nylig solgt & returnert</div>
@@ -537,6 +548,37 @@ function render(data) {
     </div>
     <canvas id="scatter" height="300"></canvas>
   </div>`;
+
+  // Draw scatter chart after DOM update
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('scatter');
+    if (!canvas || !window.Chart) return;
+    if (canvas._chartInstance) canvas._chartInstance.destroy();
+    const soldPts = data.sold.filter(c=>c.dLow&&c.t&&c.gap>-50).map(c=>({x:Math.round(c.dLow/1000),y:Math.round(c.t/1000),label:c.regnr+' '+c.label}));
+    const retPts  = data.returned.filter(c=>c.dLow&&c.t&&c.gap>-50).map(c=>({x:Math.round(c.dLow/1000),y:Math.round(c.t/1000),label:c.regnr+' '+c.label}));
+    const allX = [...soldPts,...retPts].map(p=>p.x);
+    const maxV = Math.ceil(Math.max(...allX)*1.1/100)*100;
+    canvas._chartInstance = new Chart(canvas, {
+      type:'scatter',
+      data:{datasets:[
+        {label:'Solgt',data:soldPts,backgroundColor:'rgba(46,125,50,0.7)',pointRadius:5},
+        {label:'Returnert',data:retPts,backgroundColor:'rgba(198,40,40,0.7)',pointRadius:5}
+      ]},
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{position:'top'},
+          tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: Pris lav ${ctx.raw.x}k → Bud ${ctx.raw.y}k`}}
+        },
+        scales:{
+          x:{title:{display:true,text:'Pris lav (kr tusen)'},min:0,max:maxV},
+          y:{title:{display:true,text:'Bud (kr tusen)'},min:0,max:maxV}
+        },
+        elements:{point:{hoverRadius:7}}
+      }
+    });
+    // Draw diagonal reference line plugin
+  });
 
   // Worst returned + best sold
   finHtml += `
