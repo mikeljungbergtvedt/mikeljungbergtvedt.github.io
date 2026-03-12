@@ -230,7 +230,8 @@ function fmtK(n)    { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' 
 function fmtPct(n)  { if (n === null) return '–'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
 function fmtDate(d) {
   if (!d) return '–';
-  return new Date(d).toLocaleDateString('nb-NO',{day:'numeric',month:'short'});
+  const pd = parseDate(d);
+  return pd ? pd.toLocaleDateString('nb-NO',{day:'numeric',month:'short'}) : '–';
 }
 
 async function loadData() {
@@ -268,7 +269,8 @@ function processData(rows) {
     const vDate  = r[21];  // Returnert
     const km     = r[22];
 
-    const car = { regnr, label, merke, modell, year, dLow, t, u, pDate, qDate, rDate, sDate, vDate, km };
+    const rawStatus = String(r[12] || '');
+    const car = { regnr, label, merke, modell, year, dLow, t, u, pDate, qDate, rDate, sDate, vDate, km, status: rawStatus };
 
     if (dLow) data.evaluated.push(car);
     if (pDate || qDate) data.mottatt.push(car);
@@ -329,6 +331,25 @@ function daysClass(d, target) {
   return 'days-over';
 }
 
+
+function statusBadge(s) {
+  const m = {
+    'på auksjonen':          ['🔨','b-auksjon',  'På auksjon'],
+    'ready for auction':     ['🔨','b-auksjon',  'Klar auksjon'],
+    'under arbeid':          ['🏭','b-produksjon','Under arbeid'],
+    'endelig estimat':       ['📋','b-mottatt',  'Estimat sendt'],
+    'vent. på budaksept':    ['⏳','b-auksjon',  'Venter bud'],
+    'venter på trans. best.':['🚚','b-mottatt',  'Venter henting'],
+    'solgt':                 ['✅','b-ferdig',   'Solgt'],
+    'returnert':             ['↩️','b-ferdig',   'Returnert'],
+    'avvist by customer':    ['❌','b-ferdig',   'Avvist'],
+    'avvist by admin':       ['❌','b-ferdig',   'Avvist'],
+    'avvist':                ['❌','b-ferdig',   'Avvist'],
+  };
+  const key = Object.keys(m).find(k => s.toLowerCase().includes(k));
+  const [icon, cls, lbl] = key ? m[key] : ['🏭','b-produksjon', s || 'Produksjon'];
+  return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
+}
 function render(data) {
   const bs = bracketStats(data);
   const totalEval   = data.evaluated.length;
@@ -422,7 +443,7 @@ function render(data) {
     <div class="car-card">
       <div class="car-top">
         <span class="car-regnr">${car.regnr}</span>
-        <span class="car-badge b-produksjon">🏭 Produksjon</span>
+        ${statusBadge(car.status)}
       </div>
       <div class="car-model">${car.label || '–'}</div>
       <div class="car-days ${cls}">${d !== null ? `${d} dager på anlegg` : 'Ukjent dato'}</div>
