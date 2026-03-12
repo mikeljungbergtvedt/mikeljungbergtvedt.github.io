@@ -3,76 +3,578 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Track</title>
+<title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  --green:        #004225;
-  --green-mid:    #006644;
-  --green-accent: #00875A;
-  --yellow:       #FFCC33;
-  --bg-start:     #F2F7F9;
-  --bg-end:       #E8F0F5;
-  --card:         rgba(255,255,255,0.96);
-  --border:       rgba(0,66,37,0.08);
-  --shadow:       rgba(0,66,37,0.06);
-  --shadow-h:     rgba(0,66,37,0.12);
-  --text:         #004225;
-  --muted:        #666;
-  --red:          #C62828;
-  --red-bg:       #fdecea;
-  --blue:         #1565C0;
-  --blue-bg:      #E3F2FD;
-  --orange:       #E65100;
-  --orange-bg:    #FFF3E0;
+  --green:   #004225;
+  --green2:  #006644;
+  --accent:  #00875A;
+  --yellow:  #FFCC33;
+  --bg0:     #F2F7F9;
+  --bg1:     #E8F0F5;
+  --card:    rgba(255,255,255,0.97);
+  --border:  rgba(0,66,37,0.08);
+  --shadow:  rgba(0,66,37,0.07);
+  --text:    #004225;
+  --muted:   #667;
+  --red:     #C62828;
+  --red-bg:  #FDECEA;
+  --orange:  #E65100;
+  --ora-bg:  #FFF3E0;
+  --blue:    #1565C0;
+  --blu-bg:  #E3F2FD;
+  --lav-c:   #00875A;
+  --mid-c:   #1565C0;
+  --hoy-c:   #E65100;
+  --pre-c:   #6A1B9A;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--bg0),var(--bg1));color:var(--text);min-height:100vh;}
+
+/* HEADER */
+header{background:var(--green);height:64px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;}
+.logo img{height:28px;}
+.header-right{display:flex;align-items:center;gap:16px;}
+.pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.1);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.85);}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.nav-link{font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;letter-spacing:0.5px;}
+.nav-link:hover{color:#fff;}
+.nav-link.active{color:var(--yellow);}
+
+/* MAIN */
+main{max-width:1200px;margin:0 auto;padding:40px 24px 80px;}
+
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;margin-top:40px;}
+.section-label:first-child{margin-top:0;}
+
+/* PULSE DIALS */
+.dials-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+
+.dial-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:22px 18px 18px;
+  box-shadow:0 4px 24px var(--shadow);
+  text-align:center;
+  position:relative;
+  overflow:hidden;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+.dial-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
-  color: var(--text);
-  min-height: 100vh;
+/* SVG arc dial */
+.arc-wrap{position:relative;width:110px;height:64px;margin:0 auto 10px;}
+.arc-wrap svg{width:110px;height:64px;}
+
+.dial-value{font-size:26px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.dial-unit{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px;}
+.dial-sub{font-size:10px;color:var(--muted);margin-top:6px;}
+
+.target-tag{
+  display:inline-block;
+  font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:99px;
+  margin-top:6px;
+  letter-spacing:0.5px;
+}
+.on-target .target-tag{background:#E8F5E9;color:#2E7D32;}
+.off-target .target-tag{background:var(--red-bg);color:var(--red);}
+.neutral .target-tag{background:#FFFDE7;color:#F57F17;}
+
+.dial-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+}
+.on-target::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
+.off-target::after{background:linear-gradient(90deg,var(--red),#EF9A9A);}
+.neutral::after{background:linear-gradient(90deg,var(--yellow),#FFE082);}
+
+/* BRACKET CARDS */
+.brackets-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+
+.bracket-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 4px 24px var(--shadow);
+  border-top:3px solid var(--bc);
 }
 
-/* ─── HEADER ─────────────────────────────────── */
-header {
-  background: var(--green);
-  padding: 0 40px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.bc-label{font-size:11px;font-weight:800;letter-spacing:0.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.bc-range{font-size:10px;font-weight:500;color:var(--muted);}
+
+.bc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.bc-row:last-child{border-bottom:none;}
+.bc-key{color:var(--muted);font-weight:500;}
+.bc-val{font-weight:700;}
+.pos{color:#2E7D32;}
+.neg{color:var(--red);}
+.warn{color:var(--orange);}
+
+.x-rec{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(0,66,37,0.04);
+  font-size:11px;
+}
+.x-rec-label{color:var(--muted);font-weight:500;margin-bottom:3px;}
+.x-rec-val{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
+
+/* TABLES */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px var(--shadow);}
+.th{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.th-title{font-size:13px;font-weight:700;}
+.th-badge{font-size:11px;background:var(--bg0);color:var(--muted);padding:3px 10px;border-radius:99px;}
+
+table{width:100%;border-collapse:collapse;}
+thead tr{background:rgba(0,66,37,0.03);}
+th{text-align:left;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);padding:9px 16px;border-bottom:1px solid var(--border);}
+td{padding:11px 16px;font-size:12px;border-bottom:1px solid rgba(0,66,37,0.04);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(0,66,37,0.015);}
+
+.regnr{font-weight:700;color:var(--green);font-size:13px;}
+.gap-bar-wrap{width:80px;height:6px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.gap-bar{height:100%;border-radius:99px;}
+
+/* SCATTER PLOT */
+.plot-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);}
+.plot-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.plot-sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+canvas{width:100%;border-radius:8px;}
+
+/* LOADING */
+.loading{text-align:center;padding:80px;color:var(--muted);font-size:14px;}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){
+  .dials-grid{grid-template-columns:1fr 1fr;}
+  .brackets-grid{grid-template-columns:1fr 1fr;}
+  .two-col,.three-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy">
+  </div>
+  <div class="header-right">
+    <a href="peasy-track.html" class="nav-link">Track</a>
+    <a href="peasy-pulse.html" class="nav-link active">Pulse</a>
+    <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
+  </div>
+</header>
+
+<main>
+  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen…</div></div>
+</main>
+
+<script>
+const API = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+const TARGETS = { evalPQ: 10, pqSolgt: 70, prodDays: 3 };
+const BRACKETS = [
+  { name:'Lav',     range:'0–100k',   lo:0,      hi:100000,  color:'#00875A' },
+  { name:'Mid',     range:'100–250k', lo:100000, hi:250000,  color:'#1565C0' },
+  { name:'Høy',     range:'250–400k', lo:250000, hi:400000,  color:'#E65100' },
+  { name:'Premium', range:'400k+',    lo:400000, hi:9999999, color:'#6A1B9A' },
+];
+
+function parseDLow(val) {
+  if (!val || val === '-') return null;
+  try {
+    const s = String(val).replace(/\s|\u00a0/g,'');
+    const parts = s.split('-');
+    const n = parseInt(parts[0]);
+    return isNaN(n) ? null : n;
+  } catch { return null; }
 }
 
-.logo img { height: 28px; }
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+function bracket(dLow) {
+  return BRACKETS.find(b => dLow >= b.lo && dLow < b.hi) || null;
 }
 
-.live-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 99px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.85);
+function pct(n, of) { return of ? Math.round(n / of * 100) : 0; }
+function avg(arr)    { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function fmtKr(n)    { return n ? Math.round(n).toLocaleString('nb-NO') + ' kr' : '–'; }
+function fmtPct(n)   { if (n === null) return '–'; const s = n.toFixed(1); return (n>0?'+':'')+s+'%'; }
+
+async function loadData() {
+  const res = await fetch(API);
+  const buf = await res.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: 'array' });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header:1 });
 }
 
-.pulse {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #4caf50;
-  animation: blink 2s infinite;
+function processData(rows) {
+  const headers = rows[0];
+  // cols: B=1 RegNr, D=3 Endelig AR verdi, E=4 Høyeste bud,
+  //       F=5 Finans, L=11 Kilde, M=12 Status,
+  //       P=15 Gire bestilt, Q=16 Levere selv, R=17 Mottatt,
+  //       S=18 Solgt på, T=19 Bud, U=20 Avgift, V=21 Returnert
+
+  const data = { evaluated:[], pq:[], received:[], sold:[], returned:[] };
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const regnr  = r[1];
+    const dLow   = parseDLow(r[3]);
+    const t      = typeof r[19]==='number' ? r[19] : null;
+    const u      = typeof r[20]==='number' ? r[20] : null;
+    const pDate  = r[15];
+    const qDate  = r[16];
+    const rDate  = r[17];
+    const sDate  = r[18];
+    const vDate  = r[21];
+
+    if (!regnr) continue;
+
+    const car = { regnr, dLow, t, u, sDate, vDate, pDate, qDate, rDate };
+
+    if (dLow) data.evaluated.push(car);
+    if (pDate || qDate) data.pq.push(car);
+    if (rDate) data.received.push(car);
+    if (sDate && dLow && t) data.sold.push({...car, gap: (t-dLow)/dLow*100 });
+    if (vDate && dLow && t && t>0) data.returned.push({...car, gap: (t-dLow)/dLow*100 });
+  }
+
+  return data;
 }
 
+function bracketStats(data) {
+  return BRACKETS.map(b => {
+    const evalB = data.evaluated.filter(c => c.dLow >= b.lo && c.dLow < b.hi);
+    const pqB   = data.pq.filter(c => c.dLow >= b.lo && c.dLow < b.hi);
+    const soldB = data.sold.filter(c => c.dLow >= b.lo && c.dLow < b.hi);
+    const retB  = data.returned.filter(c => c.dLow >= b.lo && c.dLow < b.hi);
+
+    // Filter outliers (gap worse than -40%) for X% recommendation
+    const soldClean = soldB.filter(c => c.gap > -40);
+    const retClean  = retB.filter(c => c.gap > -40);
+
+    const avgGapSolgt = avg(soldClean.map(c=>c.gap));
+    const avgGapRet   = avg(retClean.map(c=>c.gap));
+    const convRate    = pct(pqB.length, evalB.length);
+    const soldRate    = pct(soldB.length, pqB.length);
+
+    // X% recommendation: current 3% adjusted by avg gap on sold cars
+    const recX = avgGapSolgt !== null ? +(3 + avgGapSolgt).toFixed(1) : 3.0;
+
+    return { ...b, evalCount:evalB.length, pqCount:pqB.length,
+             soldCount:soldB.length, retCount:retB.length,
+             convRate, soldRate, avgGapSolgt, avgGapRet, recX,
+             soldCars:soldB, retCars:retB };
+  });
+}
+
+function drawArc(svgEl, valuePct, color) {
+  // Half-circle arc: 0% = left, 100% = right
+  // r=46, cx=55, cy=58 (bottom of svg)
+  const r = 46, cx = 55, cy = 60;
+  const startAngle = Math.PI; // 180°
+  const endAngle   = 0;       // 0°
+  const angle = startAngle - (valuePct/100) * Math.PI;
+
+  const x = cx + r * Math.cos(angle);
+  const y = cy + r * Math.sin(angle);
+
+  // Background arc
+  svgEl.innerHTML = `
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}"
+          fill="none" stroke="rgba(0,66,37,0.08)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${x} ${y}"
+          fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="${x}" cy="${y}" r="4" fill="${color}"/>
+  `;
+}
+
+function render(data) {
+  const bs = bracketStats(data);
+
+  const totalEval   = data.evaluated.length;
+  const totalPQ     = data.pq.length;
+  const totalSold   = data.sold.length;
+  const totalRet    = data.returned.length;
+  const pqRate      = pct(totalPQ, totalEval);
+  const soldRate    = pct(totalSold, totalPQ);
+  const noCureCost  = totalRet * 3000;
+  const avgGapSolgt = avg(data.sold.filter(c=>c.gap>-40).map(c=>c.gap));
+  const avgGapRet   = avg(data.returned.filter(c=>c.gap>-40).map(c=>c.gap));
+
+  const pqOk   = pqRate   >= TARGETS.evalPQ;
+  const sldOk  = soldRate >= TARGETS.pqSolgt;
+
+  // ── BUILD HTML ──
+  let html = '';
+
+  // ── DIALS ──
+  html += `<div class="section-label">Peasy Pulse — Nøkkeltall</div>
+  <div class="dials-grid">
+
+    <div class="dial-card neutral">
+      <div class="dial-label">Evaluert</div>
+      <div class="arc-wrap"><svg id="arc0"></svg></div>
+      <div class="dial-value">${totalEval.toLocaleString('nb-NO')}</div>
+      <div class="dial-unit">biler</div>
+      <div class="dial-sub">Totalt i database</div>
+      <div class="target-tag">Alle tider</div>
+    </div>
+
+    <div class="dial-card ${pqOk?'on-target':'off-target'}">
+      <div class="dial-label">Evaluert → P/Q</div>
+      <div class="arc-wrap"><svg id="arc1"></svg></div>
+      <div class="dial-value">${pqRate}<span style="font-size:14px;font-weight:600">%</span></div>
+      <div class="dial-unit">${totalPQ} av ${totalEval}</div>
+      <div class="dial-sub">Selger aksepterer D</div>
+      <div class="target-tag">Mål ${TARGETS.evalPQ}%</div>
+    </div>
+
+    <div class="dial-card ${sldOk?'on-target':'off-target'}">
+      <div class="dial-label">P/Q → Solgt</div>
+      <div class="arc-wrap"><svg id="arc2"></svg></div>
+      <div class="dial-value">${soldRate}<span style="font-size:14px;font-weight:600">%</span></div>
+      <div class="dial-unit">${totalSold} av ${totalPQ}</div>
+      <div class="dial-sub">Høyeste bud akseptert</div>
+      <div class="target-tag">Mål ${TARGETS.pqSolgt}%</div>
+    </div>
+
+    <div class="dial-card ${avgGapSolgt!==null&&avgGapSolgt>-5?'on-target':'off-target'}">
+      <div class="dial-label">Avg T vs D low (solgt)</div>
+      <div class="arc-wrap"><svg id="arc3"></svg></div>
+      <div class="dial-value" style="color:${avgGapSolgt>=0?'#2E7D32':'#C62828'}">${avgGapSolgt!==null?(avgGapSolgt>0?'+':'')+avgGapSolgt.toFixed(1):'–'}<span style="font-size:14px">%</span></div>
+      <div class="dial-unit">T vs D low</div>
+      <div class="dial-sub">Prisnøyaktighet</div>
+      <div class="target-tag">Dynamisk X%</div>
+    </div>
+
+    <div class="dial-card off-target">
+      <div class="dial-label">No-cure kostnad</div>
+      <div class="arc-wrap"><svg id="arc4"></svg></div>
+      <div class="dial-value" style="font-size:20px">${Math.round(noCureCost/1000)}k</div>
+      <div class="dial-unit">kr estimert</div>
+      <div class="dial-sub">${totalRet} returnerte × 3 000kr</div>
+      <div class="target-tag">Mål: 0</div>
+    </div>
+
+  </div>`;
+
+  // ── BRACKET ANALYSIS ──
+  html += `<div class="section-label">Prisbrakett-analyse — D vs T</div>
+  <div class="brackets-grid">`;
+
+  for (const b of bs) {
+    const xColor = b.recX > 3 ? '#2E7D32' : b.recX < 0 ? '#C62828' : '#1565C0';
+    html += `
+    <div class="bracket-card" style="--bc:${b.color}">
+      <div class="bc-label" style="color:${b.color}">
+        ${b.name} <span class="bc-range">${b.range}</span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">Evaluert</span>
+        <span class="bc-val">${b.evalCount}</span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">P/Q akseptert</span>
+        <span class="bc-val">${b.pqCount} <span style="color:var(--muted);font-weight:400">(${b.convRate}%)</span></span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">Solgt</span>
+        <span class="bc-val">${b.soldCount} <span style="color:var(--muted);font-weight:400">(${b.soldRate}%)</span></span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">Returnert</span>
+        <span class="bc-val ${b.retCount>0?'neg':''}">${b.retCount}</span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">Avg T/D (solgt)</span>
+        <span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span>
+      </div>
+      <div class="bc-row">
+        <span class="bc-key">Avg T/D (returnert)</span>
+        <span class="bc-val neg">${fmtPct(b.avgGapRet)}</span>
+      </div>
+      <div class="x-rec">
+        <div class="x-rec-label">Anbefalt X% (nå fast 3%)</div>
+        <div class="x-rec-val" style="color:${xColor}">${b.recX > 0 ? '+' : ''}${b.recX}%</div>
+      </div>
+    </div>`;
+  }
+
+  html += `</div>`;
+
+  // ── SCATTER: D low vs T ──
+  html += `<div class="section-label">D low vs T — Alle biler</div>
+  <div class="plot-card">
+    <div class="plot-title">Prisnøyaktighet: D low vs Høyeste bud (T)</div>
+    <div class="plot-sub">Grønn = solgt · Rød = returnert · Stiplet linje = perfekt treff (D=T)</div>
+    <canvas id="scatter" height="300"></canvas>
+  </div>`;
+
+  // ── WORST RETURNED ──
+  html += `<div class="section-label">Kostbare returneringer & beste treff</div>
+  <div class="two-col">
+    <div class="table-card">
+      <div class="th">
+        <div class="th-title">❌ Verste returneringer (T vs D low)</div>
+        <div class="th-badge">${totalRet} totalt · ~${Math.round(noCureCost/1000)}k kr</div>
+      </div>
+      <table>
+        <thead><tr><th>Regnr</th><th>D low</th><th>T (bud)</th><th>Gap</th><th>Kostnad</th></tr></thead>
+        <tbody>`;
+
+  const worstRet = [...data.returned].sort((a,b)=>a.gap-b.gap).slice(0,10);
+  for (const c of worstRet) {
+    const barW = Math.min(Math.abs(c.gap), 100);
+    html += `<tr>
+      <td><span class="regnr">${c.regnr}</span></td>
+      <td>${Math.round(c.dLow/1000).toLocaleString('nb-NO')}k</td>
+      <td>${Math.round(c.t/1000).toLocaleString('nb-NO')}k</td>
+      <td>
+        <span style="color:var(--red);font-weight:700">${fmtPct(c.gap)}</span>
+        <div class="gap-bar-wrap"><div class="gap-bar" style="width:${barW}%;background:var(--red)"></div></div>
+      </td>
+      <td style="color:var(--red);font-weight:600">~3 000 kr</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div>
+
+    <div class="table-card">
+      <div class="th">
+        <div class="th-title">✅ Beste pristreff (solgte biler)</div>
+        <div class="th-badge">T nærmest D low</div>
+      </div>
+      <table>
+        <thead><tr><th>Regnr</th><th>D low</th><th>T (bud)</th><th>Gap</th></tr></thead>
+        <tbody>`;
+
+  const bestSold = [...data.sold].sort((a,b)=>Math.abs(a.gap)-Math.abs(b.gap)).slice(0,10);
+  for (const c of bestSold) {
+    const col = c.gap >= 0 ? '#2E7D32' : c.gap > -5 ? '#E65100' : '#C62828';
+    html += `<tr>
+      <td><span class="regnr">${c.regnr}</span></td>
+      <td>${Math.round(c.dLow/1000).toLocaleString('nb-NO')}k</td>
+      <td>${Math.round(c.t/1000).toLocaleString('nb-NO')}k</td>
+      <td style="color:${col};font-weight:700">${fmtPct(c.gap)}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div>
+  </div>`;
+
+  document.getElementById('app').innerHTML = html;
+
+  // ── DRAW ARCS ──
+  requestAnimationFrame(() => {
+    drawArc(document.getElementById('arc0'), 100, '#004225');
+    drawArc(document.getElementById('arc1'), Math.min(pqRate/20*100,100), pqOk?'#4CAF50':'#C62828');
+    drawArc(document.getElementById('arc2'), Math.min(soldRate/100*100,100), sldOk?'#4CAF50':'#C62828');
+    const gapNorm = avgGapSolgt !== null ? Math.min(Math.max((avgGapSolgt+20)/40*100,0),100) : 50;
+    drawArc(document.getElementById('arc3'), gapNorm, avgGapSolgt>=0?'#4CAF50':'#E65100');
+    const costNorm = Math.min(noCureCost/200000*100, 100);
+    drawArc(document.getElementById('arc4'), costNorm, '#C62828');
+
+    // ── SCATTER CANVAS ──
+    drawScatter(data.sold, data.returned);
+  });
+}
+
+function drawScatter(sold, returned) {
+  const canvas = document.getElementById('scatter');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = 300;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  canvas.style.height = H + 'px';
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const all   = [...sold.map(c=>({...c,type:'sold'})), ...returned.map(c=>({...c,type:'ret'}))];
+  const maxV  = Math.max(...all.map(c=>Math.max(c.dLow,c.t)), 500000);
+  const pad   = { l:50, r:20, t:20, b:40 };
+  const pw    = W - pad.l - pad.r;
+  const ph    = H - pad.t - pad.b;
+
+  const sx = v => pad.l + (v/maxV)*pw;
+  const sy = v => pad.t + ph - (v/maxV)*ph;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,66,37,0.06)';
+  ctx.lineWidth = 1;
+  for (let i=0; i<=5; i++) {
+    const x = pad.l + (i/5)*pw;
+    const y = pad.t + (i/5)*ph;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l+pw, y); ctx.stroke();
+  }
+
+  // Diagonal D=T line
+  ctx.strokeStyle = 'rgba(0,66,37,0.2)';
+  ctx.setLineDash([5,4]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), sy(0));
+  ctx.lineTo(sx(maxV), sy(maxV));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Points
+  for (const c of all) {
+    const x = sx(c.dLow);
+    const y = sy(c.t);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = c.type === 'sold'
+      ? 'rgba(0,135,90,0.7)'
+      : 'rgba(198,40,40,0.75)';
+    ctx.fill();
+    ctx.strokeStyle = c.type === 'sold' ? '#00875A' : '#C62828';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axes labels
+  ctx.fillStyle = '#999';
+  ctx.font = '10px Inter';
+  ctx.textAlign = 'center';
+  ctx.fillText('D low (estimat til selger)', pad.l + pw/2, H - 6);
+  ctx.save();
+  ctx.translate(12, pad.t + ph/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('T (høyeste bud)', 0, 0);
+  ctx.restore();
+}
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// Load
+loadData().then(rows => {
+  const data = processData(rows);
+  render(data);
+}).catch(err => {
+  document.getElementById('app').innerHTML =
+    `<div style="text-align:center;padding:60px;color:#C62828">
+      Kunne ikke hente data: ${err.message}<br>
+      <small style="color:#999">CORS kan blokkere direkte API-kall fra browser. Vurder proxy eller manuell opplasting.</small>
+    </div>`;
+});
+</script>
+</body>
+</html>
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 /* ─── MAIN ────────────────────────────────────── */
