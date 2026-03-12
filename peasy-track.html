@@ -195,12 +195,10 @@ function processData(rows) {
     if(sDate) data.sold.push(car);
     if(vDate) data.returned.push(car);
 
-    // Avvist: has D but no P/Q and status suggests rejection
     if(dLow && !pDate && !qDate && !sDate && !vDate && (status.includes('avvist')||status.includes('reject'))) {
       data.avvist.push(car);
     }
 
-    // In production: mottatt at compound, not sold, not returned
     if(rDate && !sDate && !vDate) {
       const mottattDate=parseDate(rDate);
       const daysSince=mottattDate?Math.floor((Date.now()-mottattDate)/86400000):null;
@@ -226,11 +224,10 @@ function render(data) {
 
   const prodDaysArr=data.inProd.filter(c=>c.daysSince!==null).map(c=>c.daysSince);
   const avgProd=prodDaysArr.length?(prodDaysArr.reduce((a,b)=>a+b,0)/prodDaysArr.length).toFixed(1):'–';
-  const prodOk=avgProd==='–'||parseFloat(avgProd)<=TARGETS.prodDays;
+  const prodOk=avgProd===�–'||parseFloat(avgProd)<=TARGETS.prodDays;
 
   let html='';
 
-  // KPI counters
   html+=`
   <div class="section-label">Nøkkeltall</div>
   <div class="kpi-grid">
@@ -266,7 +263,6 @@ function render(data) {
     </div>
   </div>`;
 
-  // Funnel
   const avvistCount=data.avvist.length;
   html+=`
   <div class="section-label">Salgstrakt</div>
@@ -311,7 +307,6 @@ function render(data) {
     </div>
   </div>`;
 
-  // In production cards
   const inProdSorted=[...data.inProd].sort((a,b)=>(b.daysSince||0)-(a.daysSince||0));
   const maxD=Math.max(...inProdSorted.map(c=>c.daysSince||0),1);
 
@@ -345,9 +340,8 @@ function render(data) {
   }
   html+=`</div>`;
 
-  // On auction
   if(data.onAuction.length){
-    html+=`<div class="section-label">🔨 På auksjon nå (${totalAuct} biler)</div><div class="pipeline-grid">`;
+    html+=`<div class="section-label">🔨 På auksjon nå ${totalAuct} biler)</div><div class="pipeline-grid">`;
     for(const car of data.onAuction){
       html+=`
       <div class="car-card">
@@ -365,7 +359,6 @@ function render(data) {
     html+=`</div>`;
   }
 
-  // Recently completed
   const recentSold=[...data.sold].sort((a,b)=>new Date(b.sDate)-new Date(a.sDate)).slice(0,10);
   const recentRet=[...data.returned].sort((a,b)=>new Date(b.vDate)-new Date(a.vDate)).slice(0,10);
 
@@ -387,7 +380,7 @@ function render(data) {
       <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
       <td>${fmtK(c.dLow)}</td>
       <td style="color:${gapCol};font-weight:700">${fmtK(c.t)}</td>
-      <td style="color:var(--muted);font-size:11px">${daysAgo(c.sDate)}</td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(cs.sDate)}</td>
     </tr>`;
   }
   html+=`</tbody></table></div>
@@ -397,14 +390,14 @@ function render(data) {
         <div class="th-badge">${totalRet} totalt</div>
       </div>
       <table>
-        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead>
+        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Ud</th><th>Returnert</th></tr></thead>
         <tbody>`;
   for(const c of recentRet){
     html+=`<tr>
       <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
       <td>${fmtK(c.dLow)}</td>
       <td style="color:var(--red);font-weight:700">${fmtK(c.t)}</td>
-      <td style="color:var(--muted);font-size:11px">${daysAgo(c.vDate)}</td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(cs.vDate)}</td>
     </tr>`;
   }
   html+=`</tbody></table></div></div>`;
