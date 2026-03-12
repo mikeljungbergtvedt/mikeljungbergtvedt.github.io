@@ -5,401 +5,121 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peasy Track</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  --green:        #004225;
-  --green-mid:    #006644;
-  --green-accent: #00875A;
-  --yellow:       #FFCC33;
-  --bg-start:     #F2F7F9;
-  --bg-end:       #E8F0F5;
-  --card:         rgba(255,255,255,0.96);
-  --border:       rgba(0,66,37,0.08);
-  --shadow:       rgba(0,66,37,0.06);
-  --shadow-h:     rgba(0,66,37,0.12);
-  --text:         #004225;
-  --muted:        #666;
-  --red:          #C62828;
-  --red-bg:       #fdecea;
-  --blue:         #1565C0;
-  --blue-bg:      #E3F2FD;
-  --orange:       #E65100;
-  --orange-bg:    #FFF3E0;
+  --green:   #004225;
+  --green2:  #006644;
+  --accent:  #00875A;
+  --yellow:  #FFCC33;
+  --bg0:     #F2F7F9;
+  --bg1:     #E8F0F5;
+  --card:    rgba(255,255,255,0.97);
+  --border:  rgba(0,66,37,0.08);
+  --shadow:  rgba(0,66,37,0.07);
+  --text:    #004225;
+  --muted:   #667;
+  --red:     #C62828;
+  --red-bg:  #FDECEA;
+  --orange:  #E65100;
+  --ora-bg:  #FFF3E0;
+  --blue:    #1565C0;
+  --blu-bg:  #E3F2FD;
 }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--bg0),var(--bg1));color:var(--text);min-height:100vh;}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+header{background:var(--green);height:64px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;}
+.logo img{height:28px;}
+.header-right{display:flex;align-items:center;gap:16px;}
+.pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.1);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.85);}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.nav-link{font-size:13px;font-weight:600;color:rgba(255,255,255,0.65);text-decoration:none;letter-spacing:0.3px;padding:6px 14px;border-radius:99px;transition:all 0.15s;}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,0.1);}
+.nav-link.active{color:var(--green);background:var(--yellow);}
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
-  color: var(--text);
-  min-height: 100vh;
-}
+main{max-width:1200px;margin:0 auto;padding:40px 24px 80px;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;margin-top:40px;}
+.section-label:first-child{margin-top:0;}
 
-/* ─── HEADER ─────────────────────────────────── */
-header {
-  background: var(--green);
-  padding: 0 40px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+/* KPI COUNTERS */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px 16px 16px;box-shadow:0 4px 24px var(--shadow);text-align:center;position:relative;overflow:hidden;}
+.kpi-label{font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.kpi-value{font-size:38px;font-weight:900;letter-spacing:-2px;line-height:1;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+.kpi-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;margin-top:7px;letter-spacing:0.5px;}
+.on-target .kpi-tag{background:#E8F5E9;color:#2E7D32;}
+.off-target .kpi-tag{background:var(--red-bg);color:var(--red);}
+.neutral .kpi-tag{background:#FFFDE7;color:#F57F17;}
+.kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.on-target::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
+.off-target::after{background:linear-gradient(90deg,var(--red),#EF9A9A);}
+.neutral::after{background:linear-gradient(90deg,var(--yellow),#FFE082);}
 
-.logo img { height: 28px; }
+/* FUNNEL */
+.funnel-row{display:grid;grid-template-columns:repeat(9,1fr);gap:0;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 20px var(--shadow);}
+.funnel-step{padding:20px 12px;text-align:center;border-right:1px solid var(--border);position:relative;}
+.funnel-step:last-child{border-right:none;}
+.f-icon{font-size:22px;margin-bottom:6px;}
+.f-num{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--green);margin-bottom:2px;}
+.f-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.f-pct{font-size:10px;font-weight:600;margin-top:4px;padding:2px 6px;border-radius:99px;display:inline-block;}
+.funnel-arrow{display:flex;align-items:center;justify-content:center;color:rgba(0,66,37,0.15);font-size:18px;border-right:1px solid var(--border);}
+.f-rejected .f-num{color:var(--red);}
+.f-rejected .f-pct{background:var(--red-bg);color:var(--red);}
+.f-sold .f-num{color:var(--accent);}
+.f-sold .f-pct{background:#E8F5E9;color:#2E7D32;}
+.f-mottatt .f-pct{background:var(--blu-bg);color:var(--blue);}
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
+/* PIPELINE CARDS */
+.pipeline-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.car-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:0 3px 16px var(--shadow);display:flex;flex-direction:column;gap:6px;}
+.car-top{display:flex;align-items:center;justify-content:space-between;}
+.car-regnr{font-size:15px;font-weight:800;color:var(--green);letter-spacing:0.3px;}
+.car-model{font-size:12px;color:var(--muted);font-weight:500;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;}
+.b-mottatt  {background:var(--blu-bg);color:var(--blue);}
+.b-prod     {background:#F3E5F5;color:#6A1B9A;}
+.b-auksjon  {background:#E8EAF6;color:#283593;}
+.b-solgt    {background:#E8F5E9;color:#2E7D32;}
+.b-returnert{background:var(--red-bg);color:var(--red);}
+.b-avvist   {background:#FFF8E1;color:#F57F17;}
+.car-days{font-size:11px;font-weight:600;}
+.days-ok  {color:var(--accent);}
+.days-warn{color:var(--orange);}
+.days-over{color:var(--red);}
+.car-detail{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;}
+.progress-bar{height:4px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;margin-top:4px;}
+.progress-fill{height:100%;border-radius:99px;}
 
-.live-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 99px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.85);
-}
+/* TABLE */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px var(--shadow);}
+.th{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.th-title{font-size:13px;font-weight:700;}
+.th-badge{font-size:11px;background:var(--bg0);color:var(--muted);padding:3px 10px;border-radius:99px;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:rgba(0,66,37,0.03);}
+th{text-align:left;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);padding:9px 14px;border-bottom:1px solid var(--border);}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(0,66,37,0.04);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(0,66,37,0.015);}
+.regnr{font-weight:700;color:var(--green);font-size:13px;}
+.car-name{font-size:11px;color:var(--muted);display:block;margin-top:1px;}
 
-.pulse {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #4caf50;
-  animation: blink 2s infinite;
-}
+.loading{text-align:center;padding:80px;color:var(--muted);font-size:14px;}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-/* ─── MAIN ────────────────────────────────────── */
-main {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 24px 80px;
-}
-
-/* ─── SECTION LABEL ───────────────────────────── */
-.section-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 14px;
-  margin-top: 40px;
-}
-.section-title:first-child { margin-top: 0; }
-
-/* ─── REV COUNTERS ────────────────────────────── */
-.rev-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.rev-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px 20px 20px;
-  box-shadow: 0 4px 20px var(--shadow);
-  position: relative;
-  overflow: hidden;
-}
-
-.rev-card::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 4px;
-  border-radius: 0 0 16px 16px;
-}
-
-.rev-card.on-target::after  { background: #4caf50; }
-.rev-card.off-target::after { background: var(--red); }
-.rev-card.neutral::after    { background: var(--yellow); }
-
-.rev-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
-.rev-value {
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -2px;
-  margin-bottom: 6px;
-}
-
-.rev-card.on-target  .rev-value { color: var(--green-accent); }
-.rev-card.off-target .rev-value { color: var(--red); }
-.rev-card.neutral    .rev-value { color: var(--green); }
-
-.rev-sub {
-  font-size: 12px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.rev-target {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 99px;
-}
-
-.on-target  .rev-target { background: #e8f5e9; color: #2e7d32; }
-.off-target .rev-target { background: var(--red-bg); color: var(--red); }
-.neutral    .rev-target { background: #fffde7; color: #f57f17; }
-
-/* Gauge bar */
-.gauge-track {
-  height: 6px;
-  background: rgba(0,66,37,0.08);
-  border-radius: 99px;
-  margin-top: 12px;
-  overflow: hidden;
-}
-
-.gauge-fill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.8s ease;
-}
-
-.on-target  .gauge-fill { background: #4caf50; }
-.off-target .gauge-fill { background: var(--red); }
-.neutral    .gauge-fill { background: var(--yellow); }
-
-/* ─── FUNNEL PIPELINE ──────────────────────────── */
-.funnel-row {
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px var(--shadow);
-}
-
-.funnel-step {
-  padding: 20px 12px;
-  text-align: center;
-  border-right: 1px solid var(--border);
-  position: relative;
-}
-
-.funnel-step:last-child { border-right: none; }
-
-.f-icon  { font-size: 22px; margin-bottom: 6px; }
-.f-num   { font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--green); margin-bottom: 2px; }
-.f-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-.f-pct   { font-size: 10px; font-weight: 600; margin-top: 4px; padding: 2px 6px; border-radius: 99px; display: inline-block; }
-
-.f-rejected .f-num { color: var(--red); }
-.f-rejected .f-pct { background: var(--red-bg); color: var(--red); }
-.f-sold .f-num     { color: var(--green-accent); }
-.f-sold .f-pct     { background: #e8f5e9; color: #2e7d32; }
-.f-mottatt .f-pct  { background: var(--blue-bg); color: var(--blue); }
-
-.funnel-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(0,66,37,0.15);
-  font-size: 18px;
-  border-right: 1px solid var(--border);
-}
-
-/* ─── ACTIVE CARS ─────────────────────────────── */
-.table-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px var(--shadow);
-}
-
-.table-head {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.table-head-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--green);
-}
-
-.count-badge {
-  font-size: 11px;
-  background: var(--bg-start);
-  color: var(--muted);
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-weight: 500;
-}
-
-table { width: 100%; border-collapse: collapse; }
-thead tr { background: rgba(0,66,37,0.03); }
-th {
-  text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--border);
-}
-td {
-  padding: 13px 20px;
-  font-size: 13px;
-  border-bottom: 1px solid rgba(0,66,37,0.05);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(0,66,37,0.02); }
-
-.regnr {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--green);
-  letter-spacing: 0.3px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.b-pickup   { background: #fff8e1; color: #f57f17; }
-.b-arrived  { background: var(--blue-bg); color: var(--blue); }
-.b-ready    { background: #f3e5f5; color: #6a1b9a; }
-.b-auction  { background: #e8eaf6; color: #283593; }
-.b-sold     { background: #e8f5e9; color: #2e7d32; }
-.b-unknown  { background: #f5f5f5; color: #757575; }
-
-.days-cell { font-size: 13px; font-weight: 600; }
-.days-ok   { color: var(--green-accent); }
-.days-warn { color: var(--orange); }
-.days-over { color: var(--red); }
-
-/* ─── TWO-COL ─────────────────────────────────── */
-.two-col { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
-
-/* ─── EVENT LOG ───────────────────────────────── */
-.event-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 20px;
-  border-bottom: 1px solid rgba(0,66,37,0.05);
-}
-.event-row:last-child { border-bottom: none; }
-
-.e-icon {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.e-regnr {
-  font-size: 13px; font-weight: 700;
-  color: var(--green);
-  min-width: 65px;
-}
-.e-desc  { font-size: 12px; color: var(--muted); flex: 1; }
-.e-time  { font-size: 11px; color: var(--muted); white-space: nowrap; }
-
-/* ─── REJECTED ────────────────────────────────── */
-.rej-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 20px;
-  border-bottom: 1px solid rgba(0,66,37,0.05);
-  font-size: 12px;
-}
-.rej-row:last-child { border-bottom: none; }
-.rej-reg { font-size: 13px; font-weight: 700; color: var(--red); }
-.rej-when { color: var(--muted); }
-
-/* ─── FACILITY TIME ───────────────────────────── */
-.facility-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: 0 4px 20px var(--shadow);
-}
-
-.fac-metric {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.fac-num {
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -1.5px;
-}
-
-.fac-unit { font-size: 14px; font-weight: 500; color: var(--muted); }
-.fac-desc { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-
-.fac-cars { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-
-.fac-car-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(0,66,37,0.03);
-}
-
-.fac-reg { font-weight: 700; color: var(--green); font-size: 13px; }
-.fac-d   { font-weight: 600; }
-.fac-ok  { color: var(--green-accent); }
-.fac-warn{ color: var(--orange); }
-.fac-over{ color: var(--red); }
-
-/* ─── LOADING ─────────────────────────────────── */
-.loading { text-align: center; padding: 80px; color: var(--muted); font-size: 14px; }
-
-@media (max-width: 900px) {
-  .rev-grid { grid-template-columns: 1fr 1fr; }
-  .funnel-row { grid-template-columns: 1fr 1fr 1fr; }
-  .funnel-arrow { display: none; }
-  .two-col { grid-template-columns: 1fr; }
-  header { padding: 0 20px; }
-  main { padding: 24px 16px 60px; }
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .funnel-row{grid-template-columns:1fr 1fr 1fr;}
+  .funnel-arrow{display:none;}
+  .two-col{grid-template-columns:1fr;}
+  header{padding:0 20px;}
+  main{padding:24px 16px 60px;}
 }
 </style>
 </head>
@@ -410,390 +130,302 @@ tr:hover td { background: rgba(0,66,37,0.02); }
     <img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy">
   </div>
   <div class="header-right">
-    <div class="live-pill">
-      <div class="pulse"></div>
-      <span id="clock">–</span>
-    </div>
+    <a href="peasy-track.html" class="nav-link active">Track</a>
+    <a href="peasy-pulse.html" class="nav-link">Pulse</a>
+    <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
 </header>
 
 <main>
-  <div id="app"><div class="loading">Henter data…</div></div>
+  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen…</div></div>
 </main>
 
 <script>
-const DATA_URL = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/tracked-cars.json?t=' + Date.now();
+const API    = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+const CUTOFF = new Date('2025-11-01');
+const TARGETS = { evalMottatt: 10, mottattSolgt: 70, prodDays: 3 };
 
-// Targets
-const TARGET_EVAL_MOTTATT = 10;  // % evaluert → mottatt
-const TARGET_MOTTATT_SOLGT = 70; // % mottatt  → solgt
-const TARGET_PROD_DAYS = 3;       // days CAR_ARRIVED → CAR_READY
+function parseDLow(val) {
+  if (!val || val==='-') return null;
+  try { const n=parseInt(String(val).replace(/\s|\u00a0/g,'').split('-')[0]); return isNaN(n)?null:n; }
+  catch { return null; }
+}
+function parseDate(val) {
+  if (!val) return null;
+  const parts=String(val).trim().slice(0,10).split('.');
+  return parts.length===3 ? new Date(`${parts[2]}-${parts[1]}-${parts[0]}`) : null;
+}
+function daysAgo(d) {
+  if (!d) return '–';
+  const n=Math.floor((Date.now()-new Date(d))/86400000);
+  if(n===0)return'I dag'; if(n===1)return'I går'; return`${n}d siden`;
+}
+function fmtDate(d){if(!d)return'–';return new Date(d).toLocaleDateString('nb-NO',{day:'numeric',month:'short'});}
+function fmtK(n){return n?Math.round(n/1000).toLocaleString('nb-NO')+'k':'–';}
+function pct(n,of){return of?Math.round(n/of*100):0;}
+function daysClass(d,t){if(d<=t)return'days-ok';if(d<=t*2)return'days-warn';return'days-over';}
 
-const STAGE_ORDER = ['EVALUATED','PICKUP','SELF_DELIVERY','CAR_ARRIVED','CAR_READY','ON_AUCTION','AUCTION_FINISHED','SOLD','CONTRACT_SIGNED'];
-const ACTIVE_STAGES = ['PICKUP','SELF_DELIVERY','CAR_ARRIVED','CAR_READY','ON_AUCTION','AUCTION_FINISHED'];
-const SKIP = ['RN12345'];
-
-function latest(events) {
-  return events.reduce((a,b) => new Date(a.ts) > new Date(b.ts) ? a : b);
+async function loadData() {
+  const res=await fetch(API);
+  const buf=await res.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array'});
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
 }
 
-function highest(events) {
-  let best = -1, bestE = null;
-  for (const e of events) {
-    const i = STAGE_ORDER.indexOf(e.event);
-    if (i > best) { best = i; bestE = e; }
-  }
-  return bestE;
-}
+function processData(rows) {
+  const data={evaluated:[],mottatt:[],inProd:[],onAuction:[],sold:[],returned:[],avvist:[]};
 
-function daysBetween(a, b) {
-  return Math.round(Math.abs(new Date(b) - new Date(a)) / 86400000);
-}
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const regnr=r[1]; if(!regnr) continue;
+    const nDate=parseDate(r[13]);
+    if(nDate && nDate<CUTOFF) continue;
 
-function daysAgo(ts) {
-  const d = Math.floor((Date.now() - new Date(ts)) / 86400000);
-  if (d === 0) return 'I dag';
-  if (d === 1) return 'I går';
-  return d + 'd siden';
-}
+    const label=[r[6],r[7],r[8]].filter(Boolean).join(' ');
+    const dLow=parseDLow(r[3]);
+    const t=r[19]?parseInt(String(r[19]).replace(/[\s\u00a0]/g,''))||null:null;
+    const pDate=r[15], qDate=r[16], rDate=r[17], sDate=r[18], vDate=r[21];
+    const status=String(r[12]||'').toLowerCase();
+    const km=r[22];
 
-function fmtTime(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short'}) + ' ' +
-         d.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'});
-}
+    const car={regnr,label,dLow,t,pDate,qDate,rDate,sDate,vDate,km,nDate};
 
-function stageName(e) {
-  return {
-    EVALUATED:'Pris sendt til selger',
-    PICKUP:'Henting bestilt',
-    SELF_DELIVERY:'Egenleveranse bestilt',
-    CAR_ARRIVED:'Bilen ankommet anlegg',
-    CAR_READY:'Klar for auksjon',
-    ON_AUCTION:'På auksjon',
-    AUCTION_FINISHED:'Auksjon avsluttet',
-    SOLD:'Solgt',
-    CONTRACT_SIGNED:'Solgt',
-    REJECTED:'Avvist av selger',
-  }[e] || e;
-}
+    if(dLow) data.evaluated.push(car);
+    if(pDate||qDate) data.mottatt.push(car);
+    if(sDate) data.sold.push(car);
+    if(vDate) data.returned.push(car);
 
-function stageIcon(e) {
-  return {
-    EVALUATED:        {bg:'#e8f5e9',ic:'📤'},
-    PICKUP:           {bg:'#fff8e1',ic:'🚚'},
-    SELF_DELIVERY:    {bg:'#fff8e1',ic:'🚗'},
-    CAR_ARRIVED:      {bg:'#e3f2fd',ic:'🏁'},
-    CAR_READY:        {bg:'#f3e5f5',ic:'📸'},
-    ON_AUCTION:       {bg:'#e8eaf6',ic:'🔨'},
-    AUCTION_FINISHED: {bg:'#e8eaf6',ic:'⏱'},
-    SOLD:             {bg:'#e8f5e9',ic:'🎉'},
-    CONTRACT_SIGNED:  {bg:'#e8f5e9',ic:'🎉'},
-    REJECTED:         {bg:'#fdecea',ic:'❌'},
-  }[e] || {bg:'#f5f5f5',ic:'•'};
-}
-
-function stageBadge(e) {
-  const map = {
-    PICKUP:           ['🚚 Henting bestilt','b-pickup'],
-    SELF_DELIVERY:    ['🚗 Egenleveranse','b-pickup'],
-    CAR_ARRIVED:      ['🏁 Ankommet','b-arrived'],
-    CAR_READY:        ['📸 Klar for auksjon','b-ready'],
-    ON_AUCTION:       ['🔨 På auksjon','b-auction'],
-    AUCTION_FINISHED: ['⏱ Auksjon avsluttet','b-auction'],
-    SOLD:             ['🎉 Solgt','b-sold'],
-    CONTRACT_SIGNED:  ['🎉 Solgt','b-sold'],
-  };
-  const [l,c] = map[e] || ['• Ukjent','b-unknown'];
-  return `<span class="badge ${c}">${l}</span>`;
-}
-
-function daysClass(d, target) {
-  if (d <= target) return 'days-ok';
-  if (d <= target * 1.5) return 'days-warn';
-  return 'days-over';
-}
-
-function pct(n, of) { return of ? Math.round(n/of*100) : 0; }
-
-function gauge(val, target) {
-  const w = Math.min(Math.round(val/target*100), 100);
-  return w;
-}
-
-function render(raw) {
-  // ── Metrics ──
-  let evaluert=0, pickup=0, selfDel=0, arrived=0, ready=0, onAuction=0, solgt=0, avvist=0;
-  const activeCars=[], rejectedCars=[], allEvents=[];
-  const facilityTimes=[]; // {regnr, days, arrived, ready}
-
-  for (const [regnr, events] of Object.entries(raw)) {
-    if (SKIP.includes(regnr)) continue;
-
-    const has = t => events.some(e => e.event === t);
-    const get = t => events.find(e => e.event === t);
-
-    const isEval    = has('EVALUATED');
-    const isPickup  = has('PICKUP');
-    const isSelfDel = has('SELF_DELIVERY');
-    const isArrived = has('CAR_ARRIVED');
-    const isReady   = has('CAR_READY');
-    const isAuction = has('ON_AUCTION');
-    const isSold    = has('SOLD') || has('CONTRACT_SIGNED');
-    const isReject  = has('REJECTED') && !isSold;
-
-    if (isEval)    evaluert++;
-    if (isPickup)  pickup++;
-    if (isSelfDel) selfDel++;
-    if (isArrived) arrived++;
-    if (isReady)   ready++;
-    if (isAuction) onAuction++;
-    if (isSold)    solgt++;
-    if (isReject)  avvist++;
-
-    // Facility time: CAR_ARRIVED → CAR_READY
-    if (isArrived && isReady) {
-      const arrE = get('CAR_ARRIVED');
-      const rdyE = get('CAR_READY');
-      const days = daysBetween(arrE.ts, rdyE.ts);
-      facilityTimes.push({ regnr, days });
-    } else if (isArrived && !isReady && !isSold) {
-      // Still waiting
-      const arrE = get('CAR_ARRIVED');
-      const days = Math.floor((Date.now() - new Date(arrE.ts)) / 86400000);
-      facilityTimes.push({ regnr, days, pending: true });
+    // Avvist: has D but no P/Q and status suggests rejection
+    if(dLow && !pDate && !qDate && !sDate && !vDate && (status.includes('avvist')||status.includes('reject'))) {
+      data.avvist.push(car);
     }
 
-    for (const e of events) allEvents.push({regnr,...e});
-
-    const h = highest(events);
-    if (!h) continue;
-
-    if (!isSold && !isReject && ACTIVE_STAGES.includes(h.event)) {
-      activeCars.push({regnr, events, highest: h, latest: latest(events)});
-    } else if (isReject) {
-      rejectedCars.push({regnr, latest: latest(events)});
+    // In production: mottatt at compound, not sold, not returned
+    if(rDate && !sDate && !vDate) {
+      const mottattDate=parseDate(rDate);
+      const daysSince=mottattDate?Math.floor((Date.now()-mottattDate)/86400000):null;
+      const isOnAuction=status.includes('auksjon')||status.includes('auction');
+      if(isOnAuction) data.onAuction.push({...car,daysSince,mottattDate});
+      else data.inProd.push({...car,daysSince,mottattDate});
     }
   }
+  return data;
+}
 
-  activeCars.sort((a,b) => new Date(b.latest.ts)-new Date(a.latest.ts));
-  rejectedCars.sort((a,b) => new Date(b.latest.ts)-new Date(a.latest.ts));
-  facilityTimes.sort((a,b) => b.days - a.days);
+function render(data) {
+  const totalEval=data.evaluated.length;
+  const totalMott=data.mottatt.length;
+  const totalSold=data.sold.length;
+  const totalRet=data.returned.length;
+  const totalProd=data.inProd.length;
+  const totalAuct=data.onAuction.length;
+  const mottRate=pct(totalMott,totalEval);
+  const soldRate=pct(totalSold,totalMott);
+  const mottOk=mottRate>=TARGETS.evalMottatt;
+  const sldOk=soldRate>=TARGETS.mottattSolgt;
 
-  const recentEvents = [...allEvents]
-    .filter(e => !SKIP.includes(e.regnr))
-    .sort((a,b) => new Date(b.ts)-new Date(a.ts))
-    .slice(0,14);
+  const prodDaysArr=data.inProd.filter(c=>c.daysSince!==null).map(c=>c.daysSince);
+  const avgProd=prodDaysArr.length?(prodDaysArr.reduce((a,b)=>a+b,0)/prodDaysArr.length).toFixed(1):'–';
+  const prodOk=avgProd==='–'||parseFloat(avgProd)<=TARGETS.prodDays;
 
-  const mottatt = pickup + selfDel;
-  const pEvalMottatt = pct(mottatt, evaluert);
-  const pMottattSolgt = pct(solgt, mottatt);
-  const avgFacility = facilityTimes.length
-    ? (facilityTimes.reduce((s,f)=>s+f.days,0)/facilityTimes.length).toFixed(1)
-    : '–';
+  let html='';
 
-  // ── REV COUNTERS ──
-  const evalOk = pEvalMottatt >= TARGET_EVAL_MOTTATT;
-  const solgtOk = pMottattSolgt >= TARGET_MOTTATT_SOLGT;
-  const facOk = avgFacility === '–' || parseFloat(avgFacility) <= TARGET_PROD_DAYS;
-
-  let html = '';
-
-  // Section: Rev counters
-  html += `<div class="section-title">Nøkkeltall</div>
-  <div class="rev-grid">
-
-    <div class="rev-card neutral">
-      <div class="rev-label">Evaluert totalt</div>
-      <div class="rev-value">${evaluert}</div>
-      <div class="rev-sub">
-        <span>Tilbud sendt</span>
-      </div>
-      <div class="gauge-track"><div class="gauge-fill" style="width:100%"></div></div>
+  // KPI counters
+  html+=`
+  <div class="section-label">Nøkkeltall</div>
+  <div class="kpi-grid">
+    <div class="kpi-card neutral">
+      <div class="kpi-label">Evaluert totalt</div>
+      <div class="kpi-value">${totalEval}</div>
+      <div class="kpi-sub">Tilbud sendt selger</div>
+      <div class="kpi-tag">Fra 1.11.2025</div>
     </div>
-
-    <div class="rev-card ${evalOk?'on-target':'off-target'}">
-      <div class="rev-label">Evaluert → Mottatt</div>
-      <div class="rev-value">${pEvalMottatt}<span style="font-size:22px;font-weight:600">%</span></div>
-      <div class="rev-sub">
-        <span>${mottatt} av ${evaluert} mottatt</span>
-        <span class="rev-target">Mål ${TARGET_EVAL_MOTTATT}%</span>
-      </div>
-      <div class="gauge-track"><div class="gauge-fill" style="width:${Math.min(pEvalMottatt,100)}%"></div></div>
+    <div class="kpi-card ${mottOk?'on-target':'off-target'}">
+      <div class="kpi-label">Evaluert → Mottatt</div>
+      <div class="kpi-value">${mottRate}<span style="font-size:22px;font-weight:600">%</span></div>
+      <div class="kpi-sub">${totalMott} av ${totalEval} mottatt</div>
+      <div class="kpi-tag">Mål ${TARGETS.evalMottatt}%</div>
     </div>
-
-    <div class="rev-card ${solgtOk?'on-target':'off-target'}">
-      <div class="rev-label">Mottatt → Solgt</div>
-      <div class="rev-value">${pMottattSolgt}<span style="font-size:22px;font-weight:600">%</span></div>
-      <div class="rev-sub">
-        <span>${solgt} av ${mottatt} solgt</span>
-        <span class="rev-target">Mål ${TARGET_MOTTATT_SOLGT}%</span>
-      </div>
-      <div class="gauge-track"><div class="gauge-fill" style="width:${Math.min(pMottattSolgt,100)}%"></div></div>
+    <div class="kpi-card ${sldOk?'on-target':'off-target'}">
+      <div class="kpi-label">Mottatt → Solgt</div>
+      <div class="kpi-value">${soldRate}<span style="font-size:22px;font-weight:600">%</span></div>
+      <div class="kpi-sub">${totalSold} av ${totalMott} solgt</div>
+      <div class="kpi-tag">Mål ${TARGETS.mottattSolgt}%</div>
     </div>
-
-    <div class="rev-card ${facOk?'on-target':'off-target'}">
-      <div class="rev-label">Produksjonstid</div>
-      <div class="rev-value">${avgFacility}<span style="font-size:22px;font-weight:600"> d</span></div>
-      <div class="rev-sub">
-        <span>Ankommet → Klar</span>
-        <span class="rev-target">Mål ${TARGET_PROD_DAYS}d</span>
-      </div>
-      <div class="gauge-track"><div class="gauge-fill" style="width:${avgFacility==='–'?0:Math.min(parseFloat(avgFacility)/TARGET_PROD_DAYS*100,100)}%"></div></div>
+    <div class="kpi-card ${prodOk?'on-target':'off-target'}">
+      <div class="kpi-label">Produksjonstid snitt</div>
+      <div class="kpi-value">${avgProd}<span style="font-size:22px;font-weight:600"> d</span></div>
+      <div class="kpi-sub">Mottatt → klar for auksjon</div>
+      <div class="kpi-tag">Mål ${TARGETS.prodDays}d</div>
     </div>
-
+    <div class="kpi-card neutral">
+      <div class="kpi-label">Aktive nå</div>
+      <div class="kpi-value">${totalProd+totalAuct}</div>
+      <div class="kpi-sub">${totalProd} produksjon · ${totalAuct} auksjon</div>
+      <div class="kpi-tag">Live</div>
+    </div>
   </div>`;
 
-  // Section: Pipeline funnel
-  html += `<div class="section-title">Salgstrakt</div>
+  // Funnel
+  const avvistCount=data.avvist.length;
+  html+=`
+  <div class="section-label">Salgstrakt</div>
   <div class="funnel-row">
     <div class="funnel-step">
-      <div class="f-icon">📤</div>
-      <div class="f-num">${evaluert}</div>
+      <div class="f-icon">📄</div>
+      <div class="f-num">${totalEval}</div>
       <div class="f-label">Evaluert</div>
     </div>
     <div class="funnel-arrow">›</div>
     <div class="funnel-step f-mottatt">
-      <div class="f-icon">📬</div>
-      <div class="f-num">${mottatt}</div>
+      <div class="f-icon">🚗</div>
+      <div class="f-num">${totalMott}</div>
       <div class="f-label">Mottatt</div>
-      <div class="f-pct" style="background:#e3f2fd;color:#1565c0">${pEvalMottatt}%</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">
-        <span style="background:#fff8e1;padding:1px 5px;border-radius:4px;margin-right:2px">🚚 ${pickup}</span>
-        <span style="background:#fff8e1;padding:1px 5px;border-radius:4px">🚗 ${selfDel}</span>
-      </div>
+      <div class="f-pct">${mottRate}%</div>
     </div>
     <div class="funnel-arrow">›</div>
     <div class="funnel-step">
-      <div class="f-icon">🏁</div>
-      <div class="f-num">${arrived}</div>
-      <div class="f-label">Ankommet</div>
+      <div class="f-icon">🏭</div>
+      <div class="f-num">${totalProd}</div>
+      <div class="f-label">Produksjon</div>
     </div>
     <div class="funnel-arrow">›</div>
     <div class="funnel-step">
-      <div class="f-icon">📸</div>
-      <div class="f-num">${ready}</div>
-      <div class="f-label">Klar auksjon</div>
+      <div class="f-icon">🔨</div>
+      <div class="f-num">${totalAuct}</div>
+      <div class="f-label">Auksjon</div>
     </div>
     <div class="funnel-arrow">›</div>
     <div class="funnel-step f-sold">
       <div class="f-icon">🎉</div>
-      <div class="f-num">${solgt}</div>
+      <div class="f-num">${totalSold}</div>
       <div class="f-label">Solgt</div>
-      <div class="f-pct">${pMottattSolgt}%</div>
+      <div class="f-pct">${soldRate}%</div>
     </div>
     <div class="funnel-arrow">›</div>
     <div class="funnel-step f-rejected">
-      <div class="f-icon">❌</div>
-      <div class="f-num">${avvist}</div>
-      <div class="f-label">Avvist</div>
-      <div class="f-pct">${pct(avvist,evaluert)}%</div>
+      <div class="f-icon">↩</div>
+      <div class="f-num">${totalRet}</div>
+      <div class="f-label">Returnert</div>
+      <div class="f-pct">${pct(totalRet,totalMott)}%</div>
     </div>
   </div>`;
 
-  // Section: Active cars + facility time
-  html += `<div class="section-title">Aktive biler i pipeline</div>
+  // In production cards
+  const inProdSorted=[...data.inProd].sort((a,b)=>(b.daysSince||0)-(a.daysSince||0));
+  const maxD=Math.max(...inProdSorted.map(c=>c.daysSince||0),1);
+
+  html+=`
+  <div class="section-label">🏭 I produksjon på anlegg (${totalProd} biler)</div>
+  <div class="pipeline-grid">`;
+
+  if(!inProdSorted.length){
+    html+=`<div style="color:var(--muted);padding:24px;font-size:13px;grid-column:1/-1">Ingen biler i produksjon nå</div>`;
+  }
+  for(const car of inProdSorted){
+    const d=car.daysSince;
+    const cls=daysClass(d,TARGETS.prodDays);
+    const barPct=Math.min((d/Math.max(maxD,7))*100,100);
+    const barColor=cls==='days-ok'?'#4CAF50':cls==='days-warn'?'#E65100':'#C62828';
+    html+=`
+    <div class="car-card">
+      <div class="car-top">
+        <span class="car-regnr">${car.regnr}</span>
+        <span class="badge b-prod">🏭 Produksjon</span>
+      </div>
+      <div class="car-model">${car.label||'Ukjent bil'}</div>
+      <div class="car-days ${cls}">${d!==null?`${d} dager på anlegg`:'Ukjent dato'}</div>
+      <div class="car-detail">
+        <span>Mottatt: ${fmtDate(car.rDate)}</span>
+        ${car.dLow?`<span>Pris lav: ${fmtK(car.dLow)}</span>`:''}
+        ${car.km?`<span>${Math.round(car.km/1000)}k km</span>`:''}
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+    </div>`;
+  }
+  html+=`</div>`;
+
+  // On auction
+  if(data.onAuction.length){
+    html+=`<div class="section-label">🔨 På auksjon nå (${totalAuct} biler)</div><div class="pipeline-grid">`;
+    for(const car of data.onAuction){
+      html+=`
+      <div class="car-card">
+        <div class="car-top">
+          <span class="car-regnr">${car.regnr}</span>
+          <span class="badge b-auksjon">🔨 Auksjon</span>
+        </div>
+        <div class="car-model">${car.label||'Ukjent bil'}</div>
+        <div class="car-detail">
+          <span>Mottatt: ${fmtDate(car.rDate)}</span>
+          ${car.dLow?`<span>Pris lav: ${fmtK(car.dLow)}</span>`:''}
+        </div>
+      </div>`;
+    }
+    html+=`</div>`;
+  }
+
+  // Recently completed
+  const recentSold=[...data.sold].sort((a,b)=>new Date(b.sDate)-new Date(a.sDate)).slice(0,10);
+  const recentRet=[...data.returned].sort((a,b)=>new Date(b.vDate)-new Date(a.vDate)).slice(0,10);
+
+  html+=`
+  <div class="section-label">Nylig fullført</div>
   <div class="two-col">
     <div class="table-card">
-      <div class="table-head">
-        <div class="table-head-title">Under behandling</div>
-        <div class="count-badge">${activeCars.length} biler</div>
+      <div class="th">
+        <div class="th-title">✅ Nylig solgt</div>
+        <div class="th-badge">${totalSold} totalt</div>
       </div>
       <table>
-        <thead><tr>
-          <th>Regnr</th><th>Status</th><th>Dager</th>
-        </tr></thead>
+        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Solgt</th></tr></thead>
         <tbody>`;
-
-  if (!activeCars.length) {
-    html += `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">Ingen aktive biler</td></tr>`;
-  }
-  for (const car of activeCars) {
-    const d = Math.floor((Date.now()-new Date(car.latest.ts))/86400000);
-    html += `<tr>
-      <td><span class="regnr">${car.regnr}</span></td>
-      <td>${stageBadge(car.highest.event)}</td>
-      <td><span class="days-cell ${daysClass(d,7)}">${d===0?'I dag':d+'d'}</span></td>
+  for(const c of recentSold){
+    const gap=c.t&&c.dLow?(c.t-c.dLow)/c.dLow*100:null;
+    const gapCol=gap===null?'var(--muted)':gap>=0?'#2E7D32':gap>-10?'#E65100':'#C62828';
+    html+=`<tr>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td>
+      <td style="color:${gapCol};font-weight:700">${fmtK(c.t)}</td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(c.sDate)}</td>
     </tr>`;
   }
-  html += `</tbody></table></div>`;
-
-  // Facility time card
-  html += `<div class="facility-card">
-      <div class="section-title" style="margin-top:0">Produksjonstid per bil</div>
-      <div class="fac-metric">
-        <div class="fac-num ${facOk?'days-ok':'days-over'}">${avgFacility}</div>
-        <div class="fac-unit">dager snitt</div>
+  html+=`</tbody></table></div>
+    <div class="table-card">
+      <div class="th">
+        <div class="th-title">↩ Nylig returnert</div>
+        <div class="th-badge">${totalRet} totalt</div>
       </div>
-      <div class="fac-desc">Tid fra ankommet anlegg til klar for auksjon (mål: ${TARGET_PROD_DAYS}d)</div>
-      <div class="fac-cars">`;
-
-  for (const f of facilityTimes.slice(0,8)) {
-    const cls = f.days <= TARGET_PROD_DAYS ? 'fac-ok' : f.days <= TARGET_PROD_DAYS*1.5 ? 'fac-warn' : 'fac-over';
-    html += `<div class="fac-car-row">
-        <span class="fac-reg">${f.regnr}</span>
-        <span class="fac-d ${cls}">${f.days}d${f.pending?' (pågår)':''}</span>
-      </div>`;
+      <table>
+        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead>
+        <tbody>`;
+  for(const c of recentRet){
+    html+=`<tr>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td>
+      <td style="color:var(--red);font-weight:700">${fmtK(c.t)}</td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(c.vDate)}</td>
+    </tr>`;
   }
+  html+=`</tbody></table></div></div>`;
 
-  if (!facilityTimes.length) {
-    html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:16px">Ikke nok data ennå</div>`;
-  }
-
-  html += `</div></div></div>`;
-
-  // Section: Events + Rejected
-  html += `<div class="section-title">Siste hendelser & avvisninger</div>
-  <div class="two-col">
-    <div class="table-card">
-      <div class="table-head">
-        <div class="table-head-title">Hendelseslogg</div>
-      </div>`;
-
-  for (const e of recentEvents) {
-    const s = stageIcon(e.event);
-    html += `<div class="event-row">
-      <div class="e-icon" style="background:${s.bg}">${s.ic}</div>
-      <div class="e-regnr">${e.regnr}</div>
-      <div class="e-desc">${stageName(e.event)}</div>
-      <div class="e-time">${fmtTime(e.ts)}</div>
-    </div>`;
-  }
-
-  html += `</div>
-    <div class="table-card">
-      <div class="table-head">
-        <div class="table-head-title">Avvist av selger</div>
-        <div class="count-badge">${rejectedCars.length} totalt</div>
-      </div>`;
-
-  if (!rejectedCars.length) {
-    html += `<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Ingen avviste</div>`;
-  }
-  for (const c of rejectedCars.slice(0,14)) {
-    html += `<div class="rej-row">
-      <span class="rej-reg">${c.regnr}</span>
-      <span class="rej-when">${daysAgo(c.latest.ts)}</span>
-    </div>`;
-  }
-
-  html += `</div></div>`;
-
-  document.getElementById('app').innerHTML = html;
+  document.getElementById('app').innerHTML=html;
 }
 
-// Clock
-setInterval(() => {
-  document.getElementById('clock').textContent =
+setInterval(()=>{
+  document.getElementById('clock').textContent=
     new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}, 1000);
+},1000);
 
-// Load
-fetch(DATA_URL).then(r=>r.json()).then(render)
-  .catch(e => {
-    document.getElementById('app').innerHTML =
-      `<div style="text-align:center;padding:60px;color:var(--red)">Kunne ikke hente data: ${e.message}</div>`;
-  });
+loadData().then(rows=>{
+  render(processData(rows));
+}).catch(err=>{
+  document.getElementById('app').innerHTML=
+    `<div style="text-align:center;padding:60px;color:#C62828">
+      Kunne ikke hente data: ${err.message}<br>
+      <small style="color:#999">CORS kan blokkere direkte API-kall fra browser.</small>
+    </div>`;
+});
 </script>
 </body>
 </html>
