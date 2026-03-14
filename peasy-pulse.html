@@ -115,6 +115,7 @@ canvas{width:100%;border-radius:8px;}
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
+      <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
@@ -138,6 +139,7 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
+  document.getElementById('btn-eval').classList.toggle('active', m==='eval');
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
@@ -188,7 +190,7 @@ async function loadData() {
 }
 
 function processData(rows) {
-  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[] };
+  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[], unpriced:[] };
   for (let i = 1; i < rows.length; i++) {
     const r     = rows[i];
     const regnr = r[1];
@@ -290,6 +292,33 @@ function statusBadge(s) {
   const key = Object.keys(map).find(k => s.toLowerCase().includes(k));
   const [icon, cls, lbl] = key ? map[key] : ['🏭','b-produksjon', s || 'Produksjon'];
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
+}
+
+function buildEvalHtml(data) {
+  const unpricedSorted = [...data.unpriced].sort((a,b) => {
+    const da = parseDate(a.registrertDato), db = parseDate(b.registrertDato);
+    return (da||0) - (db||0);
+  });
+  let h = '<div class="section-label">Biler uten prissetting (' + data.unpriced.length + ' biler)</div>';
+  h += '<div class="pipeline-grid">';
+  if (!unpricedSorted.length) {
+    h += '<div style="color:var(--muted);padding:24px;font-size:13px">Alle biler er priset ✅</div>';
+  }
+  for (const car of unpricedSorted) {
+    const d = parseDate(car.registrertDato);
+    const days = d ? Math.floor((Date.now() - d) / 86400000) : null;
+    const cls = days === null ? '' : days <= 1 ? 'days-ok' : days <= 3 ? 'days-warn' : 'days-over';
+    h += '<div class="car-card">';
+    h += '<div class="car-top"><span class="car-regnr">' + car.regnr + '</span>';
+    h += '<span class="car-badge b-mottatt">⏳ Ikke priset</span></div>';
+    h += '<div class="car-model">' + (car.label||'–') + '</div>';
+    h += '<div class="car-days ' + cls + '">' + (days !== null ? days + ' dager siden registrert' : '–') + '</div>';
+    h += '<div class="car-detail"><span>Registrert: ' + fmtDate(car.registrertDato) + '</span>';
+    h += (car.km ? '<span>' + Math.round(car.km/1000) + 'k km</span>' : '') + '</div>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
 }
 
 function render(data) {
@@ -518,6 +547,7 @@ function render(data) {
     ${dials}
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
+    <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data)}</div>
   `;
 
   requestAnimationFrame(() => {
