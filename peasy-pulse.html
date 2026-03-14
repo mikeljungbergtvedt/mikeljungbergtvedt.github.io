@@ -115,6 +115,7 @@ canvas{width:100%;border-radius:8px;}
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
+      <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
@@ -138,6 +139,7 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
+  document.getElementById('btn-eval').classList.toggle('active', m==='eval');
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
@@ -292,7 +294,101 @@ function statusBadge(s) {
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
 }
 
-function render(data) {
+function buildEvalHtml(data, rows) {
+  // Section 1: Endelig estimat — all cars waiting for price/seller response
+  const evalRows = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const status = String(r[12]||'').trim().toLowerCase();
+    return status === 'endelig estimat';
+  }).sort((a,b) => {
+    const da = parseDate(a[13]), db = parseDate(b[13]);
+    return (da||0) - (db||0);
+  });
+
+  let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
+  h += '<div class="table-card" style="margin-bottom:24px"><table>';
+  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav – D høy</th></tr></thead><tbody>';
+  if (!evalRows.length) {
+    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
+  }
+  for (const r of evalRows) {
+    const reg = r[1];
+    const merke = r[6]||''; const modell = r[7]||''; const year = r[8]||'';
+    const label = [merke,modell,year].filter(Boolean).join(' ');
+    const km = r[22] ? Math.round(r[22]/1000)+'k' : '–';
+    const regDate = parseDate(r[13]);
+    const days = regDate ? Math.floor((Date.now()-regDate)/86400000) : null;
+    const daysCol = days===null?'':days<=1?'color:#2E7D32':days<=3?'color:var(--orange)':'color:var(--red)';
+    const ar = String(r[3]||'').trim();
+    let priceStr;
+    if (!ar || ar==='-') {
+      priceStr = '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
+    } else {
+      const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
+      const lo = Math.round(parseInt(parts[0])/1000);
+      const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
+      priceStr = '<strong>' + lo + 'k – ' + hi + 'k</strong>';
+    }
+    h += '<tr>';
+    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
+    h += '<td style="' + daysCol + ';font-weight:700">' + (days!==null?days+'d':'–') + '</td>';
+    h += '<td><span class="regnr">' + reg + '</span></td>';
+    h += '<td style="font-size:11px">' + label + '</td>';
+    h += '<td style="font-size:11px">' + km + '</td>';
+    h += '<td>' + priceStr + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+
+  // Section 2: Avvist av selger — last 10
+  const CUTOFF = new Date('2025-11-01');
+  const avvistRows = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const nDate = parseDate(r[13]);
+    if (nDate && nDate < CUTOFF) return false;
+    const status = String(r[12]||'').toLowerCase();
+    return status.includes('avvist by customer');
+  }).sort((a,b) => (parseDate(b[13])||0)-(parseDate(a[13])||0));
+
+  const totalEval = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const nDate = parseDate(r[13]);
+    return !(nDate && nDate < CUTOFF);
+  }).length;
+  const avvistPct = totalEval ? Math.round(avvistRows.length/totalEval*100) : 0;
+
+  h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
+  h += '<div class="table-card"><table>';
+  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav – D høy</th><th>Dato</th></tr></thead><tbody>';
+  const last10 = avvistRows.slice(0,10);
+  if (!last10.length) {
+    h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
+  }
+  for (const r of last10) {
+    const ar = String(r[3]||'').trim();
+    let priceStr = '–';
+    if (ar && ar!=='-') {
+      const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
+      const lo = Math.round(parseInt(parts[0])/1000);
+      const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
+      priceStr = lo+'k – '+hi+'k';
+    }
+    const merke=r[6]||''; const modell=r[7]||''; const year=r[8]||'';
+    const label=[merke,modell,year].filter(Boolean).join(' ');
+    const km=r[22]?Math.round(r[22]/1000)+'k':'–';
+    h += '<tr>';
+    h += '<td><span class="regnr">' + r[1] + '</span></td>';
+    h += '<td style="font-size:11px">' + label + '</td>';
+    h += '<td style="font-size:11px">' + km + '</td>';
+    h += '<td>' + priceStr + '</td>';
+    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function render(data, rows) {
   const bs           = bracketStats(data);
   const totalEval    = data.evaluated.length;
   const totalMottatt = data.mottatt.length;
@@ -518,6 +614,7 @@ function render(data) {
     ${dials}
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
+    <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
   `;
 
   requestAnimationFrame(() => {
@@ -581,7 +678,7 @@ setInterval(() => {
 }, 1000);
 
 loadData()
-  .then(rows => render(processData(rows)))
+  .then(rows => render(processData(rows), rows))
   .catch(err => {
     document.getElementById('app').innerHTML =
       `<div style="text-align:center;padding:60px;color:#C62828">
