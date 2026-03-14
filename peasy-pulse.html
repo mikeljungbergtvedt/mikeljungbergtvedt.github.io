@@ -389,7 +389,7 @@ function buildEvalHtml(data, rows) {
 
   h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
   h += '<div class="table-card"><table>';
-  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav – D høy</th><th>Dato</th></tr></thead><tbody>';
+  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th><th>Dato</th></tr></thead><tbody>';
   const last10 = avvistRows.slice(0,10);
   if (!last10.length) {
     h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
@@ -435,11 +435,9 @@ function render(data, rows) {
   const mottOk       = mottattRate >= TARGETS.evalMottatt;
   const sldOk        = soldRate    >= TARGETS.mottattSolgt;
 
-  const todayStr    = new Date().toISOString().slice(0,10);
+  const todayStr    = new Date().toLocaleDateString('nb-NO', {day:'2-digit',month:'2-digit',year:'numeric'}).split('.').join('.');
   const todayCount  = data.evaluated.filter(car => {
-    if (!car.sdMottatt) return false;
-    const d = new Date(car.sdMottatt.trim().slice(6,10) + '-' + car.sdMottatt.trim().slice(3,5) + '-' + car.sdMottatt.trim().slice(0,2));
-    return !isNaN(d) && d.toISOString().slice(0,10) === todayStr;
+    return car.sdMottatt && String(car.sdMottatt).startsWith(todayStr);
   }).length;
   const daysSinceCutoff = Math.max(1, Math.floor((Date.now() - CUTOFF.getTime()) / 86400000));
   const perDay = (totalEval / daysSinceCutoff).toFixed(1);
