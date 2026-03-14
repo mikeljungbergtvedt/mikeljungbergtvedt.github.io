@@ -336,7 +336,16 @@ function buildEvalHtml(data, rows) {
     const merke = r[6]||''; const modell = r[7]||''; const year = r[8]||'';
     const label = [merke,modell,year].filter(Boolean).join(' ');
     const km = r[22] ? Math.round(r[22]/1000)+'k' : '–';
-    const regDate = parseDate(r[13]);
+    // Use r[14] SD mottatt (includes HH:MM) for precise elapsed time
+    const sdRaw = r[14] ? String(r[14]).trim() : null;
+    const regDate = sdRaw ? (function(s) {
+      const parts = s.split(' ');
+      const dp = parts[0].split('.');
+      const tp = parts[1] ? parts[1].split(':') : ['0','0'];
+      const d = new Date(dp[2]+'-'+dp[1]+'-'+dp[0]);
+      d.setHours(parseInt(tp[0]), parseInt(tp[1]), 0, 0);
+      return isNaN(d) ? parseDate(r[13]) : d;
+    })(sdRaw) : parseDate(r[13]);
     const whm = regDate ? workHoursElapsed(regDate) : null;
     const whmStr = whm === null ? '–' : whm.h + 'h ' + String(whm.m).padStart(2,'0') + 'm';
     const daysCol = whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
@@ -428,8 +437,9 @@ function render(data, rows) {
 
   const todayStr    = new Date().toISOString().slice(0,10);
   const todayCount  = data.evaluated.filter(car => {
-    const d = parseDate(car.registrertDato);
-    return d && d.toISOString().slice(0,10) === todayStr;
+    if (!car.sdMottatt) return false;
+    const d = new Date(car.sdMottatt.trim().slice(6,10) + '-' + car.sdMottatt.trim().slice(3,5) + '-' + car.sdMottatt.trim().slice(0,2));
+    return !isNaN(d) && d.toISOString().slice(0,10) === todayStr;
   }).length;
   const daysSinceCutoff = Math.max(1, Math.floor((Date.now() - CUTOFF.getTime()) / 86400000));
   const perDay = (totalEval / daysSinceCutoff).toFixed(1);
