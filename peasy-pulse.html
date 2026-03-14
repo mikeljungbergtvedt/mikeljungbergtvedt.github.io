@@ -104,6 +104,8 @@ canvas{width:100%;border-radius:8px;}
   header{padding:0 20px;}
   main{padding:24px 16px 60px;}
 }
+  .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
+  .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
 </style>
 </head>
 <body>
@@ -327,7 +329,7 @@ function buildEvalHtml(data, rows) {
 
   let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
   h += '<div class="table-card" style="margin-bottom:24px"><table>';
-  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
+  h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
   if (!evalRows.length) {
     h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
   }
@@ -360,8 +362,12 @@ function buildEvalHtml(data, rows) {
       priceStr = '<strong>' + lo + 'k – ' + hi + 'k</strong>';
     }
     h += '<tr>';
-    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
-    h += '<td style="' + daysCol + ';font-weight:700">' + whmStr + '</td>';
+    const sdVal = r[14] ? String(r[14]).trim() : '';
+    const sdDisplay = sdVal ? sdVal.slice(0,16) : fmtDate(r[13]);
+    h += '<td style="color:var(--muted);font-size:11px;white-space:nowrap">' + sdDisplay + '</td>';
+    const slaPct = whm ? Math.min(whm.total / 4 * 100, 100) : 0;
+    const slaColor = whm && whm.total < 3 ? '#4CAF50' : whm && whm.total < 4 ? '#E65100' : '#C62828';
+    h += '<td style="' + daysCol + ';font-weight:700;white-space:nowrap">' + whmStr + '<div class="sla-bar-wrap"><div class="sla-bar" style="width:' + slaPct + '%;background:' + slaColor + '"></div></div></td>';
     h += '<td><span class="regnr">' + reg + '</span></td>';
     h += '<td style="font-size:11px">' + label + '</td>';
     h += '<td style="font-size:11px">' + km + '</td>';
