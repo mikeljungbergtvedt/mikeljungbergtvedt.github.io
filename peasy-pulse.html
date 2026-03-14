@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+    // Parse dHigh from r[3] e.g. "408000-451000"
+    const r3parts = r[3] ? String(r[3]).replace(/[\s\u00a0]/g,'').split('-') : [];
+    car.dHigh = r3parts.length >= 2 ? (parseInt(r3parts[1]) || null) : car.dLow;
+    // Endelig estimat = seller is waiting for price eval
+    if (car.status && car.status.toLowerCase().includes('endelig estimat')) data.unpriced.push(car);
 <html lang="no">
 <head>
 <meta charset="UTF-8">
@@ -313,7 +318,7 @@ function buildEvalHtml(data) {
     const d = parseDate(car.registrertDato);
     const days = d ? Math.floor((Date.now() - d) / 86400000) : null;
     const daysCol = days === null ? '' : days <= 1 ? 'color:#2E7D32' : days <= 3 ? 'color:var(--orange)' : 'color:var(--red)';
-    const priced = car.dLow ? (Math.round(car.dLow/1000) + 'k – ' + Math.round(car.dHigh||car.dLow*1.1/1000) + 'k') : '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
+    const priced = car.dLow ? (Math.round(car.dLow/1000) + 'k – ' + Math.round((car.dHigh||Math.round(car.dLow*1.1))/1000) + 'k') : '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
     h += '<tr>';
     h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(car.registrertDato) + '</td>';
     h += '<td style="' + daysCol + ';font-weight:700">' + (days !== null ? days + 'd' : '–') + '</td>';
