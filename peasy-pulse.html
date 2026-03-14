@@ -295,29 +295,62 @@ function statusBadge(s) {
 }
 
 function buildEvalHtml(data) {
-  const unpricedSorted = [...data.unpriced].sort((a,b) => {
+  const CUTOFF = new Date('2025-11-01');
+
+  // Section 1: Endelig estimat — waiting for seller
+  const evalCars = [...data.unpriced].sort((a,b) => {
     const da = parseDate(a.registrertDato), db = parseDate(b.registrertDato);
     return (da||0) - (db||0);
   });
-  let h = '<div class="section-label">Biler uten prissetting (' + data.unpriced.length + ' biler)</div>';
-  h += '<div class="pipeline-grid">';
-  if (!unpricedSorted.length) {
-    h += '<div style="color:var(--muted);padding:24px;font-size:13px">Alle biler er priset ✅</div>';
+
+  let h = '<div class="section-label">Venter pa&#778; prissetting / svar fra selger (' + evalCars.length + ' biler)</div>';
+  h += '<div class="table-card" style="margin-bottom:24px"><table>';
+  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav - D høy</th></tr></thead><tbody>';
+  if (!evalCars.length) {
+    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
   }
-  for (const car of unpricedSorted) {
+  for (const car of evalCars) {
     const d = parseDate(car.registrertDato);
     const days = d ? Math.floor((Date.now() - d) / 86400000) : null;
-    const cls = days === null ? '' : days <= 1 ? 'days-ok' : days <= 3 ? 'days-warn' : 'days-over';
-    h += '<div class="car-card">';
-    h += '<div class="car-top"><span class="car-regnr">' + car.regnr + '</span>';
-    h += '<span class="car-badge b-mottatt">⏳ Ikke priset</span></div>';
-    h += '<div class="car-model">' + (car.label||'–') + '</div>';
-    h += '<div class="car-days ' + cls + '">' + (days !== null ? days + ' dager siden registrert' : '–') + '</div>';
-    h += '<div class="car-detail"><span>Registrert: ' + fmtDate(car.registrertDato) + '</span>';
-    h += (car.km ? '<span>' + Math.round(car.km/1000) + 'k km</span>' : '') + (car.dLow ? '<span>Pris lav: ' + Math.round(car.dLow/1000) + 'k</span>' : '<span style="color:var(--red)">Ikke priset</span>') + '</div>';
-    h += '</div>';
+    const daysCol = days === null ? '' : days <= 1 ? 'color:#2E7D32' : days <= 3 ? 'color:var(--orange)' : 'color:var(--red)';
+    const priced = car.dLow ? (Math.round(car.dLow/1000) + 'k – ' + Math.round(car.dHigh||car.dLow*1.1/1000) + 'k') : '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
+    h += '<tr>';
+    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(car.registrertDato) + '</td>';
+    h += '<td style="' + daysCol + ';font-weight:700">' + (days !== null ? days + 'd' : '–') + '</td>';
+    h += '<td><span class="regnr">' + car.regnr + '</span></td>';
+    h += '<td style="font-size:11px">' + (car.label||'–') + '</td>';
+    h += '<td style="font-size:11px">' + (car.km ? Math.round(car.km/1000)+'k' : '–') + '</td>';
+    h += '<td style="font-weight:700">' + priced + '</td>';
+    h += '</tr>';
   }
-  h += '</div>';
+  h += '</tbody></table></div>';
+
+  // Section 2: Avvist av selger — last 10
+  const avvist = data.evaluated
+    .filter(c => c.status && (c.status.toLowerCase().includes('avvist by customer') || c.status.toLowerCase().includes('avvist av')))
+    .sort((a,b) => (parseDate(b.registrertDato)||0) - (parseDate(a.registrertDato)||0))
+    .slice(0, 10);
+
+  const totalEval = data.evaluated.length;
+  const totalAvvist = data.evaluated.filter(c => c.status && c.status.toLowerCase().includes('avvist by customer')).length;
+  const avvistPct = totalEval ? Math.round(totalAvvist / totalEval * 100) : 0;
+
+  h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
+  h += '<div class="table-card"><table>';
+  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav - D høy</th><th>Dato</th></tr></thead><tbody>';
+  if (!avvist.length) {
+    h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
+  }
+  for (const car of avvist) {
+    h += '<tr>';
+    h += '<td><span class="regnr">' + car.regnr + '</span></td>';
+    h += '<td style="font-size:11px">' + (car.label||'–') + '</td>';
+    h += '<td style="font-size:11px">' + (car.km ? Math.round(car.km/1000)+'k' : '–') + '</td>';
+    h += '<td>' + (car.dLow ? Math.round(car.dLow/1000)+'k – ' + Math.round((car.dHigh||car.dLow)/1000)+'k' : '–') + '</td>';
+    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(car.registrertDato) + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
   return h;
 }
 
