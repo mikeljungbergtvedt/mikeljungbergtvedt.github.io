@@ -1,9 +1,4 @@
 <!DOCTYPE html>
-    // Parse dHigh from r[3] e.g. "408000-451000"
-    const r3parts = r[3] ? String(r[3]).replace(/[\s\u00a0]/g,'').split('-') : [];
-    car.dHigh = r3parts.length >= 2 ? (parseInt(r3parts[1]) || null) : car.dLow;
-    // Endelig estimat = seller is waiting for price eval
-    if (car.status && car.status.toLowerCase().includes('endelig estimat')) data.unpriced.push(car);
 <html lang="no">
 <head>
 <meta charset="UTF-8">
@@ -120,7 +115,6 @@ canvas{width:100%;border-radius:8px;}
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
-      <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
@@ -144,7 +138,6 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
-  document.getElementById('btn-eval').classList.toggle('active', m==='eval');
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
@@ -195,7 +188,7 @@ async function loadData() {
 }
 
 function processData(rows) {
-  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[], unpriced:[] };
+  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[] };
   for (let i = 1; i < rows.length; i++) {
     const r     = rows[i];
     const regnr = r[1];
@@ -297,66 +290,6 @@ function statusBadge(s) {
   const key = Object.keys(map).find(k => s.toLowerCase().includes(k));
   const [icon, cls, lbl] = key ? map[key] : ['🏭','b-produksjon', s || 'Produksjon'];
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
-}
-
-function buildEvalHtml(data) {
-  const CUTOFF = new Date('2025-11-01');
-
-  // Section 1: Endelig estimat — waiting for seller
-  const evalCars = [...data.unpriced].sort((a,b) => {
-    const da = parseDate(a.registrertDato), db = parseDate(b.registrertDato);
-    return (da||0) - (db||0);
-  });
-
-  let h = '<div class="section-label">Venter pa&#778; prissetting / svar fra selger (' + evalCars.length + ' biler)</div>';
-  h += '<div class="table-card" style="margin-bottom:24px"><table>';
-  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav - D høy</th></tr></thead><tbody>';
-  if (!evalCars.length) {
-    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
-  }
-  for (const car of evalCars) {
-    const d = parseDate(car.registrertDato);
-    const days = d ? Math.floor((Date.now() - d) / 86400000) : null;
-    const daysCol = days === null ? '' : days <= 1 ? 'color:#2E7D32' : days <= 3 ? 'color:var(--orange)' : 'color:var(--red)';
-    const priced = car.dLow ? (Math.round(car.dLow/1000) + 'k – ' + Math.round((car.dHigh||Math.round(car.dLow*1.1))/1000) + 'k') : '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
-    h += '<tr>';
-    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(car.registrertDato) + '</td>';
-    h += '<td style="' + daysCol + ';font-weight:700">' + (days !== null ? days + 'd' : '–') + '</td>';
-    h += '<td><span class="regnr">' + car.regnr + '</span></td>';
-    h += '<td style="font-size:11px">' + (car.label||'–') + '</td>';
-    h += '<td style="font-size:11px">' + (car.km ? Math.round(car.km/1000)+'k' : '–') + '</td>';
-    h += '<td style="font-weight:700">' + priced + '</td>';
-    h += '</tr>';
-  }
-  h += '</tbody></table></div>';
-
-  // Section 2: Avvist av selger — last 10
-  const avvist = data.evaluated
-    .filter(c => c.status && (c.status.toLowerCase().includes('avvist by customer') || c.status.toLowerCase().includes('avvist av')))
-    .sort((a,b) => (parseDate(b.registrertDato)||0) - (parseDate(a.registrertDato)||0))
-    .slice(0, 10);
-
-  const totalEval = data.evaluated.length;
-  const totalAvvist = data.evaluated.filter(c => c.status && c.status.toLowerCase().includes('avvist by customer')).length;
-  const avvistPct = totalEval ? Math.round(totalAvvist / totalEval * 100) : 0;
-
-  h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
-  h += '<div class="table-card"><table>';
-  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav - D høy</th><th>Dato</th></tr></thead><tbody>';
-  if (!avvist.length) {
-    h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
-  }
-  for (const car of avvist) {
-    h += '<tr>';
-    h += '<td><span class="regnr">' + car.regnr + '</span></td>';
-    h += '<td style="font-size:11px">' + (car.label||'–') + '</td>';
-    h += '<td style="font-size:11px">' + (car.km ? Math.round(car.km/1000)+'k' : '–') + '</td>';
-    h += '<td>' + (car.dLow ? Math.round(car.dLow/1000)+'k – ' + Math.round((car.dHigh||car.dLow)/1000)+'k' : '–') + '</td>';
-    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(car.registrertDato) + '</td>';
-    h += '</tr>';
-  }
-  h += '</tbody></table></div>';
-  return h;
 }
 
 function render(data) {
@@ -585,7 +518,6 @@ function render(data) {
     ${dials}
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
-    <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data)}</div>
   `;
 
   requestAnimationFrame(() => {
