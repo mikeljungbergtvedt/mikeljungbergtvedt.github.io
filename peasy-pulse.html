@@ -115,6 +115,7 @@ canvas{width:100%;border-radius:8px;}
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
+      <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
@@ -138,6 +139,7 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
+  document.getElementById('btn-eval').classList.toggle('active', m==='eval');
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
@@ -165,7 +167,9 @@ function daysAgo(val) {
   const n = Math.floor((Date.now() - d) / 86400000);
   if (n === 0) return 'I dag';
   if (n === 1) return 'I går';
-  return `${n}d siden`;
+  return `${n}d siden
+    <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${evalHtml}</div>
+  `;
 }
 
 function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : '–'; }
@@ -186,9 +190,33 @@ async function loadData() {
   const ws  = wb.Sheets[wb.SheetNames[0]];
   return XLSX.utils.sheet_to_json(ws, { header:1 });
 }
+async function loadERPMeta() {
+  try {
+    const login = await fetch('https://api.biladministrasjon.no/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email:'post@peasy.no', password:'EasyPeasy26!'})
+    }).then(r => r.json());
+    const token = login.data?.token?.token;
+    if (!token) return {};
+    const map = {};
+    for (const ep of ['estimating_ar_final','estimating_ar_temp']) {
+      const res = await fetch('https://api.biladministrasjon.no/c2b_module/driveno/processing/' + ep + '?per_page=100', {
+        headers: {'Authorization': 'Bearer ' + token}
+      }).then(r => r.json());
+      for (const car of res.data?.data?.data || []) {
+        map[car.registration_number] = {
+          hasComment: car.has_sd_comment === 1,
+          hasImages:  car.has_images === 1
+        };
+      }
+    }
+    return map;
+  } catch(e) { return {}; }
+}
+
 
 function processData(rows) {
-  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[] };
+  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[], unpriced:[] };
   for (let i = 1; i < rows.length; i++) {
     const r     = rows[i];
     const regnr = r[1];
@@ -292,7 +320,8 @@ function statusBadge(s) {
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
 }
 
-function render(data) {
+function render(data, erpMeta) {
+  erpMeta = erpMeta || {};
   const bs           = bracketStats(data);
   const totalEval    = data.evaluated.length;
   const totalMottatt = data.mottatt.length;
@@ -514,6 +543,48 @@ function render(data) {
   }
   finHtml += `</tbody></table></div></div>`;
 
+  
+  // ── EVALUERT (unpriced) ──
+  const daysSinceReg = (val) => {
+    const d = parseDate(val);
+    if (!d || isNaN(d)) return null;
+    return Math.floor((Date.now() - d) / 86400000);
+  };
+  const unpricedSorted = [...data.unpriced].sort((a,b) => {
+    const da = parseDate(a.registrertDato), db = parseDate(b.registrertDato);
+    return (da||0) - (db||0);
+  });
+  let evalHtml = `
+  <div class="section-label">Biler uten prissetting (${data.unpriced.length} biler)</div>
+  <div class="pipeline-grid">`;
+  if (!unpricedSorted.length) {
+    evalHtml += `<div style="color:var(--muted);padding:24px;font-size:13px">Alle biler er priset ✅</div>`;
+  }
+  for (const car of unpricedSorted) {
+    const days = daysSinceReg(car.registrertDato);
+    const cls  = days === null ? '' : days <= 1 ? 'days-ok' : days <= 3 ? 'days-warn' : 'days-over';
+    const meta = erpMeta[car.regnr] || {};
+    const commentIcon = meta.hasComment ? '💬' : '';
+    const photoIcon   = meta.hasImages  ? '📷' : '';
+    evalHtml += `
+    <div class="car-card">
+      <div class="car-top">
+        <span class="car-regnr">${car.regnr}</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          ${commentIcon}<span style="font-size:11px">${photoIcon}</span>
+          <span class="car-badge b-mottatt">⏳ Ikke priset</span>
+        </span>
+      </div>
+      <div class="car-model">${car.label||'–'}</div>
+      <div class="car-days ${cls}">${days !== null ? days + ' dager siden registrert' : '–'}</div>
+      <div class="car-detail">
+        <span>Registrert: ${fmtDate(car.registrertDato)}</span>
+        ${car.km ? `<span>${Math.round(car.km/1000)}k km</span>` : ''}
+      </div>
+    </div>`;
+  }
+  evalHtml += `</div>`;
+
   document.getElementById('app').innerHTML = `
     ${dials}
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
@@ -580,8 +651,8 @@ setInterval(() => {
     new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }, 1000);
 
-loadData()
-  .then(rows => render(processData(rows)))
+Promise.all([loadData(), loadERPMeta()])
+  .then(([rows, erpMeta]) => render(processData(rows), erpMeta))
   .catch(err => {
     document.getElementById('app').innerHTML =
       `<div style="text-align:center;padding:60px;color:#C62828">
