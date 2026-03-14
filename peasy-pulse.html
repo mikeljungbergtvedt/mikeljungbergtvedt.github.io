@@ -294,6 +294,25 @@ function statusBadge(s) {
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
 }
 
+function workHoursElapsed(from) {
+  const workStart = 8, workEnd = 16;
+  const now = new Date();
+  let total = 0;
+  let cur = new Date(from);
+  while (cur < now) {
+    const day = cur.getDay();
+    if (day === 0 || day === 6) { cur.setDate(cur.getDate()+1); cur.setHours(workStart,0,0,0); continue; }
+    const dayStart = new Date(cur); dayStart.setHours(workStart,0,0,0);
+    const dayEnd   = new Date(cur); dayEnd.setHours(workEnd,0,0,0);
+    if (cur < dayStart) { cur = dayStart; continue; }
+    if (cur >= dayEnd)  { cur.setDate(cur.getDate()+1); cur.setHours(workStart,0,0,0); continue; }
+    const periodEnd = now < dayEnd ? now : dayEnd;
+    total += Math.floor((periodEnd - cur) / 60000);
+    cur = dayEnd;
+  }
+  return { h: Math.floor(total/60), m: total%60, total: Math.floor(total/60) };
+}
+
 function buildEvalHtml(data, rows) {
   // Section 1: Endelig estimat — all cars waiting for price/seller response
   const evalRows = (rows||[]).slice(1).filter(r => {
@@ -307,7 +326,7 @@ function buildEvalHtml(data, rows) {
 
   let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
   h += '<div class="table-card" style="margin-bottom:24px"><table>';
-  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>D lav – D høy</th></tr></thead><tbody>';
+  h += '<thead><tr><th>Registrert</th><th>Dager</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
   if (!evalRows.length) {
     h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
   }
@@ -317,8 +336,9 @@ function buildEvalHtml(data, rows) {
     const label = [merke,modell,year].filter(Boolean).join(' ');
     const km = r[22] ? Math.round(r[22]/1000)+'k' : '–';
     const regDate = parseDate(r[13]);
-    const days = regDate ? Math.floor((Date.now()-regDate)/86400000) : null;
-    const daysCol = days===null?'':days<=1?'color:#2E7D32':days<=3?'color:var(--orange)':'color:var(--red)';
+    const whm = regDate ? workHoursElapsed(regDate) : null;
+    const whmStr = whm === null ? '–' : whm.h + 'h ' + String(whm.m).padStart(2,'0') + 'm';
+    const daysCol = whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
     const ar = String(r[3]||'').trim();
     let priceStr;
     if (!ar || ar==='-') {
@@ -331,7 +351,7 @@ function buildEvalHtml(data, rows) {
     }
     h += '<tr>';
     h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
-    h += '<td style="' + daysCol + ';font-weight:700">' + (days!==null?days+'d':'–') + '</td>';
+    h += '<td style="' + daysCol + ';font-weight:700">' + whmStr + '</td>';
     h += '<td><span class="regnr">' + reg + '</span></td>';
     h += '<td style="font-size:11px">' + label + '</td>';
     h += '<td style="font-size:11px">' + km + '</td>';
