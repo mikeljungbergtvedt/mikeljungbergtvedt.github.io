@@ -594,7 +594,7 @@ function render(data, rows) {
       <div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span></div>
       <div class="bc-row"><span class="bc-key">Avg Bud/Pris (returnert)</span><span class="bc-val neg">${fmtPct(b.avgGapRet)}</span></div>
       <div class="x-rec">
-        <div class="x-rec-label">Anbefalt X%</div>
+        <div class="x-rec-label">Estimert avvik fra Peasy estimert lav</div>
         <div class="x-rec-val" style="color:${xColor}">${b.recX>0?'+':''}${b.recX}%</div>
       </div>
     </div>`;
@@ -606,7 +606,7 @@ function render(data, rows) {
     <div class="plot-explain">
       <strong>Hva viser dette?</strong> Hver prikk er én bil. X-aksen er <em>Pris lav</em> — den laveste grensen Peasy sender til selger. Y-aksen er <em>Høyeste bud</em> på auksjonen. Den stiplede linjen er perfekt treff (Bud = Pris lav). Grønne prikker <em>over</em> linjen = bud høyere enn Pris lav (bra!). Røde prikker <em>under</em> = returneringsrisiko.
     </div>
-    <canvas id="bracket-chart-placeholder" height="300"></canvas>
+    <canvas id="scatter" height="300"></canvas>
   </div>
   <div class="section-label">Kostbare returneringer &amp; beste pristreff</div>
   <div class="two-col">
@@ -664,7 +664,7 @@ function render(data, rows) {
 }
 
 function drawScatter(sold, returned) {
-  const canvas = document.getElementById('bracket-chart-placeholder');
+  const canvas = document.getElementById('scatter');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.offsetWidth, H = 300;
@@ -719,59 +719,6 @@ loadData()
         <small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small>
       </div>`;
   });
-</script>
-<script>
-(function poll(){if(!window._lastRows){setTimeout(poll,400);return;}draw(window._lastRows);var o=window.setMode;if(o)window.setMode=function(m){o(m);if(m==='fin')setTimeout(function(){draw(window._lastRows);},150);}; })();
-function draw(rows){
-  var el=document.getElementById('bracket-chart');if(!el||!rows)return;
-  var CUT=new Date('2025-11-01');
-  function pd(v){if(!v)return null;var p=String(v).trim().slice(0,10).split('.');return p.length===3?new Date(p[2]+'-'+p[1]+'-'+p[0]):null;}
-  var B=[{l:'Lav\n0-100k',lo:0,hi:100000},{l:'Mid\n100-250k',lo:100000,hi:250000},{l:'H\u00f8y\n250-400k',lo:250000,hi:400000},{l:'Premium\n400k+',lo:400000,hi:Infinity}];
-  var S=B.map(function(b){
-    var s=[],r=[];
-    rows.slice(1).forEach(function(row){
-      if(!row[1]||!row[3]||row[3]==='-'||!row[4]||row[4]===0)return;
-      var d=pd(row[13]);if(!d||d<CUT)return;
-      var dL=parseInt(String(row[3]).replace(/[\s\u00a0]/g,'').split('-')[0]);
-      if(dL<b.lo||dL>=b.hi)return;
-      var st=String(row[12]||'').toLowerCase();
-      var pct=(parseInt(row[4])-dL)/dL*100;
-      if(st.includes('solgt')||st.includes('salgsmelding')||st.includes('budaksept')||st.includes('signering'))s.push(pct);
-      else if(st.includes('returnert'))r.push(pct);
-    });
-    var avg=function(a){return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10:null;};
-    return{sa:avg(s),ra:avg(r),sn:s.length,rn:r.length};
-  });
-  var W=el.clientWidth||600,H=280,p={t:24,r:16,b:52,l:58};
-  var vals=S.flatMap(function(s){return[s.sa,s.ra].filter(function(v){return v!==null;});});
-  var mx=Math.max.apply(null,vals.map(Math.abs).concat([15]));
-  var mY=p.t+(H-p.t-p.b)/2,sY=(H-p.t-p.b)/2,bw=(W-p.l-p.r)/B.length;
-  var svg='<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">';
-  [-20,-10,0,10,20].forEach(function(pct){
-    if(Math.abs(pct)>mx*1.2)return;
-    var y=mY-(pct/mx)*sY;
-    svg+='<line x1="'+p.l+'" y1="'+y+'" x2="'+(W-p.r)+'" y2="'+y+'" stroke="'+(pct===0?'#bbb':'#eee')+'" stroke-width="'+(pct===0?1.5:1)+'"/>';
-    svg+='<text x="'+(p.l-5)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#888">'+pct+'%</text>';
-  });
-  S.forEach(function(s,i){
-    var cx=p.l+i*bw+bw/2,hw=bw*0.28;
-    function bar(avg,n,x,col){
-      if(avg===null)return;
-      var bh=Math.abs(avg/mx)*sY,by=avg>=0?mY-bh:mY;
-      svg+='<rect x="'+x+'" y="'+by+'" width="'+hw+'" height="'+bh+'" fill="'+col+'" rx="3"/>';
-      var ly=avg>=0?by-5:by+bh+13;
-      svg+='<text x="'+(x+hw/2)+'" y="'+ly+'" text-anchor="middle" font-size="11" font-weight="bold" fill="'+col+'">'+(avg>=0?'+':'')+avg+'%</text>';
-      svg+='<text x="'+(x+hw/2)+'" y="'+(ly+(avg>=0?-11:11))+'" text-anchor="middle" font-size="9" fill="#aaa">'+n+'</text>';
-    }
-    bar(s.sa,s.sn,cx-hw-2,'#2E7D32');
-    bar(s.ra,s.rn,cx+2,'#C62828');
-    B[i].l.split('\n').forEach(function(line,li){svg+='<text x="'+cx+'" y="'+(H-p.b+16+li*13)+'" text-anchor="middle" font-size="10" font-weight="600" fill="#333">'+line+'</text>';});
-  });
-  svg+='<rect x="'+(W/2-55)+'" y="5" width="10" height="10" fill="#2E7D32" rx="2"/><text x="'+(W/2-42)+'" y="14" font-size="10" fill="#333">Solgt</text>';
-  svg+='<rect x="'+(W/2+5)+'" y="5" width="10" height="10" fill="#C62828" rx="2"/><text x="'+(W/2+18)+'" y="14" font-size="10" fill="#333">Returnert</text>';
-  svg+='</svg>';
-  el.innerHTML=svg;
-}
 </script>
 </body>
 </html>
