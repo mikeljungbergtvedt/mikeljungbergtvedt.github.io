@@ -107,23 +107,21 @@ canvas{width:100%;border-radius:8px;}
   .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
   .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
 
-  @media (max-width: 768px) {
-    .dials-grid { grid-template-columns: repeat(2,1fr) !important; gap:10px; padding:10px !important; }
-    .dial-card { padding:12px 8px !important; }
-    .dial-label { font-size:9px !important; }
-    .dial-value { font-size:26px !important; }
-    .pipeline-grid { grid-template-columns:1fr 1fr !important; gap:8px !important; }
-    .brackets-grid { grid-template-columns:1fr 1fr !important; gap:8px !important; }
-    .header-right { gap:4px; }
-    .mode-btn { padding:5px 10px; font-size:12px; }
-    .table-card { padding:8px !important; }
-    table { font-size:10px !important; }
-    th, td { padding:4px 5px !important; }
+  @media (max-width:768px){
+    .dials-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px;padding:10px!important}
+    .dial-card{padding:12px 8px!important}
+    .dial-label{font-size:9px!important}
+    .dial-value{font-size:24px!important}
+    .pipeline-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+    .brackets-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+    .mode-btn{padding:5px 10px;font-size:12px}
+    .table-card{padding:8px!important;overflow-x:auto}
+    table{font-size:10px!important}
+    th,td{padding:4px 5px!important}
   }
-  @media (max-width: 480px) {
-    .pipeline-grid { grid-template-columns:1fr !important; }
-    .brackets-grid { grid-template-columns:1fr !important; }
-    .dials-grid { grid-template-columns:repeat(2,1fr) !important; }
+  @media (max-width:480px){
+    .pipeline-grid{grid-template-columns:1fr!important}
+    .brackets-grid{grid-template-columns:1fr!important}
   }
 </style>
 </head>
@@ -697,54 +695,30 @@ function render(data, rows) {
       const p95 = allVals[Math.floor(allVals.length*0.95)] || 100;
       const maxVal = Math.min(p95 * 1.1, Math.max(...allVals)) + 20;
       if (Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-      const brackets = [
-        { label: ['Lav','0–100k'],    range: [0,100000] },
-        { label: ['Mid','100–250k'],  range: [100000,250000] },
-        { label: ['Høy','250–400k'], range: [250000,400000] },
-        { label: ['Premium','400k+'], range: [400000,Infinity] },
-      ];
-      const CUTOFF3 = new Date('2025-11-01');
-      const bdata = brackets.map(b => {
-        const bCars = rows.slice(1).filter(r => {
-          if (!r[1]||!r[3]||r[3]==='-'||!r[4]||r[4]===0) return false;
-          const d = parseDate(r[13]); if (!d||d<CUTOFF3) return false;
-          const parts = String(r[3]).replace(/[\s\u00a0]/g,'').split('-');
-          const dLow = parseInt(parts[0]);
-          const status = String(r[12]||'').toLowerCase();
-          return dLow >= b.range[0] && dLow < b.range[1] &&
-            (status.includes('solgt')||status.includes('salgsmelding')||status.includes('budaksept')||status.includes('signering'));
-        });
-        if (!bCars.length) return { n: 0, avg: 0 };
-        const avg = bCars.reduce((s,r) => {
-          const parts = String(r[3]).replace(/[\s\u00a0]/g,'').split('-');
-          const dLow = parseInt(parts[0]);
-          const bud = parseInt(r[4]);
-          return s + (bud - dLow) / dLow * 100;
-        }, 0) / bCars.length;
-        return { n: bCars.length, avg: Math.round(avg * 10) / 10 };
-      });
       new Chart(canvas, {
-        type: 'bar',
+        type: 'scatter',
         data: {
-          labels: brackets.map(b => b.label),
-          datasets: [{ label: 'Avg Bud vs Pris lav (%)', data: bdata.map(b => b.avg),
-            backgroundColor: bdata.map(b => b.avg >= 0 ? 'rgba(46,125,50,0.8)' : 'rgba(198,40,40,0.8)'),
-            borderRadius: 6 }]
+          datasets: [
+            { label: 'Solgt', data: pts.sold, backgroundColor: 'rgba(46,125,50,0.7)', pointRadius: 5 },
+            { label: 'Returnert', data: pts.returned, backgroundColor: 'rgba(198,40,40,0.7)', pointRadius: 5 },
+            { label: 'Andre', data: pts.other, backgroundColor: 'rgba(180,180,180,0.5)', pointRadius: 4 },
+          ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false },
-            tooltip: { callbacks: { label: ctx => ctx.parsed.y.toFixed(1) + '% — ' + bdata[ctx.dataIndex].n + ' solgte biler' } }
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': Pris lav ' + ctx.parsed.x + 'k — Bud ' + ctx.parsed.y + 'k' } }
           },
           scales: {
-            x: { ticks: { font: { size: 11 } } },
-            y: { title: { display: true, text: 'Bud vs Pris lav (%)' },
-              ticks: { callback: v => v + '%' } }
-          }
+            x: { title: { display: true, text: 'Pris lav (1000 kr)' }, min: 0, max: maxVal + 20 },
+            y: { title: { display: true, text: 'Høyeste bud (1000 kr)' }, min: 0, max: maxVal + 20 }
+          },
+          elements: { point: { hoverRadius: 7 } }
         }
       });
+      // Draw diagonal guide line
     });
-  }
 
     // Build all-cars table
     const tbl = document.getElementById('all-cars-table');
