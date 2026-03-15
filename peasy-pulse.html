@@ -674,7 +674,9 @@ function render(data, rows) {
         else if (status.includes('returnert')) pts.returned.push(pt);
         else pts.other.push(pt);
       }
-      const maxVal = Math.max(...[...pts.sold,...pts.returned,...pts.other].map(p=>Math.max(p.x,p.y)), 100);
+      const allVals = [...pts.sold,...pts.returned,...pts.other].flatMap(p=>[p.x,p.y]).sort((a,b)=>a-b);
+      const p95 = allVals[Math.floor(allVals.length*0.95)] || 100;
+      const maxVal = Math.min(p95 * 1.1, Math.max(...allVals)) + 20;
       if (Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
       new Chart(canvas, {
         type: 'scatter',
@@ -700,6 +702,55 @@ function render(data, rows) {
       });
       // Draw diagonal guide line
     });
+
+    // Build all-cars table
+    const tbl = document.getElementById('all-cars-table');
+    if (tbl && rows) {
+      const CUTOFF2 = new Date('2025-11-01');
+      const xPctFor = (dMid) => dMid <= 100000 ? 0.102 : dMid <= 250000 ? -0.089 : dMid <= 400000 ? -0.046 : -0.073;
+      const carRows = rows.slice(1).filter(r => {
+        if (!r[1] || !r[3] || r[3]==='-') return false;
+        const d = parseDate(r[13]);
+        return d && d >= CUTOFF2;
+      }).sort((a,b) => (parseDate(b[13])||0) - (parseDate(a[13])||0));
+
+      let html = '<table style="width:100%;font-size:11px;border-collapse:collapse">';
+      html += '<thead><tr style="background:#004225;color:#fff">';
+      html += '<th style="padding:6px 8px;text-align:left">Dato</th>';
+      html += '<th style="padding:6px 8px;text-align:left">RegNr</th>';
+      html += '<th style="padding:6px 8px;text-align:left">Bil</th>';
+      html += '<th style="padding:6px 8px;text-align:right">D lav</th>';
+      html += '<th style="padding:6px 8px;text-align:right">D høy</th>';
+      html += '<th style="padding:6px 8px;text-align:right">Est. bud (E)</th>';
+      html += '<th style="padding:6px 8px;text-align:right">Høyeste bud</th>';
+      html += '<th style="padding:6px 8px;text-align:left">Status</th>';
+      html += '</tr></thead><tbody>';
+
+      carRows.forEach((r, i) => {
+        const ar = String(r[3]).replace(/[\s\u00a0]/g,'');
+        const parts = ar.split('-');
+        const dLow = parseInt(parts[0]) || 0;
+        const dHigh = parseInt(parts[1] || parts[0]) || 0;
+        const dMid = dLow > 0 ? Math.round(dLow / 0.95) : 0;
+        const xPct = xPctFor(dMid);
+        const eBud = dLow > 0 ? Math.round(dLow * (1 + xPct) / 1000) : null;
+        const bud = parseInt(r[4]) || 0;
+        const bg = i % 2 === 0 ? '#fff' : '#f9f9f9';
+        const budColor = bud > 0 ? (bud >= dLow ? '#2E7D32' : '#C62828') : '#999';
+        html += '<tr style="background:' + bg + '">';
+        html += '<td style="padding:5px 8px;color:#666">' + (r[13] ? String(r[13]).slice(0,10) : '') + '</td>';
+        html += '<td style="padding:5px 8px;font-weight:700">' + (r[1]||'') + '</td>';
+        html += '<td style="padding:5px 8px">' + (r[6]||'') + ' ' + (r[7]||'') + ' ' + (r[8]||'') + '</td>';
+        html += '<td style="padding:5px 8px;text-align:right">' + (dLow ? Math.round(dLow/1000)+'k' : '–') + '</td>';
+        html += '<td style="padding:5px 8px;text-align:right">' + (dHigh ? Math.round(dHigh/1000)+'k' : '–') + '</td>';
+        html += '<td style="padding:5px 8px;text-align:right;font-weight:700">' + (eBud ? '~'+eBud+'k' : '–') + '</td>';
+        html += '<td style="padding:5px 8px;text-align:right;color:' + budColor + ';font-weight:700">' + (bud ? Math.round(bud/1000)+'k' : '–') + '</td>';
+        html += '<td style="padding:5px 8px;font-size:10px;color:#555">' + (r[12]||'') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      tbl.innerHTML = html;
+    }
   }
 
   requestAnimationFrame(() => {
