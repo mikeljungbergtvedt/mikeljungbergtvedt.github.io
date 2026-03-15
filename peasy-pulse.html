@@ -142,6 +142,7 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
+  if (m==='fin') render(window._lastData, window._lastRows);
   document.getElementById('btn-eval').classList.toggle('active', m==='eval');
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
@@ -425,6 +426,7 @@ function buildEvalHtml(data, rows) {
 }
 
 function render(data, rows) {
+  window._lastData = data; window._lastRows = rows;
   const bs           = bracketStats(data);
   const totalEval    = data.evaluated.length;
   const totalMottatt = data.mottatt.length;
@@ -649,6 +651,56 @@ function render(data, rows) {
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
     <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
   `;
+
+  // Build scatter chart if on fin tab
+  if (currentMode === 'fin') {
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('scatter');
+      if (!canvas || !rows) return;
+      const CUTOFF = new Date('2025-11-01');
+      const pts = { sold: [], returned: [], other: [] };
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r[1] || !r[3] || r[3]==='-' || !r[4] || r[4]===0) continue;
+        const d = parseDate(r[13]);
+        if (!d || d < CUTOFF) continue;
+        const parts = String(r[3]).replace(/[\s\u00a0]/g,'').split('-');
+        const dLow = parseInt(parts[0]);
+        const bud  = parseInt(r[4]);
+        if (!dLow || !bud) continue;
+        const status = String(r[12]||'').toLowerCase();
+        const pt = { x: Math.round(dLow/1000), y: Math.round(bud/1000) };
+        if (status.includes('solgt') || status.includes('salgsmelding') || status.includes('budaksept') || status.includes('signering')) pts.sold.push(pt);
+        else if (status.includes('returnert')) pts.returned.push(pt);
+        else pts.other.push(pt);
+      }
+      const maxVal = Math.max(...[...pts.sold,...pts.returned,...pts.other].map(p=>Math.max(p.x,p.y)), 100);
+      if (Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
+      new Chart(canvas, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'Solgt', data: pts.sold, backgroundColor: 'rgba(46,125,50,0.7)', pointRadius: 5 },
+            { label: 'Returnert', data: pts.returned, backgroundColor: 'rgba(198,40,40,0.7)', pointRadius: 5 },
+            { label: 'Andre', data: pts.other, backgroundColor: 'rgba(180,180,180,0.5)', pointRadius: 4 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': Pris lav ' + ctx.parsed.x + 'k — Bud ' + ctx.parsed.y + 'k' } }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Pris lav (1000 kr)' }, min: 0, max: maxVal + 20 },
+            y: { title: { display: true, text: 'Høyeste bud (1000 kr)' }, min: 0, max: maxVal + 20 }
+          },
+          elements: { point: { hoverRadius: 7 } }
+        }
+      });
+      // Draw diagonal guide line
+    });
+  }
 
   requestAnimationFrame(() => {
     drawArc(document.getElementById('arc0'), 100, '#004225');
