@@ -106,23 +106,6 @@ canvas{width:100%;border-radius:8px;}
 }
   .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
   .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
-
-  @media (max-width:768px){
-    .dials-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px;padding:10px!important}
-    .dial-card{padding:12px 8px!important}
-    .dial-label{font-size:9px!important}
-    .dial-value{font-size:24px!important}
-    .pipeline-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
-    .brackets-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
-    .mode-btn{padding:5px 10px;font-size:12px}
-    .table-card{padding:8px!important;overflow-x:auto}
-    table{font-size:10px!important}
-    th,td{padding:4px 5px!important}
-  }
-  @media (max-width:480px){
-    .pipeline-grid{grid-template-columns:1fr!important}
-    .brackets-grid{grid-template-columns:1fr!important}
-  }
 </style>
 </head>
 <body>
@@ -625,7 +608,7 @@ function render(data, rows) {
     <div class="plot-explain">
       <strong>Hva viser dette?</strong> Hver prikk er én bil. X-aksen er <em>Pris lav</em> — den laveste grensen Peasy sender til selger. Y-aksen er <em>Høyeste bud</em> på auksjonen. Den stiplede linjen er perfekt treff (Bud = Pris lav). Grønne prikker <em>over</em> linjen = bud høyere enn Pris lav (bra!). Røde prikker <em>under</em> = returneringsrisiko.
     </div>
-    <canvas id="scatter" style="width:100%;height:300px;max-height:300px;display:block"></canvas></canvas>
+    <canvas id="scatter" height="300"></canvas>
   </div>
   <div class="section-label">Kostbare returneringer &amp; beste pristreff</div>
   <div class="two-col">
@@ -695,59 +678,30 @@ function render(data, rows) {
       const p95 = allVals[Math.floor(allVals.length*0.95)] || 100;
       const maxVal = Math.min(p95 * 1.1, Math.max(...allVals)) + 20;
       if (Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-      const CUTOFF3 = new Date('2025-11-01');
-      const bDefs = [
-        {label:'Lav 0-100k',    lo:0,      hi:100000},
-        {label:'Mid 100-250k',  lo:100000, hi:250000},
-        {label:'H\u00f8y 250-400k', lo:250000, hi:400000},
-        {label:'Premium 400k+', lo:400000, hi:Infinity},
-      ];
-      const bStats = bDefs.map(b => {
-        const sold = rows.slice(1).filter(r => {
-          if (!r[1]||!r[3]||r[3]==='-'||!r[4]||r[4]===0) return false;
-          const d = parseDate(r[13]); if (!d||d<CUTOFF3) return false;
-          const parts = String(r[3]).replace(/[\s\u00a0]/g,'').split('-');
-          const dLow = parseInt(parts[0]);
-          const st = String(r[12]||'').toLowerCase();
-          return dLow>=b.lo && dLow<b.hi && (st.includes('solgt')||st.includes('salgsmelding')||st.includes('budaksept')||st.includes('signering'));
-        });
-        if (!sold.length) return {n:0, avg:0};
-        const avg = sold.reduce((s,r) => {
-          const parts = String(r[3]).replace(/[\s\u00a0]/g,'').split('-');
-          return s + (parseInt(r[4]) - parseInt(parts[0])) / parseInt(parts[0]) * 100;
-        }, 0) / sold.length;
-        return {n: sold.length, avg: Math.round(avg*10)/10};
-      });
       new Chart(canvas, {
-        type: 'bar',
+        type: 'scatter',
         data: {
-          labels: bStats.map((b,i) => bDefs[i].label),
-          datasets: [{
-            label: 'Avg bud vs D lav (%)',
-            data: bStats.map(b => b.avg),
-            backgroundColor: bStats.map(b => b.avg>=0 ? 'rgba(46,125,50,0.8)' : 'rgba(198,40,40,0.8)'),
-            borderRadius: 6,
-            barThickness: 60,
-          }]
+          datasets: [
+            { label: 'Solgt', data: pts.sold, backgroundColor: 'rgba(46,125,50,0.7)', pointRadius: 5 },
+            { label: 'Returnert', data: pts.returned, backgroundColor: 'rgba(198,40,40,0.7)', pointRadius: 5 },
+            { label: 'Andre', data: pts.other, backgroundColor: 'rgba(180,180,180,0.5)', pointRadius: 4 },
+          ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: {display:false},
-            tooltip: {callbacks:{label: ctx => ctx.parsed.y.toFixed(1)+'%  ('+bStats[ctx.dataIndex].n+' biler)'}}
+            legend: { position: 'top' },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': Pris lav ' + ctx.parsed.x + 'k — Bud ' + ctx.parsed.y + 'k' } }
           },
           scales: {
-            x: {ticks:{font:{size:12,weight:'bold'}}},
-            y: {
-              ticks:{callback: v => v+'%', font:{size:11}},
-              title:{display:true, text:'Bud vs D lav (%)'},
-              grid:{color:'rgba(0,0,0,0.06)'}
-            }
-          }
+            x: { title: { display: true, text: 'Pris lav (1000 kr)' }, min: 0, max: maxVal + 20 },
+            y: { title: { display: true, text: 'Høyeste bud (1000 kr)' }, min: 0, max: maxVal + 20 }
+          },
+          elements: { point: { hoverRadius: 7 } }
         }
       });
+      // Draw diagonal guide line
     });
-  }
 
     // Build all-cars table
     const tbl = document.getElementById('all-cars-table');
