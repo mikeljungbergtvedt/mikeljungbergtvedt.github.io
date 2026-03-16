@@ -6,7 +6,7 @@
 <title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-window.getWeekNumber = function(d){
+window._getWeekNum = function(d){
   var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
   var dayNum=date.getUTCDay()||7;
   date.setUTCDate(date.getUTCDate()+4-dayNum);
@@ -14,7 +14,7 @@ window.getWeekNumber = function(d){
   return Math.ceil((((date-yearStart)/86400000)+1)/7);
 }
 
-window.renderUke = function(){
+window._renderUke = function(){
   var el=document.getElementById('app');
   var rows=window._lastRows;
   if(!el||!rows)return;
@@ -29,7 +29,7 @@ window.renderUke = function(){
   function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');return p.length===3?new Date(p[2]+'-'+p[1]+'-'+p[0]):new Date(s);}
   function inW(v){var d=pd(v);return d&&d>=wStart&&d<wEnd;}
   var fmtD=function(d){return d.toLocaleDateString('nb-NO',{day:'2-digit',month:'short'});};
-  var wkn=getWeekNumber(wStart);
+  var wkn=window._getWeekNum(wStart);
   var fmtW='Uke '+wkn+' · '+fmtD(wStart)+' – '+fmtD(wSun)+' '+wSun.getFullYear();
   var ev=0,sold=0,ret=0,av=0;
   var soldR=[],retR=[];
@@ -285,9 +285,9 @@ function setMode(m) {
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
-  var b=document.getElementById('btn-uke');if(b)b.classList.toggle('active',m==='uke');
-  if(m==='uke')setTimeout(function(){window.renderUke&&window.renderUke();},80);
-  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},80);
+  var bu=document.getElementById('btn-uke');if(bu)bu.classList.toggle('active',m==='uke');
+  if(m==='uke')setTimeout(function(){window._renderUke&&window._renderUke();},100);
+  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
 }
 
 function parseDLow(val) {
