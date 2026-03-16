@@ -143,6 +143,36 @@ function renderUke(){
     +'</div>';
 }
 
+
+function renderUkeTab(rows,el){
+  if(!rows||!el)return;
+  if(window._ukeOff===undefined)window._ukeOff=0;
+  var off=window._ukeOff;
+  var now=new Date(),dow=now.getDay()||7;
+  var mon=new Date(now);mon.setHours(0,0,0,0);mon.setDate(now.getDate()-(dow-1));
+  var wS=new Date(mon);wS.setDate(mon.getDate()-7+off*7);
+  var wE=new Date(wS);wE.setDate(wS.getDate()+7);
+  function pd(v){var p=String(v||'').trim().slice(0,10).split('.');return p.length===3?new Date(p[2]+'-'+p[1]+'-'+p[0]):null;}
+  function iw(v){var d=pd(v);return d&&d>=wS&&d<wE;}
+  var d2=new Date(Date.UTC(wS.getFullYear(),wS.getMonth(),wS.getDate()));
+  var dn=d2.getUTCDay()||7;d2.setUTCDate(d2.getUTCDate()+4-dn);
+  var ys=new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+  var wn=Math.ceil((((d2-ys)/86400000)+1)/7);
+  var mo=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  var lbl='Uke '+wn+' - '+wS.getDate()+'. '+mo[wS.getMonth()]+' til '+(new Date(wE-1)).getDate()+'. '+mo[(new Date(wE-1)).getMonth()];
+  var ev=rows.filter(function(r){return iw(r[14])&&r[3]&&r[3]!=='-';}).length;
+  var sol=rows.filter(function(r){return iw(r[18]);});
+  var ret=rows.filter(function(r){return iw(r[21]);});
+  var av=rows.filter(function(r){return String(r[12]||'').toLowerCase().indexOf('avvist')>-1&&iw(r[14]);}).length;
+  var pa=sol.length+ret.length,rate=pa>0?Math.round(sol.length/pa*100):0;
+  var gebyr=sol.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
+  var rc=rate>=70?'#2d6a2d':'#c62828';
+  var th='padding:6px;text-align:left;border-bottom:2px solid #eee';
+  var sh=sol.slice().sort(function(a,b){return(pd(a[18])||0)-(pd(b[18])||0);}).map(function(r){return'<tr><td style="padding:6px">'+String(r[18]||'').slice(0,10)+'</td><td style="padding:6px;color:#004225;font-weight:600">'+r[1]+'</td><td style="padding:6px">'+r[6]+' '+r[7]+' '+r[8]+'</td><td style="padding:6px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'-')+'</td><td style="padding:6px;text-align:right;color:#004225;font-weight:600">'+(r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'-')+'</td></tr>';}).join('')||'<tr><td colspan="5" style="padding:10px;text-align:center;color:#888">Ingen solgte</td></tr>';
+  var rh=ret.slice().sort(function(a,b){return(pd(a[21])||0)-(pd(b[21])||0);}).map(function(r){return'<tr><td style="padding:6px">'+String(r[21]||'').slice(0,10)+'</td><td style="padding:6px;color:#c62828;font-weight:600">'+r[1]+'</td><td style="padding:6px">'+r[6]+' '+r[7]+' '+r[8]+'</td><td style="padding:6px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'-')+'</td></tr>';}).join('')||'<tr><td colspan="4" style="padding:10px;text-align:center;color:#888">Ingen returnerte</td></tr>';
+  el.innerHTML='<div style="padding:24px;max-width:900px;margin:0 auto;font-family:Arial,sans-serif"><div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px"><button onclick="window._ukeOff--;setMode('uke')" style="background:none;border:1px solid #ccc;border-radius:6px;padding:6px 14px;cursor:pointer">&#8592; Forrige</button><div style="font-size:18px;font-weight:700">'+lbl+'</div><button onclick="window._ukeOff++;setMode('uke')" '+(off>=0?'disabled style="opacity:.3"':'')+' style="background:none;border:1px solid #ccc;border-radius:6px;padding:6px 14px;cursor:pointer">Neste &#8594;</button></div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px"><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:#1565c0">'+ev+'</div><div style="font-size:12px;color:#666;margin-top:4px">Evaluert</div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:#6a1b9a">'+pa+'</div><div style="font-size:12px;color:#666;margin-top:4px">Pa auksjon</div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:#2d6a2d">'+sol.length+'</div><div style="font-size:12px;color:#666;margin-top:4px">Solgt</div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:#c62828">'+ret.length+'</div><div style="font-size:12px;color:#666;margin-top:4px">Ikke solgt</div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:#e65100">'+av+'</div><div style="font-size:12px;color:#666;margin-top:4px">Avvist</div></div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>Auksjonsrate</b><b style="color:'+rc+'">'+rate+'%</b></div><div style="background:#eee;height:10px;border-radius:4px;position:relative"><div style="background:'+rc+';width:'+Math.min(rate,100)+'%;height:100%;border-radius:4px"></div><div style="position:absolute;left:70%;top:-4px;width:2px;height:18px;background:#333"></div></div><div style="margin-top:8px;font-size:13px;color:#666">Gebyr: <b style="color:#004225">'+gebyr.toLocaleString('nb-NO')+' kr</b></div></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;margin-bottom:20px"><h3 style="margin:0 0 10px">Solgte ('+sol.length+')</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5f5"><th style="'+th+'">Dato</th><th style="'+th+'">RegNr</th><th style="'+th+'">Bil</th><th style="'+th+';text-align:right">Bud</th><th style="'+th+';text-align:right">Gebyr</th></tr></thead><tbody>'+sh+'</tbody></table></div><div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px"><h3 style="margin:0 0 10px">Ikke solgt ('+ret.length+')</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5f5"><th style="'+th+'">Dato</th><th style="'+th+'">RegNr</th><th style="'+th+'">Bil</th><th style="'+th+';text-align:right">Bud</th></tr></thead><tbody>'+rh+'</tbody></table></div></div>';
+}
+
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -285,6 +315,36 @@ function setMode(m) {
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
+  var bu=document.getElementById('btn-uke');if(bu)bu.classList.toggle('active',m==='uke');
+  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
+  if(m==='uke')setTimeout(function(){
+    var el=document.getElementById('uke-section'),rows=window._lastRows;
+    if(!el||!rows)return;
+    if(window._ukeOffset===undefined)window._ukeOffset=0;
+    var off=window._ukeOffset,now=new Date(),dow=now.getDay()||7;
+    var m0=new Date(now);m0.setHours(0,0,0,0);m0.setDate(now.getDate()-(dow-1));
+    var wS=new Date(m0);wS.setDate(m0.getDate()-7+off*7);
+    var wE=new Date(wS);wE.setDate(wS.getDate()+7);
+    function pd(v){var s=String(v||'').trim().slice(0,10).split('.');return s.length===3?new Date(s[2]+'-'+s[1]+'-'+s[0]):null;}
+    function inW(v){var d=pd(v);return d&&d>=wS&&d<wE;}
+    var mo=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+    var d2=new Date(Date.UTC(wS.getFullYear(),wS.getMonth(),wS.getDate())),dn=d2.getUTCDay()||7;
+    d2.setUTCDate(d2.getUTCDate()+4-dn);var ys=new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+    var wn=Math.ceil((((d2-ys)/86400000)+1)/7);
+    var wl='Uke '+wn+' - '+wS.getDate()+'. '+mo[wS.getMonth()]+' - '+(wE.getDate()-1)+'. '+mo[wE.getMonth()-1>=0?wE.getMonth()-1:11]+' '+wE.getFullYear();
+    var ev=rows.filter(function(r){return inW(r[14])&&r[3]&&r[3]!=='-';}).length;
+    var sol=rows.filter(function(r){return inW(r[18]);});
+    var ret=rows.filter(function(r){return inW(r[21]);});
+    var av=rows.filter(function(r){return String(r[12]||'').toLowerCase().indexOf('avvist')>-1&&inW(r[14]);}).length;
+    var pa=sol.length+ret.length,rate=pa>0?Math.round(sol.length/pa*100):0;
+    var gebyr=sol.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
+    var rc=rate>=70?'#2d6a2d':'#c62828';
+    var kpis=[['Evaluert',ev,'#1565c0'],['Pa auksjon',pa,'#6a1b9a'],['Solgt',sol.length,'#2d6a2d'],['Ikke solgt',ret.length,'#c62828'],['Avvist',av,'#e65100']];
+    var sh=sol.slice().sort(function(a,b){return(pd(a[18])||0)-(pd(b[18])||0);}).map(function(r){return'<tr><td style="padding:6px">'+String(r[18]||'').slice(0,10)+'</td><td style="padding:6px;color:#004225;font-weight:600">'+r[1]+'</td><td style="padding:6px">'+r[6]+' '+r[7]+' '+r[8]+'</td><td style="padding:6px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'-')+'</td><td style="padding:6px;text-align:right;color:#004225;font-weight:600">'+(r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'-')+'</td></tr>';}).join('')||'<tr><td colspan="5" style="padding:10px;text-align:center;color:#999">Ingen solgte</td></tr>';
+    var rh=ret.slice().sort(function(a,b){return(pd(a[21])||0)-(pd(b[21])||0);}).map(function(r){return'<tr><td style="padding:6px">'+String(r[21]||'').slice(0,10)+'</td><td style="padding:6px;color:#c62828;font-weight:600">'+r[1]+'</td><td style="padding:6px">'+r[6]+' '+r[7]+' '+r[8]+'</td><td style="padding:6px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'-')+'</td></tr>';}).join('')||'<tr><td colspan="4" style="padding:10px;text-align:center;color:#999">Ingen returnerte</td></tr>';
+    el.innerHTML='<div style="padding:24px;max-width:900px;margin:0 auto;font-family:Arial,sans-serif">'+'<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px">'+'<button onclick="window._ukeOffset--;setMode('uke')" style="background:none;border:1px solid #ccc;border-radius:6px;padding:6px 14px;cursor:pointer">&#8592; Forrige</button>'+'<div style="font-size:18px;font-weight:700;text-align:center">'+wl+'</div>'+'<button onclick="window._ukeOffset++;setMode('uke')" '+(off>=0?'disabled style="opacity:.3"':'')+' style="background:none;border:1px solid #ccc;border-radius:6px;padding:6px 14px;cursor:pointer">Neste &#8594;</button>'+'</div>'+'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">'+kpis.map(function(x){return'<div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;text-align:center"><div style="font-size:28px;font-weight:700;color:'+x[2]+'">'+x[1]+'</div><div style="font-size:12px;color:#666;margin-top:4px">'+x[0]+'</div></div>';}).join('')+'</div>'+'<div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>Auksjonsrate</b><b style="color:'+rc+'">'+rate+'% <span style="font-weight:400;color:#888">(mal 70%)</span></b></div><div style="background:#eee;height:10px;border-radius:4px;position:relative"><div style="background:'+rc+';width:'+Math.min(rate,100)+'%;height:100%;border-radius:4px"></div><div style="position:absolute;left:70%;top:-4px;width:2px;height:18px;background:#333"></div></div><div style="margin-top:8px;font-size:13px;color:#666">Gebyr: <b style="color:#004225">'+gebyr.toLocaleString('nb-NO')+' kr</b></div></div>'+'<div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px;margin-bottom:20px"><h3 style="margin:0 0 10px;font-size:15px">Solgte biler ('+sol.length+')</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5f5"><th style="padding:6px;text-align:left">Dato</th><th style="padding:6px;text-align:left">RegNr</th><th style="padding:6px;text-align:left">Bil</th><th style="padding:6px;text-align:right">Bud</th><th style="padding:6px;text-align:right">Gebyr</th></tr></thead><tbody>'+sh+'</tbody></table></div>'+'<div style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px"><h3 style="margin:0 0 10px;font-size:15px">Ikke solgt ('+ret.length+')</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5f5"><th style="padding:6px;text-align:left">Dato</th><th style="padding:6px;text-align:left">RegNr</th><th style="padding:6px;text-align:left">Bil</th><th style="padding:6px;text-align:right">Bud</th></tr></thead><tbody>'+rh+'</tbody></table></div></div>';
+  },100);
+  if(m==='uke')setTimeout(function(){renderUkeTab(window._lastRows,document.getElementById('uke-section'));},100);
 }
 
 function parseDLow(val) {
@@ -467,7 +527,7 @@ function buildEvalHtml(data, rows) {
     return (da||0) - (db||0);
   });
 
-  let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
+  let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
   h += '<div class="table-card" style="margin-bottom:24px"><table>';
   h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
   if (!evalRows.length) {
@@ -791,6 +851,7 @@ function render(data, rows) {
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
     <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
+  <div class="mode-section" data-mode="uke" id="uke-section"></div>
   `;
 
   requestAnimationFrame(() => {
