@@ -5,74 +5,723 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-window.getWeekNumber = function(d){
-  var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-  var dayNum=date.getUTCDay()||7;
-  date.setUTCDate(date.getUTCDate()+4-dayNum);
-  var yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));
-  return Math.ceil((((date-yearStart)/86400000)+1)/7);
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --green: #004225; --green2: #006644; --accent: #00875A; --yellow: #FFCC33;
+  --bg0: #F2F7F9; --bg1: #E8F0F5; --card: rgba(255,255,255,0.97);
+  --border: rgba(0,66,37,0.08); --shadow: rgba(0,66,37,0.07);
+  --text: #004225; --muted: #667; --red: #C62828; --red-bg: #FDECEA;
+  --orange: #E65100; --ora-bg: #FFF3E0; --blue: #1565C0; --blu-bg: #E3F2FD;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--bg0),var(--bg1));color:var(--text);min-height:100vh;}
+header{background:var(--green);height:64px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;}
+.logo img{height:28px;}
+.header-right{display:flex;align-items:center;gap:16px;}
+.pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.1);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.85);}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.mode-toggle{display:flex;background:rgba(255,255,255,0.1);border-radius:99px;padding:3px;gap:2px;}
+.mode-btn{font-size:11px;font-weight:600;padding:5px 14px;border-radius:99px;border:none;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:rgba(255,255,255,0.65);background:transparent;}
+.mode-btn.active{background:var(--yellow);color:var(--green);}
+main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;margin-top:40px;}
+.section-label:first-child{margin-top:0;}
+.dials-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:14px;}
+.dial-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px 16px 16px;box-shadow:0 4px 24px var(--shadow);text-align:center;position:relative;overflow:hidden;}
+.dial-label{font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.arc-wrap{position:relative;width:110px;height:64px;margin:0 auto 10px;}
+.arc-wrap svg{width:110px;height:64px;}
+.dial-value{font-size:26px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.dial-unit{font-size:10px;font-weight:500;color:var(--muted);margin-top:2px;}
+.dial-sub{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.3;}
+.target-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;margin-top:6px;letter-spacing:0.5px;}
+.on-target .target-tag{background:#E8F5E9;color:#2E7D32;}
+.off-target .target-tag{background:var(--red-bg);color:var(--red);}
+.neutral .target-tag{background:#FFFDE7;color:#F57F17;}
+.dial-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.on-target::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
+.off-target::after{background:linear-gradient(90deg,var(--red),#EF9A9A);}
+.neutral::after{background:linear-gradient(90deg,var(--yellow),#FFE082);}
+.brackets-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.bracket-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);border-top:3px solid var(--bc);}
+.bc-label{font-size:12px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.bc-range{font-size:10px;font-weight:500;color:var(--muted);}
+.bc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.bc-row:last-child{border-bottom:none;}
+.bc-key{color:var(--muted);font-weight:500;}
+.bc-val{font-weight:700;}
+.pos{color:#2E7D32;} .neg{color:var(--red);} .warn{color:var(--orange);}
+.x-rec{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(0,66,37,0.04);font-size:11px;}
+.x-rec-label{color:var(--muted);font-weight:500;margin-bottom:3px;}
+.x-rec-val{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
+.pipeline-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.car-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:0 3px 16px var(--shadow);display:flex;flex-direction:column;gap:6px;}
+.car-top{display:flex;align-items:center;justify-content:space-between;}
+.car-regnr{font-size:15px;font-weight:800;color:var(--green);letter-spacing:0.3px;}
+.car-model{font-size:12px;color:var(--muted);font-weight:500;}
+.car-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;}
+.b-mottatt{background:var(--blu-bg);color:var(--blue);}
+.b-produksjon{background:#F3E5F5;color:#6A1B9A;}
+.b-auksjon{background:#E8EAF6;color:#283593;}
+.b-ferdig{background:#E8F5E9;color:#2E7D32;}
+.car-days{font-size:11px;font-weight:600;}
+.days-ok{color:var(--accent);} .days-warn{color:var(--orange);} .days-over{color:var(--red);}
+.car-detail{font-size:11px;color:var(--muted);display:flex;gap:10px;}
+.progress-bar{height:4px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;margin-top:4px;}
+.progress-fill{height:100%;border-radius:99px;transition:width 0.6s ease;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px var(--shadow);}
+.th{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.th-title{font-size:13px;font-weight:700;}
+.th-badge{font-size:11px;background:var(--bg0);color:var(--muted);padding:3px 10px;border-radius:99px;}
+.th-note{font-size:10px;color:var(--muted);font-style:italic;padding:6px 18px 10px;border-bottom:1px solid var(--border);background:rgba(0,66,37,0.015);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:rgba(0,66,37,0.03);}
+th{text-align:left;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);padding:9px 14px;border-bottom:1px solid var(--border);}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(0,66,37,0.04);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(0,66,37,0.015);}
+.regnr{font-weight:700;color:var(--green);font-size:13px;}
+.car-name{font-size:11px;color:var(--muted);display:block;margin-top:1px;}
+.gap-bar-wrap{width:60px;height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px;}
+.gap-bar{height:100%;border-radius:99px;}
+.plot-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);}
+.plot-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.plot-explain{font-size:11px;color:var(--muted);padding:10px 14px;background:rgba(0,66,37,0.03);border-radius:8px;margin-bottom:14px;line-height:1.6;}
+canvas{width:100%;border-radius:8px;}
+.mode-section{display:none;}
+.mode-section.visible{display:block;}
+.loading{text-align:center;padding:80px;color:var(--muted);font-size:14px;}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){
+  .dials-grid{grid-template-columns:repeat(2,1fr);}
+  .brackets-grid{grid-template-columns:repeat(2,1fr);}
+  .two-col{grid-template-columns:1fr;}
+  header{padding:0 20px;}
+  main{padding:24px 16px 60px;}
+}
+  .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
+  .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy">
+  </div>
+  <div class="header-right">
+      <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&#8592; portal</a>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
+      <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
+    </div>
+    <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
+  </div>
+</header>
+<main>
+  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen…</div></div>
+</main>
+<script>
+const API      = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+const TARGETS  = { evalMottatt: 10, mottattSolgt: 70, prodDays: 3 };
+const CUTOFF   = new Date('2025-11-01');
+const BRACKETS = [
+  { name:'Lav',     range:'0–100k',   lo:0,      hi:100000,  color:'#00875A' },
+  { name:'Mid',     range:'100–250k', lo:100000,  hi:250000,  color:'#1565C0' },
+  { name:'Høy',     range:'250–400k', lo:250000,  hi:400000,  color:'#E65100' },
+  { name:'Premium', range:'400k+',    lo:400000,  hi:9999999, color:'#6A1B9A' },
+];
+let currentMode = 'ops';
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('btn-ops').classList.toggle('active', m==='ops');
+  document.getElementById('btn-fin').classList.toggle('active', m==='fin');
+  document.getElementById('btn-eval').classList.toggle('active', m==='eval');
+  document.querySelectorAll('.mode-section').forEach(el =>
+    el.classList.toggle('visible', el.dataset.mode === m)
+  );
 }
 
-window.renderUke = function(){
-  var el=document.getElementById('uke-section');
-  var rows=window._lastRows;
-  if(!el||!rows)return;
-  if(window._ukeOffset===undefined)window._ukeOffset=0;
-  var offset=window._ukeOffset;
-  var now=new Date();
-  var dow=now.getDay()===0?7:now.getDay();
-  var thisMon=new Date(now);thisMon.setDate(now.getDate()-dow+1);thisMon.setHours(0,0,0,0);
-  var wStart=new Date(thisMon);wStart.setDate(thisMon.getDate()-7+offset*7);
-  var wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+7);
-  var wSun=new Date(wEnd);wSun.setDate(wEnd.getDate()-1);
-  function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');return p.length===3?new Date(p[2]+'-'+p[1]+'-'+p[0]):new Date(s);}
-  function inW(v){var d=pd(v);return d&&d>=wStart&&d<wEnd;}
-  var fmtD=function(d){return d.toLocaleDateString('nb-NO',{day:'2-digit',month:'short'});};
-  var wkn=getWeekNumber(wStart);
-  var fmtW='Uke '+wkn+' · '+fmtD(wStart)+' – '+fmtD(wSun)+' '+wSun.getFullYear();
-  var ev=0,sold=0,ret=0,av=0;
-  var soldR=[],retR=[];
-  rows.slice(1).forEach(function(r){
-    var st=String(r[12]||'');
-    var ar=String(r[3]||'');
-    if(inW(r[14])&&ar&&ar!=='-'&&ar.includes('-'))ev++;
-    if(inW(r[18])){sold++;soldR.push({reg:r[1],bil:(r[6]||'')+' '+(r[7]||'')+' '+(r[8]||''),dato:String(r[18]).slice(0,10),bud:parseInt(r[4])||0,fee:parseInt(r[20])||0});}
-    if(inW(r[21])){ret++;retR.push({reg:r[1],bil:(r[6]||'')+' '+(r[7]||'')+' '+(r[8]||''),dato:String(r[21]).slice(0,10),bud:parseInt(r[4])||0});}
-    if(st==='Avvist by customer'&&inW(r[14]))av++;
+function parseDLow(val) {
+  if (!val || val === '-') return null;
+  const s = String(val).replace(/\s|\u00a0/g,'');
+  const n = parseInt(s.split('-')[0]);
+  return isNaN(n) ? null : n;
+}
+
+function parseDate(val) {
+  if (!val) return null;
+  const s = String(val).trim().slice(0,10);
+  const parts = s.split('.');
+  if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+  return null;
+}
+
+function daysAgo(val) {
+  if (!val) return '–';
+  const d = parseDate(val);
+  if (!d || isNaN(d)) return '–';
+  const n = Math.floor((Date.now() - d) / 86400000);
+  if (n === 0) return 'I dag';
+  if (n === 1) return 'I går';
+  return `${n}d siden`;
+}
+
+function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : '–'; }
+function fmtPct(n) { if (n===null||n===undefined) return '–'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
+function fmtDate(val) {
+  if (!val) return '–';
+  const d = parseDate(val);
+  if (!d || isNaN(d)) return '–';
+  return d.toLocaleDateString('nb-NO', { day:'numeric', month:'short' });
+}
+function pct(n, of) { return of ? Math.round(n/of*100) : 0; }
+function avg(arr)   { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+
+async function loadData() {
+  const res = await fetch(API);
+  const buf = await res.arrayBuffer();
+  const wb  = XLSX.read(buf, { type:'array' });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header:1 });
+}
+
+function processData(rows) {
+  const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[] };
+  for (let i = 1; i < rows.length; i++) {
+    const r     = rows[i];
+    const regnr = r[1];
+    if (!regnr) continue;
+    const nDate = parseDate(r[13]);
+    if (nDate && nDate < CUTOFF) continue;
+
+    const merke  = r[6]  || '';
+    const modell = r[7]  || '';
+    const year   = r[8]  || '';
+    const label  = [merke, modell, year].filter(Boolean).join(' ');
+    const dLow   = parseDLow(r[3]);
+    const t      = r[19] ? parseInt(String(r[19]).replace(/[\s\u00a0]/g,'')) || null : null;
+    const u      = r[20] ? parseInt(String(r[20]).replace(/[\s\u00a0]/g,'')) || null : null;
+
+    // r[17] = Mottatt (R) — fysisk mottatt på anlegg
+    // r[18] = Solgt på (S)
+    // r[21] = Returnert på (V)
+    const rDate = r[17] && String(r[17]).trim() !== '' ? r[17] : null;
+    const sDate = r[18] && String(r[18]).trim() !== '' ? r[18] : null;
+    const vDate = r[21] && String(r[21]).trim() !== '' ? r[21] : null;
+    const km     = r[22];
+    const status = String(r[12] || '');
+
+    const car = { regnr, label, merke, modell, year, dLow, t, u, rDate, sDate, vDate, km, status, registrertDato: r[13] };
+
+    if (dLow)  data.evaluated.push(car);
+    if (rDate) data.mottatt.push(car);
+
+    if (sDate && dLow && t) {
+      const e = (t && u) ? t - u : t;
+      data.sold.push({ ...car, e, gap: (e - dLow) / dLow * 100 });
+    }
+    if (vDate && dLow && t && t > 0) {
+      const e = (t && u) ? t - u : t;
+      data.returned.push({ ...car, e, gap: (e - dLow) / dLow * 100 });
+    }
+    if (rDate && !sDate && !vDate) {
+      const mottattDate      = parseDate(rDate);
+      const daysSinceMottatt = mottattDate ? Math.floor((Date.now()-mottattDate)/86400000) : null;
+      data.inProd.push({ ...car, daysSinceMottatt, mottattDate });
+    }
+  }
+  return data;
+}
+
+function bracketStats(data) {
+  return BRACKETS.map(b => {
+    const evalB = data.evaluated.filter(c => c.dLow >= b.lo && c.dLow < b.hi);
+    const motB  = data.mottatt.filter(c   => c.dLow >= b.lo && c.dLow < b.hi);
+    const soldB = data.sold.filter(c      => c.dLow >= b.lo && c.dLow < b.hi);
+    const retB  = data.returned.filter(c  => c.dLow >= b.lo && c.dLow < b.hi);
+    const avgGapSolgt = avg(soldB.filter(c=>c.gap>-40).map(c=>c.gap));
+    const recX  = avgGapSolgt !== null ? +(3 + avgGapSolgt).toFixed(1) : 3.0;
+    return {
+      ...b,
+      evalCount: evalB.length, motCount: motB.length,
+      soldCount: soldB.length, retCount: retB.length,
+      convRate:  pct(motB.length,  evalB.length),
+      soldRate:  pct(soldB.length, motB.length),
+      avgGapSolgt,
+      avgGapRet: avg(retB.filter(c=>c.gap>-40).map(c=>c.gap)),
+      recX,
+    };
   });
-  soldR.sort(function(a,b){return a.dato>b.dato?1:-1;});
-  retR.sort(function(a,b){return a.dato>b.dato?1:-1;});
-  var tot=sold+ret;
-  var rate=tot>0?Math.round(sold/tot*100):0;
-  var fee=soldR.reduce(function(s,r){return s+r.fee;},0);
-  var isCurrentWeek=offset>=0;
-  var canNext=offset<0;
+}
 
-  var kpis=[
-    {icon:'\uD83D\uDCCB',label:'Evaluert',val:ev,sub:'priset',col:'#004225'},
-    {icon:'\uD83D\uDD28',label:'P\u00e5 auksjon',val:tot,sub:'totalt',col:'#1a6b8a'},
-    {icon:'\u2705',label:'Solgt',val:sold,sub:'biler',col:'#2d6a2d'},
-    {icon:'\u274C',label:'Ikke solgt',val:ret,sub:'returnert',col:'#c62828'},
-    {icon:'\uD83D\uDEAB',label:'Avvist',val:av,sub:'av kunde',col:'#7a3b0a'}
-  ];
+function drawArc(svgEl, valuePct, color) {
+  const r=46, cx=55, cy=60;
+  const angle = Math.PI - (valuePct/100) * Math.PI;
+  const x = cx + r*Math.cos(angle);
+  const y = cy + r*Math.sin(angle);
+  svgEl.innerHTML = `
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="rgba(0,66,37,0.08)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${x} ${y}" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="${x}" cy="${y}" r="4" fill="${color}"/>`;
+}
 
-  var kpiHtml=kpis.map(function(k){
-    return '<div style="background:#fff;border-radius:10px;padding:16px 8px;text-align:center;border-top:4px solid '+k.col+';box-shadow:0 2px 8px rgba(0,0,0,.07)">'
-      +'<div style="font-size:22px;margin-bottom:4px">'+k.icon+'</div>'
-      +'<div style="font-size:32px;font-weight:700;color:'+k.col+';line-height:1.1">'+k.val+'</div>'
-      +'<div style="font-weight:700;font-size:11px;color:#333;margin:5px 0 2px">'+k.label+'</div>'
-      +'<div style="font-size:10px;color:#999;font-style:italic">'+k.sub+'</div>'
-      +'</div>';
-  }).join('');
+function daysClass(d, target) {
+  if (d <= target)     return 'days-ok';
+  if (d <= target * 2) return 'days-warn';
+  return 'days-over';
+}
 
-  function soldRow(r,i){
-    return '<tr style="background:'+(i%2?'#f9f9f9':'#fff')+';border-top:1px solid #f0f0f0">'
-      +'<td style="padding:7px 12px;color:#666">'+r.dato+'</td>'
-      +'<td style="padding:7px 12px;font-weight:700;color:#004225">'+r.reg+'</td>'
-      +'<td style="padding:7px 12px">'+r.bil+'</td>'
-      +'<td style="padding:7px 12px;text-align:right">'+(r.bud?Math.round(r.bud/1000)+'k kr':'–')+'</td>'
-      +'<td style="padding:7px 12px;text-align:right;color:#2d6a2d;font-weight:700">'+(r.fee?r.fee.toLocaleString('nb-NO')+' kr':'–')+'</td>'
+function statusBadge(s) {
+  const map = {
+    'på auksjonen':           ['🔨','b-auksjon',    'På auksjon'],
+    'ready for auction':      ['🔨','b-auksjon',    'Klar auksjon'],
+    'under arbeid':           ['🏭','b-produksjon', 'Under arbeid'],
+    'endelig estimat':        ['📋','b-mottatt',    'Estimat sendt'],
+    'vent. på budaksept':     ['⏳','b-auksjon',    'Venter bud avklaring'],
+    'venter på trans. best.': ['🚚','b-mottatt',    'Venter henting'],
+    'solgt':                  ['✅','b-ferdig',     'Solgt'],
+    'returnert':              ['↩️','b-ferdig',     'Returnert'],
+    'avvist by customer':     ['❌','b-ferdig',     'Avvist'],
+    'avvist by admin':        ['❌','b-ferdig',     'Avvist'],
+    'avvist':                 ['❌','b-ferdig',     'Avvist'],
+  };
+  const key = Object.keys(map).find(k => s.toLowerCase().includes(k));
+  const [icon, cls, lbl] = key ? map[key] : ['🏭','b-produksjon', s || 'Produksjon'];
+  return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
+}
+
+function workHoursElapsed(from) {
+  const workStart = 8, workEnd = 16;
+  const now = new Date();
+  let total = 0;
+  let cur = new Date(from);
+  while (cur < now) {
+    const day = cur.getDay();
+    if (day === 0 || day === 6) { cur.setDate(cur.getDate()+1); cur.setHours(workStart,0,0,0); continue; }
+    const dayStart = new Date(cur); dayStart.setHours(workStart,0,0,0);
+    const dayEnd   = new Date(cur); dayEnd.setHours(workEnd,0,0,0);
+    if (cur < dayStart) { cur = dayStart; continue; }
+    if (cur >= dayEnd)  { cur.setDate(cur.getDate()+1); cur.setHours(workStart,0,0,0); continue; }
+    const periodEnd = now < dayEnd ? now : dayEnd;
+    total += Math.floor((periodEnd - cur) / 60000);
+    cur = dayEnd;
+  }
+  return { h: Math.floor(total/60), m: total%60, total: Math.floor(total/60) };
+}
+
+function buildEvalHtml(data, rows) {
+  // Section 1: Endelig estimat — all cars waiting for price/seller response
+  const evalRows = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const status = String(r[12]||'').trim().toLowerCase();
+    return status === 'endelig estimat' || status === 'sd mottatt';
+  }).sort((a,b) => {
+    const da = parseDate(a[13]), db = parseDate(b[13]);
+    return (da||0) - (db||0);
+  });
+
+  let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
+  h += '<div class="table-card" style="margin-bottom:24px"><table>';
+  h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
+  if (!evalRows.length) {
+    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
+  }
+  for (const r of evalRows) {
+    const reg = r[1];
+    const merke = r[6]||''; const modell = r[7]||''; const year = r[8]||'';
+    const label = [merke,modell,year].filter(Boolean).join(' ');
+    const km = r[22] ? Math.round(r[22]/1000)+'k' : '–';
+    // Use r[14] SD mottatt (includes HH:MM) for precise elapsed time
+    const sdRaw = r[14] ? String(r[14]).trim() : null;
+    const regDate = sdRaw ? (function(s) {
+      const parts = s.split(' ');
+      const dp = parts[0].split('.');
+      const tp = parts[1] ? parts[1].split(':') : ['0','0'];
+      const d = new Date(dp[2]+'-'+dp[1]+'-'+dp[0]);
+      d.setHours(parseInt(tp[0]), parseInt(tp[1]), 0, 0);
+      return isNaN(d) ? parseDate(r[13]) : d;
+    })(sdRaw) : parseDate(r[13]);
+    const whm = regDate ? workHoursElapsed(regDate) : null;
+    const whmStr = whm === null ? '–' : whm.h + 'h ' + String(whm.m).padStart(2,'0') + 'm';
+    const daysCol = whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
+    const ar = String(r[3]||'').trim();
+    let priceStr;
+    if (!ar || ar==='-') {
+      priceStr = '<span style="color:var(--red);font-weight:700">Ikke priset</span>';
+    } else {
+      const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
+      const lo = Math.round(parseInt(parts[0])/1000);
+      const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
+      priceStr = '<strong>' + lo + 'k – ' + hi + 'k</strong>';
+    }
+    h += '<tr>';
+    const sdVal = r[14] ? String(r[14]).trim() : '';
+    const sdDisplay = sdVal ? sdVal.slice(0,16) : fmtDate(r[13]);
+    h += '<td style="color:var(--muted);font-size:11px;white-space:nowrap">' + sdDisplay + '</td>';
+    const slaPct = whm ? Math.min(whm.total / 4 * 100, 100) : 0;
+    const slaColor = whm && whm.total < 3 ? '#4CAF50' : whm && whm.total < 4 ? '#E65100' : '#C62828';
+    h += '<td style="' + daysCol + ';font-weight:700;white-space:nowrap">' + whmStr + '<div class="sla-bar-wrap"><div class="sla-bar" style="width:' + slaPct + '%;background:' + slaColor + '"></div></div></td>';
+    h += '<td><span class="regnr">' + reg + '</span></td>';
+    h += '<td style="font-size:11px">' + label + '</td>';
+    h += '<td style="font-size:11px">' + km + '</td>';
+    h += '<td>' + priceStr + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+
+  // Section 2: Avvist av selger — last 10
+  const CUTOFF = new Date('2025-11-01');
+  const avvistRows = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const nDate = parseDate(r[13]);
+    if (nDate && nDate < CUTOFF) return false;
+    const status = String(r[12]||'').toLowerCase();
+    return status.includes('avvist by customer');
+  }).sort((a,b) => (parseDate(b[13])||0)-(parseDate(a[13])||0));
+
+  const totalEval = (rows||[]).slice(1).filter(r => {
+    if (!r[1]) return false;
+    const nDate = parseDate(r[13]);
+    return !(nDate && nDate < CUTOFF);
+  }).length;
+  const avvistPct = totalEval ? Math.round(avvistRows.length/totalEval*100) : 0;
+
+  h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
+  h += '<div class="table-card"><table>';
+  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th><th>Dato</th></tr></thead><tbody>';
+  const last10 = avvistRows.slice(0,10);
+  if (!last10.length) {
+    h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
+  }
+  for (const r of last10) {
+    const ar = String(r[3]||'').trim();
+    let priceStr = '–';
+    if (ar && ar!=='-') {
+      const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
+      const lo = Math.round(parseInt(parts[0])/1000);
+      const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
+      priceStr = lo+'k – '+hi+'k';
+    }
+    const merke=r[6]||''; const modell=r[7]||''; const year=r[8]||'';
+    const label=[merke,modell,year].filter(Boolean).join(' ');
+    const km=r[22]?Math.round(r[22]/1000)+'k':'–';
+    h += '<tr>';
+    h += '<td><span class="regnr">' + r[1] + '</span></td>';
+    h += '<td style="font-size:11px">' + label + '</td>';
+    h += '<td style="font-size:11px">' + km + '</td>';
+    h += '<td>' + priceStr + '</td>';
+    h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function render(data, rows) {
+  const bs           = bracketStats(data);
+  const totalEval    = data.evaluated.length;
+  const totalMottatt = data.mottatt.length;
+  const totalSold    = data.sold.length;
+  const totalRet     = data.returned.length;
+  const mottattRate  = pct(totalMottatt, totalEval);
+  const soldRate     = pct(totalSold, totalMottatt);
+  const uVals        = data.sold.map(c=>c.u).filter(u=>u&&u>500);
+  const totalU       = uVals.reduce((a,b)=>a+b,0);
+  const avgU         = uVals.length ? Math.round(totalU/uVals.length) : 0;
+  const avgGapSolgt  = avg(data.sold.filter(c=>c.gap>-40).map(c=>c.gap));
+  const noCureCost   = totalRet * 3000;
+  const netRevenue   = totalU - noCureCost;
+  const mottOk       = mottattRate >= TARGETS.evalMottatt;
+  const sldOk        = soldRate    >= TARGETS.mottattSolgt;
+
+  const todayStr    = new Date().toLocaleDateString('nb-NO', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const todayCount  = (rows||[]).slice(1).filter(r => r[14] && String(r[14]).startsWith(todayStr)).length;
+  const daysSinceCutoff = Math.max(1, Math.floor((Date.now() - CUTOFF.getTime()) / 86400000));
+  const perDay = (totalEval / daysSinceCutoff).toFixed(1);
+
+  const dials = `
+  <div class="section-label">Nøkkeltall</div>
+  <div class="dials-grid">
+    <div class="dial-card neutral">
+      <div class="dial-label">Evaluert</div>
+      <div class="arc-wrap"><svg id="arc0"></svg></div>
+      <div class="dial-value">${totalEval.toLocaleString('nb-NO')}</div>
+      <div class="dial-unit">biler</div>
+      <div class="dial-sub">Tilbud sendt selger</div>
+      <div class="target-tag">Fra 1.11.2025</div>
+    </div>
+    <div class="dial-card ${mottOk?'on-target':'off-target'}">
+      <div class="dial-label">Evaluert → Mottatt</div>
+      <div class="arc-wrap"><svg id="arc1"></svg></div>
+      <div class="dial-value">${mottattRate}<span style="font-size:14px;font-weight:600">%</span></div>
+      <div class="dial-unit">${totalMottatt} av ${totalEval}</div>
+      <div class="dial-sub">Selger aksepterer tilbud</div>
+      <div class="target-tag">Mål ${TARGETS.evalMottatt}%</div>
+    </div>
+    <div class="dial-card ${sldOk?'on-target':'off-target'}">
+      <div class="dial-label">Mottatt → Solgt</div>
+      <div class="arc-wrap"><svg id="arc2"></svg></div>
+      <div class="dial-value">${soldRate}<span style="font-size:14px;font-weight:600">%</span></div>
+      <div class="dial-unit">${totalSold} av ${totalMottatt}</div>
+      <div class="dial-sub">Høyeste bud akseptert</div>
+      <div class="target-tag">Mål ${TARGETS.mottattSolgt}%</div>
+    </div>
+    <div class="dial-card neutral">
+      <div class="dial-label">I produksjon nå</div>
+      <div class="arc-wrap"><svg id="arc3"></svg></div>
+      <div class="dial-value">${data.inProd.length}</div>
+      <div class="dial-unit">biler på anlegg</div>
+      <div class="dial-sub">Venter vask/foto/test</div>
+      <div class="target-tag">Live</div>
+    </div>
+    <div class="dial-card ${avgGapSolgt!==null&&avgGapSolgt>-5?'on-target':'off-target'}">
+      <div class="dial-label">Avg Bud vs Pris lav</div>
+      <div class="arc-wrap"><svg id="arc4"></svg></div>
+      <div class="dial-value" style="color:${avgGapSolgt>=0?'#2E7D32':'#C62828'}">${avgGapSolgt!==null?(avgGapSolgt>0?'+':'')+avgGapSolgt.toFixed(1):'–'}<span style="font-size:14px">%</span></div>
+      <div class="dial-unit">Bud vs Pris lav (solgt)</div>
+      <div class="dial-sub">Prisnøyaktighet</div>
+      <div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: ${data.sold.filter(c=>c.e>0).length?Math.round(data.sold.filter(c=>c.e>0).reduce((a,c)=>a+c.e,0)/data.sold.filter(c=>c.e>0).length/1000)+'k kr':'–'}</div>
+      <div class="target-tag">Dynamisk X%</div>
+    </div>
+    <div class="dial-card on-target">
+      <div class="dial-label">Total inntekt (U)</div>
+      <div class="arc-wrap"><svg id="arc5"></svg></div>
+      <div class="dial-value" style="font-size:18px">${Math.round(totalU/1000)}k</div>
+      <div class="dial-unit">kr · snitt ${avgU.toLocaleString('nb-NO')} kr</div>
+      <div class="dial-sub">Netto etter no-cure: <strong style="color:${netRevenue>0?'#2E7D32':'#C62828'}">${Math.round(netRevenue/1000)}k kr</strong></div>
+      <div class="target-tag">Alle solgte biler</div>
+    </div>
+    <div class="dial-card neutral">
+      <div class="dial-label">Registrert i dag / snitt</div>
+      <div class="arc-wrap"><svg id="arc6"></svg></div>
+      <div class="dial-value">${todayCount}</div>
+      <div class="dial-unit">biler i dag</div>
+      <div class="dial-sub">Snitt: <strong>${perDay}</strong> / dag siden 1.11.25</div>
+      <div class="target-tag">Live</div>
+    </div>
+  </div>`;
+
+  // ── OPS ──
+  const inProdSorted = [...data.inProd].sort((a,b)=>(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0));
+  const maxDays = Math.max(...inProdSorted.map(c=>c.daysSinceMottatt||0), 1);
+  let opsHtml = `
+  <div class="section-label">Biler i produksjon på anlegg (${data.inProd.length} biler)</div>
+  <div class="pipeline-grid">`;
+  if (!inProdSorted.length) opsHtml += `<div style="color:var(--muted);padding:24px;font-size:13px">Ingen biler i produksjon nå</div>`;
+  for (const car of inProdSorted) {
+    const d   = car.daysSinceMottatt;
+    const cls = daysClass(d, TARGETS.prodDays);
+    const p   = Math.min((d / Math.max(maxDays, 7)) * 100, 100);
+    const bc  = cls==='days-ok'?'#4CAF50':cls==='days-warn'?'#E65100':'#C62828';
+    opsHtml += `
+    <div class="car-card">
+      <div class="car-top"><span class="car-regnr">${car.regnr}</span>${statusBadge(car.status)}</div>
+      <div class="car-model">${car.label||'–'}</div>
+      <div class="car-days ${cls}">${d!==null?`${d} dager på anlegg`:'Ukjent dato'}</div>
+      <div class="car-detail">
+        <span>Mottatt: ${fmtDate(car.rDate)}</span>
+        ${car.dLow?`<span>Pris lav: ${fmtK(car.dLow)}</span>`:''}
+        ${car.km  ?`<span>${Math.round(car.km/1000)}k km</span>`:''}
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${bc}"></div></div>
+    </div>`;
+  }
+  opsHtml += `</div>`;
+
+  const cutoff30   = Date.now() - 30*24*60*60*1000;
+  const recentSold = [...data.sold]
+    .filter(c=>{const d=parseDate(c.sDate);return d&&d>=cutoff30;})
+    .sort((a,b)=>(parseDate(b.sDate)||0)-(parseDate(a.sDate)||0)).slice(0,15);
+  const recentRet  = [...data.returned]
+    .filter(c=>{const d=parseDate(c.vDate);return d&&d>=cutoff30;})
+    .sort((a,b)=>(parseDate(b.vDate)||0)-(parseDate(a.vDate)||0)).slice(0,15);
+
+  opsHtml += `
+  <div class="section-label">Nylig solgt &amp; returnert</div>
+  <div class="two-col">
+    <div class="table-card">
+      <div class="th"><div class="th-title">✅ Nylig solgt</div><div class="th-badge">${totalSold} totalt</div></div>
+      <table>
+        <thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Solgt</th></tr></thead>
+        <tbody>`;
+  for (const c of recentSold) {
+    const gc = c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';
+    opsHtml += `<tr>
+      <td><span class="regnr">${c.regnr}</span></td>
+      <td><span style="font-size:11px">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td>
+      <td style="color:${gc};font-weight:700">${fmtK(c.e)} <span style="font-size:10px">(${fmtPct(c.gap)})</span></td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(c.sDate)}</td>
+    </tr>`;
+  }
+  opsHtml += `</tbody></table></div>
+    <div class="table-card">
+      <div class="th"><div class="th-title">↩ Nylig returnert</div><div class="th-badge">${totalRet} totalt</div></div>
+      <table>
+        <thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead>
+        <tbody>`;
+  for (const c of recentRet) {
+    opsHtml += `<tr>
+      <td><span class="regnr">${c.regnr}</span></td>
+      <td><span style="font-size:11px">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td>
+      <td style="color:var(--red);font-weight:700">${fmtK(c.e)} <span style="font-size:10px">(${fmtPct(c.gap)})</span></td>
+      <td style="color:var(--muted);font-size:11px">${daysAgo(c.vDate)}</td>
+    </tr>`;
+  }
+  opsHtml += `</tbody></table></div></div>`;
+
+  // ── FIN ──
+  let finHtml = `
+  <div class="section-label">Prisbrakett-analyse — Pris lav vs Bud</div>
+  <div class="brackets-grid">`;
+  for (const b of bs) {
+    const xColor = b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';
+    finHtml += `
+    <div class="bracket-card" style="--bc:${b.color}">
+      <div class="bc-label" style="color:${b.color}">${b.name} <span class="bc-range">${b.range}</span></div>
+      <div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">${b.evalCount}</span></div>
+      <div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">${b.motCount} <span style="color:var(--muted);font-weight:400">(${b.convRate}%)</span></span></div>
+      <div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">${b.soldCount} <span style="color:var(--muted);font-weight:400">(${b.soldRate}%)</span></span></div>
+      <div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val ${b.retCount>0?'neg':''}">${b.retCount}</span></div>
+      <div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span></div>
+      <div class="bc-row"><span class="bc-key">Avg Bud/Pris (returnert)</span><span class="bc-val neg">${fmtPct(b.avgGapRet)}</span></div>
+      <div class="x-rec">
+        <div class="x-rec-label">Estimert avvik fra Peasy estimert lav</div>
+        <div class="x-rec-val" style="color:${xColor}">${b.recX>0?'+':''}${b.recX}%</div>
+      </div>
+    </div>`;
+  }
+  finHtml += `</div>
+  <div class="section-label">Pris lav vs Bud — Alle biler</div>
+  <div class="plot-card">
+    <div class="plot-title">Prisnøyaktighet: Pris lav vs Høyeste bud</div>
+    <div class="plot-explain">
+      <strong>Hva viser dette?</strong> Hver prikk er én bil. X-aksen er <em>Pris lav</em> — den laveste grensen Peasy sender til selger. Y-aksen er <em>Høyeste bud</em> på auksjonen. Den stiplede linjen er perfekt treff (Bud = Pris lav). Grønne prikker <em>over</em> linjen = bud høyere enn Pris lav (bra!). Røde prikker <em>under</em> = returneringsrisiko.
+    </div>
+    <canvas id="scatter" height="300"></canvas>
+  </div>
+  <div class="section-label">Kostbare returneringer &amp; beste pristreff</div>
+  <div class="two-col">
+    <div class="table-card">
+      <div class="th"><div class="th-title">❌ Verste returneringer</div><div class="th-badge">${totalRet} totalt</div></div>
+      <div class="th-note">⚠️ No-cure kostnad (~3 000 kr) er et grovt estimat — faktisk kostnad varierer og bekreftes av Autoringen.</div>
+      <table>
+        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th><th>Est. kostnad</th></tr></thead>
+        <tbody>`;
+  const worstRet = [...data.returned].sort((a,b)=>a.gap-b.gap).slice(0,10);
+  for (const c of worstRet) {
+    finHtml += `<tr>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td><td>${fmtK(c.e)}</td>
+      <td><span style="color:var(--red);font-weight:700">${fmtPct(c.gap)}</span>
+        <div class="gap-bar-wrap"><div class="gap-bar" style="width:${Math.min(Math.abs(c.gap),100)}%;background:var(--red)"></div></div></td>
+      <td style="color:var(--red);font-weight:600">~3 000 kr</td>
+    </tr>`;
+  }
+  finHtml += `</tbody></table></div>
+    <div class="table-card">
+      <div class="th"><div class="th-title">✅ Beste pristreff (solgte)</div><div class="th-badge">Bud nærmest Pris lav</div></div>
+      <table>
+        <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th></tr></thead>
+        <tbody>`;
+  const bestSold = [...data.sold].sort((a,b)=>Math.abs(a.gap)-Math.abs(b.gap)).slice(0,10);
+  for (const c of bestSold) {
+    const col = c.gap>=0?'#2E7D32':c.gap>-5?'#E65100':'#C62828';
+    finHtml += `<tr>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td>${fmtK(c.dLow)}</td><td>${fmtK(c.e)}</td>
+      <td style="color:${col};font-weight:700">${fmtPct(c.gap)}</td>
+    </tr>`;
+  }
+  finHtml += `</tbody></table></div></div>`;
+
+  document.getElementById('app').innerHTML = `
+    ${dials}
+    <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
+    <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
+    <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
+  `;
+
+  requestAnimationFrame(() => {
+    drawArc(document.getElementById('arc0'), 100, '#004225');
+    drawArc(document.getElementById('arc1'), Math.min(mottattRate/20*100,100), mottOk?'#4CAF50':'#C62828');
+    drawArc(document.getElementById('arc2'), Math.min(soldRate/100*100,100),   sldOk ?'#4CAF50':'#C62828');
+    drawArc(document.getElementById('arc3'), Math.min(data.inProd.length/20*100,100), '#1565C0');
+    const gapNorm = avgGapSolgt!==null ? Math.min(Math.max((avgGapSolgt+20)/40*100,0),100) : 50;
+    drawArc(document.getElementById('arc4'), gapNorm, avgGapSolgt>=0?'#4CAF50':'#E65100');
+    drawArc(document.getElementById('arc5'), Math.min(totalU/1000000*100,100), '#00875A');
+    drawArc(document.getElementById('arc6'), Math.min(todayCount/10*100,100),  '#1565C0');
+    drawScatter(data.sold, data.returned);
+  });
+}
+
+function drawScatter(sold, returned) {
+  const canvas = document.getElementById('scatter');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = 300;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  canvas.style.height = H + 'px';
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const all  = [...sold.map(c=>({...c,type:'sold'})), ...returned.map(c=>({...c,type:'ret'}))];
+  const maxV = Math.max(...all.map(c=>Math.max(c.dLow, c.e||0)), 500000);
+  const pad  = {l:55,r:20,t:20,b:44};
+  const pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
+  const sx = v => pad.l+(v/maxV)*pw;
+  const sy = v => pad.t+ph-(v/maxV)*ph;
+  ctx.strokeStyle='rgba(0,66,37,0.06)'; ctx.lineWidth=1;
+  for (let i=0;i<=5;i++) {
+    const x=pad.l+(i/5)*pw, y=pad.t+(i/5)*ph;
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,pad.t+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+pw,y); ctx.stroke();
+    if (i>0) {
+      ctx.fillStyle='#bbb'; ctx.font='9px Inter'; ctx.textAlign='center';
+      ctx.fillText(Math.round(maxV/5*i/1000)+'k', x, pad.t+ph+14);
+      ctx.textAlign='right';
+      ctx.fillText(Math.round(maxV/5*(5-i)/1000)+'k', pad.l-6, pad.t+(i/5)*ph+4);
+    }
+  }
+  ctx.strokeStyle='rgba(0,66,37,0.2)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(sx(0),sy(0)); ctx.lineTo(sx(maxV),sy(maxV)); ctx.stroke();
+  ctx.setLineDash([]);
+  for (const c of all) {
+    ctx.beginPath(); ctx.arc(sx(c.dLow), sy(c.e||0), 5, 0, Math.PI*2);
+    ctx.fillStyle   = c.type==='sold'?'rgba(0,135,90,0.7)':'rgba(198,40,40,0.75)';
+    ctx.fill();
+    ctx.strokeStyle = c.type==='sold'?'#00875A':'#C62828'; ctx.lineWidth=1; ctx.stroke();
+  }
+  ctx.fillStyle='#999'; ctx.font='10px Inter'; ctx.textAlign='center';
+  ctx.fillText('Pris lav (tilbud til selger)', pad.l+pw/2, H-4);
+  ctx.save(); ctx.translate(12,pad.t+ph/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Høyeste bud (på auksjon)', 0, 0); ctx.restore();
+}
+
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+loadData()
+  .then(rows => render(processData(rows), rows))
+  .catch(err => {
+    document.getElementById('app').innerHTML =
+      `<div style="text-align:center;padding:60px;color:#C62828">
+        Kunne ikke hente data: ${err.message}<br>
+        <small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small>
+      </div>`;
+  });
+</script>
+</body>
+</html>      +'<td style="padding:7px 12px;text-align:right;color:#2d6a2d;font-weight:700">'+(r.fee?r.fee.toLocaleString('nb-NO')+' kr':'–')+'</td>'
       +'</tr>';
   }
   function retRow(r,i){
