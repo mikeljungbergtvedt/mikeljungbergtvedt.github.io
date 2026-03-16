@@ -5,7 +5,199 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+function renderUkerapport() {
+  var el = document.getElementById('uke-section');
+  var rows = window._lastRows;
+  if (!el || !rows) return;
+  if (window._ukeWeekOffset === undefined) window._ukeWeekOffset = 0;
+  var off = window._ukeWeekOffset;
+
+  // Calculate week bounds
+  var now = new Date();
+  var dow = now.getDay() || 7;
+  var mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate() - (dow-1));
+  var wS = new Date(mon); wS.setDate(mon.getDate() + off*7 - 7);
+  var wE = new Date(wS); wE.setDate(wS.getDate() + 7);
+
+  // Week number
+  var d2 = new Date(Date.UTC(wS.getFullYear(), wS.getMonth(), wS.getDate()));
+  var dn = d2.getUTCDay()||7; d2.setUTCDate(d2.getUTCDate()+4-dn);
+  var ys = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+  var wn = Math.ceil((((d2-ys)/86400000)+1)/7);
+  var mo = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  var wLabel = 'Uke ' + wn + ' \u00B7 ' + wS.getDate() + '. ' + mo[wS.getMonth()] + ' \u2013 ' + (new Date(wE-1)).getDate() + '. ' + mo[(new Date(wE-1)).getMonth()];
+
+  function pd(v) {
+    if (!v) return null;
+    var s = String(v).trim().slice(0,10);
+    var p = s.split('.');
+    return p.length===3 ? new Date(p[2]+'-'+p[1]+'-'+p[0]) : new Date(s);
+  }
+  function inW(v) { var d=pd(v); return d && d>=wS && d<wE; }
+  function days(a,b) { var da=pd(a),db=pd(b); if(!da||!db) return null; return Math.round((db-da)/86400000); }
+  function avg(arr) { return arr.length ? (arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1) : null; }
+
+  var all = rows.slice(1).filter(function(r){return r[1];});
+  var evaluert  = all.filter(function(r){return inW(r[14]);});
+  var mottatt   = all.filter(function(r){return inW(r[17]);});
+  var solgt     = all.filter(function(r){return inW(r[18]);});
+  var returnert = all.filter(function(r){return inW(r[21]);});
+  var avvist    = all.filter(function(r){return inW(r[14]) && String(r[12]||'').toLowerCase().indexOf('avvist')>-1;});
+
+  var pa = solgt.length + returnert.length;
+  var rate = pa > 0 ? Math.round(solgt.length/pa*100) : 0;
+  var gebyr = solgt.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
+  var rc = rate >= 70 ? '#2d6a2d' : '#c62828';
+
+  var evToMot = evaluert.filter(function(r){return r[17];}).map(function(r){return days(r[14],r[17]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToSolgt = solgt.map(function(r){return days(r[17],r[18]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToRet   = returnert.map(function(r){return days(r[17],r[21]);}).filter(function(d){return d!==null&&d>=0;});
+
+  var canNext = off < 0;
+
+  function kpi(icon, label, val, color, sub) {
+    return '<div style="background:#fff;border-radius:12px;padding:16px 10px;text-align:center;border-top:3px solid '+color+';box-shadow:0 2px 8px rgba(0,0,0,.06)">'
+      +'<div style="font-size:20px;margin-bottom:4px">'+icon+'</div>'
+      +'<div style="font-size:30px;font-weight:800;color:'+color+';line-height:1">'+val+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:#333;margin:5px 0 2px">'+label+'</div>'
+      +'<div style="font-size:10px;color:#999">'+sub+'</div>'
+      +'</div>';
+  }
+
+  function timeline(label, val, suffix, warn) {
+    if (val === null) return '';
+    var color = warn ? '#c62828' : '#2d6a2d';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,66,37,0.06)">'
+      +'<span style="font-size:12px;color:#667">'+label+'</span>'
+      +'<span style="font-size:15px;font-weight:800;color:'+color+'">'+val+' '+suffix+'</span>'
+      +'</div>';
+  }
+
+  function soldRow(r) {
+    var d = days(r[17], r[18]);
+    var dc = d!==null&&d>10 ? '#c62828' : '#2d6a2d';
+    return '<tr style="border-top:1px solid rgba(0,66,37,0.05)">'
+      +'<td style="padding:8px 12px;font-weight:700;color:#004225;font-size:12px">'+r[1]+'</td>'
+      +'<td style="padding:8px 12px;font-size:11px;color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'\u2013')+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;text-align:right;color:#2d6a2d;font-weight:700">'+(r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'\u2013')+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;text-align:center;color:'+dc+';font-weight:700">'+(d!==null?d+'d':'\u2013')+'</td>'
+      +'</tr>';
+  }
+
+  function retRow(r) {
+    var d = days(r[17], r[21]);
+    var dc = d!==null&&d>10 ? '#c62828' : '#667';
+    return '<tr style="border-top:1px solid rgba(0,66,37,0.05)">'
+      +'<td style="padding:8px 12px;font-weight:700;color:#c62828;font-size:12px">'+r[1]+'</td>'
+      +'<td style="padding:8px 12px;font-size:11px;color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;text-align:right">'+(r[4]?Math.round(r[4]/1000)+'k':'\u2013')+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;text-align:center;color:'+dc+';font-weight:700">'+(d!==null?d+'d':'\u2013')+'</td>'
+      +'</tr>';
+  }
+
+  function avvRow(r) {
+    var est = String(r[3]||'').trim();
+    return '<tr style="border-top:1px solid rgba(0,66,37,0.05)">'
+      +'<td style="padding:8px 12px;font-weight:700;color:#004225;font-size:12px">'+r[1]+'</td>'
+      +'<td style="padding:8px 12px;font-size:11px;color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td style="padding:8px 12px;font-size:11px;color:#667">'+(est&&est!=='-'?est.replace(/\s/g,'').replace('-',' \u2013 ').replace(/(\d{3,})(\u2013)(\d{3,})/,function(_,a,d,b){return Math.round(a/1000)+'k'+d+Math.round(b/1000)+'k';}):'\u2013')+'</td>'
+      +'</tr>';
+  }
+
+  var soldSorted = solgt.slice().sort(function(a,b){return (pd(a[18])||0)-(pd(b[18])||0);});
+  var retSorted  = returnert.slice().sort(function(a,b){return (pd(a[21])||0)-(pd(b[21])||0);});
+
+  el.innerHTML =
+    '<div style="max-width:960px;margin:0 auto;padding:0 0 40px">'
+
+    // Nav
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 20px">'
+      +'<button onclick="window._ukeWeekOffset--;renderUkerapport()" style="background:#004225;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer">\u2190 Forrige uke</button>'
+      +'<div style="text-align:center">'
+        +'<div style="font-size:17px;font-weight:800;color:#004225">'+wLabel+'</div>'
+        +(off===0?'<div style="font-size:10px;color:#c62828;margin-top:2px">Uken er ikke ferdig enn\u00E5</div>':'')
+      +'</div>'
+      +'<button onclick="window._ukeWeekOffset++;renderUkerapport()" '+(canNext?'':'disabled')+' style="background:'+(canNext?'#004225':'#ccc')+';color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:'+(canNext?'pointer':'not-allowed')+'">Neste uke \u2192</button>'
+    +'</div>'
+
+    // KPIs
+    +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">'
+      +kpi('\uD83D\uDCCB','Evaluert',evaluert.length,'#004225','tilbud sendt')
+      +kpi('\uD83D\uDE97','Mottatt',mottatt.length,'#1565c0','p\u00E5 anlegg')
+      +kpi('\u2705','Solgt',solgt.length,'#2d6a2d','biler')
+      +kpi('\u274C','Ikke solgt',returnert.length,'#c62828','returnert')
+      +kpi('\uD83D\uDEAB','Avvist',avvist.length,'#e65100','av selger')
+    +'</div>'
+
+    // Auksjonsrate
+    +'<div style="background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<span style="font-weight:700;font-size:13px;color:#004225">Auksjonsrate</span>'
+        +'<span style="font-size:12px">'
+          +'<b style="color:'+rc+';font-size:18px">'+rate+'%</b>'
+          +' <span style="color:#aaa">(m\u00E5l 70%)</span>'
+          +(gebyr>0?' \u00B7 Gebyr: <b style="color:#004225">'+gebyr.toLocaleString('nb-NO')+' kr</b>':'')
+        +'</span>'
+      +'</div>'
+      +'<div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;position:relative">'
+        +'<div style="height:100%;width:'+Math.min(rate,100)+'%;background:'+rc+';border-radius:4px"></div>'
+        +'<div style="position:absolute;left:70%;top:0;width:2px;height:100%;background:rgba(0,0,0,0.2)"></div>'
+      +'</div>'
+    +'</div>'
+
+    // Tidslinjer
+    +'<div style="background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#aaa;margin-bottom:8px">Tidslinjer</div>'
+      +timeline('Evaluert \u2192 Mottatt (snitt)', avg(evToMot), 'dager', parseFloat(avg(evToMot))>5)
+      +timeline('Mottatt \u2192 Solgt (snitt)', avg(motToSolgt), 'dager', parseFloat(avg(motToSolgt))>10)
+      +timeline('Mottatt \u2192 Returnert (snitt)', avg(motToRet), 'dager', parseFloat(avg(motToRet))>10)
+    +'</div>'
+
+    // Solgte
+    +'<div style="background:#fff;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">'
+      +'<div style="background:#004225;color:#fff;padding:10px 16px;font-weight:700;font-size:12px">\u2705 Solgte biler ('+solgt.length+')</div>'
+      +(soldSorted.length
+        ?'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:rgba(0,66,37,0.03)">'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">REGNR</th>'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">BIL</th>'
+          +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">BUD</th>'
+          +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">GEBYR</th>'
+          +'<th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">DAGER</th>'
+          +'</tr></thead><tbody>'+soldSorted.map(soldRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen solgte biler denne uken</div>')
+    +'</div>'
+
+    // Returnerte
+    +'<div style="background:#fff;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">'
+      +'<div style="background:#c62828;color:#fff;padding:10px 16px;font-weight:700;font-size:12px">\u274C Ikke solgt \u2014 returnert ('+returnert.length+')</div>'
+      +(retSorted.length
+        ?'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:rgba(0,66,37,0.03)">'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">REGNR</th>'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">BIL</th>'
+          +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">BUD</th>'
+          +'<th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">DAGER</th>'
+          +'</tr></thead><tbody>'+retSorted.map(retRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen returnerte biler denne uken</div>')
+    +'</div>'
+
+    // Avviste
+    +'<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">'
+      +'<div style="background:#e65100;color:#fff;padding:10px 16px;font-weight:700;font-size:12px">\uD83D\uDEAB Avvist av selger ('+avvist.length+')</div>'
+      +(avvist.length
+        ?'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:rgba(0,66,37,0.03)">'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">REGNR</th>'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">BIL</th>'
+          +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px">ESTIMAT</th>'
+          +'</tr></thead><tbody>'+avvist.map(avvRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen avviste biler denne uken</div>')
+    +'</div>'
+
+    +'</div>';
+}
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -119,6 +311,7 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
+      <button class="mode-btn" id="btn-uke" onclick="setMode('uke')">Ukerapport</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
   </div>
@@ -147,6 +340,8 @@ function setMode(m) {
     el.classList.toggle('visible', el.dataset.mode === m)
   );
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
+  var bu=document.getElementById('btn-uke');if(bu)bu.classList.toggle('active',m==='uke');
+  if(m==='uke')setTimeout(renderUkerapport,80);
 }
 
 function parseDLow(val) {
@@ -650,6 +845,7 @@ function render(data, rows) {
     <div class="mode-section${currentMode==='ops'?' visible':''}" data-mode="ops">${opsHtml}</div>
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
     <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
+    <div class="mode-section" data-mode="uke" id="uke-section"></div>
   `;
 
   requestAnimationFrame(() => {
