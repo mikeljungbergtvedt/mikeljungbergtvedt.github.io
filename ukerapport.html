@@ -4,155 +4,227 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peasy Ukerapport</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#F2F7F9,#E8F0F5);color:#004225;min-height:100vh;}
 header{background:#004225;height:64px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;}
-.logo{color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;}
-.back{font-size:11px;color:rgba(255,255,255,0.5);text-decoration:none;padding:4px 8px;border-radius:99px;transition:color .15s;}
-.back:hover{color:rgba(255,255,255,0.9);}
+.logo img{height:28px;}
+.nav a{font-size:11px;color:rgba(255,255,255,0.4);text-decoration:none;padding:4px 8px;border-radius:99px;margin-left:8px;}
+.nav a:hover{color:rgba(255,255,255,0.8);}
 main{max-width:960px;margin:0 auto;padding:40px 24px 80px;}
-.week-header{margin-bottom:24px;}
-.week-title{font-size:22px;font-weight:800;color:#004225;}
-.week-sub{font-size:12px;color:#aaa;margin-top:4px;}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.week-title{font-size:20px;font-weight:800;color:#004225;text-align:center;}
+.week-sub{font-size:11px;color:#aaa;text-align:center;margin-top:3px;}
+.btn{background:#004225;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;}
+.btn:disabled{background:#ccc;cursor:not-allowed;}
 .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
-.kpi{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-.kpi-val{font-size:32px;font-weight:800;line-height:1;}
-.kpi-label{font-size:11px;font-weight:700;color:#333;margin-top:6px;}
-.kpi-sub{font-size:10px;color:#aaa;margin-top:2px;}
-.card{background:#fff;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;}
-.card-header{padding:10px 16px;font-weight:700;font-size:12px;color:#fff;}
-.card-body{padding:14px 18px;}
-.rate-bar-wrap{background:#eee;border-radius:4px;height:8px;position:relative;margin-top:8px;}
-.rate-bar{height:100%;border-radius:4px;}
-.rate-marker{position:absolute;left:70%;top:0;width:2px;height:100%;background:rgba(0,0,0,0.2);}
-.timeline-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(0,66,37,0.06);font-size:12px;}
-.timeline-row:last-child{border-bottom:none;}
-table{width:100%;border-collapse:collapse;font-size:12px;}
+.kpi{background:rgba(255,255,255,0.97);border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 24px rgba(0,66,37,0.07);border:1px solid rgba(0,66,37,0.08);}
+.kpi-val{font-size:32px;font-weight:900;line-height:1;letter-spacing:-1px;}
+.kpi-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667;margin-top:6px;}
+.kpi-sub{font-size:10px;color:#aaa;margin-top:3px;}
+.card{background:rgba(255,255,255,0.97);border-radius:16px;margin-bottom:16px;box-shadow:0 4px 24px rgba(0,66,37,0.07);overflow:hidden;border:1px solid rgba(0,66,37,0.08);}
+.card-body{padding:16px 20px;}
+.card-hdr{padding:10px 16px;font-weight:700;font-size:12px;color:#fff;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#667;margin-bottom:10px;}
+.rate-bar-bg{background:rgba(0,66,37,0.08);border-radius:99px;height:8px;position:relative;margin-top:8px;overflow:hidden;}
+.rate-bar-fill{height:100%;border-radius:99px;}
+.rate-marker{position:absolute;left:70%;top:-2px;width:2px;height:12px;background:rgba(0,0,0,0.15);}
+.tl-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,66,37,0.06);font-size:12px;}
+.tl-row:last-child{border-bottom:none;}
+table{width:100%;border-collapse:collapse;}
 thead tr{background:rgba(0,66,37,0.03);}
-th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.8px;}
-th.r{text-align:right;}
-th.c{text-align:center;}
-td{padding:8px 12px;border-top:1px solid rgba(0,66,37,0.05);}
-td.r{text-align:right;}
-td.c{text-align:center;}
-.avvist-list{padding:12px 16px;font-size:11px;color:#667;line-height:2;}
+th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#667;padding:9px 14px;border-bottom:1px solid rgba(0,66,37,0.08);}
+th.r{text-align:right;} th.c{text-align:center;}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(0,66,37,0.04);}
+td.r{text-align:right;} td.c{text-align:center;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(0,66,37,0.015);}
+.loading{text-align:center;padding:80px;color:#aaa;}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid rgba(0,66,37,0.1);border-top-color:#004225;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
 .version{position:fixed;bottom:8px;right:12px;font-size:9px;color:rgba(0,66,37,0.3);font-family:monospace;}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo"><img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy" style="height:28px"></div>
-  <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" class="back">&larr; portal</a>
+  <div class="logo"><img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"></div>
+  <div class="nav">
+    <a href="https://mikeljungbergtvedt.github.io/peasy-pulse.html">&larr; Pulse</a>
+    <a href="https://mikeljungbergtvedt.github.io/peasyportal.html">&larr; portal</a>
+  </div>
 </header>
 <main>
-  <div class="week-header">
-    <div class="week-title">Uke 11 &middot; 9&ndash;15. mars 2026</div>
-    <div class="week-sub">Ukerapport &mdash; aktivitet og resultater</div>
-  </div>
-
-  <!-- KPIs -->
-  <div class="kpi-grid">
-    <div class="kpi" style="border-top:3px solid #004225">
-      <div class="kpi-val" style="color:#004225">70</div>
-      <div class="kpi-label">Evaluert</div>
-      <div class="kpi-sub">tilbud sendt</div>
-    </div>
-    <div class="kpi" style="border-top:3px solid #1565c0">
-      <div class="kpi-val" style="color:#1565c0">10</div>
-      <div class="kpi-label">Mottatt</div>
-      <div class="kpi-sub">p&aring; anlegg</div>
-    </div>
-    <div class="kpi" style="border-top:3px solid #2d6a2d">
-      <div class="kpi-val" style="color:#2d6a2d">4</div>
-      <div class="kpi-label">Solgt</div>
-      <div class="kpi-sub">biler</div>
-    </div>
-    <div class="kpi" style="border-top:3px solid #c62828">
-      <div class="kpi-val" style="color:#c62828">5</div>
-      <div class="kpi-label">Ikke solgt</div>
-      <div class="kpi-sub">returnert</div>
-    </div>
-    <div class="kpi" style="border-top:3px solid #e65100">
-      <div class="kpi-val" style="color:#e65100">19</div>
-      <div class="kpi-label">Avvist</div>
-      <div class="kpi-sub">av selger</div>
-    </div>
-  </div>
-
-  <!-- Konverteringsrate -->
-  <div class="card">
-    <div class="card-body">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:700;font-size:13px">Konverteringsrate (mottatt &rarr; solgt)</span>
-        <span><b style="color:#c62828;font-size:20px">44%</b> <span style="color:#aaa;font-size:12px">(m&aring;l 70%)</span> &middot; Peasy fee: <b style="color:#004225">26 600 kr</b></span>
-      </div>
-      <div class="rate-bar-wrap">
-        <div class="rate-bar" style="width:44%;background:#c62828"></div>
-        <div class="rate-marker"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tidslinjer -->
-  <div class="card">
-    <div class="card-body">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#aaa;margin-bottom:8px">Tidslinjer</div>
-      <div class="timeline-row">
-        <span style="color:#667">Evaluert &rarr; Mottatt (snitt)</span>
-        <b style="color:#2d6a2d">2.0 dager</b>
-      </div>
-      <div class="timeline-row">
-        <span style="color:#667">Mottatt &rarr; Solgt (snitt)</span>
-        <b style="color:#667">7.5 dager</b>
-      </div>
-      <div class="timeline-row">
-        <span style="color:#667">Mottatt &rarr; Returnert (snitt)</span>
-        <b style="color:#c62828">14.0 dager &#9888;</b>
-      </div>
-    </div>
-  </div>
-
-  <!-- Solgte -->
-  <div class="card">
-    <div class="card-header" style="background:#004225">&#10003; Solgte biler (4) &middot; 26 600 kr gebyr</div>
-    <table>
-      <thead><tr>
-        <th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="r">GEBYR</th><th class="c">DAGER</th>
-      </tr></thead>
-      <tbody>
-        <tr><td style="font-weight:700;color:#004225">BT57017</td><td style="color:#667">Audi Q7 e-tron 2017</td><td class="r">230k</td><td class="r" style="color:#2d6a2d;font-weight:700">9 900 kr</td><td class="c">7</td></tr>
-        <tr><td style="font-weight:700;color:#004225">SV20608</td><td style="color:#667">Peugeot 5008 2011</td><td class="r">32k</td><td class="r" style="color:#2d6a2d;font-weight:700">5 900 kr</td><td class="c">8</td></tr>
-        <tr><td style="font-weight:700;color:#004225">BT83894</td><td style="color:#667">Land Rover RR Sport 2016</td><td class="r">398k</td><td class="r" style="color:#2d6a2d;font-weight:700">4 900 kr</td><td class="c">8</td></tr>
-        <tr><td style="font-weight:700;color:#004225">AE22838</td><td style="color:#667">Hyundai Getz 2008</td><td class="r">10k</td><td class="r" style="color:#2d6a2d;font-weight:700">5 900 kr</td><td class="c">7</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Returnerte -->
-  <div class="card">
-    <div class="card-header" style="background:#c62828">&#10007; Ikke solgt &mdash; returnert (5)</div>
-    <table>
-      <thead><tr>
-        <th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="c">DAGER</th>
-      </tr></thead>
-      <tbody>
-        <tr><td style="font-weight:700;color:#c62828">AA66388</td><td style="color:#667">BMW X5 xDrive30D 2012</td><td class="r">173k</td><td class="c" style="color:#c62828;font-weight:700">23 !</td></tr>
-        <tr><td style="font-weight:700;color:#c62828">EK66015</td><td style="color:#667">Tesla Model X 2017</td><td class="r">170k</td><td class="c" style="color:#c62828;font-weight:700">18 !</td></tr>
-        <tr><td style="font-weight:700;color:#c62828">EL64666</td><td style="color:#667">KIA Soul 2015</td><td class="r">17k</td><td class="c">13</td></tr>
-        <tr><td style="font-weight:700;color:#c62828">EK69297</td><td style="color:#667">VW Golf 2017</td><td class="r">73k</td><td class="c">9</td></tr>
-        <tr><td style="font-weight:700;color:#c62828">SV74265</td><td style="color:#667">Ford Mondeo 2016</td><td class="r">57k</td><td class="c">7</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Avviste -->
-  <div class="card">
-    <div class="card-header" style="background:#e65100">Avvist av selger (19)</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.03)"><th style="padding:8px 12px;font-size:10px;font-weight:700;color:#aaa">REGNR</th><th style="padding:8px 12px;font-size:10px;font-weight:700;color:#aaa">BIL</th><th style="padding:8px 12px;font-size:10px;font-weight:700;color:#aaa;text-align:right">ESTIMAT</th></tr></thead><tbody><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EP22492</td><td style="padding:8px 12px;color:#667">Tesla Model 3 2019</td><td style="padding:8px 12px;text-align:right">144&ndash;160k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">BU26288</td><td style="padding:8px 12px;color:#667">VW Tiguan 2021</td><td style="padding:8px 12px;text-align:right">241&ndash;267k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EN85161</td><td style="padding:8px 12px;color:#667">Lexus RZ300E 2025</td><td style="padding:8px 12px;text-align:right">366&ndash;403k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EV82484</td><td style="padding:8px 12px;color:#667">Tesla Model S 2019</td><td style="padding:8px 12px;text-align:right">163&ndash;180k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">RK77136</td><td style="padding:8px 12px;color:#667">BMW 520d 2014</td><td style="padding:8px 12px;text-align:right">142&ndash;156k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EV82194</td><td style="padding:8px 12px;color:#667">Tesla Model X 2019</td><td style="padding:8px 12px;text-align:right">217&ndash;235k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">BT68332</td><td style="padding:8px 12px;color:#667">Audi A3 e-tron 2017</td><td style="padding:8px 12px;text-align:right">109&ndash;120k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EF79406</td><td style="padding:8px 12px;color:#667">BMW i4 M50 2023</td><td style="padding:8px 12px;text-align:right">390&ndash;430k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">JV25704</td><td style="padding:8px 12px;color:#667">VW Touran 2017</td><td style="padding:8px 12px;text-align:right">198&ndash;219k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">BU16800</td><td style="padding:8px 12px;color:#667">Jaguar Discovery 2019</td><td style="padding:8px 12px;text-align:right">382&ndash;422k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">VH99118</td><td style="padding:8px 12px;color:#667">Audi A4 2018</td><td style="padding:8px 12px;text-align:right">240&ndash;265k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">BU37056</td><td style="padding:8px 12px;color:#667">Toyota C-HR 2023</td><td style="padding:8px 12px;text-align:right">251&ndash;277k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">DR34618</td><td style="padding:8px 12px;color:#667">VW Caddy 2017</td><td style="padding:8px 12px;text-align:right">85&ndash;95k</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">PP81400</td><td style="padding:8px 12px;color:#667">Mercedes A150 2009</td><td style="padding:8px 12px;text-align:right">&ndash;</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">EL47257</td><td style="padding:8px 12px;color:#667">KIA Soul 2014</td><td style="padding:8px 12px;text-align:right">&ndash;</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">KH82465</td><td style="padding:8px 12px;color:#667">VW Passat 2012</td><td style="padding:8px 12px;text-align:right">&ndash;</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">AE28498</td><td style="padding:8px 12px;color:#667">Mazda 6 2010</td><td style="padding:8px 12px;text-align:right">&ndash;</td></tr><tr><td style="padding:8px 12px;font-weight:700;color:#e65100">ZH60270</td><td style="padding:8px 12px;color:#667">Suzuki Vitara 2021</td><td style="padding:8px 12px;text-align:right">&ndash;</td></tr></tbody></table>
-  </div>
+  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data&hellip;</div></div>
 </main>
 <div class="version">v16.03.b</div>
+<script>
+const API = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
+var weekOffset = -1; // default: last complete week
+
+function pd(v) {
+  if (!v) return null;
+  var s = String(v).trim().slice(0,10);
+  var p = s.split('.');
+  return p.length===3 ? new Date(p[2]+'-'+p[1]+'-'+p[0]) : new Date(s);
+}
+
+function getWeekBounds(offset) {
+  var now = new Date();
+  var dow = now.getDay()||7;
+  var mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-(dow-1));
+  var wS = new Date(mon); wS.setDate(mon.getDate() + offset*7);
+  var wE = new Date(wS); wE.setDate(wS.getDate()+7);
+  return {wS:wS, wE:wE};
+}
+
+function getWeekNumber(d) {
+  var d2 = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  var dn = d2.getUTCDay()||7; d2.setUTCDate(d2.getUTCDate()+4-dn);
+  var ys = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+  return Math.ceil((((d2-ys)/86400000)+1)/7);
+}
+
+function avg(arr) { return arr.length ? (arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1) : null; }
+
+function days(a,b) {
+  var da=pd(a), db=pd(b);
+  if (!da||!db) return null;
+  return Math.round((db-da)/86400000);
+}
+
+function render(rows) {
+  var bounds = getWeekBounds(weekOffset);
+  var wS = bounds.wS, wE = bounds.wE;
+  var mo = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  var wn = getWeekNumber(wS);
+  var wLabel = 'Uke '+wn+' &middot; '+wS.getDate()+'. '+mo[wS.getMonth()]+' &ndash; '+(new Date(wE-1)).getDate()+'. '+mo[(new Date(wE-1)).getMonth()]+' '+wE.getFullYear();
+
+  function inW(v) { var d=pd(v); return d&&d>=wS&&d<wE; }
+
+  var all = rows.slice(1).filter(function(r){return r[1];});
+  var evaluert  = all.filter(function(r){return inW(r[14]);});
+  var mottatt   = all.filter(function(r){return inW(r[17]);});
+  var solgt     = all.filter(function(r){return inW(r[18]);});
+  var returnert = all.filter(function(r){return inW(r[21]);});
+  var avvist    = all.filter(function(r){return inW(r[14])&&String(r[12]||'').toLowerCase().indexOf('avvist')>-1;});
+
+  var pa = solgt.length+returnert.length;
+  var rate = pa>0 ? Math.round(solgt.length/pa*100) : 0;
+  var fee = solgt.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
+  var rc = rate>=70 ? '#2d6a2d' : '#c62828';
+
+  var evToMot   = evaluert.filter(function(r){return r[17];}).map(function(r){return days(r[14],r[17]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToSold = solgt.map(function(r){return days(r[17],r[18]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToRet  = returnert.map(function(r){return days(r[17],r[21]);}).filter(function(d){return d!==null&&d>=0;});
+
+  var soldSorted = solgt.slice().sort(function(a,b){return (pd(a[18])||0)-(pd(b[18])||0);});
+  var retSorted  = returnert.slice().sort(function(a,b){return (pd(a[21])||0)-(pd(b[21])||0);});
+
+  function soldRow(r) {
+    var d = days(r[17],r[18]);
+    var dc = d!==null&&d>10 ? '#c62828' : '#2d6a2d';
+    return '<tr><td style="font-weight:700;color:#004225">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+( r[4]?Math.round(r[4]/1000)+'k':'&ndash;')+'</td><td class="r" style="color:#2d6a2d;font-weight:700">'+( r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'&ndash;')+'</td><td class="c" style="color:'+dc+';font-weight:700">'+( d!==null?d+'d':'&ndash;')+'</td></tr>';
+  }
+  function retRow(r) {
+    var d = days(r[17],r[21]);
+    var dc = d!==null&&d>10 ? '#c62828' : '#667';
+    return '<tr><td style="font-weight:700;color:#c62828">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+( r[4]?Math.round(r[4]/1000)+'k':'&ndash;')+'</td><td class="c" style="color:'+dc+';font-weight:700">'+( d!==null?d+'d':'&ndash;')+'</td></tr>';
+  }
+  function avvRow(r) {
+    var est = String(r[3]||'').trim().replace(/\s/g,'');
+    var parts = est.split('-');
+    var estStr = parts.length===2 ? Math.round(parseInt(parts[0])/1000)+'k&ndash;'+Math.round(parseInt(parts[1])/1000)+'k' : '&ndash;';
+    return '<tr><td style="font-weight:700;color:#e65100">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+estStr+'</td></tr>';
+  }
+
+  var isCurrentWeek = weekOffset === 0;
+
+  document.getElementById('app').innerHTML =
+    '<div class="week-nav">'+
+      '<button class="btn" onclick="weekOffset--;loadAndRender()">&larr; Forrige uke</button>'+
+      '<div><div class="week-title">'+wLabel+'</div>'+
+        (isCurrentWeek ? '<div class="week-sub" style="color:#c62828">Uken er ikke ferdig enn&aring;</div>' : '')+
+      '</div>'+
+      '<button class="btn" onclick="weekOffset++;loadAndRender()" '+(weekOffset>=0?'disabled':'')+'>&rarr; Neste uke</button>'+
+    '</div>'+
+
+    '<div class="kpi-grid">'+
+      kpi(evaluert.length,'Evaluert','tilbud sendt','#004225')+
+      kpi(mottatt.length,'Mottatt','p&aring; anlegg','#1565c0')+
+      kpi(solgt.length,'Solgt','biler','#2d6a2d')+
+      kpi(returnert.length,'Ikke solgt','returnert','#c62828')+
+      kpi(avvist.length,'Avvist','av selger','#e65100')+
+    '</div>'+
+
+    '<div class="card"><div class="card-body">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-weight:700;font-size:13px">Konverteringsrate (mottatt &rarr; solgt)</span>'+
+        '<span><b style="color:'+rc+';font-size:20px">'+rate+'%</b> <span style="color:#aaa;font-size:12px">(m&aring;l 70%)</span> &middot; Peasy fee: <b style="color:#004225">'+fee.toLocaleString('nb-NO')+' kr</b></span>'+
+      '</div>'+
+      '<div class="rate-bar-bg"><div class="rate-bar-fill" style="width:'+Math.min(rate,100)+'%;background:'+rc+'"></div><div class="rate-marker"></div></div>'+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-body">'+
+      '<div class="section-label">Tidslinjer</div>'+
+      tl('Evaluert &rarr; Mottatt (snitt)', avg(evToMot), false)+
+      tl('Mottatt &rarr; Solgt (snitt)', avg(motToSold), parseFloat(avg(motToSold))>10)+
+      tl('Mottatt &rarr; Returnert (snitt)', avg(motToRet), parseFloat(avg(motToRet))>10)+
+    '</div></div>'+
+
+    '<div class="card">'+
+      '<div class="card-hdr" style="background:#004225">&#10003; Solgte biler ('+solgt.length+') &middot; '+fee.toLocaleString('nb-NO')+' kr fee</div>'+
+      (soldSorted.length ?
+        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="r">FEE</th><th class="c">DAGER</th></tr></thead><tbody>'+soldSorted.map(soldRow).join('')+'</tbody></table>' :
+        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen solgte biler denne uken</div>')+
+    '</div>'+
+
+    '<div class="card">'+
+      '<div class="card-hdr" style="background:#c62828">&#10007; Ikke solgt &mdash; returnert ('+returnert.length+')</div>'+
+      (retSorted.length ?
+        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="c">DAGER</th></tr></thead><tbody>'+retSorted.map(retRow).join('')+'</tbody></table>' :
+        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen returnerte biler denne uken</div>')+
+    '</div>'+
+
+    '<div class="card">'+
+      '<div class="card-hdr" style="background:#e65100">Avvist av selger ('+avvist.length+')</div>'+
+      (avvist.length ?
+        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">ESTIMAT</th></tr></thead><tbody>'+avvist.map(avvRow).join('')+'</tbody></table>' :
+        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen avviste biler denne uken</div>')+
+    '</div>';
+}
+
+function kpi(val, label, sub, color) {
+  return '<div class="kpi" style="border-top:3px solid '+color+'">'+
+    '<div class="kpi-val" style="color:'+color+'">'+val+'</div>'+
+    '<div class="kpi-label">'+label+'</div>'+
+    '<div class="kpi-sub">'+sub+'</div>'+
+  '</div>';
+}
+
+function tl(label, val, warn) {
+  if (!val) return '';
+  var color = warn ? '#c62828' : val < 3 ? '#2d6a2d' : '#667';
+  return '<div class="tl-row"><span style="color:#667">'+label+'</span><b style="color:'+color+'">'+val+' dager'+(warn?' &#9888;':'')+'</b></div>';
+}
+
+function loadAndRender() {
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div><br>Henter data&hellip;</div>';
+  fetch(API)
+    .then(function(r){return r.arrayBuffer();})
+    .then(function(buf){
+      var wb = XLSX.read(buf, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      render(rows);
+    })
+    .catch(function(err){
+      document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px;color:#c62828">Kunne ikke hente data: '+err.message+'</div>';
+    });
+}
+
+loadAndRender();
+</script>
 </body>
 </html>
