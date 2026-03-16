@@ -6,7 +6,7 @@
 <title>Peasy Pulse</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-function getWeekNumber(d){
+window.getWeekNumber = function(d){
   var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
   var dayNum=date.getUTCDay()||7;
   date.setUTCDate(date.getUTCDate()+4-dayNum);
@@ -14,7 +14,7 @@ function getWeekNumber(d){
   return Math.ceil((((date-yearStart)/86400000)+1)/7);
 }
 
-function renderUke(){
+window.renderUke = function(){
   var el=document.getElementById('app');
   var rows=window._lastRows;
   if(!el||!rows)return;
@@ -285,9 +285,9 @@ function setMode(m) {
   document.querySelectorAll('.mode-section').forEach(el =>
     el.classList.toggle('visible', el.dataset.mode === m)
   );
-  var btnUke=document.getElementById('btn-uke'); if(btnUke) btnUke.classList.toggle('active',m==='uke');
-  if(m==='uke') setTimeout(renderUke,50);
-  if(m==='fin') setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},80);
+  var b=document.getElementById('btn-uke');if(b)b.classList.toggle('active',m==='uke');
+  if(m==='uke')setTimeout(function(){window.renderUke&&window.renderUke();},80);
+  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},80);
 }
 
 function parseDLow(val) {
@@ -795,7 +795,6 @@ function render(data, rows) {
     <div class="mode-section${currentMode==='fin'?' visible':''}" data-mode="fin">${finHtml}</div>
     <div class="mode-section${currentMode==='eval'?' visible':''}" data-mode="eval">${buildEvalHtml(data, rows)}</div>
   <div class="mode-section" data-mode="uke" id="uke-section"></div>
-  <div class="mode-section" data-mode="uke" id="uke-section"></div>
   `;
 
   requestAnimationFrame(() => {
@@ -807,7 +806,7 @@ function render(data, rows) {
     drawArc(document.getElementById('arc4'), gapNorm, avgGapSolgt>=0?'#4CAF50':'#E65100');
     drawArc(document.getElementById('arc5'), Math.min(totalU/1000000*100,100), '#00875A');
     drawArc(document.getElementById('arc6'), Math.min(todayCount/10*100,100),  '#1565C0');
-    drawScatter(window._lastData.sold, window._lastData.returned);
+    drawScatter(data.sold, data.returned);
   });
 }
 
