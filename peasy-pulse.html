@@ -49,7 +49,8 @@ main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
 .bracket-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);border-top:3px solid var(--bc);}
 .bc-label{font-size:12px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
 .bc-range{font-size:10px;font-weight:500;color:var(--muted);}
-.bc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.bc-divider{border-top:1px solid rgba(0,0,0,0.08);margin:6px 0}
+    .bc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .bc-row:last-child{border-bottom:none;}
 .bc-key{color:var(--muted);font-weight:500;}
 .bc-val{font-weight:700;}
@@ -250,12 +251,17 @@ function bracketStats(data) {
     const avgGapSolgt = avg(soldB.filter(c=>c.gap>-40).map(c=>c.gap));
     const recX  = avgGapSolgt !== null ? +(3 + avgGapSolgt).toFixed(1) : 3.0;
     const rejB = data.evaluated.filter(c => c.status === 'Avvist by customer' && c.dLow > 0 && c.dLow >= b.lo && c.dLow < b.hi);
+    const inProdRegnr = new Set(data.inProd.map(c => c.regnr));
+    const rejB     = data.evaluated.filter(c => c.status === 'Avvist by customer' && c.dLow > 0 && c.dLow >= b.lo && c.dLow < b.hi);
+    const motBx    = motB.filter(c => !inProdRegnr.has(c.regnr));
+    const soldBx   = soldB.filter(c => !inProdRegnr.has(c.regnr));
+    const retBx    = retB.filter(c => !inProdRegnr.has(c.regnr));
     return {
       ...b,
       evalCount: evalB.length, motCount: motB.length,
-      soldCount: soldB.length, retCount: retB.length, rejCount: rejB.length,
-      convRate:  pct(motB.length,  evalB.length),
-      soldRate:  pct(soldB.length, motB.length),
+      motCount: motBx.length, soldCount: soldBx.length, retCount: retBx.length, rejCount: rejB.length,
+      convRate:  pct(motBx.length,  evalB.length),
+      soldRate:  pct(soldBx.length, motBx.length),
       avgGapSolgt,
       avgGapRet: avg(retB.filter(c=>c.gap>-40).map(c=>c.gap)),
       recX,
@@ -583,23 +589,23 @@ function render(data, rows) {
 
   // ── FIN ──
   let finHtml = `
-  <div class="section-label">Prisbrakett-analyse — Pris lav vs Bud</div>
+  <div class="section-label">Prisbrakett-analyse — Pris lav vs Bud<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">* Ekskl. biler i produksjon på anlegg</span></div>
   <div class="brackets-grid">`;
   for (const b of bs) {
     const xColor = b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';
     finHtml += `
     <div class="bracket-card" style="--bc:${b.color}">
       <div class="bc-label" style="color:${b.color}">${b.name} <span class="bc-range">${b.range}</span></div>
-      <div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">${b.evalCount}</span></div>
-      <div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">${b.motCount} <span style="color:var(--muted);font-weight:400">(${b.convRate}%)</span></span></div>
-      <div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">${b.soldCount} <span style="color:var(--muted);font-weight:400">(${b.soldRate}%)</span></span></div>
-      <div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val ${b.retCount>0?'neg':''}">${b.retCount}</span></div>
-      <div class="bc-row"><span class="bc-key">Avvist av selger</span><span class="bc-val ${b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn'}">${b.rejCount} <span style="color:var(--muted);font-weight:400">(${b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0}%)</span></span></div>
-      <div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span></div>
-      <div class="bc-row"><span class="bc-key">Avg Bud/Pris (returnert)</span><span class="bc-val neg">${fmtPct(b.avgGapRet)}</span></div>
-      <div class="x-rec">
-        <div class="x-rec-label">Anbefalt X% (nå fast 3%)</div>
-        <div class="x-rec-val" style="color:${xColor}">${b.recX>0?'+':''}${b.recX}%</div>
+      <div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val"><b>${b.evalCount}</b></span></div>
+      <div class="bc-row"><span class="bc-key">Avvist eval</span><span class="bc-val ${b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn'}">${b.rejCount} <span style="color:var(--muted);font-weight:400">(${b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0}%)</span></span></div>
+      <div class="bc-divider"></div>
+      <div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">${b.motCount} <span style="color:var(--muted);font-weight:400">(${b.convRate}% av eval)</span></span></div>
+      <div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val ${b.soldCount>0?'pos':''}">${b.soldCount} <span style="color:var(--muted);font-weight:400">(${b.soldRate}% av mottatt)</span></span></div>
+      <div class="bc-row"><span class="bc-key">Bud avvist</span><span class="bc-val ${b.retCount>0?'neg':''}">${b.retCount} <span style="color:var(--muted);font-weight:400">(${b.motCount>0?Math.round(b.retCount/b.motCount*100):0}% av mottatt)</span></span></div>
+      <div class="bc-divider"></div>
+      <div class="bc-row"><span class="bc-key">Avg bud/pris lav (solgt)</span><span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span></div>
+      <div class="bc-row"><span class="bc-key">Avg bud/pris lav (ret.)</span><span class="bc-val neg">${fmtPct(b.avgGapRet)}</span></div>
+      <div class="bc-rec"><div class="bc-rec-label">Anbefalt X% (nå fast 3%)</div><div class="bc-rec-val" style="color:${b.recX>=0?'var(--green)':'var(--red)'}">${b.recX >= 0 ? '+' : ''}${b.recX}%</div></div>
       </div>
     </div>`;
   }
@@ -726,6 +732,6 @@ loadData()
       </div>`;
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.b</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.c</div>
 </body>
 </html>
