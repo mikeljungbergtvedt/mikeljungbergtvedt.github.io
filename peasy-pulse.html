@@ -120,20 +120,20 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
     </div>
-    <div class="pill"><div class="pulse-dot"></div><span id="clock">–</span></div>
+    <div class="pill"><div class="pulse-dot"></div><span id="clock">â</span></div>
   </div>
 </header>
 <main>
-  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen…</div></div>
+  <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringenâ¦</div></div>
 </main>
 <script>
 const API      = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
 const TARGETS  = { evalMottatt: 10, mottattSolgt: 70, prodDays: 3 };
 const CUTOFF   = new Date('2025-11-01');
 const BRACKETS = [
-  { name:'Lav',     range:'0–100k',   lo:0,      hi:100000,  color:'#00875A' },
-  { name:'Mid',     range:'100–250k', lo:100000,  hi:250000,  color:'#1565C0' },
-  { name:'Høy',     range:'250–400k', lo:250000,  hi:400000,  color:'#E65100' },
+  { name:'Lav',     range:'0â100k',   lo:0,      hi:100000,  color:'#00875A' },
+  { name:'Mid',     range:'100â250k', lo:100000,  hi:250000,  color:'#1565C0' },
+  { name:'HÃ¸y',     range:'250â400k', lo:250000,  hi:400000,  color:'#E65100' },
   { name:'Premium', range:'400k+',    lo:400000,  hi:9999999, color:'#6A1B9A' },
 ];
 let currentMode = 'ops';
@@ -165,21 +165,21 @@ function parseDate(val) {
 }
 
 function daysAgo(val) {
-  if (!val) return '–';
+  if (!val) return 'â';
   const d = parseDate(val);
-  if (!d || isNaN(d)) return '–';
+  if (!d || isNaN(d)) return 'â';
   const n = Math.floor((Date.now() - d) / 86400000);
   if (n === 0) return 'I dag';
-  if (n === 1) return 'I går';
+  if (n === 1) return 'I gÃ¥r';
   return `${n}d siden`;
 }
 
-function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : '–'; }
-function fmtPct(n) { if (n===null||n===undefined) return '–'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
+function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : 'â'; }
+function fmtPct(n) { if (n===null||n===undefined) return 'â'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
 function fmtDate(val) {
-  if (!val) return '–';
+  if (!val) return 'â';
   const d = parseDate(val);
-  if (!d || isNaN(d)) return '–';
+  if (!d || isNaN(d)) return 'â';
   return d.toLocaleDateString('nb-NO', { day:'numeric', month:'short' });
 }
 function pct(n, of) { return of ? Math.round(n/of*100) : 0; }
@@ -210,9 +210,9 @@ function processData(rows) {
     const t      = r[19] ? parseInt(String(r[19]).replace(/[\s\u00a0]/g,'')) || null : null;
     const u      = r[20] ? parseInt(String(r[20]).replace(/[\s\u00a0]/g,'')) || null : null;
 
-    // r[17] = Mottatt (R) — fysisk mottatt på anlegg
-    // r[18] = Solgt på (S)
-    // r[21] = Returnert på (V)
+    // r[17] = Mottatt (R) â fysisk mottatt pÃ¥ anlegg
+    // r[18] = Solgt pÃ¥ (S)
+    // r[21] = Returnert pÃ¥ (V)
     const rDate = r[17] && String(r[17]).trim() !== '' ? r[17] : null;
     const sDate = r[18] && String(r[18]).trim() !== '' ? r[18] : null;
     const vDate = r[21] && String(r[21]).trim() !== '' ? r[21] : null;
@@ -249,10 +249,11 @@ function bracketStats(data) {
     const retB  = data.returned.filter(c  => c.dLow >= b.lo && c.dLow < b.hi);
     const avgGapSolgt = avg(soldB.filter(c=>c.gap>-40).map(c=>c.gap));
     const recX  = avgGapSolgt !== null ? +(3 + avgGapSolgt).toFixed(1) : 3.0;
+    const rejB = data.evaluated.filter(c => c.status === 'Avvist by customer' && c.dLow > 0 && c.dLow >= b.lo && c.dLow < b.hi);
     return {
       ...b,
       evalCount: evalB.length, motCount: motB.length,
-      soldCount: soldB.length, retCount: retB.length,
+      soldCount: soldB.length, retCount: retB.length, rejCount: rejB.length,
       convRate:  pct(motB.length,  evalB.length),
       soldRate:  pct(soldB.length, motB.length),
       avgGapSolgt,
@@ -281,20 +282,20 @@ function daysClass(d, target) {
 
 function statusBadge(s) {
   const map = {
-    'på auksjonen':           ['🔨','b-auksjon',    'På auksjon'],
-    'ready for auction':      ['🔨','b-auksjon',    'Klar auksjon'],
-    'under arbeid':           ['🏭','b-produksjon', 'Under arbeid'],
-    'endelig estimat':        ['📋','b-mottatt',    'Estimat sendt'],
-    'vent. på budaksept':     ['⏳','b-auksjon',    'Venter bud avklaring'],
-    'venter på trans. best.': ['🚚','b-mottatt',    'Venter henting'],
-    'solgt':                  ['✅','b-ferdig',     'Solgt'],
-    'returnert':              ['↩️','b-ferdig',     'Returnert'],
-    'avvist by customer':     ['❌','b-ferdig',     'Avvist'],
-    'avvist by admin':        ['❌','b-ferdig',     'Avvist'],
-    'avvist':                 ['❌','b-ferdig',     'Avvist'],
+    'pÃ¥ auksjonen':           ['ð¨','b-auksjon',    'PÃ¥ auksjon'],
+    'ready for auction':      ['ð¨','b-auksjon',    'Klar auksjon'],
+    'under arbeid':           ['ð­','b-produksjon', 'Under arbeid'],
+    'endelig estimat':        ['ð','b-mottatt',    'Estimat sendt'],
+    'vent. pÃ¥ budaksept':     ['â³','b-auksjon',    'Venter bud avklaring'],
+    'venter pÃ¥ trans. best.': ['ð','b-mottatt',    'Venter henting'],
+    'solgt':                  ['â','b-ferdig',     'Solgt'],
+    'returnert':              ['â©ï¸','b-ferdig',     'Returnert'],
+    'avvist by customer':     ['â','b-ferdig',     'Avvist'],
+    'avvist by admin':        ['â','b-ferdig',     'Avvist'],
+    'avvist':                 ['â','b-ferdig',     'Avvist'],
   };
   const key = Object.keys(map).find(k => s.toLowerCase().includes(k));
-  const [icon, cls, lbl] = key ? map[key] : ['🏭','b-produksjon', s || 'Produksjon'];
+  const [icon, cls, lbl] = key ? map[key] : ['ð­','b-produksjon', s || 'Produksjon'];
   return `<span class="car-badge ${cls}">${icon} ${lbl}</span>`;
 }
 
@@ -318,7 +319,7 @@ function workHoursElapsed(from) {
 }
 
 function buildEvalHtml(data, rows) {
-  // Section 1: Endelig estimat — all cars waiting for price/seller response
+  // Section 1: Endelig estimat â all cars waiting for price/seller response
   const evalRows = (rows||[]).slice(1).filter(r => {
     if (!r[1]) return false;
     const status = String(r[12]||'').trim().toLowerCase();
@@ -328,17 +329,17 @@ function buildEvalHtml(data, rows) {
     return (da||0) - (db||0);
   });
 
-  let h = '<div class="section-label">Venter pà prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
+  let h = '<div class="section-label">Venter paÌ prissetting / svar fra selger (' + evalRows.length + ' biler)</div>';
   h += '<div class="table-card" style="margin-bottom:24px"><table>';
-  h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th></tr></thead><tbody>';
+  h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav â hÃ¸y</th></tr></thead><tbody>';
   if (!evalRows.length) {
-    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter ✅</td></tr>';
+    h += '<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter â</td></tr>';
   }
   for (const r of evalRows) {
     const reg = r[1];
     const merke = r[6]||''; const modell = r[7]||''; const year = r[8]||'';
     const label = [merke,modell,year].filter(Boolean).join(' ');
-    const km = r[22] ? Math.round(r[22]/1000)+'k' : '–';
+    const km = r[22] ? Math.round(r[22]/1000)+'k' : 'â';
     // Use r[14] SD mottatt (includes HH:MM) for precise elapsed time
     const sdRaw = r[14] ? String(r[14]).trim() : null;
     const regDate = sdRaw ? (function(s) {
@@ -350,7 +351,7 @@ function buildEvalHtml(data, rows) {
       return isNaN(d) ? parseDate(r[13]) : d;
     })(sdRaw) : parseDate(r[13]);
     const whm = regDate ? workHoursElapsed(regDate) : null;
-    const whmStr = whm === null ? '–' : whm.h + 'h ' + String(whm.m).padStart(2,'0') + 'm';
+    const whmStr = whm === null ? 'â' : whm.h + 'h ' + String(whm.m).padStart(2,'0') + 'm';
     const daysCol = whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
     const ar = String(r[3]||'').trim();
     let priceStr;
@@ -360,7 +361,7 @@ function buildEvalHtml(data, rows) {
       const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
       const lo = Math.round(parseInt(parts[0])/1000);
       const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
-      priceStr = '<strong>' + lo + 'k – ' + hi + 'k</strong>';
+      priceStr = '<strong>' + lo + 'k â ' + hi + 'k</strong>';
     }
     h += '<tr>';
     const sdVal = r[14] ? String(r[14]).trim() : '';
@@ -377,7 +378,7 @@ function buildEvalHtml(data, rows) {
   }
   h += '</tbody></table></div>';
 
-  // Section 2: Avvist av selger — last 10
+  // Section 2: Avvist av selger â last 10
   const CUTOFF = new Date('2025-11-01');
   const avvistRows = (rows||[]).slice(1).filter(r => {
     if (!r[1]) return false;
@@ -394,25 +395,25 @@ function buildEvalHtml(data, rows) {
   }).length;
   const avvistPct = totalEval ? Math.round(avvistRows.length/totalEval*100) : 0;
 
-  h += '<div class="section-label">Avvist av selger — siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
+  h += '<div class="section-label">Avvist av selger â siste 10 (' + avvistPct + '% av evaluert fra 1.11.25)</div>';
   h += '<div class="table-card"><table>';
-  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav – høy</th><th>Dato</th></tr></thead><tbody>';
+  h += '<thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav â hÃ¸y</th><th>Dato</th></tr></thead><tbody>';
   const last10 = avvistRows.slice(0,10);
   if (!last10.length) {
     h += '<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
   }
   for (const r of last10) {
     const ar = String(r[3]||'').trim();
-    let priceStr = '–';
+    let priceStr = 'â';
     if (ar && ar!=='-') {
       const parts = ar.replace(/[\s\u00a0]/g,'').split('-');
       const lo = Math.round(parseInt(parts[0])/1000);
       const hi = Math.round(parseInt(parts[1]||parts[0])/1000);
-      priceStr = lo+'k – '+hi+'k';
+      priceStr = lo+'k â '+hi+'k';
     }
     const merke=r[6]||''; const modell=r[7]||''; const year=r[8]||'';
     const label=[merke,modell,year].filter(Boolean).join(' ');
-    const km=r[22]?Math.round(r[22]/1000)+'k':'–';
+    const km=r[22]?Math.round(r[22]/1000)+'k':'â';
     h += '<tr>';
     h += '<td><span class="regnr">' + r[1] + '</span></td>';
     h += '<td style="font-size:11px">' + label + '</td>';
@@ -449,7 +450,7 @@ function render(data, rows) {
   const perDay = (totalEval / daysSinceCutoff).toFixed(1);
 
   const dials = `
-  <div class="section-label">Nøkkeltall</div>
+  <div class="section-label">NÃ¸kkeltall</div>
   <div class="dials-grid">
     <div class="dial-card neutral">
       <div class="dial-label">Evaluert</div>
@@ -460,43 +461,43 @@ function render(data, rows) {
       <div class="target-tag">Fra 1.11.2025</div>
     </div>
     <div class="dial-card ${mottOk?'on-target':'off-target'}">
-      <div class="dial-label">Evaluert → Mottatt</div>
+      <div class="dial-label">Evaluert â Mottatt</div>
       <div class="arc-wrap"><svg id="arc1"></svg></div>
       <div class="dial-value">${mottattRate}<span style="font-size:14px;font-weight:600">%</span></div>
       <div class="dial-unit">${totalMottatt} av ${totalEval}</div>
       <div class="dial-sub">Selger aksepterer tilbud</div>
-      <div class="target-tag">Mål ${TARGETS.evalMottatt}%</div>
+      <div class="target-tag">MÃ¥l ${TARGETS.evalMottatt}%</div>
     </div>
     <div class="dial-card ${sldOk?'on-target':'off-target'}">
-      <div class="dial-label">Mottatt → Solgt</div>
+      <div class="dial-label">Mottatt â Solgt</div>
       <div class="arc-wrap"><svg id="arc2"></svg></div>
       <div class="dial-value">${soldRate}<span style="font-size:14px;font-weight:600">%</span></div>
       <div class="dial-unit">${totalSold} av ${totalMottatt}</div>
-      <div class="dial-sub">Høyeste bud akseptert</div>
-      <div class="target-tag">Mål ${TARGETS.mottattSolgt}%</div>
+      <div class="dial-sub">HÃ¸yeste bud akseptert</div>
+      <div class="target-tag">MÃ¥l ${TARGETS.mottattSolgt}%</div>
     </div>
     <div class="dial-card neutral">
-      <div class="dial-label">I produksjon nå</div>
+      <div class="dial-label">I produksjon nÃ¥</div>
       <div class="arc-wrap"><svg id="arc3"></svg></div>
       <div class="dial-value">${data.inProd.length}</div>
-      <div class="dial-unit">biler på anlegg</div>
+      <div class="dial-unit">biler pÃ¥ anlegg</div>
       <div class="dial-sub">Venter vask/foto/test</div>
       <div class="target-tag">Live</div>
     </div>
     <div class="dial-card ${avgGapSolgt!==null&&avgGapSolgt>-5?'on-target':'off-target'}">
       <div class="dial-label">Avg Bud vs Pris lav</div>
       <div class="arc-wrap"><svg id="arc4"></svg></div>
-      <div class="dial-value" style="color:${avgGapSolgt>=0?'#2E7D32':'#C62828'}">${avgGapSolgt!==null?(avgGapSolgt>0?'+':'')+avgGapSolgt.toFixed(1):'–'}<span style="font-size:14px">%</span></div>
+      <div class="dial-value" style="color:${avgGapSolgt>=0?'#2E7D32':'#C62828'}">${avgGapSolgt!==null?(avgGapSolgt>0?'+':'')+avgGapSolgt.toFixed(1):'â'}<span style="font-size:14px">%</span></div>
       <div class="dial-unit">Bud vs Pris lav (solgt)</div>
-      <div class="dial-sub">Prisnøyaktighet</div>
-      <div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: ${data.sold.filter(c=>c.e>0).length?Math.round(data.sold.filter(c=>c.e>0).reduce((a,c)=>a+c.e,0)/data.sold.filter(c=>c.e>0).length/1000)+'k kr':'–'}</div>
+      <div class="dial-sub">PrisnÃ¸yaktighet</div>
+      <div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: ${data.sold.filter(c=>c.e>0).length?Math.round(data.sold.filter(c=>c.e>0).reduce((a,c)=>a+c.e,0)/data.sold.filter(c=>c.e>0).length/1000)+'k kr':'â'}</div>
       <div class="target-tag">Dynamisk X%</div>
     </div>
     <div class="dial-card on-target">
       <div class="dial-label">Total inntekt (U)</div>
       <div class="arc-wrap"><svg id="arc5"></svg></div>
       <div class="dial-value" style="font-size:18px">${Math.round(totalU/1000)}k</div>
-      <div class="dial-unit">kr · snitt ${avgU.toLocaleString('nb-NO')} kr</div>
+      <div class="dial-unit">kr Â· snitt ${avgU.toLocaleString('nb-NO')} kr</div>
       <div class="dial-sub">Netto etter no-cure: <strong style="color:${netRevenue>0?'#2E7D32':'#C62828'}">${Math.round(netRevenue/1000)}k kr</strong></div>
       <div class="target-tag">Alle solgte biler</div>
     </div>
@@ -510,13 +511,13 @@ function render(data, rows) {
     </div>
   </div>`;
 
-  // ── OPS ──
+  // ââ OPS ââ
   const inProdSorted = [...data.inProd].sort((a,b)=>(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0));
   const maxDays = Math.max(...inProdSorted.map(c=>c.daysSinceMottatt||0), 1);
   let opsHtml = `
-  <div class="section-label">Biler i produksjon på anlegg (${data.inProd.length} biler)</div>
+  <div class="section-label">Biler i produksjon pÃ¥ anlegg (${data.inProd.length} biler)</div>
   <div class="pipeline-grid">`;
-  if (!inProdSorted.length) opsHtml += `<div style="color:var(--muted);padding:24px;font-size:13px">Ingen biler i produksjon nå</div>`;
+  if (!inProdSorted.length) opsHtml += `<div style="color:var(--muted);padding:24px;font-size:13px">Ingen biler i produksjon nÃ¥</div>`;
   for (const car of inProdSorted) {
     const d   = car.daysSinceMottatt;
     const cls = daysClass(d, TARGETS.prodDays);
@@ -525,8 +526,8 @@ function render(data, rows) {
     opsHtml += `
     <div class="car-card">
       <div class="car-top"><span class="car-regnr">${car.regnr}</span>${statusBadge(car.status)}</div>
-      <div class="car-model">${car.label||'–'}</div>
-      <div class="car-days ${cls}">${d!==null?`${d} dager på anlegg`:'Ukjent dato'}</div>
+      <div class="car-model">${car.label||'â'}</div>
+      <div class="car-days ${cls}">${d!==null?`${d} dager pÃ¥ anlegg`:'Ukjent dato'}</div>
       <div class="car-detail">
         <span>Mottatt: ${fmtDate(car.rDate)}</span>
         ${car.dLow?`<span>Pris lav: ${fmtK(car.dLow)}</span>`:''}
@@ -549,7 +550,7 @@ function render(data, rows) {
   <div class="section-label">Nylig solgt &amp; returnert</div>
   <div class="two-col">
     <div class="table-card">
-      <div class="th"><div class="th-title">✅ Nylig solgt</div><div class="th-badge">${totalSold} totalt</div></div>
+      <div class="th"><div class="th-title">â Nylig solgt</div><div class="th-badge">${totalSold} totalt</div></div>
       <table>
         <thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Solgt</th></tr></thead>
         <tbody>`;
@@ -557,7 +558,7 @@ function render(data, rows) {
     const gc = c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';
     opsHtml += `<tr>
       <td><span class="regnr">${c.regnr}</span></td>
-      <td><span style="font-size:11px">${c.label||'–'}</span></td>
+      <td><span style="font-size:11px">${c.label||'â'}</span></td>
       <td>${fmtK(c.dLow)}</td>
       <td style="color:${gc};font-weight:700">${fmtK(c.e)} <span style="font-size:10px">(${fmtPct(c.gap)})</span></td>
       <td style="color:var(--muted);font-size:11px">${daysAgo(c.sDate)}</td>
@@ -565,14 +566,14 @@ function render(data, rows) {
   }
   opsHtml += `</tbody></table></div>
     <div class="table-card">
-      <div class="th"><div class="th-title">↩ Nylig returnert</div><div class="th-badge">${totalRet} totalt</div></div>
+      <div class="th"><div class="th-title">â© Nylig returnert</div><div class="th-badge">${totalRet} totalt</div></div>
       <table>
         <thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead>
         <tbody>`;
   for (const c of recentRet) {
     opsHtml += `<tr>
       <td><span class="regnr">${c.regnr}</span></td>
-      <td><span style="font-size:11px">${c.label||'–'}</span></td>
+      <td><span style="font-size:11px">${c.label||'â'}</span></td>
       <td>${fmtK(c.dLow)}</td>
       <td style="color:var(--red);font-weight:700">${fmtK(c.e)} <span style="font-size:10px">(${fmtPct(c.gap)})</span></td>
       <td style="color:var(--muted);font-size:11px">${daysAgo(c.vDate)}</td>
@@ -580,9 +581,9 @@ function render(data, rows) {
   }
   opsHtml += `</tbody></table></div></div>`;
 
-  // ── FIN ──
+  // ââ FIN ââ
   let finHtml = `
-  <div class="section-label">Prisbrakett-analyse — Pris lav vs Bud</div>
+  <div class="section-label">Prisbrakett-analyse â Pris lav vs Bud</div>
   <div class="brackets-grid">`;
   for (const b of bs) {
     const xColor = b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';
@@ -593,35 +594,36 @@ function render(data, rows) {
       <div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">${b.motCount} <span style="color:var(--muted);font-weight:400">(${b.convRate}%)</span></span></div>
       <div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">${b.soldCount} <span style="color:var(--muted);font-weight:400">(${b.soldRate}%)</span></span></div>
       <div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val ${b.retCount>0?'neg':''}">${b.retCount}</span></div>
+      <div class="bc-row"><span class="bc-key">Avvist av selger</span><span class="bc-val ${b.rejCount>0 && (b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0 && (b.rejCount/b.evalCount)<0.22?'pos':'warn'}">${b.rejCount} <span style="color:var(--muted);font-weight:400">(${b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0}%)</span></span></div>
       <div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val ${b.avgGapSolgt>=0?'pos':'warn'}">${fmtPct(b.avgGapSolgt)}</span></div>
       <div class="bc-row"><span class="bc-key">Avg Bud/Pris (returnert)</span><span class="bc-val neg">${fmtPct(b.avgGapRet)}</span></div>
       <div class="x-rec">
-        <div class="x-rec-label">Anbefalt X% (nå fast 3%)</div>
+        <div class="x-rec-label">Anbefalt X% (nÃ¥ fast 3%)</div>
         <div class="x-rec-val" style="color:${xColor}">${b.recX>0?'+':''}${b.recX}%</div>
       </div>
     </div>`;
   }
   finHtml += `</div>
-  <div class="section-label">Pris lav vs Bud — Alle biler</div>
+  <div class="section-label">Pris lav vs Bud â Alle biler</div>
   <div class="plot-card">
-    <div class="plot-title">Prisnøyaktighet: Pris lav vs Høyeste bud</div>
+    <div class="plot-title">PrisnÃ¸yaktighet: Pris lav vs HÃ¸yeste bud</div>
     <div class="plot-explain">
-      <strong>Hva viser dette?</strong> Hver prikk er én bil. X-aksen er <em>Pris lav</em> — den laveste grensen Peasy sender til selger. Y-aksen er <em>Høyeste bud</em> på auksjonen. Den stiplede linjen er perfekt treff (Bud = Pris lav). Grønne prikker <em>over</em> linjen = bud høyere enn Pris lav (bra!). Røde prikker <em>under</em> = returneringsrisiko.
+      <strong>Hva viser dette?</strong> Hver prikk er Ã©n bil. X-aksen er <em>Pris lav</em> â den laveste grensen Peasy sender til selger. Y-aksen er <em>HÃ¸yeste bud</em> pÃ¥ auksjonen. Den stiplede linjen er perfekt treff (Bud = Pris lav). GrÃ¸nne prikker <em>over</em> linjen = bud hÃ¸yere enn Pris lav (bra!). RÃ¸de prikker <em>under</em> = returneringsrisiko.
     </div>
     <canvas id="scatter" height="300"></canvas>
   </div>
   <div class="section-label">Kostbare returneringer &amp; beste pristreff</div>
   <div class="two-col">
     <div class="table-card">
-      <div class="th"><div class="th-title">❌ Verste returneringer</div><div class="th-badge">${totalRet} totalt</div></div>
-      <div class="th-note">⚠️ No-cure kostnad (~3 000 kr) er et grovt estimat — faktisk kostnad varierer og bekreftes av Autoringen.</div>
+      <div class="th"><div class="th-title">â Verste returneringer</div><div class="th-badge">${totalRet} totalt</div></div>
+      <div class="th-note">â ï¸ No-cure kostnad (~3 000 kr) er et grovt estimat â faktisk kostnad varierer og bekreftes av Autoringen.</div>
       <table>
         <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th><th>Est. kostnad</th></tr></thead>
         <tbody>`;
   const worstRet = [...data.returned].sort((a,b)=>a.gap-b.gap).slice(0,10);
   for (const c of worstRet) {
     finHtml += `<tr>
-      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'â'}</span></td>
       <td>${fmtK(c.dLow)}</td><td>${fmtK(c.e)}</td>
       <td><span style="color:var(--red);font-weight:700">${fmtPct(c.gap)}</span>
         <div class="gap-bar-wrap"><div class="gap-bar" style="width:${Math.min(Math.abs(c.gap),100)}%;background:var(--red)"></div></div></td>
@@ -630,7 +632,7 @@ function render(data, rows) {
   }
   finHtml += `</tbody></table></div>
     <div class="table-card">
-      <div class="th"><div class="th-title">✅ Beste pristreff (solgte)</div><div class="th-badge">Bud nærmest Pris lav</div></div>
+      <div class="th"><div class="th-title">â Beste pristreff (solgte)</div><div class="th-badge">Bud nÃ¦rmest Pris lav</div></div>
       <table>
         <thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th></tr></thead>
         <tbody>`;
@@ -638,7 +640,7 @@ function render(data, rows) {
   for (const c of bestSold) {
     const col = c.gap>=0?'#2E7D32':c.gap>-5?'#E65100':'#C62828';
     finHtml += `<tr>
-      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'–'}</span></td>
+      <td><span class="regnr">${c.regnr}</span><span class="car-name">${c.label||'â'}</span></td>
       <td>${fmtK(c.dLow)}</td><td>${fmtK(c.e)}</td>
       <td style="color:${col};font-weight:700">${fmtPct(c.gap)}</td>
     </tr>`;
@@ -706,7 +708,7 @@ function drawScatter(sold, returned) {
   ctx.fillStyle='#999'; ctx.font='10px Inter'; ctx.textAlign='center';
   ctx.fillText('Pris lav (tilbud til selger)', pad.l+pw/2, H-4);
   ctx.save(); ctx.translate(12,pad.t+ph/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Høyeste bud (på auksjon)', 0, 0); ctx.restore();
+  ctx.fillText('HÃ¸yeste bud (pÃ¥ auksjon)', 0, 0); ctx.restore();
 }
 
 setInterval(() => {
