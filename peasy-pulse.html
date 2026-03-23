@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ab</title>
+<title>Peasy Pulse v16.03.ac</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -433,7 +433,74 @@ function buildEvalHtml(data, rows) {
     return (da||0)-(db||0);
   });
 
-  var h = '<div class="section-label">Venter pa prissetting / svar fra selger ('+evalRows.length+' biler)</div>';
+  // Compute 30d and 90d eval-aksept and bud-aksept rates
+  var now = new Date();
+  var d30 = new Date(now); d30.setDate(d30.getDate()-30);
+  var d90 = new Date(now); d90.setDate(d90.getDate()-90);
+  var evalAll = (rows||[]).slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
+  var recv30 = evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d30;}).length;
+  var recv90 = evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d90;}).length;
+  var eval30 = evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d30;}).length;
+  var eval90 = evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d90;}).length;
+  var ep30 = eval30>0?Math.round(recv30/eval30*100):0;
+  var ep90 = eval90>0?Math.round(recv90/eval90*100):0;
+  var epD = ep30-ep90;
+  var soldAll = (window._lastData&&window._lastData.sold)||[];
+  var mottAll = (window._lastData&&window._lastData.mottatt)||[];
+  var sold30 = soldAll.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d30;}).length;
+  var sold90 = soldAll.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d90;}).length;
+  var mott30 = mottAll.filter(function(c){var d=parseDate(c.rDate);return d&&d>=d30;}).length;
+  var mott90 = mottAll.filter(function(c){var d=parseDate(c.rDate);return d&&d>=d90;}).length;
+  var bp30 = mott30>0?Math.round(sold30/mott30*100):0;
+  var bp90 = mott90>0?Math.round(sold90/mott90*100):0;
+  var bpD = bp30-bp90;
+
+  function gaugeArc(pct, color, r, cx, cy) {
+    var angle = Math.PI - (Math.min(pct,100)/100)*Math.PI;
+    var x = cx+r*Math.cos(angle), y = cy+r*Math.sin(angle);
+    return '<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="9" stroke-linecap="round"/>'
+      +'<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+x+' '+y+'" fill="none" stroke="'+color+'" stroke-width="9" stroke-linecap="round"/>';
+  }
+
+  var epColor30 = ep30>=20?'#2E7D32':'#C62828';
+  var bpColor30 = bp30>=70?'#2E7D32':'#C62828';
+  var epDStr = (epD>0?'+':'')+epD+'%';
+  var bpDStr = (bpD>0?'+':'')+bpD+'%';
+  var epDColor = epD>0?'#2E7D32':epD<0?'#C62828':'#888';
+  var bpDColor = bpD>0?'#2E7D32':bpD<0?'#C62828':'#888';
+
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">';
+  // Gauge 1: Eval-aksept
+  h += '<div style="background:#fff;border-radius:16px;padding:20px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 4px 24px rgba(0,66,37,0.07);text-align:center">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Eval-aksept &mdash; Mottatt / Evaluert</div>';
+  h += '<svg viewBox="0 0 160 95" style="width:180px;height:107px">';
+  h += gaugeArc(ep90, '#9fe1cb', 68, 80, 80);
+  h += gaugeArc(ep30, epColor30, 52, 80, 80);
+  h += '<text x="80" y="70" text-anchor="middle" font-size="24" font-weight="900" fill="'+epColor30+'">'+ep30+'%</text>';
+  h += '<text x="80" y="84" text-anchor="middle" font-size="10" fill="'+epDColor+'" font-weight="700">'+epDStr+' vs 90d</text>';
+  h += '<text x="80" y="93" text-anchor="middle" font-size="8" fill="#aaa">mal 20%</text>';
+  h += '</svg>';
+  h += '<div style="display:flex;justify-content:center;gap:24px;margin-top:4px;font-size:11px">';
+  h += '<span style="color:#9fe1cb;font-weight:700">&#9632; 90d: '+ep90+'%</span>';
+  h += '<span style="color:'+epColor30+';font-weight:700">&#9632; 30d: '+ep30+'%</span>';
+  h += '</div></div>';
+  // Gauge 2: Bud-aksept
+  h += '<div style="background:#fff;border-radius:16px;padding:20px;border:1px solid rgba(0,135,90,0.1);box-shadow:0 4px 24px rgba(0,66,37,0.07);text-align:center">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Bud-aksept &mdash; Solgt / Mottatt</div>';
+  h += '<svg viewBox="0 0 160 95" style="width:180px;height:107px">';
+  h += gaugeArc(bp90, '#9fe1cb', 68, 80, 80);
+  h += gaugeArc(bp30, bpColor30, 52, 80, 80);
+  h += '<text x="80" y="70" text-anchor="middle" font-size="24" font-weight="900" fill="'+bpColor30+'">'+bp30+'%</text>';
+  h += '<text x="80" y="84" text-anchor="middle" font-size="10" fill="'+bpDColor+'" font-weight="700">'+bpDStr+' vs 90d</text>';
+  h += '<text x="80" y="93" text-anchor="middle" font-size="8" fill="#aaa">mal 70%</text>';
+  h += '</svg>';
+  h += '<div style="display:flex;justify-content:center;gap:24px;margin-top:4px;font-size:11px">';
+  h += '<span style="color:#9fe1cb;font-weight:700">&#9632; 90d: '+bp90+'%</span>';
+  h += '<span style="color:'+bpColor30+';font-weight:700">&#9632; 30d: '+bp30+'%</span>';
+  h += '</div></div>';
+  h += '</div>';
+
+  h += '<div class="section-label">Venter pa prissetting / svar fra selger ('+evalRows.length+' biler)</div>';
   h += '<div class="table-card" style="margin-bottom:24px"><table>';
   h += '<thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav &#8211; hoy</th></tr></thead><tbody>';
   if (!evalRows.length) {
@@ -711,6 +778,6 @@ loadData()
     document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.ab</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.ac</div>
 </body>
 </html>
