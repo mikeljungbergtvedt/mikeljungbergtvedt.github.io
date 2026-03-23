@@ -140,8 +140,6 @@ let currentMode = 'ops';
 
 function setMode(m) {
   currentMode = m;
-  if(m==="eval"&&window._lastRows)renderAksept(window._lastRows);
-  if(m==='eval'&&window._lastRows){renderAkseptTable(window._lastRows);}
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
   document.getElementById('btn-eval').classList.toggle('active', m==='eval');
@@ -176,8 +174,6 @@ function daysAgo(val) {
   return `${n}d siden`;
 }
 
-function renderAkseptTable(rows){const fD=s=>{if(!s)return null;const p=String(s).trim().split(".");return p.length===3?p[2]+"-"+p[1]+"-"+p[0]:null;};const aksept=rows.filter(r=>(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim())).sort((a,b)=>new Date(fD(String(b[15]||b[16]||"").split(" ")[0]))-new Date(fD(String(a[15]||a[16]||"").split(" ")[0]))).slice(0,40);const tb=document.getElementById("aksept-tbody");const ct=document.getElementById("aksept-count");if(ct)ct.textContent=aksept.length+" biler";if(!tb)return;tb.innerHTML=aksept.map(r=>{const ed=String(r[13]||"").trim();const gd=r[15]&&String(r[15]).trim()?String(r[15]).trim().split(" ")[0]:null;const ld=r[16]&&String(r[16]).trim()?String(r[16]).trim().split(" ")[0]:null;const ad=gd||ld;const diff=ed&&ad?Math.round((new Date(fD(ad))-new Date(fD(ed)))/864e5):"-";const type=gd?"Gire":"Levere selv";return "<tr style='border-bottom:0.5px solid rgba(0,66,37,0.06)'>"+"<td style='padding:8px 12px;font-family:monospace;font-size:11px;font-weight:700;color:#7C3AED'>"+(r[1]||"")+"</td>"+"<td style='padding:8px 12px;font-size:12px'>"+(r[6]||"")+" "+(r[7]||"")+" "+(r[8]||"")+"</td>"+"<td style='padding:8px 12px;font-size:12px;color:#667A72'>"+ed+"</td>"+"<td style='padding:8px 12px;font-size:12px'>"+(ad||"")+"</td>"+"<td style='padding:8px 12px;font-size:12px;font-weight:700;color:"+(diff<=3?"#2E7D32":"#667A72")+"'>"+(diff)+"d</td>"+"<td style='padding:8px 12px;font-size:11px;color:#667A72'>"+type+"</td>"+"</tr>";}).join("");}
-function renderAksept(rows){var fD=function(s){if(!s)return null;var p=String(s).trim().split(".");return p.length===3?p[2]+"-"+p[1]+"-"+p[0]:null;};var aksept=rows.filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());}).sort(function(a,b){return new Date(fD(String(b[15]||b[16]||"").split(" ")[0]))-new Date(fD(String(a[15]||a[16]||"").split(" ")[0]));}).slice(0,40);var badge=document.getElementById("aksept-badge");if(badge)badge.textContent=aksept.length+" biler";var tb=document.getElementById("aksept-tbody");if(!tb)return;tb.innerHTML=aksept.map(function(r){var ed=String(r[13]||"").trim();var gd=r[15]&&String(r[15]).trim()?String(r[15]).trim().split(" ")[0]:null;var ld=r[16]&&String(r[16]).trim()?String(r[16]).trim().split(" ")[0]:null;var ad=gd||ld;var diff=ed&&ad?Math.round((new Date(fD(ad))-new Date(fD(ed)))/864e5):"-";return"<tr style='border-bottom:0.5px solid rgba(0,66,37,0.06)'>"+'<td style="padding:8px 12px;font-family:monospace;font-size:11px;font-weight:700;color:#7C3AED">'+( r[1]||"")+'</td>'+'<td style="padding:8px 12px;font-size:12px">'+( r[6]||"")+" "+(r[7]||"")+" "+(r[8]||"")+'</td>'+'<td style="padding:8px 12px;font-size:12px;color:#667A72">'+ed+'</td>'+'<td style="padding:8px 12px;font-size:12px">'+( ad||"")+'</td>'+'<td style="padding:8px 12px;font-size:12px;font-weight:700;color:'+(diff<=3?"#2E7D32":"#667A72")+'">'+diff+"d</td>"+'<td style="padding:8px 12px;font-size:11px;color:#667A72">'+( gd?"Gire":"Levere selv")+'</td></tr>';}).join("");}
 function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : '–'; }
 function fmtPct(n) { if (n===null||n===undefined) return '–'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
 function fmtDate(val) {
@@ -427,9 +423,7 @@ function buildEvalHtml(data, rows) {
     h += '<td style="color:var(--muted);font-size:11px">' + fmtDate(r[13]) + '</td>';
     h += '</tr>';
   }
-  h += '</tbody></table></div>
-  <div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>
-  <div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>';
+  h += '</tbody></table></div>';
   return h;
 }
 
@@ -572,7 +566,6 @@ function render(data, rows) {
     </tr>`;
   }
   opsHtml += `</tbody></table></div>
-     <div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>
     <div class="table-card">
       <div class="th"><div class="th-title">↩ Nylig returnert</div><div class="th-badge">${totalRet} totalt</div></div>
       <table>
@@ -587,8 +580,7 @@ function render(data, rows) {
       <td style="color:var(--muted);font-size:11px">${daysAgo(c.vDate)}</td>
     </tr>`;
   }
-  opsHtml += `</tbody></table></div>
-  <div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div></div>`;
+  opsHtml += `</tbody></table></div></div>`;
 
   // ── FIN ──
   let finHtml = `
@@ -735,6 +727,6 @@ loadData()
       </div>`;
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.g</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.d</div>
 </body>
 </html>
