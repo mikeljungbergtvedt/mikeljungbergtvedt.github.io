@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse</title>
+<title>Peasy Pulse v16.03.ab</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -213,18 +213,19 @@ function renderEvalSection(rows, data) {
   if (c1) {
     var ex1 = Chart.getChart(c1); if (ex1) ex1.destroy();
     new Chart(c1, {data:{labels:days,datasets:[
-      {type:'bar',label:'Eval',data:ev,backgroundColor:'rgba(0,66,37,0.3)',yAxisID:'y2'},
-      {type:'bar',label:'Bestilt',data:ak,backgroundColor:'rgba(0,135,90,0.7)',yAxisID:'y2'},
+      {type:'bar',label:'Eval',data:ev,backgroundColor:'rgba(0,66,37,0.2)',yAxisID:'y2',order:2},
+      {type:'bar',label:'Bestilt',data:ak,backgroundColor:'rgba(0,135,90,0.65)',yAxisID:'y2',order:2},
       {type:'line',data:days.map(function(_,i){
         var e=ev.slice(Math.max(0,i-6),i+1).reduce(function(a,b){return a+b;},0);
         var a=ak.slice(Math.max(0,i-6),i+1).reduce(function(a,b){return a+b;},0);
         return e>0?Math.round(a/e*100):null;
-      }),borderColor:'#C62828',borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y',spanGaps:true}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      }),borderColor:'#C62828',borderWidth:2,pointRadius:2,tension:0.4,yAxisID:'y',spanGaps:true,order:1},
+      {type:'line',data:days.map(function(){return 20;}),borderColor:'rgba(198,40,40,0.3)',borderWidth:1,borderDash:[4,3],pointRadius:0,yAxisID:'y',order:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
     scales:{
       x:{ticks:{color:'#888',font:{size:10},maxTicksLimit:10},grid:{display:false},border:{display:false}},
       y:{min:0,max:100,position:'left',ticks:{color:'#C62828',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},
-      y2:{position:'right',ticks:{color:'#888',font:{size:10}},grid:{display:false},border:{display:false}}
+      y2:{position:'right',ticks:{color:'#888',font:{size:10},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}
     }}});
   }
 
@@ -249,15 +250,18 @@ function renderEvalSection(rows, data) {
   var c2 = document.getElementById('soldRecvChart');
   if (c2) {
     var ex2 = Chart.getChart(c2); if (ex2) ex2.destroy();
+    // Compute sold rate per day for % axis
+    var soldPct2 = days2.map(function(_,i){return rc[i]>0?Math.round(sl[i]/rc[i]*100):null;});
     new Chart(c2, {data:{labels:days2,datasets:[
-      {type:'bar',label:'Mottatt',data:rc,backgroundColor:'rgba(0,66,37,0.25)',yAxisID:'y'},
-      {type:'bar',label:'Solgt',data:sl,backgroundColor:'rgba(0,135,90,0.65)',yAxisID:'y'},
-      {type:'line',data:days2.map(function(_,i){return rc[i]>0?Math.round(rc[i]*0.7*10)/10:null;}),
-       borderColor:'#1D9E75',borderWidth:1.5,borderDash:[5,3],pointRadius:0,yAxisID:'y',spanGaps:true}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      {type:'bar',label:'Mottatt',data:rc,backgroundColor:'rgba(0,66,37,0.2)',yAxisID:'y2',order:2},
+      {type:'bar',label:'Solgt',data:sl,backgroundColor:'rgba(0,135,90,0.65)',yAxisID:'y2',order:2},
+      {type:'line',data:soldPct2,borderColor:'#00875A',borderWidth:2,pointRadius:2,tension:0.4,yAxisID:'y',spanGaps:true,order:1},
+      {type:'line',data:days2.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.3)',borderWidth:1,borderDash:[4,3],pointRadius:0,yAxisID:'y',order:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
     scales:{
       x:{ticks:{color:'#888',font:{size:10},maxTicksLimit:10},grid:{display:false},border:{display:false}},
-      y:{ticks:{color:'#888',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}
+      y:{min:0,max:100,position:'left',ticks:{color:'#00875A',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},
+      y2:{position:'right',ticks:{color:'#888',font:{size:10},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}
     }}});
   }
 
@@ -505,10 +509,18 @@ function buildEvalHtml(data, rows) {
   h+='</tbody></table></div>';
 
   // Grafer
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">';
-  h+='<div class="table-card"><div class="th"><div class="th-title">Eval og bestilt levering &#8212; 30d</div></div><div style="padding:12px 16px;position:relative;height:200px"><canvas id="evalDayChart"></canvas></div></div>';
-  h+='<div class="table-card"><div class="th"><div class="th-title">Solgt vs mottatt &#8212; 30d</div></div><div style="padding:12px 16px;position:relative;height:200px"><canvas id="soldRecvChart"></canvas></div></div>';
+  h+='<div class="table-card" style="margin-bottom:16px">';
+  h+='<div class="th"><div class="th-title">Eval og bestilt levering &#8212; 30 dager</div></div>';
+  h+='<div style="padding:8px 18px 4px;font-size:11px;color:var(--muted);line-height:1.5">';
+  h+='Gronne soeyler = bestilt levering/henting. Graa soeyler = antall evaluert per dag. Rod linje = 7-dagers snitt eval-akseptrate (%). Mal: 20%.';
   h+='</div>';
+  h+='<div style="padding:12px 16px;position:relative;height:220px"><canvas id="evalDayChart"></canvas></div></div>';
+  h+='<div class="table-card" style="margin-bottom:16px">';
+  h+='<div class="th"><div class="th-title">Solgt vs mottatt &#8212; 30 dager</div></div>';
+  h+='<div style="padding:8px 18px 4px;font-size:11px;color:var(--muted);line-height:1.5">';
+  h+='Gronne soeyler = solgt per dag. Graa soeyler = mottatt per dag. Stiplet linje = 70% mal (solgt/mottatt). Viser om vi selger nok av bilene vi tar inn.';
+  h+='</div>';
+  h+='<div style="padding:12px 16px;position:relative;height:220px"><canvas id="soldRecvChart"></canvas></div></div>';
 
   h+='<div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
@@ -699,6 +711,6 @@ loadData()
     document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.aa</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.ab</div>
 </body>
 </html>
