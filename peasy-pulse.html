@@ -140,7 +140,6 @@ let currentMode = 'ops';
 
 function setMode(m) {
   currentMode = m;
-  if(m==="eval"&&window._lastRows)renderEvalSection(window._lastRows);
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
   document.getElementById('btn-eval').classList.toggle('active', m==='eval');
@@ -175,8 +174,24 @@ function daysAgo(val) {
   return `${n}d siden`;
 }
 
-function renderEvalSection(rows){var today=new Date(),days=[],ev=[],ak=[];for(var i=29;i>=0;i--){var d=new Date(today);d.setDate(d.getDate()-i);days.push(d.toLocaleDateString("nb-NO",{day:"2-digit",month:"2-digit"}));ev.push(0);ak.push(0);}var toDs=function(v){var d=parseDate(v);return d?d.toLocaleDateString("nb-NO",{day:"2-digit",month:"2-digit"}):null;};rows.forEach(function(r){var ds=toDs(r[13]);var idx=days.indexOf(ds);if(idx>=0)ev[idx]++;});rows.forEach(function(r){var ad=r[15]&&String(r[15]).trim()?String(r[15]).trim().split(" ")[0]:null;if(!ad){ad=r[16]&&String(r[16]).trim()?String(r[16]).trim().split(" ")[0]:null;}if(!ad)return;var ds=toDs(ad);var idx=days.indexOf(ds);if(idx>=0)ak[idx]++;});var conv=days.map(function(_,i){return ev[i]>0?Math.round(ak[i]/ev[i]*100):null;});var pts=[];conv.forEach(function(v,i){if(v!==null)pts.push({x:i,y:v});});var trend=days.map(function(){return null;});if(pts.length>=2){var n=pts.length,sx=0,sy=0,sxy=0,sxx=0;pts.forEach(function(p){sx+=p.x;sy+=p.y;sxy+=p.x*p.y;sxx+=p.x*p.x;});var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx),intercept=(sy-slope*sx)/n;trend=days.map(function(_,i){return Math.round((slope*i+intercept)*10)/10;});}var canvas=document.getElementById("evalDayChart");if(!canvas)return;if(window._evalChart)window._evalChart.destroy();window._evalChart=new Chart(canvas,{data:{labels:days,datasets:[{type:"bar",label:"Evaluert",data:ev,backgroundColor:"rgba(0,66,37,0.2)",yAxisID:"y2"},{type:"bar",label:"Bestilt",data:ak,backgroundColor:"rgba(0,135,90,0.6)",yAxisID:"y2"},{type:"line",label:"Konv %",data:conv,borderColor:"#C62828",borderWidth:1.5,pointRadius:2,pointBackgroundColor:"#C62828",tension:0,yAxisID:"y",spanGaps:false},{type:"line",label:"Trend",data:trend,borderColor:"#E57373",borderWidth:1,borderDash:[4,3],pointRadius:0,yAxisID:"y"},{type:"line",label:"20%",data:days.map(function(){return 20;}),borderColor:"#1D9E75",borderWidth:1.5,borderDash:[6,3],pointRadius:0,yAxisID:"y"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#888",font:{size:10},maxTicksLimit:10},grid:{display:false},border:{display:false}},y:{min:0,max:30,ticks:{color:"#444",font:{size:10},callback:function(v){return v+"%";}},grid:{color:"rgba(0,0,0,0.04)"},border:{display:false}},y2:{position:"right",ticks:{color:"#888",font:{size:10}},grid:{display:false},border:{display:false}}}}});var badge=document.getElementById("aksept-badge"),tb=document.getElementById("aksept-tbody");if(!tb)return;var aksept=rows.filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());}).sort(function(a,b){var da=parseDate(String(b[15]||b[16]||"").split(" ")[0]),db=parseDate(String(a[15]||a[16]||"").split(" ")[0]);return(da||0)-(db||0);}).slice(0,40);if(badge)badge.textContent=aksept.length+" biler";tb.innerHTML=aksept.map(function(r){var ed=String(r[13]||"").trim(),gd=r[15]&&String(r[15]).trim()?String(r[15]).trim().split(" ")[0]:null,ld=r[16]&&String(r[16]).trim()?String(r[16]).trim().split(" ")[0]:null,ad=gd||ld,evalD=parseDate(ed),aksD=parseDate(ad),diff=evalD&&aksD?Math.round((aksD-evalD)/864e5):"-";return "<tr style='border-bottom:0.5px solid rgba(0,66,37,0.06)'><td style='padding:8px 12px;font-family:monospace;font-size:11px;font-weight:700;color:#7C3AED'>"+(r[1]||"")+"</td><td style='padding:8px 12px;font-size:12px'>"+(r[6]||"")+" "+(r[7]||"")+" "+(r[8]||"")+"</td><td style='padding:8px 12px;font-size:12px;color:#667A72'>"+ed+"</td><td style='padding:8px 12px;font-size:12px'>"+(ad||"")+"</td><td style='padding:8px 12px;font-size:12px;font-weight:700;color:"+(diff<=3?"#2E7D32":"#667A72")+"'>"+(diff)+"d</td><td style='padding:8px 12px;font-size:11px;color:#667A72'>"+(gd?"Gire":"Levere selv")+"</td></tr>";}).join("");}
+function fmtK(n)   { return n ? Math.round(n/1000).toLocaleString('nb-NO')+'k' : '–'; }
+function fmtPct(n) { if (n===null||n===undefined) return '–'; return (n>0?'+':'')+n.toFixed(1)+'%'; }
+function fmtDate(val) {
+  if (!val) return '–';
+  const d = parseDate(val);
+  if (!d || isNaN(d)) return '–';
+  return d.toLocaleDateString('nb-NO', { day:'numeric', month:'short' });
+}
+function pct(n, of) { return of ? Math.round(n/of*100) : 0; }
+function avg(arr)   { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
 
+async function loadData() {
+  const res = await fetch(API);
+  const buf = await res.arrayBuffer();
+  const wb  = XLSX.read(buf, { type:'array' });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header:1 });
+}
 
 function processData(rows) {
   const data = { evaluated:[], mottatt:[], sold:[], returned:[], inProd:[] };
@@ -358,9 +373,7 @@ function buildEvalHtml(data, rows) {
     h += '<td style="' + daysCol + ';font-weight:700;white-space:nowrap">' + whmStr + '<div class="sla-bar-wrap"><div class="sla-bar" style="width:' + slaPct + '%;background:' + slaColor + '"></div></div></td>';
     h += '<td><span class="regnr">' + reg + '</span></td>';
     h += '<td style="font-size:11px">' + label + '</td>';
-    h += '<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Eval og bestilt levering &#8212; siste 30 dager</div></div><div style="padding:12px 16px;position:relative;height:200px"><canvas id="evalDayChart"></canvas></div></div>';
-  h += '<div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>';
-h += '<td style="font-size:11px">' + km + '</td>';
+    h += '<td style="font-size:11px">' + km + '</td>';
     h += '<td>' + priceStr + '</td>';
     h += '</tr>';
   }
@@ -411,7 +424,7 @@ h += '<td style="font-size:11px">' + km + '</td>';
     h += '</tr>';
   }
   h += '</tbody></table></div>';
-    return h;
+  return h;
 }
 
 function render(data, rows) {
@@ -553,7 +566,6 @@ function render(data, rows) {
     </tr>`;
   }
   opsHtml += `</tbody></table></div>
-  
     <div class="table-card">
       <div class="th"><div class="th-title">↩ Nylig returnert</div><div class="th-badge">${totalRet} totalt</div></div>
       <table>
@@ -715,6 +727,6 @@ loadData()
       </div>`;
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.l</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.d</div>
 </body>
 </html>
