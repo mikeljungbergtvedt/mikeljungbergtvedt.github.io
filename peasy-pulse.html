@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ah</title>
+<title>Peasy Pulse v16.03.al</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,6 +257,16 @@ function renderEvalCharts(rows, data) {
     var idx = days.indexOf(ds); if (idx>=0) soldPerDay[idx]++;
   });
 
+  // Linear regression trendline
+  function linReg(data) {
+    var pts=data.map(function(v,i){return v!==null?{x:i,y:v}:null;}).filter(Boolean);
+    if(pts.length<7)return data.map(function(){return null;});
+    var n=pts.length,sx=0,sy=0,sxy=0,sxx=0;
+    pts.forEach(function(p){sx+=p.x;sy+=p.y;sxy+=p.x*p.y;sxx+=p.x*p.x;});
+    var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx),intercept=(sy-slope*sx)/n;
+    return data.map(function(_,i){return Math.round((slope*i+intercept)*10)/10;});
+  }
+
   // Rolling 7d rate
   function rolling7(num, den) {
     return days.map(function(_,i) {
@@ -306,7 +316,8 @@ function renderEvalCharts(rows, data) {
       {type:'bar',  label:'Evaluert',  data:evalPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
       {type:'bar',  label:'Mottatt',   data:recvPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
       {type:'line', label:'Rate',      data:evalRate,   borderColor:'#C62828', backgroundColor:'rgba(198,40,40,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal',       data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.35)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2}
+      {type:'line', label:'Mal',       data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.35)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
+      {type:'line', label:'Trend',     data:linReg(evalRate), borderColor:'#B71C1C', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
     ]}, options:chartOpts(20,'#C62828','rgba(198,40,40,0.35)')});
   }
 
@@ -318,7 +329,8 @@ function renderEvalCharts(rows, data) {
       {type:'bar',  label:'Mottatt',  data:mottPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
       {type:'bar',  label:'Solgt',    data:soldPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
       {type:'line', label:'Rate',     data:budRate,    borderColor:'#00875A', backgroundColor:'rgba(0,135,90,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal',      data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.4)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2}
+      {type:'line', label:'Mal',      data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.4)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
+      {type:'line', label:'Trend',    data:linReg(budRate), borderColor:'#1B5E20', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
     ]}, options:chartOpts(70,'#00875A','rgba(0,135,90,0.4)')});
   }
 
@@ -659,7 +671,7 @@ function buildTiltakHtml() {
   h += '<strong style="color:#004225">Slik bruker du tiltak-analysen:</strong> Sett datoen du hevet ankerprisene. ';
   h += 'Etter ~10 dagers lag (selger evalueres i dag, bil ankommer om 10d) ser du om eval-aksept stiger. ';
   h += 'Biler som ankommer etter tiltaket utgjor cohorten &#8212; disse folges til auksjon for a male bud-aksept.';
-  h += '<div style="margin-top:8px;font-size:11px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ah &#183; Data oppdateres ved refresh</div>';
+  h += '<div style="margin-top:8px;font-size:11px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.al &#183; Data oppdateres ved refresh</div>';
   h += '</div>';
 
   h += '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
@@ -895,6 +907,6 @@ loadData()
     document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ah</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.al</div>
 </body>
 </html>
