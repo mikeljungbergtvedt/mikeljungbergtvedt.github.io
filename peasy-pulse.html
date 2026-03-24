@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.an</title>
+<title>Peasy Pulse v16.03.ao</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -119,10 +119,11 @@ var BRACKETS=[
   {name:'Hoy',range:'250-400k',lo:250000,hi:400000,color:'#E65100'},
   {name:'Premium',range:'400k+',lo:400000,hi:9999999,color:'#6A1B9A'}
 ];
-var currentMode='ops';
+var currentMode=(function(){try{return localStorage.getItem('peasy-mode')||'ops';}catch(e){return 'ops';}})();
 
 function setMode(m){
   currentMode=m;
+  try{localStorage.setItem('peasy-mode',m);}catch(e){}
   document.getElementById('btn-ops').classList.toggle('active',m==='ops');
   document.getElementById('btn-fin').classList.toggle('active',m==='fin');
   document.getElementById('btn-eval').classList.toggle('active',m==='eval');
@@ -299,7 +300,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% pa auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drommen: Hoyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.an &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ao &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -325,9 +326,9 @@ var tkChart1=null;
 function renderTiltakCharts(){
   var dateEl=document.getElementById('tiltakDateInput');
   if(!dateEl)return;
-  if(!dateEl.value){var def=new Date();def.setDate(def.getDate()-14);dateEl.value=def.toISOString().slice(0,10);}
+  if(!dateEl.value){try{var saved=localStorage.getItem('peasy-tiltakdato');if(saved)dateEl.value=saved;else{var def=new Date();def.setDate(def.getDate()-14);dateEl.value=def.toISOString().slice(0,10);}}catch(e){var def=new Date();def.setDate(def.getDate()-14);dateEl.value=def.toISOString().slice(0,10);}}
   dateEl.removeEventListener('change',renderTiltakCharts);
-  dateEl.addEventListener('change',renderTiltakCharts);
+  dateEl.addEventListener('change',function(){try{localStorage.setItem('peasy-tiltakdato',dateEl.value);}catch(e){}renderTiltakCharts();});
   var rows=window._lastRows||[];
   var today=new Date();
   var picked=new Date(dateEl.value);
@@ -522,6 +523,6 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.an</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ao</div>
 </body>
 </html>
