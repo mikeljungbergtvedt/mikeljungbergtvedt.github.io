@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ar</title>
+<title>Peasy Pulse v16.03.as</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -301,7 +301,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% pa auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drommen: Hoyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ar &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.as &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -459,6 +459,9 @@ function render(data,rows){
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
     +'</div>';
+  var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
+  var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
+  var opsHtml='';
   // Daily pulse card
   var todayDate = new Date(); todayDate.setHours(0,0,0,0);
   var evalAll2 = (rows||[]).slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
@@ -546,9 +549,8 @@ function render(data,rows){
   opsHtml += syklusKort('Total syklus', lagTot, 15, 'dager');
   opsHtml += '</div>';
 
-  var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
-  var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
-  var opsHtml='<div class="section-label">Biler i produksjon pa anlegg ('+data.inProd.length+' biler)</div><div class="pipeline-grid">';
+
+  opsHtml+='<div class="section-label">Biler i produksjon pa anlegg ('+data.inProd.length+' biler)</div><div class="pipeline-grid">';
   if(!iPS.length)opsHtml+='<div style="color:var(--muted);padding:24px;font-size:13px">Ingen biler i produksjon na</div>';
   for(var i=0;i<iPS.length;i++){var car=iPS[i],d=car.daysSinceMottatt,cls=daysClass(d,TARGETS.prodDays);var p=Math.min((d/Math.max(mxD,7))*100,100),bc=cls==='days-ok'?'#4CAF50':cls==='days-warn'?'#E65100':'#C62828';opsHtml+='<div class="car-card"><div class="car-top"><span class="car-regnr">'+car.regnr+'</span>'+statusBadge(car.status)+'</div><div class="car-model">'+(car.label||'-')+'</div><div class="car-days '+cls+'">'+(d!==null?d+' dager pa anlegg':'Ukjent dato')+'</div><div class="car-detail"><span>Mottatt: '+fmtDate(car.rDate)+'</span>'+(car.dLow?'<span>Pris lav: '+fmtK(car.dLow)+'</span>':'')+(car.km?'<span>'+Math.round(car.km/1000)+'k km</span>':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';}
   opsHtml+='</div>';
@@ -611,6 +613,6 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ar</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.as</div>
 </body>
 </html>
