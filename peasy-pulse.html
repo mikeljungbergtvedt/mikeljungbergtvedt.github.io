@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ad</title>
+<title>Peasy Pulse v16.03.ae</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -120,6 +120,7 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
+      <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&#8211;</span></div>
   </div>
@@ -144,11 +145,15 @@ function setMode(m) {
   document.getElementById('btn-ops').classList.toggle('active', m==='ops');
   document.getElementById('btn-fin').classList.toggle('active', m==='fin');
   document.getElementById('btn-eval').classList.toggle('active', m==='eval');
+  document.getElementById('btn-tiltak').classList.toggle('active', m==='tiltak');
   document.querySelectorAll('.mode-section').forEach(function(el) {
     el.classList.toggle('visible', el.dataset.mode === m);
   });
   if (m==='eval' && window._lastData && window._lastRows) {
     renderEvalCharts(window._lastRows, window._lastData);
+  }
+  if (m==='tiltak') {
+    setTimeout(function(){renderTiltakCharts();}, 100);
   }
   if (m==='fin') {
     setTimeout(function() {
@@ -619,7 +624,8 @@ function render(data, rows) {
   document.getElementById('app').innerHTML = dials
     +'<div class="mode-section'+(currentMode==='ops'?' visible':'')+'" data-mode="ops">'+opsHtml+'</div>'
     +'<div class="mode-section'+(currentMode==='fin'?' visible':'')+'" data-mode="fin">'+finHtml+'</div>'
-    +'<div class="mode-section'+(currentMode==='eval'?' visible':'')+'" data-mode="eval">'+buildEvalHtml(data,rows)+'</div>';
+    +'<div class="mode-section'+(currentMode==='eval'?' visible':'')+'" data-mode="eval">'+buildEvalHtml(data,rows)+'</div>'
+    +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>';
 
   requestAnimationFrame(function(){
     drawArc(document.getElementById('arc0'),100,'#004225');
@@ -633,6 +639,221 @@ function render(data, rows) {
     if(currentMode==='eval') renderEvalCharts(rows,data);
     drawScatter(window._lastData.sold,window._lastData.returned);
   });
+}
+
+
+var TILTAK_SERIES = [{"date": "25.12.", "eval": 4, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "26.12.", "eval": 6, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "27.12.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "28.12.", "eval": 5, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "29.12.", "eval": 8, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "30.12.", "eval": 5, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "31.12.", "eval": 2, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "1.1.", "eval": 5, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "2.1.", "eval": 13, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "3.1.", "eval": 8, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "4.1.", "eval": 9, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "5.1.", "eval": 13, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "6.1.", "eval": 14, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "7.1.", "eval": 6, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "8.1.", "eval": 11, "recv": 3, "sold": 1, "ret": 2, "inProd": 0}, {"date": "9.1.", "eval": 4, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "10.1.", "eval": 12, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "11.1.", "eval": 5, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "12.1.", "eval": 5, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "13.1.", "eval": 12, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "14.1.", "eval": 16, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "15.1.", "eval": 10, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "16.1.", "eval": 15, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "17.1.", "eval": 14, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "18.1.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "19.1.", "eval": 7, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "20.1.", "eval": 18, "recv": 3, "sold": 2, "ret": 1, "inProd": 0}, {"date": "21.1.", "eval": 18, "recv": 3, "sold": 2, "ret": 1, "inProd": 0}, {"date": "22.1.", "eval": 14, "recv": 2, "sold": 2, "ret": 0, "inProd": 0}, {"date": "23.1.", "eval": 11, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "24.1.", "eval": 8, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "25.1.", "eval": 4, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "26.1.", "eval": 2, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "27.1.", "eval": 20, "recv": 3, "sold": 2, "ret": 1, "inProd": 0}, {"date": "28.1.", "eval": 16, "recv": 2, "sold": 2, "ret": 0, "inProd": 0}, {"date": "29.1.", "eval": 14, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "30.1.", "eval": 10, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "31.1.", "eval": 12, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "1.2.", "eval": 4, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "2.2.", "eval": 4, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "3.2.", "eval": 14, "recv": 2, "sold": 2, "ret": 0, "inProd": 0}, {"date": "4.2.", "eval": 13, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "5.2.", "eval": 15, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "6.2.", "eval": 14, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "7.2.", "eval": 10, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "8.2.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "9.2.", "eval": 2, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "10.2.", "eval": 18, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "11.2.", "eval": 14, "recv": 3, "sold": 1, "ret": 0, "inProd": 2}, {"date": "12.2.", "eval": 14, "recv": 2, "sold": 2, "ret": 0, "inProd": 0}, {"date": "13.2.", "eval": 10, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "14.2.", "eval": 9, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "15.2.", "eval": 8, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "16.2.", "eval": 7, "recv": 1, "sold": 1, "ret": 0, "inProd": 0}, {"date": "17.2.", "eval": 7, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "18.2.", "eval": 9, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "19.2.", "eval": 9, "recv": 2, "sold": 0, "ret": 2, "inProd": 0}, {"date": "20.2.", "eval": 7, "recv": 1, "sold": 0, "ret": 1, "inProd": 0}, {"date": "21.2.", "eval": 2, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "22.2.", "eval": 7, "recv": 2, "sold": 1, "ret": 1, "inProd": 0}, {"date": "23.2.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "24.2.", "eval": 14, "recv": 2, "sold": 1, "ret": 0, "inProd": 1}, {"date": "25.2.", "eval": 17, "recv": 3, "sold": 0, "ret": 0, "inProd": 3}, {"date": "26.2.", "eval": 13, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "27.2.", "eval": 10, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "28.2.", "eval": 7, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "1.3.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "2.3.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "3.3.", "eval": 20, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "4.3.", "eval": 16, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "5.3.", "eval": 17, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "6.3.", "eval": 16, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "7.3.", "eval": 11, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "8.3.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "9.3.", "eval": 3, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "10.3.", "eval": 23, "recv": 3, "sold": 0, "ret": 0, "inProd": 3}, {"date": "11.3.", "eval": 14, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "12.3.", "eval": 15, "recv": 2, "sold": 0, "ret": 0, "inProd": 2}, {"date": "13.3.", "eval": 14, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "14.3.", "eval": 9, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "15.3.", "eval": 8, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "16.3.", "eval": 19, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "17.3.", "eval": 23, "recv": 1, "sold": 0, "ret": 0, "inProd": 1}, {"date": "18.3.", "eval": 14, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "19.3.", "eval": 14, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "20.3.", "eval": 8, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "21.3.", "eval": 13, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "22.3.", "eval": 10, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "23.3.", "eval": 31, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}, {"date": "24.3.", "eval": 0, "recv": 0, "sold": 0, "ret": 0, "inProd": 0}];
+
+function buildTiltakHtml() {
+  var h = '';
+  h += '<div style="margin-bottom:16px;padding:14px 18px;background:#fff;border-radius:16px;border:1px solid rgba(0,66,37,0.08);font-size:13px;color:#667A72;line-height:1.7;border-left:4px solid #1D9E75">';
+  h += '<strong style="color:#004225">Slik bruker du tiltak-analysen:</strong> Sett datoen du hevet ankerprisene. ';
+  h += 'Etter ~10 dagers lag (selger evalueres i dag, bil ankommer om 10d) ser du om eval-aksept stiger. ';
+  h += 'Biler som ankommer etter tiltaket utgjor cohorten — disse folges til auksjon for a male bud-aksept.';
+  h += '</div>';
+
+  h += '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
+  h += '<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
+  h += '<input type="date" id="tiltakDateInput" style="font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,66,37,0.2);background:#fff;color:#004225"></div>';
+  h += '<div style="padding-bottom:2px;font-size:12px;color:#667A72" id="tiltakLagInfo"></div>';
+  h += '</div>';
+
+  h += '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px">';
+  h += '<div style="background:#fff;border-radius:14px;padding:16px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 2px 12px rgba(0,66,37,0.05)">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">Eval-aksept for</div>';
+  h += '<div id="tk-ep-before" style="font-size:32px;font-weight:900;line-height:1">-</div></div>';
+
+  h += '<div style="background:#fff;border-radius:14px;padding:16px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 2px 12px rgba(0,66,37,0.05)">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">Eval-aksept etter</div>';
+  h += '<div id="tk-ep-after" style="font-size:32px;font-weight:900;line-height:1">-</div></div>';
+
+  h += '<div style="background:#fff;border-radius:14px;padding:16px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 2px 12px rgba(0,66,37,0.05)">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">Bud-aksept cohort</div>';
+  h += '<div id="tk-bp-cohort" style="font-size:32px;font-weight:900;line-height:1">-</div>';
+  h += '<div id="tk-bp-sub" style="font-size:11px;color:#667A72;margin-top:4px"></div></div>';
+
+  h += '<div style="background:#fff;border-radius:14px;padding:16px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 2px 12px rgba(0,66,37,0.05)">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">Biler i cohort</div>';
+  h += '<div id="tk-cohort-n" style="font-size:32px;font-weight:900;line-height:1">-</div>';
+  h += '<div style="font-size:11px;color:#667A72;margin-top:4px">mottatt etter tiltak</div></div>';
+  h += '</div>';
+
+  h += '<div class="table-card" style="margin-bottom:16px">';
+  h += '<div class="th"><div class="th-title">Steg 1 &#8212; Eval-aksept utvikling (90 dager)</div></div>';
+  h += '<div class="chart-explain">Gra soeyler = evaluert per dag. Gronne soeyler = mottatt (aksepterte tilbud). Rod linje = rullerende 7-dagers akseptrate. Stiplet = 20%-mal. Gul strek = tiltaksdato. Gron strek = forventet effektstart (+10d).</div>';
+  h += '<div style="padding:16px;position:relative;height:260px"><canvas id="tkChart1"></canvas></div></div>';
+
+  h += '<div class="table-card" style="margin-bottom:16px">';
+  h += '<div class="th"><div class="th-title">Steg 2 &#8212; Cohort bud-aksept (biler mottatt etter tiltak)</div></div>';
+  h += '<div class="chart-explain">Viser kun biler som ble mottatt etter tiltaksdato. Gront = solgt pa auksjon. Gratt = fortsatt i produksjon. Rodt = returnert. Stiplet = 70%-mal bud-aksept.</div>';
+  h += '<div style="padding:16px;position:relative;height:200px"><canvas id="tkChart2"></canvas></div></div>';
+
+  h += '<div id="tk-status" style="font-size:13px;color:#667A72;padding:12px 0;line-height:1.6"></div>';
+  return h;
+}
+
+var tkChart1 = null, tkChart2 = null;
+
+function renderTiltakCharts() {
+  var dateEl = document.getElementById('tiltakDateInput');
+  if (!dateEl) return;
+  if (!dateEl.value) {
+    var def = new Date(); def.setDate(def.getDate()-14);
+    dateEl.value = def.toISOString().slice(0,10);
+  }
+  dateEl.removeEventListener('change', renderTiltakCharts);
+  dateEl.addEventListener('change', renderTiltakCharts);
+
+  var picked = new Date(dateEl.value);
+  var today = new Date();
+  var daysAgo = Math.round((today - picked) / 86400000);
+  var LAG = 10;
+  var S = TILTAK_SERIES;
+  var N = S.length;
+  var tiltakIdx = N - 1 - daysAgo;
+  var effectIdx = tiltakIdx + LAG;
+
+  var lagEl = document.getElementById('tiltakLagInfo');
+  if (lagEl) {
+    var daysLeft = Math.max(0, LAG - daysAgo);
+    lagEl.textContent = daysAgo + ' dager siden tiltak · effekt ' + (daysLeft > 0 ? 'om ' + daysLeft + ' dager' : 'allerede synlig');
+  }
+
+  // KPIs
+  var bfSlice = S.slice(Math.max(0, tiltakIdx-30), tiltakIdx+1);
+  var bfE = bfSlice.reduce(function(a,s){return a+s.eval;},0);
+  var bfR = bfSlice.reduce(function(a,s){return a+s.recv;},0);
+  var epBefore = bfE > 0 ? Math.round(bfR/bfE*100) : 0;
+
+  var afSlice = S.slice(Math.max(0,effectIdx));
+  var afE = afSlice.reduce(function(a,s){return a+s.eval;},0);
+  var afR = afSlice.reduce(function(a,s){return a+s.recv;},0);
+  var epAfter = afE > 0 ? Math.round(afR/afE*100) : null;
+
+  var cohSlice = S.slice(Math.max(0,tiltakIdx+1));
+  var cohRecv = cohSlice.reduce(function(a,s){return a+s.recv;},0);
+  var cohSold = cohSlice.reduce(function(a,s){return a+s.sold;},0);
+  var cohRet  = cohSlice.reduce(function(a,s){return a+s.ret;},0);
+  var cohProd = cohSlice.reduce(function(a,s){return a+s.inProd;},0);
+  var cohDone = cohSold + cohRet;
+  var bpCohort = cohDone > 0 ? Math.round(cohSold/cohDone*100) : null;
+
+  function setEl(id, val, target, fmt) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (val === null) { el.textContent = 'for tidlig'; el.style.color = '#aaa'; return; }
+    el.textContent = fmt(val);
+    el.style.color = val >= target ? '#2E7D32' : '#C62828';
+  }
+  setEl('tk-ep-before', epBefore, 20, function(v){return v+'%';});
+  setEl('tk-ep-after', epAfter, 20, function(v){return v+'%';});
+  setEl('tk-bp-cohort', bpCohort, 70, function(v){return v+'%';});
+  var nEl = document.getElementById('tk-cohort-n');
+  if (nEl) nEl.textContent = cohRecv;
+  var subEl = document.getElementById('tk-bp-sub');
+  if (subEl) subEl.textContent = cohDone > 0 ? cohSold+' solgt / '+cohRet+' ret / '+cohProd+' i prod' : 'ingen ferdigstilt enda';
+
+  // Rolling 7d rate
+  var labels = S.map(function(s){return s.date;});
+  var evalArr = S.map(function(s){return s.eval;});
+  var recvArr = S.map(function(s){return s.recv;});
+  var rate7 = labels.map(function(_,i){
+    var n=0,d=0;
+    for(var j=Math.max(0,i-6);j<=i;j++){n+=recvArr[j];d+=evalArr[j];}
+    return d>0?Math.round(n/d*100):null;
+  });
+
+  if (tkChart1) tkChart1.destroy();
+  var ctx1 = document.getElementById('tkChart1');
+  if (!ctx1) return;
+  tkChart1 = new Chart(ctx1, {
+    data:{labels:labels,datasets:[
+      {type:'bar',label:'Evaluert',data:evalArr,backgroundColor:'rgba(136,135,128,0.2)',yAxisID:'y2',order:4},
+      {type:'bar',label:'Mottatt', data:recvArr,backgroundColor:'rgba(29,158,117,0.65)',yAxisID:'y2',order:3},
+      {type:'line',label:'Akseptrate',data:rate7,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.07)',fill:true,borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y',spanGaps:true,order:1},
+      {type:'line',label:'Mal 20%',data:labels.map(function(){return 20;}),borderColor:'rgba(198,40,40,0.3)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:400},
+      plugins:{
+        legend:{display:false},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){
+          if(c.dataset.label==='Akseptrate') return 'Akseptrate: '+(c.parsed.y!==null?c.parsed.y+'%':'-');
+          if(c.dataset.label==='Mal 20%') return 'Mal: 20%';
+          return c.dataset.label+': '+c.parsed.y+' stk';
+        }}}
+      },
+      scales:{
+        x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:10},grid:{display:false},border:{display:false}},
+        y:{min:0,max:35,position:'left',ticks:{color:'#C62828',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},
+        y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}
+      }
+    }
+  });
+
+  // Draw tiltak + effect lines
+  setTimeout(function(){
+    if (!tkChart1) return;
+    var ch = tkChart1, area = ch.chartArea, ctx = ctx1.getContext('2d');
+    function drawLine(idx, color, lbl) {
+      if (idx < 0 || idx >= N) return;
+      var x = ch.scales.x.getPixelForValue(idx);
+      if (x < area.left || x > area.right) return;
+      ctx.save();
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([5,3]);
+      ctx.beginPath(); ctx.moveTo(x, area.top); ctx.lineTo(x, area.bottom); ctx.stroke();
+      ctx.fillStyle = color; ctx.font = '500 10px Inter'; ctx.setLineDash([]);
+      ctx.fillText(lbl, x+4, area.top+14);
+      ctx.restore();
+    }
+    drawLine(tiltakIdx, '#BA7517', 'Tiltak');
+    drawLine(effectIdx, '#0F6E56', 'Effekt +10d');
+  }, 500);
+
+  // Chart 2: cohort stacked
+  var cohLabels=[], cohS=[], cohP=[], cohR=[];
+  S.slice(Math.max(0,tiltakIdx+1)).forEach(function(s){
+    if(s.recv>0){cohLabels.push(s.date);cohS.push(s.sold);cohP.push(s.inProd);cohR.push(s.ret);}
+  });
+
+  if (tkChart2) tkChart2.destroy();
+  var ctx2 = document.getElementById('tkChart2');
+  if (!ctx2) return;
+
+  var statusEl = document.getElementById('tk-status');
+
+  if (cohLabels.length === 0) {
+    if (statusEl) statusEl.textContent = 'Ingen biler mottatt etter tiltaksdato enda. Prøv en eldre dato, eller vent '+ LAG+' dager.';
+    return;
+  }
+
+  var goal70 = cohLabels.map(function(_,i){
+    var tot = cohS[i]+cohP[i]+cohR[i];
+    return tot > 0 ? Math.round(tot*0.7*10)/10 : null;
+  });
+
+  tkChart2 = new Chart(ctx2, {
+    data:{labels:cohLabels,datasets:[
+      {type:'bar',label:'Solgt',data:cohS,backgroundColor:'rgba(15,110,86,0.7)',stack:'s'},
+      {type:'bar',label:'I produksjon',data:cohP,backgroundColor:'rgba(136,135,128,0.3)',stack:'s'},
+      {type:'bar',label:'Returnert',data:cohR,backgroundColor:'rgba(163,45,45,0.6)',stack:'s'},
+      {type:'line',label:'70%-mal',data:goal70,borderColor:'rgba(15,110,86,0.5)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,spanGaps:true}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:400},
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:10,padding:12}},tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{stacked:true,ticks:{color:'#888',font:{size:9}},grid:{display:false},border:{display:false}},
+        y:{stacked:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}
+      }
+    }
+  });
+
+  if (statusEl) {
+    statusEl.textContent = cohDone > 0
+      ? 'Cohort: '+cohRecv+' biler mottatt etter tiltak. '+cohSold+' solgt, '+cohRet+' returnert, '+cohProd+' i produksjon. Bud-aksept: '+(bpCohort||'-')+'% (mal: 70%).'
+      : cohRecv+' biler mottatt etter tiltak — ingen er ferdigstilt pa auksjon enda. De er fortsatt i produksjon.';
+  }
 }
 
 function drawScatter(sold,returned){
@@ -663,6 +884,6 @@ loadData()
     document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.ad</div>
+<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.ae</div>
 </body>
 </html>
