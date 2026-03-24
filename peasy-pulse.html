@@ -259,11 +259,11 @@ function renderEvalCharts(rows, data) {
 
   // Linear regression trendline
   function linReg(data) {
-    var pts=data.map(function(v,i){return v!==null?{x:i,y:v}:null;}).filter(Boolean);
-    if(pts.length<7)return data.map(function(){return null;});
-    var n=pts.length,sx=0,sy=0,sxy=0,sxx=0;
+    var pts = data.map(function(v,i){return v!==null?{x:i,y:v}:null;}).filter(Boolean);
+    if (pts.length < 7) return data.map(function(){return null;});
+    var n=pts.length, sx=0, sy=0, sxy=0, sxx=0;
     pts.forEach(function(p){sx+=p.x;sy+=p.y;sxy+=p.x*p.y;sxx+=p.x*p.x;});
-    var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx),intercept=(sy-slope*sx)/n;
+    var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx), intercept=(sy-slope*sx)/n;
     return data.map(function(_,i){return Math.round((slope*i+intercept)*10)/10;});
   }
 
@@ -275,16 +275,21 @@ function renderEvalCharts(rows, data) {
       return d>0?Math.round(n/d*100):null;
     });
   }
-  // 14-day rolling for smoother trend
-  function rolling14(num, den) {
+  // Offset rate: aksept on day X / eval on day X-10
+  // Smoothed over 14d window to reduce noise
+  function offsetRate(num, den, offset, win) {
     return days.map(function(_,i) {
       var n=0,d=0;
-      for(var j=Math.max(0,i-13);j<=i;j++){n+=num[j];d+=den[j];}
-      return d>=3?Math.round(n/d*100):null;
+      for(var w=0;w<win;w++){
+        var ni=i-w, di=ni-offset;
+        if(ni>=0&&ni<num.length) n+=num[ni];
+        if(di>=0&&di<den.length) d+=den[di];
+      }
+      return d>=5?Math.round(n/d*100):null;
     });
   }
-  var evalRate = rolling14(recvPerDay, evalPerDay);
-  var budRate  = rolling14(soldPerDay, mottPerDay);
+  var evalRate = offsetRate(recvPerDay, evalPerDay, 10, 14);
+  var budRate  = offsetRate(soldPerDay, mottPerDay, 14, 14);
 
   var chartOpts = function(targetPct, lineColor, targetColor) {
     return {
@@ -308,16 +313,20 @@ function renderEvalCharts(rows, data) {
     };
   };
 
+  // Trendlines (linear regression on rate)
+  var evalTrend = linReg(evalRate);
+  var budTrend  = linReg(budRate);
+
   // Chart 1: Eval-aksept
   var c1 = document.getElementById('evalTrendChart');
   if (c1) {
     var ex1 = Chart.getChart(c1); if(ex1) ex1.destroy();
     new Chart(c1, {data:{labels:days,datasets:[
-      {type:'bar',  label:'Evaluert',  data:evalPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
-      {type:'bar',  label:'Mottatt',   data:recvPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
-      {type:'line', label:'Rate',      data:evalRate,   borderColor:'#C62828', backgroundColor:'rgba(198,40,40,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal',       data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.35)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
-      {type:'line', label:'Trend',     data:linReg(evalRate), borderColor:'#B71C1C', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
+      {type:'bar',  label:'Evaluert',  data:evalPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:4},
+      {type:'bar',  label:'Mottatt',   data:recvPerDay, backgroundColor:'rgba(0,135,90,0.6)',  yAxisID:'y2', order:3},
+      {type:'line', label:'Akseptrate',data:evalRate,   borderColor:'#C62828', backgroundColor:'rgba(198,40,40,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
+      {type:'line', label:'Mal 20%',   data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.35)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
+      {type:'line', label:'Trend',     data:evalTrend,  borderColor:'#B71C1C', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
     ]}, options:chartOpts(20,'#C62828','rgba(198,40,40,0.35)')});
   }
 
@@ -326,11 +335,11 @@ function renderEvalCharts(rows, data) {
   if (c2) {
     var ex2 = Chart.getChart(c2); if(ex2) ex2.destroy();
     new Chart(c2, {data:{labels:days,datasets:[
-      {type:'bar',  label:'Mottatt',  data:mottPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
-      {type:'bar',  label:'Solgt',    data:soldPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
-      {type:'line', label:'Rate',     data:budRate,    borderColor:'#00875A', backgroundColor:'rgba(0,135,90,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal',      data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.4)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
-      {type:'line', label:'Trend',    data:linReg(budRate), borderColor:'#1B5E20', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
+      {type:'bar',  label:'Mottatt',   data:mottPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:4},
+      {type:'bar',  label:'Solgt',     data:soldPerDay, backgroundColor:'rgba(0,135,90,0.6)',  yAxisID:'y2', order:3},
+      {type:'line', label:'Salgsrate', data:budRate,    borderColor:'#00875A', backgroundColor:'rgba(0,135,90,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
+      {type:'line', label:'Mal 70%',   data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.4)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
+      {type:'line', label:'Trend',     data:budTrend,   borderColor:'#1B5E20', borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:'y', order:0}
     ]}, options:chartOpts(70,'#00875A','rgba(0,135,90,0.4)')});
   }
 
@@ -483,22 +492,14 @@ function buildEvalHtml(data, rows) {
   // Chart 1: Eval-aksept trend
   h += '<div class="table-card" style="margin-bottom:16px">';
   h += '<div class="th"><div class="th-title">Eval-aksept utvikling &#8212; siste 90 dager</div></div>';
-  h += '<div class="chart-explain">';
-  h += '<strong>Hvordan lese denne:</strong> Gronne soeyler = biler mottatt (aksepterte tilbud). Graa soeyler = antall evaluert. ';
-  h += 'Rod linje = rullerende 7-dagers akseptrate (mottatt/evaluert). Stiplet = 20%-mal. ';
-  h += 'Nar rod linje klatrer mot stiplet linje = vi forbedrer oss.';
-  h += '</div>';
+  h += '<div class="chart-explain">Graa soeyler = evaluert. Gronne soeyler = mottatt (aksepterte tilbud). Rod linje = akseptrate %. Stiplet = 20% mal. Mork stiplet = trendlinje (30d lineaer regresjon).</div>';
   h += '<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div>';
   h += '</div>';
 
   // Chart 2: Bud-aksept trend
   h += '<div class="table-card" style="margin-bottom:24px">';
   h += '<div class="th"><div class="th-title">Bud-aksept utvikling &#8212; siste 90 dager</div></div>';
-  h += '<div class="chart-explain">';
-  h += '<strong>Hvordan lese denne:</strong> Gronne soeyler = biler solgt. Graa soeyler = biler mottatt pa anlegg. ';
-  h += 'Gron linje = rullerende 7-dagers salgsrate (solgt/mottatt). Stiplet = 70%-mal. ';
-  h += 'Nar gron linje klatrer mot stiplet linje = vi selger en storre andel av bilene vi tar inn.';
-  h += '</div>';
+  h += '<div class="chart-explain">Graa soeyler = mottatt pa anlegg. Gronne soeyler = solgt. Gron linje = salgsrate %. Stiplet = 70% mal. Mork stiplet = trendlinje (30d lineaer regresjon).</div>';
   h += '<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div>';
   h += '</div>';
 
@@ -780,10 +781,15 @@ function renderTiltakCharts() {
   var evalArr   = S.map(function(s){return s.eval;});
   var akseptArr = S.map(function(s){return s.aksept;});
   var mottattArr= S.map(function(s){return s.mottatt;});
+  // Offset: aksept on day X / eval on day X-10, smoothed 14d
   var rate14 = labels.map(function(_,i){
     var n=0,d=0;
-    for(var j=Math.max(0,i-13);j<=i;j++){n+=akseptArr[j];d+=evalArr[j];}
-    return d>=3?Math.round(n/d*100):null;
+    for(var w=0;w<14;w++){
+      var ni=i-w, di=ni-10;
+      if(ni>=0&&ni<akseptArr.length) n+=akseptArr[ni];
+      if(di>=0&&di<evalArr.length) d+=evalArr[di];
+    }
+    return d>=5?Math.round(n/d*100):null;
   });
 
   if (tkChart1) tkChart1.destroy();
@@ -802,8 +808,8 @@ function renderTiltakCharts() {
         legend:{display:false},
         tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){
           if(c.dataset.label==='Akseptrate') return 'Akseptrate: '+(c.parsed.y!==null?c.parsed.y+'%':'-');
-          if(c.dataset.label==='Mal 20%') return 'Mal: 20%';
-          return c.dataset.label+': '+c.parsed.y+' stk';
+          if(c.dataset.label==='20% mal') return 'Mal: 20%';
+          return c.dataset.label+': '+c.parsed.y;
         }}}
       },
       scales:{
@@ -812,6 +818,13 @@ function renderTiltakCharts() {
         y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}
       }
     }
+  });
+  }
+  buildTkChart1(window._tkTrendMode);
+  // Wire radios
+  ['rate','volume'].forEach(function(val){
+    var r=document.getElementById('tk-trend-'+val);
+    if(r){r.checked=(val===window._tkTrendMode);r.onchange=function(){window._tkTrendMode=val;buildTkChart1(val);};}
   });
 
   // Draw tiltak + effect lines
