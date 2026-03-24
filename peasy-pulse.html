@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ap</title>
+<title>Peasy Pulse v16.03.ar</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -301,7 +301,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% pa auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drommen: Hoyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ap &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ar &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -327,9 +327,9 @@ var tkChart1=null;
 function renderTiltakCharts(){
   var dateEl=document.getElementById('tiltakDateInput');
   if(!dateEl)return;
-  if(!dateEl.value){try{var saved=localStorage.getItem('peasy-tiltakdato');dateEl.value=saved||TILTAK_DATO;}catch(e){dateEl.value=TILTAK_DATO;}}
+  if(!dateEl.value){dateEl.value=TILTAK_DATO;}
   dateEl.removeEventListener('change',renderTiltakCharts);
-  dateEl.addEventListener('change',function(){try{localStorage.setItem('peasy-tiltakdato',dateEl.value);}catch(e){}renderTiltakCharts();});
+  dateEl.addEventListener('change',renderTiltakCharts);
   var rows=window._lastRows||[];
   var today=new Date();
   var picked=new Date(dateEl.value);
@@ -459,6 +459,93 @@ function render(data,rows){
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
     +'</div>';
+  // Daily pulse card
+  var todayDate = new Date(); todayDate.setHours(0,0,0,0);
+  var evalAll2 = (rows||[]).slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
+  function pdOps(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
+  var evalToday   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate;}).length;
+  var avvistToday = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate&&String(r[12]||'').toLowerCase().includes('avvist by customer');}).length;
+  var bestiltToday= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;}).length;
+  var mottattToday= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;}).length;
+  var solgtToday  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;}).length;
+  var retToday    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate;}).length;
+  var d7 = new Date(); d7.setDate(d7.getDate()-7); d7.setHours(0,0,0,0);
+  var eval7d   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=d7;});
+  var aksept7d = eval7d.filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());});
+  var mott7d   = evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=d7;});
+  var solgt7d  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=d7;});
+  var ret7d    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=d7;});
+  var done7d   = solgt7d.length+ret7d.length;
+  var ep7 = eval7d.length>0?Math.round(aksept7d.length/eval7d.length*100):0;
+  var bp7 = done7d>0?Math.round(solgt7d.length/done7d*100):0;
+
+  // Cycle times (last 60 days)
+  var d60 = new Date(); d60.setDate(d60.getDate()-60); d60.setHours(0,0,0,0);
+  var lagEA=[],lagAM=[],lagMS=[];
+  evalAll2.forEach(function(r){
+    var ev=pdOps(r[13]),ak=pdOps(r[15])||pdOps(r[16]),mo=pdOps(r[17]),so=pdOps(r[18]);
+    if(!ev||ev<d60)return;
+    if(ev&&ak){var d=Math.round((ak-ev)/86400000);if(d>=0&&d<30)lagEA.push(d);}
+    if(ak&&mo){var d=Math.round((mo-ak)/86400000);if(d>=0&&d<30)lagAM.push(d);}
+    if(mo&&so){var d=Math.round((so-mo)/86400000);if(d>=0&&d<30)lagMS.push(d);}
+  });
+  function snitt(arr){return arr.length?Math.round(arr.reduce(function(a,b){return a+b;},0)/arr.length):null;}
+  var lagEAsnitt=snitt(lagEA),lagAMsnitt=snitt(lagAM),lagMSsnitt=snitt(lagMS);
+  var lagTot = (lagEAsnitt!==null&&lagAMsnitt!==null&&lagMSsnitt!==null)?lagEAsnitt+lagAMsnitt+lagMSsnitt:null;
+
+  var nowDate = new Date();
+  var dagsDateStr = nowDate.toLocaleDateString('nb-NO',{day:'numeric',month:'long',year:'numeric'});
+  var ep7col = ep7>=20?'#2E7D32':'#C62828';
+  var bp7col = bp7>=70?'#2E7D32':bp7>=60?'#E65100':'#C62828';
+
+  function lagColor(v, target) { return v===null?'#aaa':v<=target?'#2E7D32':v<=target*1.5?'#E65100':'#C62828'; }
+
+  opsHtml += '<div style="background:#fff;border-radius:16px;padding:22px 24px;margin-bottom:24px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 4px 24px rgba(0,66,37,0.07)">';
+  opsHtml += '<div style="font-size:18px;font-weight:800;color:#004225;margin-bottom:18px">Peasy Pulse &mdash; '+dagsDateStr+'</div>';
+  opsHtml += '<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:20px">';
+
+  function dagKort(label, val, sub, color) {
+    return '<div style="background:rgba(0,66,37,0.03);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">'+label+'</div>'
+      +'<div style="font-size:28px;font-weight:900;line-height:1;color:'+(color||'#004225')+'">'+val+'</div>'
+      +(sub?'<div style="font-size:10px;color:#aaa;margin-top:4px">'+sub+'</div>':'')
+      +'</div>';
+  }
+
+  opsHtml += dagKort('Evaluert i dag', evalToday, 'tilbud sendt', '#004225');
+  opsHtml += dagKort('Avvist tilbud', avvistToday, 'av evaluert i dag', avvistToday>0?'#C62828':'#2E7D32');
+  opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
+  opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
+  opsHtml += dagKort('Solgt i dag', solgtToday, 'pa auksjon', solgtToday>0?'#2E7D32':'#667A72');
+  opsHtml += dagKort('Returnert i dag', retToday, 'avvist bud', retToday>0?'#C62828':'#2E7D32');
+  opsHtml += '</div>';
+
+  // 7d rates
+  opsHtml += '<div style="display:flex;gap:24px;padding-top:14px;border-top:1px solid rgba(0,66,37,0.06);flex-wrap:wrap">';
+  opsHtml += '<div style="font-size:12px;color:#667A72">7-dagers rater: ';
+  opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> (mal 20%) &nbsp;&middot;&nbsp; ';
+  opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong> (mal 70%)</div>';
+  opsHtml += '</div>';
+  opsHtml += '</div>';
+
+  // Cycle time cards
+  opsHtml += '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px">';
+
+  function syklusKort(label, val, target, enhet) {
+    var col = lagColor(val, target);
+    return '<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 2px 12px rgba(0,66,37,0.05)">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+label+'</div>'
+      +'<div style="font-size:28px;font-weight:900;line-height:1;color:'+col+'">'+(val!==null?val:'&ndash;')+'<span style="font-size:13px;font-weight:500;color:#aaa"> '+enhet+'</span></div>'
+      +'<div style="font-size:10px;color:#aaa;margin-top:4px">Mal: &le;'+target+' '+enhet+'</div>'
+      +'</div>';
+  }
+
+  opsHtml += syklusKort('Eval &rarr; Aksept', lagEAsnitt, 3, 'dager');
+  opsHtml += syklusKort('Aksept &rarr; Mottatt', lagAMsnitt, 5, 'dager');
+  opsHtml += syklusKort('Mottatt &rarr; Solgt', lagMSsnitt, 7, 'dager');
+  opsHtml += syklusKort('Total syklus', lagTot, 15, 'dager');
+  opsHtml += '</div>';
+
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
   var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
   var opsHtml='<div class="section-label">Biler i produksjon pa anlegg ('+data.inProd.length+' biler)</div><div class="pipeline-grid">';
@@ -524,6 +611,6 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ap</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ar</div>
 </body>
 </html>
