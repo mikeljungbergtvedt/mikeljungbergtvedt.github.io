@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ak</title>
+<title>Peasy Pulse v16.03.ah</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,16 +257,6 @@ function renderEvalCharts(rows, data) {
     var idx = days.indexOf(ds); if (idx>=0) soldPerDay[idx]++;
   });
 
-  // Linear regression trendline
-  function linReg(data) {
-    var pts = data.map(function(v,i){return v!==null?{x:i,y:v}:null;}).filter(Boolean);
-    if (pts.length < 7) return data.map(function(){return null;});
-    var n=pts.length, sx=0, sy=0, sxy=0, sxx=0;
-    pts.forEach(function(p){sx+=p.x;sy+=p.y;sxy+=p.x*p.y;sxx+=p.x*p.x;});
-    var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx), intercept=(sy-slope*sx)/n;
-    return data.map(function(_,i){return Math.round((slope*i+intercept)*10)/10;});
-  }
-
   // Rolling 7d rate
   function rolling7(num, den) {
     return days.map(function(_,i) {
@@ -275,21 +265,16 @@ function renderEvalCharts(rows, data) {
       return d>0?Math.round(n/d*100):null;
     });
   }
-  // Offset rate: aksept on day X / eval on day X-10
-  // Smoothed over 14d window to reduce noise
-  function offsetRate(num, den, offset, win) {
+  // 14-day rolling for smoother trend
+  function rolling14(num, den) {
     return days.map(function(_,i) {
       var n=0,d=0;
-      for(var w=0;w<win;w++){
-        var ni=i-w, di=ni-offset;
-        if(ni>=0&&ni<num.length) n+=num[ni];
-        if(di>=0&&di<den.length) d+=den[di];
-      }
-      return d>=5?Math.round(n/d*100):null;
+      for(var j=Math.max(0,i-13);j<=i;j++){n+=num[j];d+=den[j];}
+      return d>=3?Math.round(n/d*100):null;
     });
   }
-  var evalRate = offsetRate(recvPerDay, evalPerDay, 10, 14);
-  var budRate  = offsetRate(soldPerDay, mottPerDay, 14, 14);
+  var evalRate = rolling14(recvPerDay, evalPerDay);
+  var budRate  = rolling14(soldPerDay, mottPerDay);
 
   var chartOpts = function(targetPct, lineColor, targetColor) {
     return {
@@ -313,62 +298,29 @@ function renderEvalCharts(rows, data) {
     };
   };
 
-  // Trendlines
-  var evalTrendRate = linReg(evalRate);
-  var evalTrendVol  = linReg(recvPerDay);
-  var budTrendRate  = linReg(budRate);
-  var budTrendVol   = linReg(soldPerDay);
-  window._evalTrendMode = window._evalTrendMode || 'rate';
-  window._budTrendMode  = window._budTrendMode  || 'rate';
-
-  function buildEvalTrendChart(mode) {
-    var c1 = document.getElementById('evalTrendChart');
-    if (!c1) return;
+  // Chart 1: Eval-aksept
+  var c1 = document.getElementById('evalTrendChart');
+  if (c1) {
     var ex1 = Chart.getChart(c1); if(ex1) ex1.destroy();
-    var td = mode==='rate' ? evalTrendRate : evalTrendVol;
-    var ta = mode==='rate' ? 'y' : 'y2';
-    var tc = mode==='rate' ? '#E53935' : '#1B5E20';
-    var tl = mode==='rate' ? 'Trend akseptrate' : 'Trend antall bestilt';
     new Chart(c1, {data:{labels:days,datasets:[
-      {type:'bar',  label:'Evaluert',  data:evalPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:4},
-      {type:'bar',  label:'Bestilt',   data:recvPerDay, backgroundColor:'rgba(0,135,90,0.6)',  yAxisID:'y2', order:3},
-      {type:'line', label:'Rate',      data:evalRate,   borderColor:'#C62828', backgroundColor:'rgba(198,40,40,0.07)', fill:true, borderWidth:2, pointRadius:0, tension:0.3, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal 20%',   data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.3)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
-      {type:'line', label:tl,          data:td, borderColor:tc, borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:ta, order:0}
+      {type:'bar',  label:'Evaluert',  data:evalPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
+      {type:'bar',  label:'Mottatt',   data:recvPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
+      {type:'line', label:'Rate',      data:evalRate,   borderColor:'#C62828', backgroundColor:'rgba(198,40,40,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
+      {type:'line', label:'Mal',       data:days.map(function(){return 20;}), borderColor:'rgba(198,40,40,0.35)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2}
     ]}, options:chartOpts(20,'#C62828','rgba(198,40,40,0.35)')});
-    var r = document.getElementById('eval-trend-'+mode);
-    if (r) r.checked = true;
   }
 
-  function buildBudTrendChart(mode) {
-    var c2 = document.getElementById('budTrendChart');
-    if (!c2) return;
+  // Chart 2: Bud-aksept
+  var c2 = document.getElementById('budTrendChart');
+  if (c2) {
     var ex2 = Chart.getChart(c2); if(ex2) ex2.destroy();
-    var td = mode==='rate' ? budTrendRate : budTrendVol;
-    var ta = mode==='rate' ? 'y' : 'y2';
-    var tc = mode==='rate' ? '#1B5E20' : '#0D47A1';
-    var tl = mode==='rate' ? 'Trend salgsrate' : 'Trend antall solgt';
     new Chart(c2, {data:{labels:days,datasets:[
-      {type:'bar',  label:'Mottatt',  data:mottPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:4},
-      {type:'bar',  label:'Solgt',    data:soldPerDay, backgroundColor:'rgba(0,135,90,0.6)',  yAxisID:'y2', order:3},
-      {type:'line', label:'Rate',     data:budRate,    borderColor:'#00875A', backgroundColor:'rgba(0,135,90,0.07)', fill:true, borderWidth:2, pointRadius:0, tension:0.3, yAxisID:'y', spanGaps:true, order:1},
-      {type:'line', label:'Mal 70%',  data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.3)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2},
-      {type:'line', label:tl,         data:td, borderColor:tc, borderWidth:2, borderDash:[4,2], pointRadius:0, yAxisID:ta, order:0}
+      {type:'bar',  label:'Mottatt',  data:mottPerDay, backgroundColor:'rgba(0,66,37,0.15)', yAxisID:'y2', order:3},
+      {type:'bar',  label:'Solgt',    data:soldPerDay, backgroundColor:'rgba(0,135,90,0.6)', yAxisID:'y2', order:3},
+      {type:'line', label:'Rate',     data:budRate,    borderColor:'#00875A', backgroundColor:'rgba(0,135,90,0.08)', fill:true, borderWidth:2, pointRadius:2, pointHoverRadius:4, tension:0.4, yAxisID:'y', spanGaps:true, order:1},
+      {type:'line', label:'Mal',      data:days.map(function(){return 70;}), borderColor:'rgba(0,135,90,0.4)', borderWidth:1.5, borderDash:[6,4], pointRadius:0, yAxisID:'y', order:2}
     ]}, options:chartOpts(70,'#00875A','rgba(0,135,90,0.4)')});
-    var r = document.getElementById('bud-trend-'+mode);
-    if (r) r.checked = true;
   }
-
-  buildEvalTrendChart(window._evalTrendMode);
-  buildBudTrendChart(window._budTrendMode);
-
-  // Wire radio buttons (they exist in DOM from buildEvalHtml)
-  ['rate','volume'].forEach(function(v) {
-    var r1 = document.getElementById('eval-trend-'+v);
-    if (r1) r1.onchange = function(){ window._evalTrendMode=v; buildEvalTrendChart(v); };
-    var r2 = document.getElementById('bud-trend-'+v);
-    if (r2) r2.onchange = function(){ window._budTrendMode=v; buildBudTrendChart(v); };
-  });
 
   // Aksept-tabell
   var fD = function(s){if(!s)return null;var p=String(s).trim().split('.');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:null;};
@@ -518,23 +470,23 @@ function buildEvalHtml(data, rows) {
 
   // Chart 1: Eval-aksept trend
   h += '<div class="table-card" style="margin-bottom:16px">';
-  h += '<div class="th" style="flex-wrap:wrap;gap:8px"><div class="th-title">Eval-aksept utvikling &#8212; siste 90 dager</div>';
-  h += '<div style="display:flex;gap:16px;font-size:12px;align-items:center">';
-  h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" id="eval-trend-rate" name="eval-trend" value="rate" checked style="accent-color:#C62828"> Trend akseptrate %</label>';
-  h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" id="eval-trend-volume" name="eval-trend" value="volume" style="accent-color:#1B5E20"> Trend antall bestilt</label>';
-  h += '</div></div>';
-  h += '<div class="chart-explain">Graa soeyler = evaluert. Gronne soeyler = bestilt hent/lev. Rod linje = 14d akseptrate. Stiplet = 20% mal. Stiplet farget = trendlinje (lineaer regresjon).</div>';
+  h += '<div class="th"><div class="th-title">Eval-aksept utvikling &#8212; siste 90 dager</div></div>';
+  h += '<div class="chart-explain">';
+  h += '<strong>Hvordan lese denne:</strong> Gronne soeyler = biler mottatt (aksepterte tilbud). Graa soeyler = antall evaluert. ';
+  h += 'Rod linje = rullerende 7-dagers akseptrate (mottatt/evaluert). Stiplet = 20%-mal. ';
+  h += 'Nar rod linje klatrer mot stiplet linje = vi forbedrer oss.';
+  h += '</div>';
   h += '<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div>';
   h += '</div>';
 
   // Chart 2: Bud-aksept trend
   h += '<div class="table-card" style="margin-bottom:24px">';
-  h += '<div class="th" style="flex-wrap:wrap;gap:8px"><div class="th-title">Bud-aksept utvikling &#8212; siste 90 dager</div>';
-  h += '<div style="display:flex;gap:16px;font-size:12px;align-items:center">';
-  h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" id="bud-trend-rate" name="bud-trend" value="rate" checked style="accent-color:#1B5E20"> Trend salgsrate %</label>';
-  h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" id="bud-trend-volume" name="bud-trend" value="volume" style="accent-color:#0D47A1"> Trend antall solgt</label>';
-  h += '</div></div>';
-  h += '<div class="chart-explain">Graa soeyler = mottatt pa anlegg. Gronne soeyler = solgt. Gron linje = 14d salgsrate. Stiplet = 70% mal. Stiplet farget = trendlinje (lineaer regresjon).</div>';
+  h += '<div class="th"><div class="th-title">Bud-aksept utvikling &#8212; siste 90 dager</div></div>';
+  h += '<div class="chart-explain">';
+  h += '<strong>Hvordan lese denne:</strong> Gronne soeyler = biler solgt. Graa soeyler = biler mottatt pa anlegg. ';
+  h += 'Gron linje = rullerende 7-dagers salgsrate (solgt/mottatt). Stiplet = 70%-mal. ';
+  h += 'Nar gron linje klatrer mot stiplet linje = vi selger en storre andel av bilene vi tar inn.';
+  h += '</div>';
   h += '<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div>';
   h += '</div>';
 
@@ -707,7 +659,7 @@ function buildTiltakHtml() {
   h += '<strong style="color:#004225">Slik bruker du tiltak-analysen:</strong> Sett datoen du hevet ankerprisene. ';
   h += 'Etter ~10 dagers lag (selger evalueres i dag, bil ankommer om 10d) ser du om eval-aksept stiger. ';
   h += 'Biler som ankommer etter tiltaket utgjor cohorten &#8212; disse folges til auksjon for a male bud-aksept.';
-  h += '<div style="margin-top:8px;font-size:11px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ak &#183; Data oppdateres ved refresh</div>';
+  h += '<div style="margin-top:8px;font-size:11px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ah &#183; Data oppdateres ved refresh</div>';
   h += '</div>';
 
   h += '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
@@ -816,15 +768,10 @@ function renderTiltakCharts() {
   var evalArr   = S.map(function(s){return s.eval;});
   var akseptArr = S.map(function(s){return s.aksept;});
   var mottattArr= S.map(function(s){return s.mottatt;});
-  // Offset: aksept on day X / eval on day X-10, smoothed 14d
   var rate14 = labels.map(function(_,i){
     var n=0,d=0;
-    for(var w=0;w<14;w++){
-      var ni=i-w, di=ni-10;
-      if(ni>=0&&ni<akseptArr.length) n+=akseptArr[ni];
-      if(di>=0&&di<evalArr.length) d+=evalArr[di];
-    }
-    return d>=5?Math.round(n/d*100):null;
+    for(var j=Math.max(0,i-13);j<=i;j++){n+=akseptArr[j];d+=evalArr[j];}
+    return d>=3?Math.round(n/d*100):null;
   });
 
   if (tkChart1) tkChart1.destroy();
@@ -843,8 +790,8 @@ function renderTiltakCharts() {
         legend:{display:false},
         tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){
           if(c.dataset.label==='Akseptrate') return 'Akseptrate: '+(c.parsed.y!==null?c.parsed.y+'%':'-');
-          if(c.dataset.label==='20% mal') return 'Mal: 20%';
-          return c.dataset.label+': '+c.parsed.y;
+          if(c.dataset.label==='Mal 20%') return 'Mal: 20%';
+          return c.dataset.label+': '+c.parsed.y+' stk';
         }}}
       },
       scales:{
@@ -853,13 +800,6 @@ function renderTiltakCharts() {
         y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}
       }
     }
-  });
-  }
-  buildTkChart1(window._tkTrendMode);
-  // Wire radios
-  ['rate','volume'].forEach(function(val){
-    var r=document.getElementById('tk-trend-'+val);
-    if(r){r.checked=(val===window._tkTrendMode);r.onchange=function(){window._tkTrendMode=val;buildTkChart1(val);};}
   });
 
   // Draw tiltak + effect lines
@@ -955,6 +895,6 @@ loadData()
     document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ak</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ah</div>
 </body>
 </html>
