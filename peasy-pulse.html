@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.ao</title>
+<title>Peasy Pulse v16.03.ap</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -119,6 +119,7 @@ var BRACKETS=[
   {name:'Hoy',range:'250-400k',lo:250000,hi:400000,color:'#E65100'},
   {name:'Premium',range:'400k+',lo:400000,hi:9999999,color:'#6A1B9A'}
 ];
+var TILTAK_DATO = '2026-03-24'; // Endre denne datoen og commit for a oppdatere for alle
 var currentMode=(function(){try{return localStorage.getItem('peasy-mode')||'ops';}catch(e){return 'ops';}})();
 
 function setMode(m){
@@ -300,7 +301,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% pa auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drommen: Hoyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ao &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ap &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -326,7 +327,7 @@ var tkChart1=null;
 function renderTiltakCharts(){
   var dateEl=document.getElementById('tiltakDateInput');
   if(!dateEl)return;
-  if(!dateEl.value){try{var saved=localStorage.getItem('peasy-tiltakdato');if(saved)dateEl.value=saved;else{var def=new Date();def.setDate(def.getDate()-14);dateEl.value=def.toISOString().slice(0,10);}}catch(e){var def=new Date();def.setDate(def.getDate()-14);dateEl.value=def.toISOString().slice(0,10);}}
+  if(!dateEl.value){try{var saved=localStorage.getItem('peasy-tiltakdato');dateEl.value=saved||TILTAK_DATO;}catch(e){dateEl.value=TILTAK_DATO;}}
   dateEl.removeEventListener('change',renderTiltakCharts);
   dateEl.addEventListener('change',function(){try{localStorage.setItem('peasy-tiltakdato',dateEl.value);}catch(e){}renderTiltakCharts();});
   var rows=window._lastRows||[];
@@ -449,7 +450,7 @@ function render(data,rows){
   var tdC=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr);}).length;
   var dSC=Math.max(1,Math.floor((Date.now()-CUTOFF.getTime())/86400000));
   var pD=(tE/dSC).toFixed(1);
-  var dials='<div class="section-label">Nokkeltall</div><div class="dials-grid">'
+  var dials='<div class="section-label">Nokkeltall</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral"><div class="dial-label">Evaluert</div><div class="arc-wrap"><svg id="arc0"></svg></div><div class="dial-value">'+tE.toLocaleString('nb-NO')+'</div><div class="dial-unit">biler</div><div class="dial-sub">Tilbud sendt selger</div><div class="target-tag">Fra 1.11.2025</div></div>'
     +'<div class="dial-card '+(mOk?'on-target':'off-target')+'"><div class="dial-label">Evaluert &#8594; Mottatt</div><div class="arc-wrap"><svg id="arc1"></svg></div><div class="dial-value">'+mR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tM+' av '+tE+'</div><div class="dial-sub">Selger aksepterer tilbud</div><div class="target-tag">Mal '+TARGETS.evalMottatt+'%</div></div>'
     +'<div class="dial-card '+(sOk?'on-target':'off-target')+'"><div class="dial-label">Mottatt &#8594; Solgt</div><div class="arc-wrap"><svg id="arc2"></svg></div><div class="dial-value">'+sR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tS+' av '+tM+'</div><div class="dial-sub">Hoyeste bud akseptert</div><div class="target-tag">Mal '+TARGETS.mottattSolgt+'%</div></div>'
@@ -523,6 +524,6 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ao</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ap</div>
 </body>
 </html>
