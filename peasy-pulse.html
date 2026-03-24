@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.af</title>
+<title>Peasy Pulse v16.03.ah</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -265,8 +265,16 @@ function renderEvalCharts(rows, data) {
       return d>0?Math.round(n/d*100):null;
     });
   }
-  var evalRate = rolling7(recvPerDay, evalPerDay);
-  var budRate  = rolling7(soldPerDay, mottPerDay);
+  // 14-day rolling for smoother trend
+  function rolling14(num, den) {
+    return days.map(function(_,i) {
+      var n=0,d=0;
+      for(var j=Math.max(0,i-13);j<=i;j++){n+=num[j];d+=den[j];}
+      return d>=3?Math.round(n/d*100):null;
+    });
+  }
+  var evalRate = rolling14(recvPerDay, evalPerDay);
+  var budRate  = rolling14(soldPerDay, mottPerDay);
 
   var chartOpts = function(targetPct, lineColor, targetColor) {
     return {
@@ -650,7 +658,8 @@ function buildTiltakHtml() {
   h += '<div style="margin-bottom:16px;padding:14px 18px;background:#fff;border-radius:16px;border:1px solid rgba(0,66,37,0.08);font-size:13px;color:#667A72;line-height:1.7;border-left:4px solid #1D9E75">';
   h += '<strong style="color:#004225">Slik bruker du tiltak-analysen:</strong> Sett datoen du hevet ankerprisene. ';
   h += 'Etter ~10 dagers lag (selger evalueres i dag, bil ankommer om 10d) ser du om eval-aksept stiger. ';
-  h += 'Biler som ankommer etter tiltaket utgjor cohorten — disse folges til auksjon for a male bud-aksept.';
+  h += 'Biler som ankommer etter tiltaket utgjor cohorten &#8212; disse folges til auksjon for a male bud-aksept.';
+  h += '<div style="margin-top:8px;font-size:11px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.ah &#183; Data oppdateres ved refresh</div>';
   h += '</div>';
 
   h += '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
@@ -686,8 +695,8 @@ function buildTiltakHtml() {
 
   h += '<div class="table-card" style="margin-bottom:16px">';
   h += '<div class="th"><div class="th-title">Steg 2 &#8212; Cohort bud-aksept (biler mottatt etter tiltak)</div></div>';
-  h += '<div class="chart-explain">Viser biler fysisk mottatt pa anlegg (col 17) etter tiltaksdato. Disse er cohorten som folges til auksjon. Gront = solgt. Gratt = i produksjon. Rodt = returnert. Stiplet = 70%-mal bud-aksept.</div>';
-  h += '<div style="padding:16px;position:relative;height:200px"><canvas id="tkChart2"></canvas></div></div>';
+  h += '<div class="chart-explain">Biler fysisk mottatt pa anlegg (col 17) etter tiltaksdato. Binart utfall: solgt eller ikke solgt. Mal: 70% av ferdigstilte biler skal selges. Biler i produksjon telles ikke enda.</div>';
+  h += '<div id="tk-cohort-visual" style="padding:20px 24px"></div></div>';
 
   h += '<div id="tk-status" style="font-size:13px;color:#667A72;padding:12px 0;line-height:1.6"></div>';
   return h;
@@ -759,10 +768,10 @@ function renderTiltakCharts() {
   var evalArr   = S.map(function(s){return s.eval;});
   var akseptArr = S.map(function(s){return s.aksept;});
   var mottattArr= S.map(function(s){return s.mottatt;});
-  var rate7 = labels.map(function(_,i){
+  var rate14 = labels.map(function(_,i){
     var n=0,d=0;
-    for(var j=Math.max(0,i-6);j<=i;j++){n+=akseptArr[j];d+=evalArr[j];}
-    return d>0?Math.round(n/d*100):null;
+    for(var j=Math.max(0,i-13);j<=i;j++){n+=akseptArr[j];d+=evalArr[j];}
+    return d>=3?Math.round(n/d*100):null;
   });
 
   if (tkChart1) tkChart1.destroy();
@@ -772,7 +781,7 @@ function renderTiltakCharts() {
     data:{labels:labels,datasets:[
       {type:'bar',label:'Evaluert',data:evalArr,backgroundColor:'rgba(136,135,128,0.2)',yAxisID:'y2',order:4},
       {type:'bar',label:'Aksept (bestilt)',data:akseptArr,backgroundColor:'rgba(29,158,117,0.65)',yAxisID:'y2',order:3},
-      {type:'line',label:'Akseptrate',data:rate7,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.07)',fill:true,borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y',spanGaps:true,order:1},
+      {type:'line',label:'Akseptrate (14d)',data:rate14,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.07)',fill:true,borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y',spanGaps:true,order:1},
       {type:'line',label:'Mal 20%',data:labels.map(function(){return 20;}),borderColor:'rgba(198,40,40,0.3)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}
     ]},
     options:{
@@ -818,44 +827,44 @@ function renderTiltakCharts() {
     if(s.mottatt>0){cohLabels.push(s.date);cohS.push(s.sold);cohP.push(s.inProd);cohR.push(s.ret);}
   });
 
-  if (tkChart2) tkChart2.destroy();
-  var ctx2 = document.getElementById('tkChart2');
-  if (!ctx2) return;
+  // Binary cohort visual
+  var vis = document.getElementById('tk-cohort-visual');
+  if (!vis) return;
 
-  var statusEl = document.getElementById('tk-status');
-
-  if (cohLabels.length === 0) {
-    if (statusEl) statusEl.textContent = 'Ingen biler mottatt etter tiltaksdato enda. Prøv en eldre dato, eller vent '+ LAG+' dager.';
+  if (cohRecv === 0) {
+    vis.innerHTML = '<div style="color:#aaa;font-size:13px;padding:8px 0">Ingen biler mottatt etter tiltaksdato enda. Prøv en eldre dato.</div>';
     return;
   }
 
-  var goal70 = cohLabels.map(function(_,i){
-    var tot = cohS[i]+cohP[i]+cohR[i];
-    return tot > 0 ? Math.round(tot*0.7*10)/10 : null;
-  });
+  var bpColor = bpCohort === null ? '#aaa' : bpCohort >= 70 ? '#2E7D32' : '#C62828';
+  var pctSold = cohDone > 0 ? Math.round(cohSold/cohDone*100) : null;
+  var pctRet  = cohDone > 0 ? Math.round(cohRet/cohDone*100) : null;
+  var barW    = cohDone > 0 ? Math.round(cohSold/cohDone*100) : 0;
 
-  tkChart2 = new Chart(ctx2, {
-    data:{labels:cohLabels,datasets:[
-      {type:'bar',label:'Solgt',data:cohS,backgroundColor:'rgba(15,110,86,0.7)',stack:'s'},
-      {type:'bar',label:'I produksjon',data:cohP,backgroundColor:'rgba(136,135,128,0.3)',stack:'s'},
-      {type:'bar',label:'Returnert',data:cohR,backgroundColor:'rgba(163,45,45,0.6)',stack:'s'},
-      {type:'line',label:'70%-mal',data:goal70,borderColor:'rgba(15,110,86,0.5)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,spanGaps:true}
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,animation:{duration:400},
-      plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:10,padding:12}},tooltip:{mode:'index',intersect:false}},
-      scales:{
-        x:{stacked:true,ticks:{color:'#888',font:{size:9}},grid:{display:false},border:{display:false}},
-        y:{stacked:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}
-      }
-    }
-  });
-
-  if (statusEl) {
-    statusEl.textContent = cohDone > 0
-      ? 'Cohort: '+cohRecv+' biler mottatt etter tiltak. '+cohSold+' solgt, '+cohRet+' returnert, '+cohProd+' i produksjon. Bud-aksept: '+(bpCohort||'-')+'% (mal: 70%).'
-      : cohRecv+' biler mottatt etter tiltak — ingen er ferdigstilt pa auksjon enda. De er fortsatt i produksjon.';
-  }
+  vis.innerHTML =
+    '<div style="display:flex;align-items:flex-end;gap:32px;flex-wrap:wrap">'
+    // Big number
+    +'<div>'
+    +'<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Bud-aksept (ferdigstilte)</div>'
+    +'<div style="font-size:52px;font-weight:900;line-height:1;color:'+bpColor+'">'+(bpCohort !== null ? bpCohort+'%' : 'for tidlig')+'</div>'
+    +'<div style="font-size:12px;color:#aaa;margin-top:4px">Mal: 70% &mdash; '+cohSold+' solgt / '+cohDone+' ferdigstilt</div>'
+    +'</div>'
+    // Progress bar
+    +'<div style="flex:1;min-width:200px">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#aaa;margin-bottom:6px">'
+    +'<span>0%</span><span style="color:'+bpColor+';font-weight:600">70% mal</span><span>100%</span>'
+    +'</div>'
+    +'<div style="height:16px;background:rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;position:relative">'
+    +'<div style="position:absolute;left:0;top:0;height:100%;width:'+barW+'%;background:'+(bpCohort!==null&&bpCohort>=70?'#2E7D32':'#C62828')+';border-radius:8px;transition:width 0.6s ease"></div>'
+    +'<div style="position:absolute;left:70%;top:0;height:100%;width:2px;background:rgba(0,66,37,0.3)"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:20px;margin-top:10px;font-size:12px">'
+    +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(15,110,86,0.7);margin-right:4px"></span>Solgt: '+cohSold+' biler</span>'
+    +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(163,45,45,0.6);margin-right:4px"></span>Returnert: '+cohRet+' biler</span>'
+    +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(136,135,128,0.3);margin-right:4px"></span>I produksjon: '+cohProd+' biler</span>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
 }
 
 function drawScatter(sold,returned){
@@ -886,6 +895,6 @@ loadData()
     document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';
   });
 </script>
-<div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,66,37,0.45);font-family:monospace;pointer-events:none;z-index:9999">v16.03.af</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.ah</div>
 </body>
 </html>
