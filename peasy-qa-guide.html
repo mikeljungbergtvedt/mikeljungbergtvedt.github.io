@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peasy QA — Gjør boten smartere</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0D1117;
+  --paper: #F5F0E8;
+  --peasy: #004225;
+  --peasy2: #006644;
+  --accent: #FFCC33;
+  --warm: #FF6B35;
+  --muted: #6B6560;
+  --card: #FDFAF4;
+  --border: #E0D8C8;
+  --red: #C62828;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --display: 'Syne', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+/* ── HERO ── */
+.hero {
+  background: var(--peasy);
+  color: var(--paper);
+  padding: 80px 48px 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: 'QA';
+  position: absolute;
+  right: -40px;
+  top: -60px;
+  font-family: var(--display);
+  font-size: 380px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.04);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-family: var(--display);
+  font-size: clamp(48px, 7vw, 96px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -2px;
+  max-width: 900px;
+  margin-bottom: 32px;
+}
+
+.hero-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.hero-sub {
+  font-size: 16px;
+  font-weight: 300;
+  color: rgba(245,240,232,0.7);
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 32px;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(245,240,232,0.15);
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-stat-num {
+  font-family: var(--display);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.hero-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.5);
+}
+
+/* ── PHILOSOPHY BAND ── */
+.philosophy {
+  background: var(--accent);
+  color: var(--peasy);
+  padding: 40px 48px;
+}
+
+.philosophy-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.philosophy-text {
+  font-family: var(--display);
+  font-size: clamp(18px, 2.5vw, 26px);
+  font-weight: 700;
+  line-height: 1.3;
+  max-width: 1000px;
+}
+
+/* ── LAYOUT ── */
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 48px 80px;
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  margin-bottom: 32px;
+  margin-top: 64px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.section-header:first-child { margin-top: 0; }
+
+.section-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.section-title {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* ── STEP FLOW ── */
+.steps { display: flex; flex-direction: column; gap: 0; }
+
+.step {
+  display: flex;
+  gap: 0;
+  position: relative;
+}
+
+.step-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+}
+
+.step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--peasy);
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.step-line {
+  width: 2px;
+  background: var(--border);
+  flex: 1;
+  margin: 4px 0;
+  min-height: 24px;
+}
+
+.step:last-child .step-line { display: none; }
+
+.step-body {
+  padding: 0 0 32px 20px;
+  flex: 1;
+}
+
+.step-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-top: 6px;
+}
+
+.step-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+
+/* ── CHECKLIST ── */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.check-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(0,66,37,0.04);
+  border-left: 3px solid var(--peasy2);
+}
+
+.check-item.warn {
+  background: #FFF7ED;
+  border-color: var(--warm);
+}
+
+.check-item.critical {
+  background: #FEF2F2;
+  border-color: var(--red);
+}
+
+.check-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── TIME BADGE ── */
+.time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ink);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 99px;
+  margin-bottom: 12px;
+}
+
+/* ── COMMAND BOX ── */
+.command {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--ink);
+  color: #7EE787;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.command::before {
+  content: '$';
+  color: #FFCC33;
+  flex-shrink: 0;
+}
+
+/* ── GRID ── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media(max-width:800px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* ── HIGHLIGHT ── */
+.highlight {
+  background: var(--peasy);
+  color: var(--paper);
+  border-radius: 16px;
+  padding: 32px 36px;
+  margin: 32px 0;
+}
+
+.highlight-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.highlight-text {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* ── TAG ── */
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tag-green { background: #E6F4ED; color: #004225; }
+.tag-orange { background: #FFF0E6; color: #C04A00; }
+.tag-red { background: #FEE2E2; color: #991B1B; }
+
+/* ── FEEDBACK TABLE ── */
+.feedback-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.feedback-table th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 16px;
+  background: rgba(0,66,37,0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.feedback-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,66,37,0.06);
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.feedback-table tr:last-child td { border-bottom: none; }
+
+/* ── MINDSET CARDS ── */
+.mindset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.mindset-card {
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.mindset-card.wrong {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+
+.mindset-card.right {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+}
+
+.mindset-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.mindset-card.wrong .mindset-label { color: #B91C1C; }
+.mindset-card.right .mindset-label { color: #15803D; }
+
+.mindset-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* ── FOOTER ── */
+.footer {
+  background: var(--ink);
+  color: rgba(245,240,232,0.4);
+  padding: 32px 48px;
+  font-family: var(--mono);
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer span { color: var(--accent); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-title { animation: fadeUp 0.6s ease both; }
+.hero-sub { animation: fadeUp 0.6s ease 0.15s both; }
+.hero-meta { animation: fadeUp 0.6s ease 0.3s both; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Peasy C2B · Intern prosedyre</div>
+  <h1 class="hero-title">Gjør boten<br><em>smartere.</em></h1>
+  <p class="hero-sub">QA er ikke kvalitetskontroll av boten — det er feedbackloopen som gjør den bedre. Riktig tankesett, riktige observasjoner, tilbake til Mike.</p>
+  <div class="hero-meta">
+    <div class="hero-stat">
+      <div class="hero-stat-num">&lt;1 min</div>
+      <div class="hero-stat-label">Riktig bil på Finn</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">3–5 min</div>
+      <div class="hero-stat-label">Feil merke/modell</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">20%</div>
+      <div class="hero-stat-label">Mål eval-aksept</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">70%</div>
+      <div class="hero-stat-label">Mål bud-aksept</div>
+    </div>
+  </div>
+</div>
+
+<!-- PHILOSOPHY -->
+<div class="philosophy">
+  <div class="philosophy-label">Botens filosofi — husk dette alltid</div>
+  <div class="philosophy-text">Vi estimerer hva lignende bil ligger ute for på Finn.no — ikke hva vi tror dealer byr. Estimatet skal gi &gt;20% sannsynlighet for at selger aksepterer, og &gt;70% sannsynlighet for at budet aksepteres.</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- KRITISK TANKESETT -->
+  <div class="section-header">
+    <span class="section-num">00</span>
+    <span class="section-title">Riktig tankesett er alt</span>
+  </div>
+
+  <div class="highlight">
+    <div class="highlight-label">Absolutt kritisk å forstå</div>
+    <div class="highlight-text">Vi estimerer IKKE hva bilen kommer til å selges for på auksjon. Vi estimerer hva en tilsvarende bil ligger ute til på Finn.no — og setter et tilbud som er troverdig nok til at selger sier ja og starter reisen.</div>
+  </div>
+
+  <div class="mindset-grid">
+    <div class="mindset-card wrong">
+      <div class="mindset-label">❌ Feil tankesett</div>
+      <div class="mindset-text">"Denne bilen er gammel og har mye km, dealer kommer ikke til å by mye. Vi bør sette lavt estimat."</div>
+    </div>
+    <div class="mindset-card right">
+      <div class="mindset-label">✅ Riktig tankesett</div>
+      <div class="mindset-text">"Hva ligger tilsvarende biler ute for på Finn.no akkurat nå? Det er det selger sammenligner seg mot."</div>
+    </div>
+    <div class="mindset-card wrong">
+      <div class="mindset-label">❌ Feil tankesett</div>
+      <div class="mindset-text">"Estimatet virker for høyt, la oss justere ned for å sikre at selger aksepterer budet."</div>
+    </div>
+    <div class="mindset-card right">
+      <div class="mindset-label">✅ Riktig tankesett</div>
+      <div class="mindset-text">"Er Finn-søket representativt? Stemmer modell, årsmodell, drivstoff og km? Då er estimatet riktig."</div>
+    </div>
+  </div>
+
+  <!-- QA PROSESS -->
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">QA-prosessen steg for steg</span>
+  </div>
+
+  <div class="steps">
+
+    <!-- STEG 1 -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="time-badge">⏱ 30 sek</div>
+        <div class="step-title">Sjekk Finn-søket — riktig bil?</div>
+        <div class="step-desc">Klikk "Åpne søk" i Telegram-kortet. Du kommer til Finn.no med botens søk. Første blikk: er dette riktig modell og type?</div>
+
+        <div class="checklist">
+          <div class="check-item">
+            <span class="check-icon">🔍</span>
+            <div><strong>Riktig merke og modell?</strong> Er dette Volvo XC60, ikke XC40 eller V60? Er det riktig generasjon? Bot treffer ~80% av gangene — 20% er feil og MÅ rettes.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">📅</span>
+            <div><strong>Riktig årsmodell?</strong> Målet er eksakt match — en 2013-bil skal sammenlignes mot 2013-biler. Kun hvis det ikke finnes minimum 2 direkte sammenlignbare biler utvider vi med ±1 år. Vi kompenserer for usikkerhet i prisintervallet (D lav / D høy).</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🔢</span>
+            <div><strong>Minimum 2 direkte sammenlignbare biler.</strong> Hvis kun 1 treff på riktig år — utvid til ±1 år og kjør QA Override. Færre enn 2 direkte comps gir upålitelig anker.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🚗</span>
+            <div><strong>Riktig karosseri?</strong> Stasjonsvogn vs. SUV vs. Sedan gjør stor forskjell. Boten viser nå karosseritype i eval-kortet — dobbelsjekk mot søket.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">⚙️</span>
+            <div><strong>2WD eller 4WD?</strong> Avgjørende for pris. En XC60 4WD kan ligge 30–50 000 kr over 2WD. Sjekk at boten har fanget riktig drivkonfigurasjon.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">💪</span>
+            <div><strong>Riktig HK/motorvariant?</strong> En 150 hk diesel vs. 190 hk diesel er forskjellige segmenter. Sjekk at søket ikke blander varianter.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEG 2 -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">Er alt OK? Send estimat direkte.</div>
+        <div class="step-desc">Hvis Finn-søket er representativt og bilene ser riktige ut — gjør ingenting. Boten har gjort jobben. Send verdiestimат fra ERP.</div>
+
+        <div class="time-badge">⏱ &lt; 1 minutt totalt</div>
+
+        <div class="checklist">
+          <div class="check-item">
+            <span class="check-icon">✅</span>
+            <div>Klikk "Åpne i ERP" nederst i Telegram-kortet</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">✅</span>
+            <div>Sjekk at D lav / D høy er skrevet (✅ i ERP-seksjonen i kortet)</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">✅</span>
+            <div>Send verdiestimatet til selger fra ERP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEG 3 -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">3</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">Feil merke/modell? Kjør QA Override.</div>
+        <div class="step-desc">Hvis boten har søkt på feil modell, variant eller årsmodell — bygg riktig Finn-URL og kjør QA Override i Telegram. Boten re-evaluerer med din URL og skriver nytt estimat til ERP.</div>
+
+        <div class="time-badge">⏱ 3–5 minutter</div>
+
+        <div class="checklist">
+          <div class="check-item">
+            <span class="check-icon">1️⃣</span>
+            <div><strong>Gå til Finn.no</strong> og søk manuelt. Velg riktig merke, modell, årsmodell ±1 år, drivstoff og km-intervall. Sorter lav-til-høy pris.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">2️⃣</span>
+            <div><strong>Kopier URL-en</strong> fra adressefeltet i nettleseren</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">3️⃣</span>
+            <div><strong>Send til Telegram-boten:</strong></div>
+          </div>
+        </div>
+
+        <div class="command">/finn REGNR https://www.finn.no/mobility/search/car?...</div>
+
+        <div class="checklist" style="margin-top:12px">
+          <div class="check-item">
+            <span class="check-icon">4️⃣</span>
+            <div>Boten henter nytt anker, beregner nytt estimat, skriver til ERP og sender nytt eval-kort med <strong>⚡ QA OVERRIDE</strong>-merke</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">5️⃣</span>
+            <div>Sjekk nytt kort — ser det riktig ut? Send verdiestimат fra ERP.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEG 4 -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">4</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">Rapporter tilbake til Mike</div>
+        <div class="step-desc">QA er feedbackloopen. Observasjoner fra deg gjør boten bedre. Rapporter mønstre — ikke enkelttilfeller.</div>
+
+        <div class="checklist">
+          <div class="check-item warn">
+            <span class="check-icon">📝</span>
+            <div><strong>Hva skal rapporteres:</strong> Merke/modell-feil som skjer gjentatte ganger på samme type bil. Årsmodell-problemer. Karosseri eller 4WD som ikke fanges opp. Anker som virker systematisk feil for en biltype.</div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">💬</span>
+            <div>Rapport-format: "Bot søker [feil] i stedet for [riktig] på [biltype]. Skjer på ca. X av Y biler."</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end steps -->
+
+
+  <!-- HVORNÅR OVERRIDE -->
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">Når skal du override — og ikke</span>
+  </div>
+
+  <table class="feedback-table">
+    <thead>
+      <tr>
+        <th>Situasjon</th>
+        <th>Handling</th>
+        <th>Tid</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Finn-søket treffer riktig modell, riktig år, representativt utvalg</td>
+        <td><span class="tag tag-green">Send direkte</span> — boten har gjort jobben</td>
+        <td>&lt;1 min</td>
+      </tr>
+      <tr>
+        <td>Feil modellvariant (f.eks. XC60 vs V60)</td>
+        <td><span class="tag tag-orange">QA Override</span> med riktig Finn-URL</td>
+        <td>3–5 min</td>
+      </tr>
+      <tr>
+        <td>Feil årsmodell (f.eks. 2018-biler på en 2013-bil)</td>
+        <td><span class="tag tag-orange">QA Override</span> med riktig årsfilter</td>
+        <td>3–5 min</td>
+      </tr>
+      <tr>
+        <td>Mangler 4WD-filter (blander 2WD og 4WD)</td>
+        <td><span class="tag tag-orange">QA Override</span> med transmission-filter</td>
+        <td>3–5 min</td>
+      </tr>
+      <tr>
+        <td>Estimat virker lavt, men søket er riktig</td>
+        <td><span class="tag tag-green">Send uansett</span> — markedet er fasit, ikke magefølelsen</td>
+        <td>&lt;1 min</td>
+      </tr>
+      <tr>
+        <td>Estimat virker høyt, men søket er riktig</td>
+        <td><span class="tag tag-green">Send uansett</span> — vi vil heller ha for høyt enn for lavt</td>
+        <td>&lt;1 min</td>
+      </tr>
+      <tr>
+        <td>Veldig gammel bil, få treff på Finn</td>
+        <td><span class="tag tag-orange">Vurder Override</span> — utvid årsintervall manuelt</td>
+        <td>3–5 min</td>
+      </tr>
+      <tr>
+        <td>Varebil registrert som personbil</td>
+        <td><span class="tag tag-red">Override nødvendig</span> — Finn-søk blir helt feil</td>
+        <td>3–5 min</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <!-- SJEKKLISTE HURTIG -->
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <span class="section-title">Hurtigsjekkliste per bil</span>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">
+        <span>📋</span> Sjekk på Finn-søket
+      </div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-icon">□</span><div>Riktig merke og modell</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Riktig årsmodell (±1–2 år er OK)</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Riktig karosseri (stasjonsvogn, SUV, sedan)</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>2WD eller 4WD stemmer</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Drivstoff stemmer (diesel, bensin, el)</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Rimelig km-intervall</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Minst 3 sammenlignbare biler i pool</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span>📋</span> Sjekk på eval-kortet
+      </div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-icon">□</span><div>Anker virker representativt (AI-kommentar)</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Forkastede biler — var det riktig å forkaste?</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>✅ D lav/høy skrevet til ERP</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>✅ Heftelser sjekket</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>✅ Auction type riktig (type 1 >35k, type 2 ≤35k)</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Selgerkommentar — noe viktig å notere?</div></div>
+        <div class="check-item"><span class="check-icon">□</span><div>Send verdiestimат fra ERP</div></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TIPS -->
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <span class="section-title">Praktiske tips</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎯 Ikke prøv å estimere budet</div>
+    <p>Det er fristende å tenke "dette er en gammel bil med mye km, budet blir lavt, estimatet bør ned." Stopp der. Vår jobb er å matche hva markedet viser på Finn — ikke å forutsi hva dealer byr. T er 100% markedsstyrt og bestemmes på auksjon, ikke av oss.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚡ Bot treffer 80% — men 20% er avgjørende</div>
+    <p>Bot identifiserer riktig modell og type omtrent 4 av 5 ganger. Den femte er der QA gjør hele jobben. Spesielt utfordrende: biler med mange varianter (Golf, Passat, 3-serie), biler med uvanlige navn i ERP, og varebiler som er feilregistrert.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔄 QA Override setter nytt estimat automatisk</div>
+    <p>Når du kjører <code style="font-family:var(--mono);font-size:12px;background:#F0F0F0;padding:2px 6px;border-radius:4px">/finn REGNR URL</code> i Telegram henter boten nytt anker fra din URL, beregner nytt estimat, skriver D lav/høy til ERP og sender nytt eval-kort. Du trenger ikke å gjøre noe manuelt i ERP — bare sjekke det nye kortet og sende tilbudet.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Volum er viktigere enn perfeksjon</div>
+    <p>Et estimat som er 5% for lavt er langt bedre enn et estimat som aldri sendes. Null biler er katastrofalt — for lavt estimat gir bare litt lavere eval-aksept. Tvilstilfeller: send verdiestimatet. Åpenbart feil bil på Finn: override.</p>
+  </div>
+
+
+  <div class="card">
+    <div class="card-title">📌 Finn-annonse-regelen</div>
+    <p>Hvis Peasy-bilen er annonsert på Finn.no gjelder én absolutt regel: <strong>ankeret kan aldri settes høyere enn annonsert pris.</strong> Boten sjekker dette automatisk. Hvis annonsert pris er lavere enn anker brukes annonsert pris som nytt anker. Hvis anker allerede er lavere enn annonsert pris — ignoreres annonsen. Selger har selv definert et prispunkt, og vi kan ikke presentere et verdiestimат over det.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Årsmodell — eksakt match er målet</div>
+    <p>Vi søker alltid på samme årsmodell som Peasy-bilen. En 2013-bil skal sammenlignes med 2013-biler — det er det selger ser på Finn. Kun hvis det ikke finnes <strong>minst 2 direkte sammenlignbare biler</strong> utvider vi med ±1 år og kjører QA Override. Vi kompenserer for usikkerhet ved å gi et intervall (D lav / D høy) — det er nettopp derfor vi har god margin i spreaden.</p>
+  </div>
+
+</div><!-- end content -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>Peasy C2B · Intern QA-guide · peasy-auto.js v18.03.aj · QA-guide v1.1</div>
+  <div>Mål: <span>&gt;20%</span> eval-aksept · <span>&gt;70%</span> bud-aksept</div>
+</div>
+
+</body>
+</html>
