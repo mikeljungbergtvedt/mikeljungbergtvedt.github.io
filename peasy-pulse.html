@@ -213,8 +213,8 @@ function processData(rows){
     var car={regnr:regnr,label:label,merke:merke,modell:modell,year:year,dLow:dLow,t:t,u:u,rDate:rDate,sDate:sDate,vDate:vDate,km:km,status:status,registrertDato:r[13]};
     if(dLow)data.evaluated.push(car);
     if(rDate)data.mottatt.push(car);
-    if(sDate&&dLow&&t){var e=(t&&u)?t-u:t;data.sold.push(Object.assign({},car,{e:e,gap:(e-dLow)/dLow*100}));}
-    if(vDate&&dLow&&t&&t>0){var e2=(t&&u)?t-u:t;data.returned.push(Object.assign({},car,{e:e2,gap:(e2-dLow)/dLow*100}));}
+    if(sDate&&dLow&&t){data.sold.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
+    if(vDate&&dLow&&t&&t>0){data.returned.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
     if(rDate&&!sDate&&!vDate){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
   }
   return data;
@@ -228,7 +228,7 @@ function bracketStats(data){
     var rB=data.returned.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
     var aGs=avg(sB.filter(function(c){return c.gap>-40;}).map(function(c){return c.gap;}));
     var rejB=data.evaluated.filter(function(c){return c.status==='Avvist by customer'&&c.dLow>0&&c.dLow>=b.lo&&c.dLow<b.hi;});
-    return Object.assign({},b,{evalCount:eB.length,motCount:mB.length,soldCount:sB.length,retCount:rB.length,rejCount:rejB.length,convRate:pct(mB.length,eB.length),soldRate:pct(sB.length,mB.length),avgGapSolgt:aGs,avgGapRet:avg(rB.filter(function(c){return c.gap>-40;}).map(function(c){return c.gap;})),recX:aGs!==null?+aGs.toFixed(1):3.0});
+    return Object.assign({},b,{evalCount:eB.length,motCount:mB.length,soldCount:sB.length,retCount:rB.length,rejCount:rejB.length,convRate:pct(mB.length,eB.length),soldRate:pct(sB.length,mB.length),avgGapSolgt:aGs,avgGapRet:avg(rB.map(function(c){return c.gap;})),recX:aGs!==null?+aGs.toFixed(1):0.0});
   });
 }
 
@@ -690,6 +690,6 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.as</div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.d — gap = (T − D lav) / D lav</div>
 </body>
 </html>
