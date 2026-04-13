@@ -36,9 +36,11 @@ main{max-width:960px;margin:0 auto;padding:40px 24px 80px;}
 table{width:100%;border-collapse:collapse;}
 thead tr{background:rgba(0,66,37,0.03);}
 th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#667;padding:9px 14px;border-bottom:1px solid rgba(0,66,37,0.08);}
-th.r{text-align:right;} th.c{text-align:center;}
+th.r{text-align:right;}
+th.c{text-align:center;}
 td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(0,66,37,0.04);}
-td.r{text-align:right;} td.c{text-align:center;}
+td.r{text-align:right;}
+td.c{text-align:center;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(0,66,37,0.015);}
 .loading{text-align:center;padding:80px;color:#aaa;}
@@ -49,7 +51,6 @@ tr:hover td{background:rgba(0,66,37,0.015);}
 </head>
 <body>
 <a id="portal-back-link" href="peasyportal.html" style="position:fixed;top:12px;right:16px;z-index:99999;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.75);text-decoration:none;letter-spacing:0.5px;background:rgba(0,66,37,0.6);padding:5px 12px;border-radius:20px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);transition:all .2s;" onmouseover="this.style.background='rgba(0,66,37,0.9)';this.style.color='rgba(255,204,51,0.8)'" onmouseout="this.style.background='rgba(0,66,37,0.6)';this.style.color='rgba(255,255,255,0.75)'">&#8592; portal</a>
-
 <header>
   <div class="logo"><img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"></div>
   <div class="nav">
@@ -60,10 +61,11 @@ tr:hover td{background:rgba(0,66,37,0.015);}
 <main>
   <div id="app"><div class="loading"><div class="spinner"></div><br>Henter data&hellip;</div></div>
 </main>
-<div class="version">v16.03.b</div>
+<div class="version">v17.00</div>
 <script>
 const API = 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-var weekOffset = -1; // default: last complete week
+var weekOffset = -1;
+var AR_SALAER = 0.027;
 
 function pd(v) {
   if (!v) return null;
@@ -71,25 +73,28 @@ function pd(v) {
   var p = s.split('.');
   return p.length===3 ? new Date(p[2]+'-'+p[1]+'-'+p[0]) : new Date(s);
 }
-
 function getWeekBounds(offset) {
   var now = new Date();
   var dow = now.getDay()||7;
-  var mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-(dow-1));
-  var wS = new Date(mon); wS.setDate(mon.getDate() + offset*7);
-  var wE = new Date(wS); wE.setDate(wS.getDate()+7);
+  var mon = new Date(now);
+  mon.setHours(0,0,0,0);
+  mon.setDate(now.getDate()-(dow-1));
+  var wS = new Date(mon);
+  wS.setDate(mon.getDate() + offset*7);
+  var wE = new Date(wS);
+  wE.setDate(wS.getDate()+7);
   return {wS:wS, wE:wE};
 }
-
 function getWeekNumber(d) {
   var d2 = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-  var dn = d2.getUTCDay()||7; d2.setUTCDate(d2.getUTCDate()+4-dn);
+  var dn = d2.getUTCDay()||7;
+  d2.setUTCDate(d2.getUTCDate()+4-dn);
   var ys = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
   return Math.ceil((((d2-ys)/86400000)+1)/7);
 }
-
-function avg(arr) { return arr.length ? (arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1) : null; }
-
+function avg(arr) {
+  return arr.length ? (arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1) : null;
+}
 function days(a,b) {
   var da=pd(a), db=pd(b);
   if (!da||!db) return null;
@@ -106,108 +111,159 @@ function render(rows) {
   function inW(v) { var d=pd(v); return d&&d>=wS&&d<wE; }
 
   var all = rows.slice(1).filter(function(r){return r[1];});
-  var evaluert  = all.filter(function(r){return inW(r[14]);});
-  var mottatt   = all.filter(function(r){return inW(r[17]);});
-  var solgt     = all.filter(function(r){return inW(r[18]);});
-  var returnert = all.filter(function(r){return inW(r[21]);});
-  var avvist    = all.filter(function(r){return inW(r[14])&&String(r[12]||'').toLowerCase().indexOf('avvist')>-1;});
 
-  var pa = solgt.length+returnert.length;
-  var rate = pa>0 ? Math.round(solgt.length/pa*100) : 0;
-  var fee = solgt.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
-  var rc = rate>=70 ? '#2d6a2d' : '#c62828';
+  var evaluert    = all.filter(function(r){return inW(r[14]);});
+  var mottattAlle = all.filter(function(r){return inW(r[17]);});
+
+  var mottattMedBud  = mottattAlle.filter(function(r){return r[19] && r[19] !== 0;});
+  var mottattUtenBud = mottattAlle.filter(function(r){return !r[19] || r[19] === 0;});
+
+  var konvSolgt     = mottattMedBud.filter(function(r){return r[18];});
+  var konvReturnert = mottattMedBud.filter(function(r){return r[21];});
+  var konvPagaar    = mottattMedBud.filter(function(r){return !r[18] && !r[21];});
+
+  var pa   = konvSolgt.length + konvReturnert.length;
+  var rate = pa > 0 ? Math.round(konvSolgt.length / pa * 100) : null;
+
+  var solgtIPerioden     = all.filter(function(r){return inW(r[18]);});
+  var returnertIPerioden = all.filter(function(r){return inW(r[21]);});
+  var avvist = all.filter(function(r){return inW(r[14])&&String(r[12]||'').toLowerCase().indexOf('avvist')>-1;});
+
+  var fee      = solgtIPerioden.reduce(function(s,r){return s+(parseFloat(r[20])||0);},0);
+  var arInntekt = solgtIPerioden.reduce(function(s,r){return s+(parseFloat(r[19])||0)*AR_SALAER;},0);
+
+  var rc = rate===null ? '#aaa' : rate>=70 ? '#2d6a2d' : '#c62828';
 
   var evToMot   = evaluert.filter(function(r){return r[17];}).map(function(r){return days(r[14],r[17]);}).filter(function(d){return d!==null&&d>=0;});
-  var motToSold = solgt.map(function(r){return days(r[17],r[18]);}).filter(function(d){return d!==null&&d>=0;});
-  var motToRet  = returnert.map(function(r){return days(r[17],r[21]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToSold = konvSolgt.map(function(r){return days(r[17],r[18]);}).filter(function(d){return d!==null&&d>=0;});
+  var motToRet  = konvReturnert.map(function(r){return days(r[17],r[21]);}).filter(function(d){return d!==null&&d>=0;});
 
-  var soldSorted = solgt.slice().sort(function(a,b){return (pd(a[18])||0)-(pd(b[18])||0);});
-  var retSorted  = returnert.slice().sort(function(a,b){return (pd(a[21])||0)-(pd(b[21])||0);});
+  var soldSorted = solgtIPerioden.slice().sort(function(a,b){return (pd(a[18])||0)-(pd(b[18])||0);});
+  var retSorted  = returnertIPerioden.slice().sort(function(a,b){return (pd(a[21])||0)-(pd(b[21])||0);});
 
   function soldRow(r) {
     var d = days(r[17],r[18]);
     var dc = d!==null&&d>10 ? '#c62828' : '#2d6a2d';
-    return '<tr><td style="font-weight:700;color:#004225">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+( r[4]?Math.round(r[4]/1000)+'k':'&ndash;')+'</td><td class="r" style="color:#2d6a2d;font-weight:700">'+( r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'&ndash;')+'</td><td class="c" style="color:'+dc+';font-weight:700">'+( d!==null?d+'d':'&ndash;')+'</td></tr>';
+    var arVal = r[19] ? Math.round(parseFloat(r[19])*AR_SALAER) : null;
+    return '<tr>'
+      +'<td style="font-weight:700;color:#004225">'+r[1]+'</td>'
+      +'<td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td class="r">'+(r[19]?Math.round(r[19]/1000)+'k':'&ndash;')+'</td>'
+      +'<td class="r" style="color:#2d6a2d;font-weight:700">'+(r[20]?Number(r[20]).toLocaleString('nb-NO')+' kr':'&ndash;')+'</td>'
+      +'<td class="r" style="color:#1565c0;font-weight:700">'+(arVal!==null?arVal.toLocaleString('nb-NO')+' kr':'&ndash;')+'</td>'
+      +'<td class="c" style="color:'+dc+';font-weight:700">'+(d!==null?d+'d':'&ndash;')+'</td>'
+      +'</tr>';
   }
   function retRow(r) {
     var d = days(r[17],r[21]);
     var dc = d!==null&&d>10 ? '#c62828' : '#667';
-    return '<tr><td style="font-weight:700;color:#c62828">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+( r[4]?Math.round(r[4]/1000)+'k':'&ndash;')+'</td><td class="c" style="color:'+dc+';font-weight:700">'+( d!==null?d+'d':'&ndash;')+'</td></tr>';
+    return '<tr>'
+      +'<td style="font-weight:700;color:#c62828">'+r[1]+'</td>'
+      +'<td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td class="r">'+(r[4]?Math.round(r[4]/1000)+'k':'&ndash;')+'</td>'
+      +'<td class="c" style="color:'+dc+';font-weight:700">'+(d!==null?d+'d':'&ndash;')+'</td>'
+      +'</tr>';
   }
   function avvRow(r) {
     var est = String(r[3]||'').trim().replace(/\s/g,'');
     var parts = est.split('-');
     var estStr = parts.length===2 ? Math.round(parseInt(parts[0])/1000)+'k&ndash;'+Math.round(parseInt(parts[1])/1000)+'k' : '&ndash;';
-    return '<tr><td style="font-weight:700;color:#e65100">'+r[1]+'</td><td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td><td class="r">'+estStr+'</td></tr>';
+    return '<tr>'
+      +'<td style="font-weight:700;color:#e65100">'+r[1]+'</td>'
+      +'<td style="color:#667">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td class="r">'+estStr+'</td>'
+      +'</tr>';
   }
+
+  var rateInfo = rate===null
+    ? '<b style="color:#aaa;font-size:20px">&ndash;</b> <span style="color:#aaa;font-size:12px">(m&aring;l 70%) &mdash; ingen avgjort enn&aring;</span>'
+    : '<b style="color:'+rc+';font-size:20px">'+rate+'%</b> <span style="color:#aaa;font-size:12px">(m&aring;l 70%)</span>';
+  if (konvPagaar.length > 0) rateInfo += ' <span style="color:#e65100;font-size:12px">&middot; '+konvPagaar.length+' p&aring;g&aring;r</span>';
 
   var isCurrentWeek = weekOffset === 0;
 
   document.getElementById('app').innerHTML =
-    '<div class="week-nav">'+
-      '<button class="btn" onclick="weekOffset--;loadAndRender()">&larr; Forrige uke</button>'+
-      '<div><div class="week-title">'+wLabel+'</div>'+
-        (isCurrentWeek ? '<div class="week-sub" style="color:#c62828">Uken er ikke ferdig enn&aring;</div>' : '')+
-      '</div>'+
-      '<button class="btn" onclick="weekOffset++;loadAndRender()" '+(weekOffset>=0?'disabled':'')+'>&rarr; Neste uke</button>'+
-    '</div>'+
-
-    '<div class="kpi-grid">'+
-      kpi(evaluert.length,'Evaluert','tilbud sendt','#004225')+
-      kpi(mottatt.length,'Mottatt','p&aring; anlegg','#1565c0')+
-      kpi(solgt.length,'Solgt','biler','#2d6a2d')+
-      kpi(returnert.length,'Ikke solgt','returnert','#c62828')+
-      kpi(avvist.length,'Avvist','av selger','#e65100')+
-    '</div>'+
-
-    '<div class="card"><div class="card-body">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-weight:700;font-size:13px">Konverteringsrate (mottatt &rarr; solgt)</span>'+
-        '<span><b style="color:'+rc+';font-size:20px">'+rate+'%</b> <span style="color:#aaa;font-size:12px">(m&aring;l 70%)</span> &middot; Peasy fee: <b style="color:#004225">'+fee.toLocaleString('nb-NO')+' kr</b></span>'+
-      '</div>'+
-      '<div class="rate-bar-bg"><div class="rate-bar-fill" style="width:'+Math.min(rate,100)+'%;background:'+rc+'"></div><div class="rate-marker"></div></div>'+
-    '</div></div>'+
-
-    '<div class="card"><div class="card-body">'+
-      '<div class="section-label">Tidslinjer</div>'+
-      tl('Evaluert &rarr; Mottatt (snitt)', avg(evToMot), false)+
-      tl('Mottatt &rarr; Solgt (snitt)', avg(motToSold), parseFloat(avg(motToSold))>10)+
-      tl('Mottatt &rarr; Returnert (snitt)', avg(motToRet), parseFloat(avg(motToRet))>10)+
-    '</div></div>'+
-
-    '<div class="card">'+
-      '<div class="card-hdr" style="background:#004225">&#10003; Solgte biler ('+solgt.length+') &middot; '+fee.toLocaleString('nb-NO')+' kr fee</div>'+
-      (soldSorted.length ?
-        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="r">FEE</th><th class="c">DAGER</th></tr></thead><tbody>'+soldSorted.map(soldRow).join('')+'</tbody></table>' :
-        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen solgte biler denne uken</div>')+
-    '</div>'+
-
-    '<div class="card">'+
-      '<div class="card-hdr" style="background:#c62828">&#10007; Ikke solgt &mdash; returnert ('+returnert.length+')</div>'+
-      (retSorted.length ?
-        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="c">DAGER</th></tr></thead><tbody>'+retSorted.map(retRow).join('')+'</tbody></table>' :
-        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen returnerte biler denne uken</div>')+
-    '</div>'+
-
-    '<div class="card">'+
-      '<div class="card-hdr" style="background:#e65100">Avvist av selger ('+avvist.length+')</div>'+
-      (avvist.length ?
-        '<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">ESTIMAT</th></tr></thead><tbody>'+avvist.map(avvRow).join('')+'</tbody></table>' :
-        '<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen avviste biler denne uken</div>')+
-    '</div>';
+    '<div class="week-nav">'
+      +'<button class="btn" onclick="weekOffset--;loadAndRender()">&larr; Forrige uke</button>'
+      +'<div><div class="week-title">'+wLabel+'</div>'
+      +(isCurrentWeek ? '<div class="week-sub" style="color:#c62828">Uken er ikke ferdig enn&aring;</div>' : '')
+      +'</div>'
+      +'<button class="btn" onclick="weekOffset++;loadAndRender()" '+(weekOffset>=0?'disabled':'')+'>&rarr; Neste uke</button>'
+    +'</div>'
+    +'<div class="kpi-grid">'
+      +kpi(evaluert.length,'Evaluert','tilbud sendt','#004225')
+      +kpi(mottattAlle.length,'Mottatt','p&aring; anlegg','#1565c0')
+      +kpi(solgtIPerioden.length,'Solgt','biler','#2d6a2d')
+      +kpi(returnertIPerioden.length,'Ikke solgt','returnert','#c62828')
+      +kpi(avvist.length,'Avvist','av selger','#e65100')
+    +'</div>'
+    +'<div class="card"><div class="card-body">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+        +'<div>'
+          +'<span style="font-weight:700;font-size:13px">Konverteringsrate (mottatt &rarr; solgt)</span>'
+          +'<div style="font-size:10px;color:#aaa;margin-top:2px">'
+            +'Kohort: '+mottattAlle.length+' mottatt &mdash; '
+            +mottattMedBud.length+' med bud ('
+            +konvSolgt.length+' solgt, '+konvReturnert.length+' returnert'
+            +(konvPagaar.length>0?', '+konvPagaar.length+' p&aring;g&aring;r':'')
+            +(mottattUtenBud.length>0?', '+mottattUtenBud.length+' i produksjon':'')
+            +')</div>'
+        +'</div>'
+        +'<span>'+rateInfo+'</span>'
+      +'</div>'
+      +'<div class="rate-bar-bg"><div class="rate-bar-fill" style="width:'+(rate!==null?Math.min(rate,100):0)+'%;background:'+rc+'"></div><div class="rate-marker"></div></div>'
+    +'</div></div>'
+    +'<div class="card"><div class="card-body">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">'
+        +'<div style="text-align:center;flex:1">'
+          +'<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667;margin-bottom:4px">Peasy fee</div>'
+          +'<div style="font-size:22px;font-weight:900;color:#2d6a2d">'+fee.toLocaleString('nb-NO')+' kr</div>'
+          +'<div style="font-size:10px;color:#aaa;margin-top:2px">'+solgtIPerioden.length+' solgte biler</div>'
+        +'</div>'
+        +'<div style="width:1px;background:rgba(0,66,37,0.08);align-self:stretch;min-height:40px"></div>'
+        +'<div style="text-align:center;flex:1">'
+          +'<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667;margin-bottom:4px">AR inntekt (2,7% sal&aelig;r)</div>'
+          +'<div style="font-size:22px;font-weight:900;color:#1565c0">'+Math.round(arInntekt).toLocaleString('nb-NO')+' kr</div>'
+          +'<div style="font-size:10px;color:#aaa;margin-top:2px">av sum bud solgte biler</div>'
+        +'</div>'
+      +'</div>'
+    +'</div></div>'
+    +'<div class="card"><div class="card-body">'
+      +'<div class="section-label">Tidslinjer</div>'
+      +tl('Evaluert &rarr; Mottatt (snitt)', avg(evToMot), false)
+      +tl('Mottatt &rarr; Solgt (snitt)', avg(motToSold), parseFloat(avg(motToSold))>10)
+      +tl('Mottatt &rarr; Returnert (snitt)', avg(motToRet), parseFloat(avg(motToRet))>10)
+    +'</div></div>'
+    +'<div class="card">'
+      +'<div class="card-hdr" style="background:#004225">&#10003; Solgte biler ('+solgtIPerioden.length+') &middot; Peasy: '+fee.toLocaleString('nb-NO')+' kr &middot; AR: '+Math.round(arInntekt).toLocaleString('nb-NO')+' kr</div>'
+      +(soldSorted.length
+        ?'<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="r">PEASY FEE</th><th class="r">AR (2,7%)</th><th class="c">DAGER</th></tr></thead><tbody>'+soldSorted.map(soldRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen solgte biler denne uken</div>')
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-hdr" style="background:#c62828">&#10007; Ikke solgt &mdash; returnert ('+returnertIPerioden.length+')</div>'
+      +(retSorted.length
+        ?'<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">BUD</th><th class="c">DAGER</th></tr></thead><tbody>'+retSorted.map(retRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen returnerte biler denne uken</div>')
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-hdr" style="background:#e65100">Avvist av selger ('+avvist.length+')</div>'
+      +(avvist.length
+        ?'<table><thead><tr><th>REGNR</th><th>BIL</th><th class="r">ESTIMAT</th></tr></thead><tbody>'+avvist.map(avvRow).join('')+'</tbody></table>'
+        :'<div style="padding:14px 16px;color:#aaa;font-size:12px">Ingen avviste biler denne uken</div>')
+    +'</div>';
 }
 
 function kpi(val, label, sub, color) {
-  return '<div class="kpi" style="border-top:3px solid '+color+'">'+
-    '<div class="kpi-val" style="color:'+color+'">'+val+'</div>'+
-    '<div class="kpi-label">'+label+'</div>'+
-    '<div class="kpi-sub">'+sub+'</div>'+
-  '</div>';
+  return '<div class="kpi" style="border-top:3px solid '+color+'">'
+    +'<div class="kpi-val" style="color:'+color+'">'+val+'</div>'
+    +'<div class="kpi-label">'+label+'</div>'
+    +'<div class="kpi-sub">'+sub+'</div>'
+    +'</div>';
 }
-
 function tl(label, val, warn) {
   if (!val) return '';
-  var color = warn ? '#c62828' : val < 3 ? '#2d6a2d' : '#667';
+  var color = warn ? '#c62828' : parseFloat(val) < 3 ? '#2d6a2d' : '#667';
   return '<div class="tl-row"><span style="color:#667">'+label+'</span><b style="color:'+color+'">'+val+' dager'+(warn?' &#9888;':'')+'</b></div>';
 }
 
@@ -225,7 +281,6 @@ function loadAndRender() {
       document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px;color:#c62828">Kunne ikke hente data: '+err.message+'</div>';
     });
 }
-
 loadAndRender();
 </script>
 </body>
