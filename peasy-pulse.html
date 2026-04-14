@@ -182,7 +182,7 @@ function renderEvalCharts(rows,data){
   evalAll.forEach(function(r){var d=parseDate(r[17]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)recvPerDay[idx]++;});
   mottAll.forEach(function(c){var d=parseDate(c.rDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)mottPerDay[idx]++;});
   soldAll.forEach(function(c){var d=parseDate(c.sDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)soldPerDay[idx]++;});
-  function rolling14(num,den){return days.map(function(_,i){var n=0,d=0;for(var j=Math.max(0,i-13);j<=i;j++){n+=num[j];d+=den[j];}return d>=3?Math.round(n/d*100):null;});}
+  function rolling14(num,den){return days.map(function(_,i){var n=0,d=0;for(var j=Math.max(0,i-29);j<=i;j++){n+=num[j];d+=den[j];}return d>=3?Math.round(n/d*100):null;});}
   var evalRate=rolling14(recvPerDay,evalPerDay);
   var budRate=rolling14(soldPerDay,mottPerDay);
   var chartOpts=function(targetPct,lineColor){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){if(ctx.dataset.label==='Rate')return 'Akseptrate: '+(ctx.parsed.y!==null?ctx.parsed.y+'%':'-');if(ctx.dataset.label==='Mal')return 'Mal: '+targetPct+'%';return ctx.dataset.label+': '+ctx.parsed.y+' stk';}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:lineColor,font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}};};
@@ -268,7 +268,7 @@ function buildEvalHtml(data,rows){
   h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler mottatt. Graa soeyler = antall evaluert. Rød linje = 30-dagers akseptrate. Stiplet = 20%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:24px"><div class="th"><div class="th-title">Bud-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 14-dagers salgsrate. Stiplet = 70%-mal.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 30-dagers salgsrate. Stiplet = 70%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div></div>';
   var evalRows=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var d=parseDate(r[13]);if(!d)return false;return String(r[12]||'').trim().toLowerCase()==='endelig estimat';}).sort(function(a,b){return(parseDate(a[13])||0)-(parseDate(b[13])||0);});
   h+='<div class="section-label">Venter pa prissetting / svar fra selger ('+evalRows.length+' biler)</div>';
