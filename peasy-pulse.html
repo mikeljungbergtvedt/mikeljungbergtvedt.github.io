@@ -222,8 +222,8 @@ function processData(rows){
     var car={regnr:regnr,label:label,merke:merke,modell:modell,year:year,dLow:dLow,t:t,u:u,rDate:rDate,sDate:sDate,vDate:vDate,km:km,status:status,registrertDato:r[13]};
     if(dLow)data.evaluated.push(car);
     if(rDate)data.mottatt.push(car);
-    if(sDate&&dLow){data.sold.push(Object.assign({},car,{e:r[4]||0,gap:r[4]?(r[4]-dLow)/dLow*100:null}));}
-    if(status&&status.toLowerCase().includes("returned")){data.returned.push(Object.assign({},car,{e:r[4]||0,gap:(r[4]&&dLow)?((r[4]-dLow)/dLow*100):null}));}
+    if(sDate&&dLow){data.sold.push(Object.assign({},car,{e:t||0,gap:t?(t-dLow)/dLow*100:null}));}
+    if(status&&status.toLowerCase().includes("returned")){data.returned.push(Object.assign({},car,{e:t||0,gap:(t&&dLow)?((t-dLow)/dLow*100):null}));}
     if(rDate&&!sDate&&!vDate&&!status.toLowerCase().includes("to_be_returned")){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
   }
   return data;
@@ -243,7 +243,7 @@ function bracketStats(data){
 
 function drawArc(svgEl,valuePct,color){var r=46,cx=55,cy=60;var angle=Math.PI-(valuePct/100)*Math.PI;var x=cx+r*Math.cos(angle),y=cy+r*Math.sin(angle);svgEl.innerHTML='<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="rgba(0,66,37,0.08)" stroke-width="8" stroke-linecap="round"/><path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+x+' '+y+'" fill="none" stroke="'+color+'" stroke-width="8" stroke-linecap="round"/><circle cx="'+x+'" cy="'+y+'" r="4" fill="'+color+'"/>';}
 function daysClass(d,t){return d<=t?'days-ok':d<=t*2?'days-warn':'days-over';}
-function statusBadge(s){var map={'received':['&#128203;','b-mottatt','Mottatt pÃ¥ anlegg'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','PÃ¥ auksjon'],'to_be_returned':['&#10060;','b-ferdig','Til retur'],'waiting_for_transport':['&#128666;','b-produksjon','Venter transport'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter svar'],'contract_signed':['&#128203;','b-produksjon','Kontrakt signert'],'pÃ¥ auksjonen':['&#128296;','b-auksjon','PÃ¥ auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter pÃ¥ bud aksept'],'change owner':['&#128203;','b-produksjon','Venter pÃ¥ salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter pÃ¥ bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter pÃ¥ bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter pÃ¥ salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','Venter vurdering'],'waiting_for_preparation':['&#128203;','b-produksjon','KlargjÃ¸res'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','PÃ¥ auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
+function statusBadge(s){var map={'received':['&#128203;','b-mottatt','Mottatt på anlegg'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon'],'to_be_returned':['&#10060;','b-ferdig','Til retur'],'waiting_for_transport':['&#128666;','b-produksjon','Venter transport'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter svar'],'contract_signed':['&#128203;','b-produksjon','Kontrakt signert'],'på auksjonen':['&#128296;','b-auksjon','På auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter på bud aksept'],'change owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter på bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter på bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','Venter vurdering'],'waiting_for_preparation':['&#128203;','b-produksjon','Klargjøres'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
 function workHoursElapsed(from){var wS=8,wE=16,now=new Date(),total=0,cur=new Date(from);while(cur<now){var day=cur.getDay();if(day===0||day===6){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var dS=new Date(cur);dS.setHours(wS,0,0,0);var dE=new Date(cur);dE.setHours(wE,0,0,0);if(cur<dS){cur=dS;continue;}if(cur>=dE){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var pE=now<dE?now:dE;total+=Math.floor((pE-cur)/60000);cur=dE;}return{h:Math.floor(total/60),m:total%60,total:Math.floor(total/60)};}
 
 function buildEvalHtml(data,rows){
@@ -263,12 +263,12 @@ function buildEvalHtml(data,rows){
   h+='<div><div style="font-size:11px;color:#aaa;margin-bottom:4px">Siste 90 dager</div><div id="bp-90" style="font-size:28px;font-weight:700;line-height:1;color:#aaa">&ndash;</div></div>';
   h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="bp-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div><div style="font-size:10px;color:#aaa;margin-top:4px">Mal: 70%</div></div>';
   h+='</div><div style="height:4px;background:rgba(0,66,37,0.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:70%;background:rgba(0,135,90,0.2);border-radius:99px"></div></div>';
-  h+='<div style="font-size:10px;color:#aaa;margin-top:6px">70% = mal &middot; 7 av 10 mottatte biler skal selges pÃ¥ auksjon</div></div></div>';
+  h+='<div style="font-size:10px;color:#aaa;margin-top:6px">70% = mal &middot; 7 av 10 mottatte biler skal selges på auksjon</div></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Eval-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> GrÃ¸nne sÃ¸yler = biler mottatt. Graa soeyler = antall evaluert. RÃ¸d linje = 30-dagers akseptrate. Stiplet = 20%-mal.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler mottatt. Graa soeyler = antall evaluert. Rød linje = 30-dagers akseptrate. Stiplet = 20%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:24px"><div class="th"><div class="th-title">Bud-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> GrÃ¸nne sÃ¸yler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 14-dagers salgsrate. Stiplet = 70%-mal.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 14-dagers salgsrate. Stiplet = 70%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div></div>';
   var evalRows=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var d=parseDate(r[13]);if(!d)return false;return String(r[12]||'').trim().toLowerCase()==='endelig estimat';}).sort(function(a,b){return(parseDate(a[13])||0)-(parseDate(b[13])||0);});
   h+='<div class="section-label">Venter pa prissetting / svar fra selger ('+evalRows.length+' biler)</div>';
@@ -300,18 +300,18 @@ function buildEvalHtml(data,rows){
   return h;
 }
 
-// ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ TILTAK ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
+// ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ TILTAK ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
 
 function buildTiltakHtml(){
   var h='';
   h+='<div style="background:#fff;border-left:4px solid #1D9E75;border-radius:12px;padding:18px 22px;margin-bottom:20px;font-size:13px;color:#444;line-height:1.8">';
   h+='<strong style="color:#004225;font-size:14px">Hva er tiltak-analysen?</strong><br>';
-  h+='Vi hevet ankerprisene pÃ¥ en bestemt dato. HÃ¸yere anker gir hÃ¸yere D lav &mdash; det tilbudet selger ser. ';
-  h+='Vi vil vite om dette fÃ¸rer til at flere aksepterer tilbudet, ';
-  h+='og om bilene likevel selges pÃ¥ auksjon selv om selger hadde hÃ¸yere forventninger.<br><br>';
+  h+='Vi hevet ankerprisene på en bestemt dato. Høyere anker gir høyere D lav &mdash; det tilbudet selger ser. ';
+  h+='Vi vil vite om dette fører til at flere aksepterer tilbudet, ';
+  h+='og om bilene likevel selges på auksjon selv om selger hadde høyere forventninger.<br><br>';
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
-  h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% pÃ¥ auksjon?<br><br>';
-  h+='<span style="color:#888;font-size:11px">DrÃ¸mmen: HÃ¸yere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
+  h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
+  h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
   h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c17 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
@@ -319,16 +319,16 @@ function buildTiltakHtml(){
   h+='<input type="date" id="tiltakDateInput" style="font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,66,37,0.2);background:#fff;color:#004225"></div>';
   h+='<div style="padding-bottom:4px;font-size:12px;color:#667A72" id="tiltakLagInfo"></div></div>';
   h+='<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px">';
-  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Eval-aksept â 30d fÃ¸r tiltak</div><div id="tk-ep-before" style="font-size:32px;font-weight:900;line-height:1">-</div><div style="font-size:11px;color:#aaa;margin-top:4px">30 dager FÃ¸r tiltaksdato</div></div>';
-  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Eval-aksept â etter tiltak</div><div id="tk-ep-after" style="font-size:32px;font-weight:900;line-height:1">-</div><div id="tk-ep-after-sub" style="font-size:11px;color:#aaa;margin-top:4px">evaluert etter tiltak</div><div id="tk-ep-bar-after"></div></div>';
-  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,135,90,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Solgt av auksjon â etter tiltak</div><div id="tk-bp-cohort" style="font-size:32px;font-weight:900;line-height:1">-</div><div id="tk-bp-sub" style="font-size:11px;color:#aaa;margin-top:4px">bestilt etter tiltak</div><div id="tk-bp-bar" style="font-size:11px;color:#aaa;margin-top:4px"><span>Solgt av auksjon â 30d fÃ¸r tiltak</span></div></div>';
+  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Eval-aksept — 30d før tiltak</div><div id="tk-ep-before" style="font-size:32px;font-weight:900;line-height:1">-</div><div style="font-size:11px;color:#aaa;margin-top:4px">30 dager Før tiltaksdato</div></div>';
+  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Eval-aksept — etter tiltak</div><div id="tk-ep-after" style="font-size:32px;font-weight:900;line-height:1">-</div><div id="tk-ep-after-sub" style="font-size:11px;color:#aaa;margin-top:4px">evaluert etter tiltak</div><div id="tk-ep-bar-after"></div></div>';
+  h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,135,90,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Solgt av auksjon — etter tiltak</div><div id="tk-bp-cohort" style="font-size:32px;font-weight:900;line-height:1">-</div><div id="tk-bp-sub" style="font-size:11px;color:#aaa;margin-top:4px">bestilt etter tiltak</div><div id="tk-bp-bar" style="font-size:11px;color:#aaa;margin-top:4px"><span>Solgt av auksjon — 30d før tiltak</span></div></div>';
   h+='<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Cohort-storrelse</div><div id="tk-cohort-n" style="font-size:32px;font-weight:900;line-height:1">-</div><div style="font-size:11px;color:#aaa;margin-top:4px">biler evaluert etter tiltak</div></div>';
   h+='</div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Steg 1 &mdash; Eval-aksept (biler evaluert etter tiltaksdato)</div></div>';
-  h+='<div class="chart-explain"><strong>GrÃ¸nne sÃ¸yler</strong> = evaluert per dag. <strong>GrÃ¸nne sÃ¸yler</strong> = bestilte henting/levering (aksepterte tilbudet). <strong>RÃ¸d linje</strong> = 7-dagers akseptrate. <strong>Stiplet rÃ¸d</strong> = 20%-mal. <strong>Gul strek</strong> = tiltaksdato. Grafen viser alle 90 dager &mdash; cohorten er biler evaluert etter gul strek.</div>';
+  h+='<div class="chart-explain"><strong>Grønne søyler</strong> = evaluert per dag. <strong>Grønne søyler</strong> = bestilte henting/levering (aksepterte tilbudet). <strong>Rød linje</strong> = 7-dagers akseptrate. <strong>Stiplet rød</strong> = 20%-mal. <strong>Gul strek</strong> = tiltaksdato. Grafen viser alle 90 dager &mdash; cohorten er biler evaluert etter gul strek.</div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="tkChart1"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Steg 2 &mdash; Solgt av auksjon (bestilte henting/levering etter tiltaksdato)</div></div>';
-  h+='<div class="chart-explain">Disse bilene aksepterte tilbudet og sendte inn bilen etter tiltaksdato. NÃ¥r de gÃ¥r pÃ¥ auksjon: godtar selger det hÃ¸yeste budet? BinÃ¦rt utfall &mdash; solgt eller ikke. Mal: &gt;70% av ferdigstilte biler skal selges.</div>';
+  h+='<div class="chart-explain">Disse bilene aksepterte tilbudet og sendte inn bilen etter tiltaksdato. Når de går på auksjon: godtar selger det høyeste budet? Binært utfall &mdash; solgt eller ikke. Mal: &gt;70% av ferdigstilte biler skal selges.</div>';
   h+='<div id="tk-cohort-visual" style="padding:20px 24px"></div></div>';
   return h;
 }
@@ -376,7 +376,7 @@ function renderTiltakCharts(){
   var pSolgt =kohortN>0?Math.round(solgt.length/kohortN*100):0;
   var pRet   =kohortN>0?Math.round(returnert.length/kohortN*100):0;
 
-  // Baseline: 30d FÃ¸r tiltak
+  // Baseline: 30d Før tiltak
   var d30=new Date(picked); d30.setDate(d30.getDate()-30);
   var kohortFor=rows.slice(1).filter(function(r){
     if(!r[1])return false;
@@ -395,19 +395,19 @@ function renderTiltakCharts(){
   function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
   function setHtml(id,v){var e=document.getElementById(id);if(e)e.innerHTML=v;}
 
-  // Kort 1: Eval-aksept â 30d fÃ¸r tiltak (baseline)
-  document.getElementById('tk-ep-before').innerHTML = '<span style="color:' + (pAkseptFor >= 20 ? '#004225' : '#C62828') + '">' + pAkseptFor + '%</span> <span style="font-size:14px;font-weight:500;color:' + (pAkseptFor >= 20 ? '#004225' : '#C62828') + '">(mÃ¥l 20%)</span>';
+  // Kort 1: Eval-aksept — 30d før tiltak (baseline)
+  document.getElementById('tk-ep-before').innerHTML = '<span style="color:' + (pAkseptFor >= 20 ? '#004225' : '#C62828') + '">' + pAkseptFor + '%</span> <span style="font-size:14px;font-weight:500;color:' + (pAkseptFor >= 20 ? '#004225' : '#C62828') + '">(mål 20%)</span>';
   setEl('tk-ep-before-sub', akseptFor.length+' / '+kohortFor.length+' eval');
 
-  // Kort 2: Eval-aksept â etter tiltak
-  document.getElementById('tk-ep-after').innerHTML = '<span style="color:' + (pAksept >= 20 ? '#004225' : '#C62828') + '">' + pAksept + '%</span> <span style="font-size:14px;font-weight:500;color:' + (pAksept >= 20 ? '#004225' : '#C62828') + '">(mÃ¥l 20%)</span>';
+  // Kort 2: Eval-aksept — etter tiltak
+  document.getElementById('tk-ep-after').innerHTML = '<span style="color:' + (pAksept >= 20 ? '#004225' : '#C62828') + '">' + pAksept + '%</span> <span style="font-size:14px;font-weight:500;color:' + (pAksept >= 20 ? '#004225' : '#C62828') + '">(mål 20%)</span>';
   setEl('tk-ep-after-sub', akseptert.length+' akseptert / '+kohortN+' evaluert etter tiltak');
 
   // Kort 3: Bud-aksept cohort
   setEl('tk-bp-cohort', paAuksjon.length>0?Math.round(solgt.length/paAuksjon.length*100)+'%':'for tidlig');
-  setEl('tk-bp-sub', solgt.length+' solgt / '+paAuksjon.length+' pÃ¥ auksjon');
+  setEl('tk-bp-sub', solgt.length+' solgt / '+paAuksjon.length+' på auksjon');
   var bpBarEl=document.getElementById('tk-bp-bar');
-  if(bpBarEl)bpBarEl.innerHTML=(bpPct!==null?'<span style="font-size:11px;color:#aaa;display:block;margin-top:4px">Baseline (30d fÃ¸r tiltak): <strong>'+bpPct+'%</strong></span>':'');
+  if(bpBarEl)bpBarEl.innerHTML=(bpPct!==null?'<span style="font-size:11px;color:#aaa;display:block;margin-top:4px">Baseline (30d før tiltak): <strong>'+bpPct+'%</strong></span>':'');
 
   // Kort 4: Kohort-storrelse
   setEl('tk-cohort-n', kohortN);
@@ -508,7 +508,7 @@ function renderTiltakCharts(){
     html2 += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px">';
     html2 += '<div style="font-size:48px;font-weight:900;line-height:1;color:' + bpColor + '">' + (bpPct !== null ? bpPct + '%' : 'for tidlig') + '</div>';
     html2 += '<div style="font-size:12px;color:#667A72;line-height:1.8">';
-    html2 += '<div><span style="display:inline-block;width:10px;height:10px;background:#2E7D32;border-radius:2px;margin-right:4px"></span><strong>' + soldN + '</strong> solgt pÃ¥ auksjon</div>';
+    html2 += '<div><span style="display:inline-block;width:10px;height:10px;background:#2E7D32;border-radius:2px;margin-right:4px"></span><strong>' + soldN + '</strong> solgt på auksjon</div>';
     html2 += '<div><span style="display:inline-block;width:10px;height:10px;background:#C62828;border-radius:2px;margin-right:4px"></span><strong>' + retN + '</strong> returnert</div>';
     html2 += '<div><span style="display:inline-block;width:10px;height:10px;background:#1565C0;border-radius:2px;margin-right:4px"></span><strong>' + prodN + '</strong> i produksjon (ikke ferdig)</div>';
     html2 += '<div style="margin-top:4px;color:#aaa;font-size:10px">Mal: &gt;70% av ferdigstilte skal selges</div></div></div>';
@@ -544,9 +544,9 @@ function render(data,rows){
   var dials='<div class="section-label">Nokkeltall</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral"><div class="dial-label">Evaluert</div><div class="arc-wrap"><svg id="arc0"></svg></div><div class="dial-value">'+tE.toLocaleString('nb-NO')+'</div><div class="dial-unit">biler</div><div class="dial-sub">Tilbud sendt selger</div><div class="target-tag">Fra 1.11.2025</div></div>'
     +'<div class="dial-card '+(mOk?'on-target':'off-target')+'"><div class="dial-label">Evaluert &#8594; Mottatt</div><div class="arc-wrap"><svg id="arc1"></svg></div><div class="dial-value">'+mR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tM+' av '+tE+'</div><div class="dial-sub">Selger aksepterer tilbud</div><div class="target-tag">Mal '+TARGETS.evalMottatt+'%</div></div>'
-    +'<div class="dial-card '+(sOk?'on-target':'off-target')+'"><div class="dial-label">Mottatt &#8594; Solgt</div><div class="arc-wrap"><svg id="arc2"></svg></div><div class="dial-value">'+sR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tS+' av '+tM+'</div><div class="dial-sub">HÃ¸yeste bud akseptert</div><div class="target-tag">Mal '+TARGETS.mottattSolgt+'%</div></div>'
+    +'<div class="dial-card '+(sOk?'on-target':'off-target')+'"><div class="dial-label">Mottatt &#8594; Solgt</div><div class="arc-wrap"><svg id="arc2"></svg></div><div class="dial-value">'+sR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tS+' av '+tM+'</div><div class="dial-sub">Høyeste bud akseptert</div><div class="target-tag">Mal '+TARGETS.mottattSolgt+'%</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon na</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">biler pa anlegg</div><div class="dial-sub">Venter vask/foto/test</div><div class="target-tag">Live</div></div>'
-    +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Median bud vs Pris lav (solgt)</div><div class="dial-sub">PrisnÃ¸yaktighet (median)</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
+    +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Median bud vs Pris lav (solgt)</div><div class="dial-sub">Prisnøyaktighet (median)</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
     +'</div>';
@@ -610,15 +610,15 @@ function render(data,rows){
   opsHtml += dagKort('Avvist tilbud', avvistToday, 'av evaluert i dag', avvistToday>0?'#C62828':'#2E7D32');
   opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
-  opsHtml += dagKort('Solgt i dag', solgtToday, 'pÃ¥ auksjon', solgtToday>0?'#2E7D32':'#667A72');
+  opsHtml += dagKort('Solgt i dag', solgtToday, 'på auksjon', solgtToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Returnert i dag', retToday, 'avvist bud', retToday>0?'#C62828':'#2E7D32');
   opsHtml += '</div>';
 
   // 7d rates
   opsHtml += '<div style="display:flex;gap:24px;padding-top:14px;border-top:1px solid rgba(0,66,37,0.06);flex-wrap:wrap">';
   opsHtml += '<div style="font-size:12px;color:#667A72">30-dagers rater: ';
-  opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> (mÃ¥l 20%) &nbsp;&middot;&nbsp; ';
-  opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong> (mÃ¥l 70%)</div>';
+  opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> (mål 20%) &nbsp;&middot;&nbsp; ';
+  opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong> (mål 70%)</div>';
   opsHtml += '</div>';
   opsHtml += '</div>';
 
@@ -636,7 +636,7 @@ function render(data,rows){
 
   opsHtml += syklusKort('Eval &rarr; Aksept', lagEAsnitt, 3, 'dager');
   opsHtml += syklusKort('Aksept &rarr; Mottatt', lagAMsnitt, 5, 'dager');
-  opsHtml += syklusKort('Mottatt â Solgt', lagMSsnitt, 7, 'dager');
+  opsHtml += syklusKort('Mottatt → Solgt', lagMSsnitt, 7, 'dager');
   opsHtml += syklusKort('Total syklus', lagTot, 15, 'dager');
   opsHtml += '</div>';
 
@@ -655,7 +655,7 @@ function render(data,rows){
   opsHtml+='</tbody></table></div></div>';
   var finHtml='<div class="section-label">Prisbrakett-analyse &mdash; Pris lav vs Bud</div><div class="brackets-grid">';
   for(var m=0;m<bs.length;m++){var b=bs[m];var xC=b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';finHtml+='<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div><div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">'+b.evalCount+'</span></div><div class="bc-row"><span class="bc-key">Avvist av kunde</span><span class="bc-val '+(b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn')+'">'+b.rejCount+' <span style="color:var(--muted);font-weight:400">('+( b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0)+'%)</span></span></div><div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">'+b.motCount+' <span style="color:var(--muted);font-weight:400">('+b.convRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.soldCount+' <span style="color:var(--muted);font-weight:400">('+b.soldRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val '+(b.retCount>0?'neg':'')+'">'+b.retCount+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val '+(b.avgGapSolgt>=0?'pos':'warn')+'">'+fmtPct(b.avgGapSolgt)+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (ret.)</span><span class="bc-val neg">'+fmtPct(b.avgGapRet)+'</span></div><div class="x-rec"><div class="x-rec-label">Median: bud vs Pris lav</div><div class="x-rec-val" style="color:'+xC+'">'+(b.recX>0?'+':'')+b.recX+'%</div></div></div>';}
-  finHtml+='</div><div class="section-label">Pris lav vs Bud &mdash; Alle biler</div><div class="plot-card"><div class="plot-title">Prisnoyaktighet: Pris lav vs HÃ¸yeste bud</div><div class="plot-explain">Hver prikk er en bil. X = Pris lav. Y = HÃ¸yeste bud. Stiplet = perfekt treff. GrÃ¸nne prikker over linjen = bud hoyere enn Pris lav. RÃ¸de prikker = returneringsrisiko.</div><canvas id="scatter" height="300"></canvas></div>'
+  finHtml+='</div><div class="section-label">Pris lav vs Bud &mdash; Alle biler</div><div class="plot-card"><div class="plot-title">Prisnoyaktighet: Pris lav vs Høyeste bud</div><div class="plot-explain">Hver prikk er en bil. X = Pris lav. Y = Høyeste bud. Stiplet = perfekt treff. Grønne prikker over linjen = bud hoyere enn Pris lav. Røde prikker = returneringsrisiko.</div><canvas id="scatter" height="300"></canvas></div>'
     +'<div class="section-label">Kostbare returneringer &amp; beste pristreff</div><div class="two-col"><div class="table-card"><div class="th"><div class="th-title">&#10060; Verste returneringer</div><div class="th-badge">'+tR+' totalt</div></div><div class="th-note">No-cure ~3 000 kr er grovt estimat.</div><table><thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th><th>Est. kost.</th></tr></thead><tbody>';
   var wR=data.returned.slice().sort(function(a,b){return a.gap-b.gap;}).slice(0,10);
   for(var n=0;n<wR.length;n++){var wr=wR[n];finHtml+='<tr><td><span class="regnr">'+wr.regnr+'</span><span class="car-name">'+(wr.label||'-')+'</span></td><td>'+(wr.dLow?wr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td>'+(wr.e?wr.e.toLocaleString('nb-NO')+' kr':'-')+'</td><td><span style="color:var(--red);font-weight:700">'+fmtPct(wr.gap)+'</span></td><td style="color:var(--red);font-weight:600">~3 000 kr</td></tr>';}
@@ -698,7 +698,7 @@ function drawScatter(sold,returned){
   for(var i=0;i<=5;i++){var x=pad.l+(i/5)*pw,y=pad.t+(i/5)*ph;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();if(i>0){ctx.fillStyle='#bbb';ctx.font='9px Inter';ctx.textAlign='center';ctx.fillText(Math.round(maxV/5*i/1000)+'k',x,pad.t+ph+14);ctx.textAlign='right';ctx.fillText(Math.round(maxV/5*(5-i)/1000)+'k',pad.l-6,pad.t+(i/5)*ph+4);}}
   ctx.strokeStyle='rgba(0,66,37,0.2)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx(0),sy(0));ctx.lineTo(sx(maxV),sy(maxV));ctx.stroke();ctx.setLineDash([]);
   for(var j=0;j<all.length;j++){var c=all[j];ctx.beginPath();ctx.arc(sx(c.dLow),sy(c.e||0),5,0,Math.PI*2);ctx.fillStyle=c.type==='sold'?'rgba(0,135,90,0.7)':'rgba(198,40,40,0.75)';ctx.fill();ctx.strokeStyle=c.type==='sold'?'#00875A':'#C62828';ctx.lineWidth=1;ctx.stroke();}
-  ctx.fillStyle='#999';ctx.font='10px Inter';ctx.textAlign='center';ctx.fillText('Pris lav (tilbud til selger)',pad.l+pw/2,H-4);ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('HÃ¸yeste bud (pÃ¥ auksjon)',0,0);ctx.restore();
+  ctx.fillStyle='#999';ctx.font='10px Inter';ctx.textAlign='center';ctx.fillText('Pris lav (tilbud til selger)',pad.l+pw/2,H-4);ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Høyeste bud (på auksjon)',0,0);ctx.restore();
 }
 
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
@@ -708,7 +708,7 @@ loadData().then(function(rows){render(processData(rows),rows);}).catch(function(
 function buildKartTabell(posMap,filter){
   filter=filter||'alle';
   window._kartPosMap=posMap;
-  var AKSEPTERT=['Venter pÃ¥ trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
+  var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
   var AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
   var filterLabels={alle:'Alle biler',akseptert:'Aksepterte biler',avvist:'Avviste biler',solgt:'Solgte biler'};
   var rows=Object.keys(posMap).map(function(pnr){
@@ -729,13 +729,13 @@ function buildKartTabell(posMap,filter){
   var aksRate=sumBiler>0?Math.round(sumAkseptert/rows.reduce(function(s,r){return s+r.totBiler;},0)*100):0;
   var tbody=document.getElementById('kart-tabell-body');
   if(!tbody)return;
-  // Pedagogisk sammendrag Ã¸verst
+  // Pedagogisk sammendrag øverst
   var filterColor=filter==='akseptert'?'#00875A':filter==='avvist'?'#C62828':filter==='solgt'?'#1565C0':'var(--green)';
   var summary='<tr><td colspan="6" style="padding:14px 12px 10px">'
     +'<div style="background:rgba(0,66,37,0.04);border-radius:10px;padding:14px 18px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">'
     +'<div><span style="font-size:22px;font-weight:700;color:'+filterColor+'">'+sumBiler+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">'+filterLabels[filter]+'</div></div>'
     +'<div><span style="font-size:22px;font-weight:700;color:var(--green)">'+sumSteder+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">steder i Norge</div></div>'
-    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:'+(aksRate>=20?'#00875A':'#C62828')+'">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate (mÃ¥l 20%)</div></div>':'')
+    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:'+(aksRate>=20?'#00875A':'#C62828')+'">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate (mål 20%)</div></div>':'')
     +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#1565C0">'+sumSolgt+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">solgt totalt</div></div>':'')
     +'</div></td></tr>';
   var tbody=document.getElementById('kart-tabell-body');
@@ -749,7 +749,7 @@ function buildKartTabell(posMap,filter){
       +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#00875A">'+r.totAkseptert+'</td>'
       +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#C62828">'+r.totAvvist+'</td>'
       +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono)">'+r.totSolgt+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700;color:'+(rate>=20?'#00875A':rate>=10?'var(--orange)':'#C62828')+'">'+(r.totBiler>0?rate+'%':'â')+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700;color:'+(rate>=20?'#00875A':rate>=10?'var(--orange)':'#C62828')+'">'+(r.totBiler>0?rate+'%':'—')+'</td>'
       +'</tr>';
   }).join('');
 }
@@ -761,7 +761,7 @@ function buildKartTabell(posMap,filter){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <div>
         <div style="font-size:22px;font-weight:700;color:var(--green)">Hvor kommer bilene fra?</div>
-        <div id="kart-subtitle" style="font-size:13px;color:var(--muted);margin-top:4px">Klikk for Ã¥ laste kartâ¦</div>
+        <div id="kart-subtitle" style="font-size:13px;color:var(--muted);margin-top:4px">Klikk for å laste kart…</div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap" id="kart-filters">
         <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
@@ -802,7 +802,7 @@ function kartFilter(f){
   document.querySelectorAll('.kart-fbtn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
   if(!_kartMap)return;
   _kartMarkers.forEach(function(item){
-    var show=f==='alle'?true:f==='akseptert'?['Venter pÃ¥ trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(item.status)!==-1:f==='avvist'?['Avvist by customer','Avvist by admin','Avvist'].indexOf(item.status)!==-1:f==='solgt'?item.status==='sold':true;
+    var show=f==='alle'?true:f==='akseptert'?['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(item.status)!==-1:f==='avvist'?['Avvist by customer','Avvist by admin','Avvist'].indexOf(item.status)!==-1:f==='solgt'?item.status==='sold':true;
     show?item.marker.addTo(_kartMap):_kartMap.removeLayer(item.marker);
   });
   if(window._kartPosMap)buildKartTabell(window._kartPosMap,f);
@@ -819,7 +819,7 @@ async function initKart(){
   }
   _kartMap=L.map('peasy-map',{zoomControl:true}).setView([63.5,15.0],5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:18}).addTo(_kartMap);
-  document.getElementById('kart-subtitle').textContent='Laster dataâ¦';
+  document.getElementById('kart-subtitle').textContent='Laster data…';
   var resp=await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx');
   var ab=await resp.arrayBuffer();
   var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
@@ -839,28 +839,28 @@ async function initKart(){
     var coords=GEO[pnr];
     if(!coords)return;
     var antall=loc.biler.length;
-    var akseptert=loc.biler.filter(function(b){return['Venter pÃ¥ trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(b.status)!==-1;}).length;
+    var akseptert=loc.biler.filter(function(b){return['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(b.status)!==-1;}).length;
     var avvist=loc.biler.filter(function(b){return['Avvist by customer','Avvist by admin','Avvist'].indexOf(b.status)!==-1;}).length;
     var color=akseptert>0?'#00875A':avvist===antall?'#C62828':'#1565C0';
     var radius=Math.max(7,Math.min(26,7+antall*2));
     var marker=L.circleMarker([coords[0],coords[1]],{radius:radius,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:0.82});
-    var popup='<b>'+loc.sted+'</b> ('+pnr+')<br>'+antall+' bil'+(antall!==1?'er':'')+(akseptert?'<br>&#x2705; '+akseptert+' akseptert':'')+(avvist?'<br>&#x274C; '+avvist+' avvist':'')+'<br><small>'+loc.biler.slice(0,5).map(function(b){return(b.regnr||'')+' '+(b.merke||'');}).join(', ')+(loc.biler.length>5?'â¦':'')+'</small>';
+    var popup='<b>'+loc.sted+'</b> ('+pnr+')<br>'+antall+' bil'+(antall!==1?'er':'')+(akseptert?'<br>&#x2705; '+akseptert+' akseptert':'')+(avvist?'<br>&#x274C; '+avvist+' avvist':'')+'<br><small>'+loc.biler.slice(0,5).map(function(b){return(b.regnr||'')+' '+(b.merke||'');}).join(', ')+(loc.biler.length>5?'…':'')+'</small>';
     marker.bindPopup(popup);
     marker.addTo(_kartMap);
     _kartMarkers.push({marker:marker,status:loc.biler[0].status});
   });
   var tot=Object.values(posMap).reduce(function(s,v){return s+v.biler.length;},0);
   window._kartPosMap=posMap;
-  document.getElementById('kart-subtitle').textContent=tot+' biler plottet â klikk markÃ¸r for detaljer';
+  document.getElementById('kart-subtitle').textContent=tot+' biler plottet — klikk markør for detaljer';
   buildKartTabell(posMap,'alle');
 }
 
-function fmtK(v){if(!v&&v!==0)return 'â';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'â':Math.round(n/1000)+'k';}
-function fmtKm(v){if(!v&&v!==0)return 'â';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'â':n.toLocaleString('nb-NO')+' km';}
+function fmtK(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':Math.round(n/1000)+'k';}
+function fmtKm(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':n.toLocaleString('nb-NO')+' km';}
 function buildDagsTabell(evalAll2, todayDate){
   var pdOps=function(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;};
   var AVVIST=['avvist by customer','avvist by admin','avvist'];
-  var AKSEPTERT=['Venter pÃ¥ trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
+  var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
 
   var evalI   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate;});
   var avvistI = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
@@ -870,12 +870,12 @@ function buildDagsTabell(evalAll2, todayDate){
   var retI    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate&&String(r[12]||""  ).toLowerCase().includes("returned");});
 
   var grupper=[
-    {label:'Evaluert i dag',emoji:'ð',biler:evalI,color:'#1565C0'},
-    {label:'Avvist i dag',emoji:'â',biler:avvistI,color:'#C62828'},
-    {label:'Bestilt hent/lev',emoji:'ð¦',biler:bestiltI,color:'#E65100'},
-    {label:'Mottatt pÃ¥ anlegg',emoji:'ð­',biler:mottattI,color:'#6A1B9A'},
-    {label:'Solgt pÃ¥ auksjon',emoji:'â',biler:solgtI,color:'#00875A'},
-    {label:'Returnert',emoji:'ð',biler:retI,color:'#555'}
+    {label:'Evaluert i dag',emoji:'📋',biler:evalI,color:'#1565C0'},
+    {label:'Avvist i dag',emoji:'❌',biler:avvistI,color:'#C62828'},
+    {label:'Bestilt hent/lev',emoji:'📦',biler:bestiltI,color:'#E65100'},
+    {label:'Mottatt på anlegg',emoji:'🏭',biler:mottattI,color:'#6A1B9A'},
+    {label:'Solgt på auksjon',emoji:'✅',biler:solgtI,color:'#00875A'},
+    {label:'Returnert',emoji:'🔁',biler:retI,color:'#555'}
   ].filter(function(g){return g.biler.length>0;});
 
   if(grupper.length===0)return '';
@@ -883,19 +883,19 @@ function buildDagsTabell(evalAll2, todayDate){
   var rowHtml=function(r,i,isSolgt){
     var bg=i%2===0?'':'background:rgba(0,66,37,0.02)';
     var dlh=String(r[3]||'').trim();
-    if(dlh&&dlh!=='-'){var pp=dlh.split('-');if(pp.length===2){var lo=parseInt(pp[0]);var hi=parseInt(pp[1]);if(!isNaN(lo)&&!isNaN(hi))dlh=lo.toLocaleString('nb-NO')+' kr â '+hi.toLocaleString('nb-NO')+' kr';}};
-    if(!dlh)dlh='â';
+    if(dlh&&dlh!=='-'){var pp=dlh.split('-');if(pp.length===2){var lo=parseInt(pp[0]);var hi=parseInt(pp[1]);if(!isNaN(lo)&&!isNaN(hi))dlh=lo.toLocaleString('nb-NO')+' kr – '+hi.toLocaleString('nb-NO')+' kr';}};
+    if(!dlh)dlh='—';
     var kmVal=r[22]?parseInt(String(r[22]).replace(/[^\d]/g,'')):NaN;
-    var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'â';
-    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter pÃ¥ trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'PÃ¥ auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','waiting_for_valuation':'Venter vurdering','waiting_for_preparation':'KlargjÃ¸res','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor omrÃ¥de','ar_car_created':'Opprettet'};
-    var status=STATUS_NO[r[12]]||r[12]||'â';
+    var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'—';
+    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','waiting_for_valuation':'Venter vurdering','waiting_for_preparation':'Klargjøres','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
+    var status=STATUS_NO[r[12]]||r[12]||'—';
     var extraCols='';
     if(isSolgt){
       var budV=r[19]?parseInt(String(r[19]).replace(/[^\d]/g,'')):NaN;
       var dlavV=r[3]?parseInt(String(r[3]).split('-')[0].replace(/[^\d]/g,'')):NaN;
-      var budStr=!isNaN(budV)?budV.toLocaleString('nb-NO')+' kr':'â';
+      var budStr=!isNaN(budV)?budV.toLocaleString('nb-NO')+' kr':'—';
       var budColor='var(--muted)';
-      var avvikStr='â', avvikColor='var(--muted)';
+      var avvikStr='—', avvikColor='var(--muted)';
       if(!isNaN(budV)&&!isNaN(dlavV)&&dlavV>0){
         budColor=budV>=dlavV?'#00875A':'#C62828';
         var pct=Math.round((budV-dlavV)/dlavV*100);
@@ -928,10 +928,10 @@ function buildDagsTabell(evalAll2, todayDate){
       +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bil</th>'
       +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:120px">KM</th>'
       +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:190px">Peasy Est Verdi</th>'
-      +(g.label==='Solgt pÃ¥ auksjon'?'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bud</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Avvik</th>':'')
+      +(g.label==='Solgt på auksjon'?'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bud</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Avvik</th>':'')
       +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:140px">Status</th>'
       +'</tr></thead>'
-      +'<tbody>'+g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt pÃ¥ auksjon');}).join('')+'</tbody>'
+      +'<tbody>'+g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon');}).join('')+'</tbody>'
       +'</table></div>';
   });
   out+='</div>';
