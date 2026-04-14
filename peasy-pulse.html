@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.k</title>
+<title>Peasy Pulse v16.03.l</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -146,7 +146,7 @@ function renderEvalCharts(rows,data){
   var now=new Date(),d30=new Date(now),d90=new Date(now);
   d30.setDate(d30.getDate()-30);d90.setDate(d90.getDate()-90);
   var evalAll=(rows||[]).slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
-  var eval30=evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d30;}).length;
+  var eval30=evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d30;}).length;var eval90c=evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d90;}).length;var fpe30=eval30>0?Math.round(feeSum30/eval30):0;var fpe90=eval90c>0?Math.round(feeSum90/eval90c):0;var fpeDiff=fpe30-fpe90;
   var eval90=evalAll.filter(function(r){var d=parseDate(r[13]);return d&&d>=d90;}).length;
   var recv30=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d30;}).length;
   var recv90=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d90;}).length;
@@ -167,7 +167,7 @@ function renderEvalCharts(rows,data){
     var el30=document.getElementById(prefix+'-30');var el90=document.getElementById(prefix+'-90');var elD=document.getElementById(prefix+'-d');
     if(el30){el30.textContent=v30+'%';el30.style.color=c30;}if(el90)el90.textContent=v90+'%';if(elD){elD.textContent=(delta>0?'+':'')+delta+'pp vs 90d';elD.style.color=cD;}
   }
-  setKpi('ep',ep30,ep90,epD,20);setKpi('bp',bp30,bp90,bpD,70);
+  setKpi('ep',ep30,ep90,epD,20);setKpi('bp',bp30,bp90,bpD,70);var el=document.getElementById('fpe-val');if(el)el.textContent=fpe30.toLocaleString('nb-NO')+' kr';var el2=document.getElementById('fpe-90');if(el2)el2.textContent='90d: '+fpe90.toLocaleString('nb-NO')+' kr';var el3=document.getElementById('fpe-diff');if(el3){el3.textContent=(fpeDiff>=0?'+':'')+fpeDiff.toLocaleString('nb-NO')+' kr';el3.style.color=fpeDiff>=0?'#2E7D32':'#C62828';}
   var days=[],evalPerDay=[],recvPerDay=[],mottPerDay=[],soldPerDay=[];
   for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);evalPerDay.push(0);recvPerDay.push(0);mottPerDay.push(0);soldPerDay.push(0);}
   evalAll.forEach(function(r){var d=parseDate(r[13]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)evalPerDay[idx]++;});
@@ -525,7 +525,7 @@ function render(data,rows){
   var tE=data.evaluated.length,tM=data.mottatt.length,tS=data.sold.length,tR=data.returned.length;
   var mR=pct(tM,tE),sR=pct(tS,tM);
   var uVals=data.sold.map(function(c){return c.u;}).filter(function(u){return u&&u>500;});
-  var tU=uVals.reduce(function(a,b){return a+b;},0),aU=uVals.length?Math.round(tU/uVals.length):0;
+  var tU=uVals.reduce(function(a,b){return a+b;},0),aU=uVals.length?Math.round(tU/uVals.length):0;var feeVals30=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d30&&c.u&&c.t;}).map(function(c){return c.u-c.t;});var feeVals90=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d90&&c.u&&c.t;}).map(function(c){return c.u-c.t;});var feeSum30=feeVals30.reduce(function(a,b){return a+b;},0);var feeSum90=feeVals90.reduce(function(a,b){return a+b;},0);
   var aGs=avg(data.sold.map(function(c){return c.gap;}));
   var nC=tR*3000,nR=tU-nC;
   var mOk=mR>=TARGETS.evalMottatt,sOk=sR>=TARGETS.mottattSolgt;
@@ -540,7 +540,7 @@ function render(data,rows){
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon na</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">biler pa anlegg</div><div class="dial-sub">Venter vask/foto/test</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Bud vs Pris lav (solgt)</div><div class="dial-sub">Prisnoyaktighet</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
+    +'<div class="dial-card neutral"><div class="<div class="dial-card"><div class="dial-label">Fee / eval</div><div class="arc-wrap"></div><div class="dial-value" style="font-size:16px" id="fpe-val">—</div><div class="dial-unit">kr per evaluert bil</div><div class="dial-sub"><span id="fpe-90">90d: —</span> <strong id="fpe-diff" style="margin-left:6px"></strong></div><div class="target-tag">30d vs 90d</div></div>dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
     +'</div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
   var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
