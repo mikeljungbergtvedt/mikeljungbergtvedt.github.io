@@ -216,8 +216,11 @@ function processData(rows){
     if(rDate)data.mottatt.push(car);
     if(sDate&&dLow&&t){data.sold.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
     if(vDate&&dLow&&t&&t>0){data.returned.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
-    if(rDate&&!sDate&&!vDate){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
+    if(rDate&&!sDate&&!vDate&&!String(car.status||"").toLowerCase().includes("retur")){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
   }
+  var returAll=[];
+  for(var ci=0;ci<(data.evaluated||[]).length;ci++){var cr=data.evaluated[ci];if(String(cr.status||"").toLowerCase().includes("retur"))returAll.push(cr);}
+  data.returAll=returAll;
   return data;
 }
 
@@ -665,6 +668,7 @@ function render(data,rows){
     drawArc(document.getElementById('arc1'),Math.min(mR/20*100,100),mOk?'#4CAF50':'#C62828');
     drawArc(document.getElementById('arc2'),Math.min(sR/100*100,100),sOk?'#4CAF50':'#C62828');
     drawArc(document.getElementById('arc3'),Math.min(data.inProd.length/20*100,100),'#1565C0');
+  if(data.returAll&&data.returAll.length>0){opsHtml+='<div class="section-label" style="margin-top:24px">Nylig returnert — bud avvist ('+data.returAll.length+' biler)</div><div class="pipeline-grid">';data.returAll.slice().sort(function(a,b){return (b.vDate||'').localeCompare(a.vDate||'');}).forEach(function(c){var sb=statusBadge(c.status);opsHtml+='<div class="pipe-card"><div class="pipe-label">'+(sb?sb[0]+' ':'')+c.regnr+'</div><div class="pipe-sub">'+c.label+'</div><div class="pipe-sub" style="color:#C62828">'+(c.vDate||'avvist')+'</div></div>';});opsHtml+='</div>';}
     var gN=aGs!==null?Math.min(Math.max((aGs+20)/40*100,0),100):50;
     drawArc(document.getElementById('arc4'),gN,aGs>=0?'#4CAF50':'#E65100');
     drawArc(document.getElementById('arc5'),Math.min(tU/1000000*100,100),'#00875A');
