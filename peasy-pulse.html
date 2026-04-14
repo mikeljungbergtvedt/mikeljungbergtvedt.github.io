@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.k</title>
+<title>Peasy Pulse v16.03.c2</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -93,10 +93,15 @@ canvas{width:100%;border-radius:8px;}
 .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
 .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
 .chart-explain{font-size:11px;color:var(--muted);padding:8px 18px 10px;line-height:1.6;border-bottom:1px solid var(--border);background:rgba(0,66,37,0.015);}
+
+/* Kart-fane */
+.kart-fbtn{font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 14px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--green);cursor:pointer;transition:all .15s}
+.kart-fbtn:hover{border-color:var(--accent);color:var(--accent)}
+.kart-fbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
 </style>
 </head>
 <body>
-<a id="portal-back-link" href="peasyportal.html" style="position:fixed;top:12px;right:16px;z-index:99999;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.75);text-decoration:none;letter-spacing:0.5px;background:rgba(0,66,37,0.6);padding:5px 12px;border-radius:20px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);transition:all .2s;" onmouseover="this.style.background='rgba(0,66,37,0.9)';this.style.color='rgba(255,204,51,0.8)'" onmouseout="this.style.background='rgba(0,66,37,0.6)';this.style.color='rgba(255,255,255,0.75)'">&#8592; portal</a>
+
 
 <header>
   <div class="logo"><img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"></div><div id="tk-ep-bar-before"></div>
@@ -107,6 +112,7 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
+      <button class="mode-btn" id="btn-kart" onclick="setMode('kart')">Kart</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
@@ -132,8 +138,10 @@ function setMode(m){
   document.getElementById('btn-fin').classList.toggle('active',m==='fin');
   document.getElementById('btn-eval').classList.toggle('active',m==='eval');
   document.getElementById('btn-tiltak').classList.toggle('active',m==='tiltak');
+  if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
   document.querySelectorAll('.mode-section').forEach(function(el){el.classList.toggle('visible',el.dataset.mode===m);});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
+  if(m==='kart'){initKart();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
 }
@@ -216,11 +224,8 @@ function processData(rows){
     if(rDate)data.mottatt.push(car);
     if(sDate&&dLow&&t){data.sold.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
     if(vDate&&dLow&&t&&t>0){data.returned.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
-    if(rDate&&!sDate&&!vDate&&!String(car.status||"").toLowerCase().includes("retur")){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
+    if(rDate&&!sDate&&!vDate){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
   }
-  var returAll=[];
-  for(var ci=0;ci<(data.evaluated||[]).length;ci++){var cr=data.evaluated[ci];if(String(cr.status||"").toLowerCase().includes("retur"))returAll.push(cr);}
-  data.returAll=returAll;
   return data;
 }
 
@@ -230,7 +235,7 @@ function bracketStats(data){
     var mB=data.mottatt.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
     var sB=data.sold.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
     var rB=data.returned.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
-    var aGs=avg(sB.map(function(c){return c.gap;}));
+    var aGs=(function(g){if(!g.length)return null;var s=g.slice().sort(function(a,b){return a-b;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;})(sB.map(function(c){return c.gap;}));
     var rejB=data.evaluated.filter(function(c){return c.status==='Avvist by customer'&&c.dLow>0&&c.dLow>=b.lo&&c.dLow<b.hi;});
     return Object.assign({},b,{evalCount:eB.length,motCount:mB.length,soldCount:sB.length,retCount:rB.length,rejCount:rejB.length,convRate:pct(mB.length,eB.length),soldRate:pct(sB.length,mB.length),avgGapSolgt:aGs,avgGapRet:avg(rB.map(function(c){return c.gap;})),recX:(function(g){if(!g.length)return 0;var s=g.slice().sort(function(a,b){return a-b;});var m=Math.floor(s.length/2);return+(s.length%2?s[m]:(s[m-1]+s[m])/2).toFixed(1);})(sB.map(function(c){return c.gap;}))});
   });
@@ -238,7 +243,7 @@ function bracketStats(data){
 
 function drawArc(svgEl,valuePct,color){var r=46,cx=55,cy=60;var angle=Math.PI-(valuePct/100)*Math.PI;var x=cx+r*Math.cos(angle),y=cy+r*Math.sin(angle);svgEl.innerHTML='<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="rgba(0,66,37,0.08)" stroke-width="8" stroke-linecap="round"/><path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+x+' '+y+'" fill="none" stroke="'+color+'" stroke-width="8" stroke-linecap="round"/><circle cx="'+x+'" cy="'+y+'" r="4" fill="'+color+'"/>';}
 function daysClass(d,t){return d<=t?'days-ok':d<=t*2?'days-warn':'days-over';}
-function statusBadge(s){var map={'på auksjonen':['&#128296;','b-auksjon','På auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter på bud aksept'],'change owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter på bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter på bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','I produksjon'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
+function statusBadge(s){var map={'received':['&#128203;','b-mottatt','Mottatt på anlegg'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon'],'to_be_returned':['&#10060;','b-ferdig','Til retur'],'waiting_for_transport':['&#128666;','b-produksjon','Venter transport'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter svar'],'contract_signed':['&#128203;','b-produksjon','Kontrakt signert'],'på auksjonen':['&#128296;','b-auksjon','På auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter på bud aksept'],'change owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter på bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter på bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','I produksjon'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
 function workHoursElapsed(from){var wS=8,wE=16,now=new Date(),total=0,cur=new Date(from);while(cur<now){var day=cur.getDay();if(day===0||day===6){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var dS=new Date(cur);dS.setHours(wS,0,0,0);var dE=new Date(cur);dE.setHours(wE,0,0,0);if(cur<dS){cur=dS;continue;}if(cur>=dE){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var pE=now<dE?now:dE;total+=Math.floor((pE-cur)/60000);cur=dE;}return{h:Math.floor(total/60),m:total%60,total:Math.floor(total/60)};}
 
 function buildEvalHtml(data,rows){
@@ -260,7 +265,7 @@ function buildEvalHtml(data,rows){
   h+='</div><div style="height:4px;background:rgba(0,66,37,0.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:70%;background:rgba(0,135,90,0.2);border-radius:99px"></div></div>';
   h+='<div style="font-size:10px;color:#aaa;margin-top:6px">70% = mal &middot; 7 av 10 mottatte biler skal selges på auksjon</div></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Eval-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler mottatt. Graa soeyler = antall evaluert. Rød linje = 14-dagers akseptrate. Stiplet = 20%-mal.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler mottatt. Graa soeyler = antall evaluert. Rød linje = 30-dagers akseptrate. Stiplet = 20%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:24px"><div class="th"><div class="th-title">Bud-aksept utvikling &mdash; siste 90 dager</div></div>';
   h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 14-dagers salgsrate. Stiplet = 70%-mal.</div>';
@@ -271,13 +276,13 @@ function buildEvalHtml(data,rows){
   if(!evalRows.length)h+='<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter &#10003;</td></tr>';
   for(var i=0;i<evalRows.length;i++){
     var r=evalRows[i];var reg=r[1],merke=r[6]||'',modell=r[7]||'',year=r[8]||'';var lbl=[merke,modell,year].filter(Boolean).join(' ');
-    var km=r[22]?Math.round(r[22]/1000)+'k':'-';var sdRaw=r[14]?String(r[14]).trim():null;
+    var km=r[22]?parseInt(r[22]).toLocaleString('nb-NO')+' km':'-';var sdRaw=r[14]?String(r[14]).trim():null;
     var regDate=sdRaw?(function(s){var p=s.split(' '),dp=p[0].split('.'),tp=p[1]?p[1].split(':'):['0','0'];var d=new Date(dp[2]+'-'+dp[1]+'-'+dp[0]);d.setHours(parseInt(tp[0]),parseInt(tp[1]),0,0);return isNaN(d)?parseDate(r[13]):d;})(sdRaw):parseDate(r[13]);
     var whm=regDate?workHoursElapsed(regDate):null;var whmStr=whm===null?'-':whm.h+'h '+String(whm.m).padStart(2,'0')+'m';
     var daysCol=whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
     var ar=String(r[3]||'').trim(),ps;
     if(!ar||ar==='-')ps='<span style="color:var(--red);font-weight:700">Ikke priset</span>';
-    else{var p=ar.replace(/[\s\u00a0]/g,'').split('-');ps='<strong>'+Math.round(parseInt(p[0])/1000)+'k &ndash; '+Math.round(parseInt(p[1]||p[0])/1000)+'k</strong>';}
+    else{var p=ar.replace(/[\s\u00a0]/g,'').split('-');ps='<strong>'+parseInt(p[0]).toLocaleString('nb-NO')+' kr &ndash; '+parseInt(p[1]||p[0]).toLocaleString('nb-NO')+' kr</strong>';}
     var sdVal=r[14]?String(r[14]).trim():'';var sdDisplay=sdVal?sdVal.slice(0,16):fmtDate(r[13]);
     var slaPct=whm?Math.min(whm.total/4*100,100):0;var slaColor=whm&&whm.total<3?'#4CAF50':whm&&whm.total<4?'#E65100':'#C62828';
     h+='<tr><td style="color:var(--muted);font-size:11px;white-space:nowrap">'+sdDisplay+'</td><td style="'+daysCol+';font-weight:700;white-space:nowrap">'+whmStr+'<div class="sla-bar-wrap"><div class="sla-bar" style="width:'+slaPct+'%;background:'+slaColor+'"></div></div></td><td><span class="regnr">'+reg+'</span></td><td style="font-size:11px">'+lbl+'</td><td style="font-size:11px">'+km+'</td><td>'+ps+'</td></tr>';
@@ -289,7 +294,7 @@ function buildEvalHtml(data,rows){
   h+='<div class="section-label">Avvist av selger &mdash; siste 10 ('+avvistPct+'% av evaluert fra 1.11.25)</div>';
   h+='<div class="table-card" style="margin-bottom:24px"><table><thead><tr><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav &ndash; hoy</th><th>Dato</th></tr></thead><tbody>';
   var last10=avvistRows.slice(0,10);if(!last10.length)h+='<tr><td colspan="5" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
-  for(var j=0;j<last10.length;j++){var rc=last10[j],arc=String(rc[3]||'').trim(),ps2='-';if(arc&&arc!=='-'){var p2=arc.replace(/[\s\u00a0]/g,'').split('-');ps2=Math.round(parseInt(p2[0])/1000)+'k &ndash; '+Math.round(parseInt(p2[1]||p2[0])/1000)+'k';}var lbl2=[rc[6]||'',rc[7]||'',rc[8]||''].filter(Boolean).join(' ');var km2=rc[22]?Math.round(rc[22]/1000)+'k':'-';h+='<tr><td><span class="regnr">'+rc[1]+'</span></td><td style="font-size:11px">'+lbl2+'</td><td style="font-size:11px">'+km2+'</td><td>'+ps2+'</td><td style="color:var(--muted);font-size:11px">'+fmtDate(rc[13])+'</td></tr>';}
+  for(var j=0;j<last10.length;j++){var rc=last10[j],arc=String(rc[3]||'').trim(),ps2='-';if(arc&&arc!=='-'){var p2=arc.replace(/[\s\u00a0]/g,'').split('-');ps2=parseInt(p2[0]).toLocaleString('nb-NO')+' kr &ndash; '+parseInt(p2[1]||p2[0]).toLocaleString('nb-NO')+' kr';}var lbl2=[rc[6]||'',rc[7]||'',rc[8]||''].filter(Boolean).join(' ');var km2=rc[22]?parseInt(rc[22]).toLocaleString('nb-NO')+' km':'-';h+='<tr><td><span class="regnr">'+rc[1]+'</span></td><td style="font-size:11px">'+lbl2+'</td><td style="font-size:11px">'+km2+'</td><td>'+ps2+'</td><td style="color:var(--muted);font-size:11px">'+fmtDate(rc[13])+'</td></tr>';}
   h+='</tbody></table></div>';
   h+='<div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)"><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>';
   return h;
@@ -307,7 +312,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.k &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c2 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -529,7 +534,7 @@ function render(data,rows){
   var mR=pct(tM,tE),sR=pct(tS,tM);
   var uVals=data.sold.map(function(c){return c.u;}).filter(function(u){return u&&u>500;});
   var tU=uVals.reduce(function(a,b){return a+b;},0),aU=uVals.length?Math.round(tU/uVals.length):0;
-  var aGs=avg(data.sold.map(function(c){return c.gap;}));
+  var aGs=(function(g){if(!g.length)return null;var s=g.slice().sort(function(a,b){return a-b;});var m=Math.floor(s.length/2);return+(s.length%2?s[m]:(s[m-1]+s[m])/2).toFixed(1);})(data.sold.map(function(c){return c.gap;}));
   var nC=tR*3000,nR=tU-nC;
   var mOk=mR>=TARGETS.evalMottatt,sOk=sR>=TARGETS.mottattSolgt;
   var todayStr=new Date().toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -541,7 +546,7 @@ function render(data,rows){
     +'<div class="dial-card '+(mOk?'on-target':'off-target')+'"><div class="dial-label">Evaluert &#8594; Mottatt</div><div class="arc-wrap"><svg id="arc1"></svg></div><div class="dial-value">'+mR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tM+' av '+tE+'</div><div class="dial-sub">Selger aksepterer tilbud</div><div class="target-tag">Mal '+TARGETS.evalMottatt+'%</div></div>'
     +'<div class="dial-card '+(sOk?'on-target':'off-target')+'"><div class="dial-label">Mottatt &#8594; Solgt</div><div class="arc-wrap"><svg id="arc2"></svg></div><div class="dial-value">'+sR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tS+' av '+tM+'</div><div class="dial-sub">Høyeste bud akseptert</div><div class="target-tag">Mal '+TARGETS.mottattSolgt+'%</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon na</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">biler pa anlegg</div><div class="dial-sub">Venter vask/foto/test</div><div class="target-tag">Live</div></div>'
-    +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Bud vs Pris lav (solgt)</div><div class="dial-sub">Prisnoyaktighet</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
+    +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Median bud vs Pris lav (solgt)</div><div class="dial-sub">Prisnøyaktighet (median)</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
     +'</div>';
@@ -558,7 +563,7 @@ function render(data,rows){
   var mottattToday= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;}).length;
   var solgtToday  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;}).length;
   var retToday    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate;}).length;
-  var d7 = new Date(); d7.setDate(d7.getDate()-14); d7.setHours(0,0,0,0);
+  var d7 = new Date(); d7.setDate(d7.getDate()-30); d7.setHours(0,0,0,0);
   var eval7d   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=d7;});
   var aksept7d = eval7d.filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());});
   var mott7d   = evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=d7;});
@@ -566,7 +571,7 @@ function render(data,rows){
   var ret7d    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=d7;});
   var done7d   = solgt7d.length+ret7d.length;
   var ep7 = eval7d.length>0?Math.round(aksept7d.length/eval7d.length*100):0;
-  var bp7 = done7d>0?Math.round(solgt7d.length/done7d*100):0;
+  var bp7 = mott7d.length>0?Math.round(solgt7d.length/mott7d.length*100):0;
 
   // Cycle times (last 60 days)
   var d60 = new Date(); d60.setDate(d60.getDate()-60); d60.setHours(0,0,0,0);
@@ -611,7 +616,7 @@ function render(data,rows){
 
   // 7d rates
   opsHtml += '<div style="display:flex;gap:24px;padding-top:14px;border-top:1px solid rgba(0,66,37,0.06);flex-wrap:wrap">';
-  opsHtml += '<div style="font-size:12px;color:#667A72">14-dagers rater: ';
+  opsHtml += '<div style="font-size:12px;color:#667A72">30-dagers rater: ';
   opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> (mål 20%) &nbsp;&middot;&nbsp; ';
   opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong> (mål 70%)</div>';
   opsHtml += '</div>';
@@ -638,28 +643,29 @@ function render(data,rows){
 
   opsHtml+='<div class="section-label">Biler i produksjon pa anlegg ('+data.inProd.length+' biler)</div><div class="pipeline-grid">';
   if(!iPS.length)opsHtml+='<div style="color:var(--muted);padding:24px;font-size:13px">Ingen biler i produksjon na</div>';
-  for(var i=0;i<iPS.length;i++){var car=iPS[i],d=car.daysSinceMottatt,cls=daysClass(d,TARGETS.prodDays);var p=Math.min((d/Math.max(mxD,7))*100,100),bc=cls==='days-ok'?'#4CAF50':cls==='days-warn'?'#E65100':'#C62828';opsHtml+='<div class="car-card"><div class="car-top"><span class="car-regnr">'+car.regnr+'</span>'+statusBadge(car.status)+'</div><div class="car-model">'+(car.label||'-')+'</div><div class="car-days '+cls+'">'+(d!==null?d+' dager pa anlegg':'Ukjent dato')+'</div><div class="car-detail"><span>Mottatt: '+fmtDate(car.rDate)+'</span>'+(car.dLow?'<span>Pris lav: '+fmtK(car.dLow)+'</span>':'')+(car.km?'<span>'+Math.round(car.km/1000)+'k km</span>':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';}
+  for(var i=0;i<iPS.length;i++){var car=iPS[i],d=car.daysSinceMottatt,cls=daysClass(d,TARGETS.prodDays);var p=Math.min((d/Math.max(mxD,7))*100,100),bc=cls==='days-ok'?'#4CAF50':cls==='days-warn'?'#E65100':'#C62828';opsHtml+='<div class="car-card"><div class="car-top"><span class="car-regnr">'+car.regnr+'</span>'+statusBadge(car.status)+'</div><div class="car-model">'+(car.label||'-')+'</div><div class="car-days '+cls+'">'+(d!==null?d+' dager pa anlegg':'Ukjent dato')+'</div><div class="car-detail"><span>Mottatt: '+fmtDate(car.rDate)+'</span>'+(car.dLow?'<span>Pris lav: '+(car.dLow?car.dLow.toLocaleString('nb-NO')+' kr':'-')+'</span>':'')+(car.km?'<span>'+Math.round(car.km/1000)+'k km</span>':'')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';}
   opsHtml+='</div>';
   var c30=Date.now()-30*24*60*60*1000;
   var rS=data.sold.slice().filter(function(c){var d=parseDate(c.sDate);return d&&d>=c30;}).sort(function(a,b){return(parseDate(b.sDate)||0)-(parseDate(a.sDate)||0);}).slice(0,15);
   var rR=data.returned.slice().filter(function(c){var d=parseDate(c.vDate);return d&&d>=c30;}).sort(function(a,b){return(parseDate(b.vDate)||0)-(parseDate(a.vDate)||0);}).slice(0,15);
   opsHtml+='<div class="section-label">Nylig solgt &amp; returnert</div><div class="two-col"><div class="table-card"><div class="th"><div class="th-title">&#10003; Nylig solgt</div><div class="th-badge">'+tS+' totalt</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Solgt</th></tr></thead><tbody>';
-  for(var k=0;k<rS.length;k++){var c=rS[k];var gc=c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';opsHtml+='<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+fmtK(c.dLow)+'</td><td style="color:'+gc+';font-weight:700">'+fmtK(c.e)+' <span style="font-size:10px">('+fmtPct(c.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(c.sDate)+'</td></tr>';}
+  for(var k=0;k<rS.length;k++){var c=rS[k];var gc=c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';opsHtml+='<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:'+gc+';font-weight:700">'+(c.e?c.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(c.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(c.sDate)+'</td></tr>';}
   opsHtml+='</tbody></table></div><div class="table-card"><div class="th"><div class="th-title">&#8617; Nylig returnert</div><div class="th-badge">'+tR+' totalt</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead><tbody>';
-  for(var l=0;l<rR.length;l++){var cr=rR[l];opsHtml+='<tr><td><span class="regnr">'+cr.regnr+'</span></td><td><span style="font-size:11px">'+(cr.label||'-')+'</span></td><td>'+fmtK(cr.dLow)+'</td><td style="color:var(--red);font-weight:700">'+fmtK(cr.e)+' <span style="font-size:10px">('+fmtPct(cr.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(cr.vDate)+'</td></tr>';}
+  for(var l=0;l<rR.length;l++){var cr=rR[l];opsHtml+='<tr><td><span class="regnr">'+cr.regnr+'</span></td><td><span style="font-size:11px">'+(cr.label||'-')+'</span></td><td>'+(cr.dLow?cr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:var(--red);font-weight:700">'+(cr.e?cr.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(cr.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(cr.vDate)+'</td></tr>';}
   opsHtml+='</tbody></table></div></div>';
   var finHtml='<div class="section-label">Prisbrakett-analyse &mdash; Pris lav vs Bud</div><div class="brackets-grid">';
   for(var m=0;m<bs.length;m++){var b=bs[m];var xC=b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';finHtml+='<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div><div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">'+b.evalCount+'</span></div><div class="bc-row"><span class="bc-key">Avvist av kunde</span><span class="bc-val '+(b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn')+'">'+b.rejCount+' <span style="color:var(--muted);font-weight:400">('+( b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0)+'%)</span></span></div><div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">'+b.motCount+' <span style="color:var(--muted);font-weight:400">('+b.convRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.soldCount+' <span style="color:var(--muted);font-weight:400">('+b.soldRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val '+(b.retCount>0?'neg':'')+'">'+b.retCount+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val '+(b.avgGapSolgt>=0?'pos':'warn')+'">'+fmtPct(b.avgGapSolgt)+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (ret.)</span><span class="bc-val neg">'+fmtPct(b.avgGapRet)+'</span></div><div class="x-rec"><div class="x-rec-label">Median: bud vs Pris lav</div><div class="x-rec-val" style="color:'+xC+'">'+(b.recX>0?'+':'')+b.recX+'%</div></div></div>';}
   finHtml+='</div><div class="section-label">Pris lav vs Bud &mdash; Alle biler</div><div class="plot-card"><div class="plot-title">Prisnoyaktighet: Pris lav vs Høyeste bud</div><div class="plot-explain">Hver prikk er en bil. X = Pris lav. Y = Høyeste bud. Stiplet = perfekt treff. Grønne prikker over linjen = bud hoyere enn Pris lav. Røde prikker = returneringsrisiko.</div><canvas id="scatter" height="300"></canvas></div>'
     +'<div class="section-label">Kostbare returneringer &amp; beste pristreff</div><div class="two-col"><div class="table-card"><div class="th"><div class="th-title">&#10060; Verste returneringer</div><div class="th-badge">'+tR+' totalt</div></div><div class="th-note">No-cure ~3 000 kr er grovt estimat.</div><table><thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th><th>Est. kost.</th></tr></thead><tbody>';
   var wR=data.returned.slice().sort(function(a,b){return a.gap-b.gap;}).slice(0,10);
-  for(var n=0;n<wR.length;n++){var wr=wR[n];finHtml+='<tr><td><span class="regnr">'+wr.regnr+'</span><span class="car-name">'+(wr.label||'-')+'</span></td><td>'+fmtK(wr.dLow)+'</td><td>'+fmtK(wr.e)+'</td><td><span style="color:var(--red);font-weight:700">'+fmtPct(wr.gap)+'</span></td><td style="color:var(--red);font-weight:600">~3 000 kr</td></tr>';}
+  for(var n=0;n<wR.length;n++){var wr=wR[n];finHtml+='<tr><td><span class="regnr">'+wr.regnr+'</span><span class="car-name">'+(wr.label||'-')+'</span></td><td>'+(wr.dLow?wr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td>'+(wr.e?wr.e.toLocaleString('nb-NO')+' kr':'-')+'</td><td><span style="color:var(--red);font-weight:700">'+fmtPct(wr.gap)+'</span></td><td style="color:var(--red);font-weight:600">~3 000 kr</td></tr>';}
   finHtml+='</tbody></table></div><div class="table-card"><div class="th"><div class="th-title">&#10003; Beste pristreff</div><div class="th-badge">Bud naermest Pris lav</div></div><table><thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th></tr></thead><tbody>';
   var bS2=data.sold.slice().sort(function(a,b){return Math.abs(a.gap)-Math.abs(b.gap);}).slice(0,10);
-  for(var o=0;o<bS2.length;o++){var bs3=bS2[o];var col2=bs3.gap>=0?'#2E7D32':bs3.gap>-5?'#E65100':'#C62828';finHtml+='<tr><td><span class="regnr">'+bs3.regnr+'</span><span class="car-name">'+(bs3.label||'-')+'</span></td><td>'+fmtK(bs3.dLow)+'</td><td>'+fmtK(bs3.e)+'</td><td style="color:'+col2+';font-weight:700">'+fmtPct(bs3.gap)+'</td></tr>';}
+  for(var o=0;o<bS2.length;o++){var bs3=bS2[o];var col2=bs3.gap>=0?'#2E7D32':bs3.gap>-5?'#E65100':'#C62828';finHtml+='<tr><td><span class="regnr">'+bs3.regnr+'</span><span class="car-name">'+(bs3.label||'-')+'</span></td><td>'+(bs3.dLow?bs3.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td>'+(bs3.e?bs3.e.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:'+col2+';font-weight:700">'+fmtPct(bs3.gap)+'</td></tr>';}
   finHtml+='</tbody></table></div></div>';
   document.getElementById('app').innerHTML=dials
-    +'<div class="mode-section'+(currentMode==='ops'?' visible':'')+'" data-mode="ops">'+opsHtml+'</div>'
+    +'<div class="mode-section'+(currentMode==='ops'?' visible':'')+'" data-mode="ops">'+opsHtml+buildDagsTabell(evalAll2,todayDate)
+    +'</div>'
     +'<div class="mode-section'+(currentMode==='fin'?' visible':'')+'" data-mode="fin">'+finHtml+'</div>'
     +'<div class="mode-section'+(currentMode==='eval'?' visible':'')+'" data-mode="eval">'+buildEvalHtml(data,rows)+'</div>'
     +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>';
@@ -668,7 +674,6 @@ function render(data,rows){
     drawArc(document.getElementById('arc1'),Math.min(mR/20*100,100),mOk?'#4CAF50':'#C62828');
     drawArc(document.getElementById('arc2'),Math.min(sR/100*100,100),sOk?'#4CAF50':'#C62828');
     drawArc(document.getElementById('arc3'),Math.min(data.inProd.length/20*100,100),'#1565C0');
-  if(data.returAll&&data.returAll.length>0){opsHtml+='<div class="section-label" style="margin-top:24px">Nylig returnert — bud avvist ('+data.returAll.length+' biler)</div><div class="pipeline-grid">';data.returAll.slice().sort(function(a,b){return (b.vDate||'').localeCompare(a.vDate||'');}).forEach(function(c){var sb=statusBadge(c.status);opsHtml+='<div class="pipe-card"><div class="pipe-label">'+(sb?sb[0]+' ':'')+c.regnr+'</div><div class="pipe-sub">'+c.label+'</div><div class="pipe-sub" style="color:#C62828">'+(c.vDate||'avvist')+'</div></div>';});opsHtml+='</div>';}
     var gN=aGs!==null?Math.min(Math.max((aGs+20)/40*100,0),100):50;
     drawArc(document.getElementById('arc4'),gN,aGs>=0?'#4CAF50':'#E65100');
     drawArc(document.getElementById('arc5'),Math.min(tU/1000000*100,100),'#00875A');
@@ -699,7 +704,240 @@ function drawScatter(sold,returned){
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
+
+function buildKartTabell(posMap,filter){
+  filter=filter||'alle';
+  window._kartPosMap=posMap;
+  var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
+  var AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
+  var filterLabels={alle:'Alle biler',akseptert:'Aksepterte biler',avvist:'Avviste biler',solgt:'Solgte biler'};
+  var rows=Object.keys(posMap).map(function(pnr){
+    var loc=posMap[pnr];
+    var biler=filter==='alle'?loc.biler:filter==='akseptert'?loc.biler.filter(function(b){return AKSEPTERT.indexOf(b.status)!==-1;}):filter==='avvist'?loc.biler.filter(function(b){return AVVIST.indexOf(b.status)!==-1;}):filter==='solgt'?loc.biler.filter(function(b){return b.status==='sold';}):loc.biler;
+    if(biler.length===0)return null;
+    var akseptert=loc.biler.filter(function(b){return AKSEPTERT.indexOf(b.status)!==-1;}).length;
+    var avvist=loc.biler.filter(function(b){return AVVIST.indexOf(b.status)!==-1;}).length;
+    var solgt=loc.biler.filter(function(b){return b.status==='sold';}).length;
+    return {sted:loc.sted,pnr:pnr,antall:biler.length,totAkseptert:akseptert,totAvvist:avvist,totSolgt:solgt,totBiler:loc.biler.length};
+  }).filter(Boolean).sort(function(a,b){return b.antall-a.antall;});
+  // Summering
+  var sumBiler=rows.reduce(function(s,r){return s+r.antall;},0);
+  var sumAkseptert=rows.reduce(function(s,r){return s+r.totAkseptert;},0);
+  var sumAvvist=rows.reduce(function(s,r){return s+r.totAvvist;},0);
+  var sumSolgt=rows.reduce(function(s,r){return s+r.totSolgt;},0);
+  var sumSteder=rows.length;
+  var aksRate=sumBiler>0?Math.round(sumAkseptert/rows.reduce(function(s,r){return s+r.totBiler;},0)*100):0;
+  var tbody=document.getElementById('kart-tabell-body');
+  if(!tbody)return;
+  // Pedagogisk sammendrag øverst
+  var filterColor=filter==='akseptert'?'#00875A':filter==='avvist'?'#C62828':filter==='solgt'?'#1565C0':'var(--green)';
+  var summary='<tr><td colspan="6" style="padding:14px 12px 10px">'
+    +'<div style="background:rgba(0,66,37,0.04);border-radius:10px;padding:14px 18px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">'
+    +'<div><span style="font-size:22px;font-weight:700;color:'+filterColor+'">'+sumBiler+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">'+filterLabels[filter]+'</div></div>'
+    +'<div><span style="font-size:22px;font-weight:700;color:var(--green)">'+sumSteder+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">steder i Norge</div></div>'
+    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:'+(aksRate>=20?'#00875A':'#C62828')+'">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate (mål 20%)</div></div>':'')
+    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#1565C0">'+sumSolgt+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">solgt totalt</div></div>':'')
+    +'</div></td></tr>';
+  var tbody=document.getElementById('kart-tabell-body');
+  if(!tbody)return;
+  tbody.innerHTML=summary+rows.map(function(r,i){
+    var rate=r.totBiler>0?Math.round(r.totAkseptert/r.totBiler*100):0;
+    var bg=i%2===0?'':'background:rgba(0,66,37,0.02)';
+    return '<tr style="border-bottom:1px solid var(--border);'+bg+'">'
+      +'<td style="padding:8px 12px;font-weight:600">'+r.sted+'<span style="font-weight:400;color:var(--muted);margin-left:6px;font-size:11px">('+r.pnr+')</span></td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700">'+r.antall+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#00875A">'+r.totAkseptert+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#C62828">'+r.totAvvist+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono)">'+r.totSolgt+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700;color:'+(rate>=20?'#00875A':rate>=10?'var(--orange)':'#C62828')+'">'+(r.totBiler>0?rate+'%':'—')+'</td>'
+      +'</tr>';
+  }).join('');
+}
 </script>
-<div style="position:fixed;bottom:12px;right:16px;font-size:11px;font-weight:600;color:rgba(0,66,37,0.55);font-family:monospace;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.85);padding:3px 8px;border-radius:6px;border:1px solid rgba(0,66,37,0.12);">Peasy Pulse v16.03.k — Venter-tabell = status Endelig estimat (speiler ERP liste 3) | v16.03.i: recX = median(gap%) per brakett | v16.03.f: Tiltak solgt%=solgt/påAuksjon, kohort=col3 AR</div>
+
+
+<div id="kart-section" class="mode-section" data-mode="kart">
+  <div style="max-width:1200px;margin:0 auto;padding:32px 0 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:22px;font-weight:700;color:var(--green)">Hvor kommer bilene fra?</div>
+        <div id="kart-subtitle" style="font-size:13px;color:var(--muted);margin-top:4px">Klikk for å laste kart…</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="kart-filters">
+        <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
+        <button onclick="kartFilter('akseptert')" class="kart-fbtn" data-f="akseptert">Akseptert</button>
+        <button onclick="kartFilter('avvist')" class="kart-fbtn" data-f="avvist">Avvist</button>
+        <button onclick="kartFilter('solgt')" class="kart-fbtn" data-f="solgt">Solgt</button>
+      </div>
+    </div>
+    <div id="peasy-map" style="height:560px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,66,37,0.10)"></div>
+    <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Akseptert / solgt</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:6px;vertical-align:middle"></span>Avvist</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>I prosess</span>
+    </div>
+    <div style="margin-top:28px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Topp steder</div>
+      <div id="kart-tabell" style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Sted</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Totalt</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:#00875A;font-size:10px;letter-spacing:1px;text-transform:uppercase">Akseptert</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:#C62828;font-size:10px;letter-spacing:1px;text-transform:uppercase">Avvist</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Solgt</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Akseptrate</th>
+            </tr>
+          </thead>
+          <tbody id="kart-tabell-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _kartInit=false,_kartMarkers=[],_kartMap=null;
+function kartFilter(f){
+  document.querySelectorAll('.kart-fbtn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
+  if(!_kartMap)return;
+  _kartMarkers.forEach(function(item){
+    var show=f==='alle'?true:f==='akseptert'?['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(item.status)!==-1:f==='avvist'?['Avvist by customer','Avvist by admin','Avvist'].indexOf(item.status)!==-1:f==='solgt'?item.status==='sold':true;
+    show?item.marker.addTo(_kartMap):_kartMap.removeLayer(item.marker);
+  });
+  if(window._kartPosMap)buildKartTabell(window._kartPosMap,f);
+}
+async function initKart(){
+  if(_kartInit)return;
+  _kartInit=true;
+  var GEO={"1055":[59.94757224225155,10.901941971980238],"1064":[59.93481628575857,10.924353639419751],"1071":[59.928290308314175,10.869773150853488],"1087":[59.946695871677164,10.932635619105293],"1088":[59.943557951509106,10.932182609467862],"1154":[59.87508893548577,10.81842388842486],"1155":[59.874955897386435,10.819147317609566],"1160":[59.87452485645487,10.799525700206603],"1166":[59.86095949666401,10.793167612171473],"1176":[59.87818240647316,10.798061785772346],"1177":[59.87812782029157,10.78689196383117],"1178":[59.88135935036663,10.789013140607778],"1179":[59.88598737059013,10.778878785343709],"1188":[59.863791948297006,10.836018387465707],"1251":[59.82933982581833,10.782903785333318],"1253":[59.83188941595717,10.786899348367035],"1254":[59.836227837081125,10.790909521472823],"1271":[59.82803845742138,10.831234757542735],"1274":[59.821525758041524,10.84095512003385],"1275":[59.82177503646244,10.837900905107427],"1279":[59.84665312976186,10.836007757852949],"1281":[59.84935107701339,10.826139772764941],"1290":[59.8330152630768,10.85490030067563],"1337":[59.893205402244945,10.5369923007738],"1338":[59.890443735366176,10.521281762563092],"1346":[59.902976011365446,10.527629944697969],"1353":[59.93907351169463,10.50187135410088],"1354":[59.942384009474516,10.4971182048186],"1356":[59.91280610309562,10.584060315316801],"1357":[59.91755806497891,10.58158581042347],"1358":[59.93055657735064,10.615869175204187],"1363":[59.90524353630415,10.56212715225565],"1364":[59.89822072431609,10.625517689846504],"1366":[59.91515896618613,10.627796499515462],"1369":[59.91717229898928,10.622351854066869],"1383":[59.83400964712865,10.430621029919706],"1384":[59.842424773885746,10.346664512187006],"1385":[59.82421021478058,10.397221177521642],"1388":[59.81661306052812,10.429768252268072],"1389":[59.7967346191573,10.45500139679573],"1390":[59.805629259725116,10.468106573974584],"1394":[59.86336103864366,10.491882993370222],"1395":[59.85353956770642,10.459416048688148],"1396":[59.86790398466586,10.485101926609614],"1397":[59.857991888839805,10.536279960030177],"1400":[59.726682931167886,10.845484323578761],"1405":[59.75220186064439,10.832297623338494],"1406":[59.72228185340472,10.797824548441097],"1407":[59.74032963999445,10.783610711172585],"1408":[59.69168442571589,10.948533656249195],"1410":[59.80463573630551,10.784098074292883],"1412":[59.80018917597437,10.839113780939796],"1413":[59.81662258161685,10.81177535198805],"1414":[59.81806525665872,10.7844201177193],"1423":[59.74099424382631,10.806619630900737],"1430":[59.65666721436352,10.773310442798532],"1435":[59.66392560924933,10.795678881405726],"1443":[59.67502423743709,10.608419787733801],"1448":[59.66963941194595,10.659653552093534],"1459":[59.76803814666235,10.656297300955877],"1461":[59.92006434873102,10.943219718776522],"1463":[59.94395096732563,10.964556580789843],"1464":[59.94131032987419,10.981962107834645],"1465":[59.95640962615166,11.005108396240189],"1467":[59.94230675657715,11.000443317429413],"1470":[59.94477548752456,10.962265357617897],"1473":[59.92566167876981,10.95289995824055],"1476":[59.91267531171846,10.934214827964643],"1481":[60.00048213009772,10.907477444092859],"1482":[60.03532459561469,10.831963247385227],"1484":[60.09291092800335,10.863680940651115],"1511":[59.43391497588963,10.650182553729566],"1512":[59.43520005637544,10.632189763233105],"1523":[59.4220606149269,10.68235366911247],"1526":[59.41661797322639,10.670010351672016],"1529":[59.43859055930671,10.742390260431446],"1532":[59.42948027921282,10.669711458220899],"1538":[59.46904247125675,10.698649948448432],"1540":[59.60199161980678,10.756928227239284],"1542":[59.626647623608655,10.731827874532542],"1554":[59.49570731317482,10.686483781787416],"1555":[59.52242907049084,10.691636591804473],"1560":[59.312961677713474,10.68957508938076],"1570":[59.379962013976744,10.685777703068597],"1591":[59.48763443905305,10.788784398579523],"1593":[59.440446353402,11.012545991828626],"1604":[59.21436091874242,10.956978847049761],"1613":[59.226272928772765,10.923205735602638],"1617":[59.23572464977252,10.968358304021226],"1639":[59.21873693942138,11.015926303042175],"1640":[59.35378808603086,10.854762880289563],"1663":[59.2572269845987,10.994835744607352],"1666":[59.26789067867105,11.018077874590475],"1675":[59.16746824743789,10.939147414340432],"1708":[59.362872325847974,11.138548988539972],"1710":[59.309573444188906,11.10312239666108],"1718":[59.269055727945045,11.04632900093176],"1721":[59.274556279807456,11.118964608003168],"1726":[59.29300788795403,11.128924024622423],"1730":[59.31137148060069,11.242566830469274],"1738":[59.272705623105736,11.139564418351023],"1765":[59.02818425050788,11.461921066452602],"1782":[59.14096765244253,11.374533781280567],"1784":[59.1421260353122,11.383095987516164],"1788":[59.12045469853399,11.312217895939808],"1793":[59.112124934387595,11.436756714177267],"1811":[59.580246051297244,11.184960719245277],"1814":[59.61005383255775,11.241724843995453],"1815":[59.58729132665822,11.129123421567991],"1820":[59.6195631398836,11.044796868985529],"1823":[59.623694035486295,11.03274144586842],"1832":[59.59122042129484,11.131056692392509],"1850":[59.54052258615204,11.300047586194212],"1870":[59.49407732495378,11.651105550062159],"1900":[59.96917577355436,11.160827540675218],"1911":[59.83319677928359,11.14294074864404],"1914":[59.729514248326055,11.024752978394817],"1920":[59.97621869333021,11.226203958265902],"1929":[60.0369921730289,11.363637527721936],"1930":[59.93720562998523,11.808438198513636],"2000":[59.95625739039485,11.12085311740978],"2003":[59.962609991071396,11.05438404707489],"2007":[59.97831383285274,11.02881606713719],"2008":[59.89369273068541,11.117429078896224],"2010":[59.95091103884882,11.006912508182333],"2013":[59.955164725806355,10.985510011671707],"2015":[59.98023520683871,11.102331971655271],"2016":[60.023663984465834,11.066504412070401],"2019":[60.00266308637668,11.024211288353932],"2020":[60.00034963463185,11.010373655658144],"2022":[60.10694644715944,11.09464322596039],"2030":[60.176717215736495,11.022330312510546],"2032":[60.33922125317977,11.024872727330012],"2040":[60.114773924659296,11.307563399889563],"2052":[60.14089804562937,11.226106137601736],"2060":[60.164535627478344,11.109447420117409],"2067":[60.167730050424304,11.172510601665387],"2068":[60.15081077713278,11.171318204444901],"2069":[60.154741470658244,11.184480970965106],"2072":[60.268515919820075,11.227431060718818],"2080":[60.374463453175885,11.359641290413146],"2092":[60.427216506348294,11.242825174755094],"2120":[60.37410996297728,11.540876330325403],"2150":[60.13656992608513,11.419818573446006],"2162":[60.21698502903581,11.328855163516328],"2165":[60.11654273645649,11.333733679927619],"2166":[60.173808405405886,11.542780617019146],"2208":[60.187353062985125,11.980701874566039],"2210":[60.14878494653044,12.059243215887655],"2212":[60.19511186970206,11.891281190931618],"2214":[60.198051169497866,11.997970742001334],"2240":[59.93373179086891,12.190145965623017],"2266":[60.558001232024026,11.966981599196608],"2312":[60.78578740099005,11.116253494598293],"2316":[60.810479322178516,11.02513382865735],"2317":[60.792334771646814,11.084572009238741],"2340":[60.963521751309344,11.311354034006147],"2344":[60.77611929121621,11.231603278160227],"2350":[60.81553305310983,10.911316984420694],"2355":[60.86710317271957,10.77006295016433],"2380":[60.88361216961479,10.941683836779536],"2383":[60.89072570813201,10.926136228742566],"2386":[60.89851997782062,10.951015533895797],"2387":[61.204898468463114,10.924914545616016],"2388":[60.880489659271355,11.022549053032057],"2407":[60.86076282376752,11.583758539739344],"2412":[60.90563495175934,12.004880714718649],"2450":[61.15802936120267,11.427542483295282],"2500":[62.35413300948815,10.753967736959511],"2607":[61.05730405583424,10.430609174814531],"2618":[61.169916236783756,10.61841337437593],"2630":[61.61562524702931,10.4510629680048],"2656":[61.22633818643201,10.29008203332309],"2665":[62.12110697704594,8.841170774528209],"2672":[61.85032236847504,9.425592658849737],"2680":[61.86082657613124,9.005564651669099],"2730":[60.29124445441368,10.570313189344743],"2742":[60.23660078941868,10.560510872219327],"2760":[60.475607976413876,10.55967661781386],"2819":[60.799404735103266,10.64952710389758],"2825":[60.80637386582153,10.616717536978184],"2827":[60.747857433909715,10.613145413409242],"2830":[60.72535381189992,10.618159336999135],"2835":[60.718191360850604,10.624868539537593],"2836":[60.889638506102095,10.64156750662518],"2846":[60.66954447098387,10.676361898369025],"2849":[60.718051989290366,10.82915129606002],"2870":[60.82958412637233,10.070524585133638],"2920":[61.00127198915954,9.393328343186058],"3015":[59.74311114780978,10.212653660068812],"3021":[59.77095738960283,10.157442287875392],"3026":[59.76918920915891,10.140892537889423],"3030":[59.727529290334516,10.148045217295378],"3031":[59.71826287705866,10.13858926227644],"3032":[59.708916341216025,10.15377086485637],"3033":[59.72151652973817,10.152693360945442],"3034":[59.72042933867487,10.215509662983266],"3035":[59.71095892282089,10.225689302688075],"3040":[59.72858217976275,10.242553956584482],"3042":[59.72019494653311,10.206842125194513],"3043":[59.7303942373053,10.212011776512524],"3044":[59.73741567854313,10.20337118198039],"3047":[59.736734170283306,10.179491535802294],"3050":[59.69283902819092,9.988976386778972],"3053":[59.75778407760508,9.97339841077574],"3055":[59.81493687681079,10.00173843613455],"3057":[59.75935668050211,10.105026612835148],"3058":[59.75806653848568,10.056603368746304],"3060":[59.61274884644871,10.405215872979497],"3070":[59.64064142818832,10.098221446721173],"3072":[59.54179753105186,10.250314163295215],"3080":[59.45655258904701,10.358027653796848],"3085":[59.49494790743766,10.296921976761958],"3086":[59.50251352796699,10.286559687093268],"3089":[59.502260879943094,10.250732735555433],"3090":[59.537996203865106,10.089866491658631],"3111":[59.270048549410774,10.406829961299996],"3112":[59.26433527348027,10.428365168617066],"3115":[59.26404124672993,10.400038835030003],"3118":[59.27643291858585,10.438207991226367],"3120":[59.24443224416564,10.421781828211206],"3122":[59.28820322622967,10.42801339703406],"3135":[59.174283826166445,10.47431579884616],"3140":[59.19984534295059,10.388725814809174],"3142":[59.243179517638765,10.40314570860316],"3150":[59.26907050434644,10.471076132847438],"3151":[59.27155585100451,10.463199510004756],"3153":[59.30217365757666,10.496460722492321],"3154":[59.270887608960145,10.478307162040702],"3160":[59.22146415471724,10.27904841166373],"3170":[59.27856891490672,10.326696809167098],"3172":[59.26868609293787,10.357532039624633],"3174":[59.35802003156062,10.29330481229138],"3175":[59.3393149765954,10.294025642714907],"3179":[59.32527858851025,10.494541448779682],"3182":[59.407856558486,10.474622987023244],"3183":[59.42095005796778,10.470857194226744],"3186":[59.39710574151363,10.471514457052375],"3189":[59.422424754979545,10.462707986913882],"3209":[59.105454341149084,10.220169636725254],"3216":[59.144603190678126,10.231518879360806],"3218":[59.13812477607559,10.279295037680559],"3219":[59.12152145581255,10.240994693760149],"3236":[59.13344803263878,10.251599458634592],"3243":[59.21682935511979,10.144338381262482],"3256":[59.05470181861692,10.025929084881255],"3265":[59.03843479245125,9.990382374628737],"3269":[59.0609072382165,10.035724150576907],"3277":[59.351822450500194,9.935565109599558],"3290":[59.01029377682786,10.034977820853387],"3295":[59.041877467557526,9.837063156009847],"3302":[59.74700577593954,9.950362166682932],"3303":[59.79228762619639,9.911773395505048],"3320":[59.729144504397446,9.845177374048726],"3340":[59.88276037765438,9.871753671548026],"3370":[59.96155892676888,9.998436115475242],"3402":[59.79586457594118,10.175181181594455],"3404":[59.81654965303303,10.195773800721732],"3408":[59.81042707559237,10.26936435043329],"3414":[59.7558250312839,10.26093779288689],"3427":[59.72640195203024,10.313206263448697],"3430":[59.72906151541912,10.326696257963969],"3470":[59.780264762587635,10.496972044474301],"3472":[59.76470077878881,10.461840501628673],"3474":[59.703459657521186,10.507048381425708],"3475":[59.638282573711955,10.575078057777898],"3511":[60.139344631278846,10.272038503615116],"3513":[60.16137629803413,10.269793408158934],"3514":[60.18789328210615,10.296838902999735],"3515":[60.17778417337294,10.266857356381147],"3520":[60.23874024553593,10.42651859165108],"3530":[60.09212601906793,10.19002839612446],"3531":[60.04784280466639,10.380533114556366],"3533":[60.092517152575375,10.109726030834922],"3550":[60.68252647101909,9.01913783262447],"3580":[60.542249953281015,8.228730914557165],"3610":[59.645968673699855,9.659086774376725],"3611":[59.6734889435308,9.643506123939671],"3612":[59.676678652386265,9.677232520556494],"3614":[59.810719849462224,9.697814165777329],"3619":[59.64449368596485,9.749792880878879],"3647":[59.544137602211094,9.880270466876159],"3683":[59.50970397714041,9.321931937223432],"3712":[59.16596206015426,9.651368444687984],"3717":[59.21743605279205,9.60167271739999],"3724":[59.205161784877404,9.603137816286713],"3725":[59.20363759286763,9.594468476341854],"3726":[59.21123150290469,9.577675052393193],"3732":[59.19996412176562,9.612097787926764],"3735":[59.172072330958045,9.588525227397977],"3830":[59.237673200942865,9.353444028924592],"3864":[59.753863283968684,8.188475809438138],"3910":[59.15951658445003,9.665025870611613],"3917":[59.13412232297799,9.664393706170438],"3929":[59.114336829677086,9.669808886582523],"3936":[59.112380637421346,9.653634700750882],"3942":[59.09557295595285,9.673859068907738],"3962":[59.037151683224145,9.677472547328277],"4008":[58.96417179535205,5.726287832407367],"4011":[58.956020291731924,5.725977295752714],"4014":[58.970586081187484,5.747585637272541],"4016":[58.94532355081729,5.731600454556343],"4017":[58.94124064828915,5.727450018611965],"4019":[58.947632580787335,5.714408337699025],"4020":[58.921505137421214,5.718072831092981],"4021":[58.9454290366462,5.697873311518947],"4022":[58.96443757329231,5.701060412774803],"4023":[58.96771980146408,5.7113623125924935],"4025":[58.9738308464612,5.696175895147302],"4026":[58.981556504910046,5.707309164261724],"4027":[58.98889112052809,5.689691053787512],"4028":[58.993036337027974,5.683832971399333],"4029":[58.989983631286385,5.699068198482652],"4032":[58.90490829912073,5.725217320227334],"4034":[58.897949087334005,5.723052217394191],"4041":[58.940622037181626,5.680068897398045],"4046":[58.95929630003282,5.633052032413042],"4048":[58.96477864591893,5.60464561158029],"4049":[58.96836758280652,5.6146564469661655],"4055":[58.8875588927132,5.61978605187086],"4056":[58.93907505873527,5.592697880225822],"4057":[58.94571848918204,5.58478816448427],"4070":[58.99630255524756,5.621093082122303],"4083":[59.00138578764295,5.724126462752147],"4085":[58.99246743659624,5.7371092290757755],"4130":[59.2848258901191,6.505834521275005],"4156":[59.06414880461251,5.701510159360056],"4160":[59.174798976603896,5.8753783260293355],"4208":[59.52201984688421,6.195222332985685],"4250":[59.28545538390125,5.298881750790994],"4260":[59.371281189042044,5.231981838204698],"4262":[59.34733739723927,5.274022867953185],"4270":[59.24046723169647,5.198399976703051],"4275":[59.270570292477366,5.202891716270437],"4307":[58.85450576721604,5.731324760934163],"4310":[58.92145261953889,5.848137090744197],"4314":[58.8773282851424,5.726826894408745],"4317":[58.865773137497634,5.7287171681749856],"4318":[58.84753903953714,5.714639423027996],"4320":[58.82828216588883,5.730355796499621],"4322":[58.81026015236117,5.698540686875534],"4324":[58.81613256307888,5.746773953203959],"4325":[58.84551393220545,5.758236555251167],"4326":[58.84438773756116,5.7627810461621065],"4329":[58.87874696301475,5.771753647376699],"4330":[58.773218569229186,5.837006561978471],"4331":[58.74701479438381,5.933897482937219],"4332":[58.78298747793017,5.814477312165531],"4340":[58.7327693176679,5.647325681531161],"4343":[58.72132959173465,5.542241035268385],"4344":[58.7261545574178,5.649465488691398],"4345":[58.733122530302445,5.671511951169934],"4353":[58.78522165696182,5.70774091103603],"4355":[58.757830899115675,5.71247886301713],"4362":[58.57029555445213,5.695922487827481],"4365":[58.67705018665322,5.665075354744968],"4370":[58.450133558460095,5.996822189667895],"4372":[58.41220412548528,6.031717925008837],"4374":[58.45233445687787,5.9742428487971315],"4375":[58.486659159922404,5.893939065841838],"4380":[58.32898481392274,6.355368413898003],"4406":[58.30925015105529,6.673766076175318],"4513":[58.035373688899384,7.417006153072051],"4515":[58.03237489138378,7.50329115805016],"4517":[58.072256324336365,7.480071391616072],"4520":[58.12036707747149,7.18897420744055],"4560":[58.118891189264545,6.680866642560101],"4608":[58.14543005145532,8.001020031839486],"4610":[58.14311557353585,7.994200103400945],"4618":[58.188093147426414,7.925394744119536],"4619":[58.213609844547555,7.934529935823412],"4631":[58.150803883372106,8.007070995337873],"4633":[58.172528828466355,8.041861185747415],"4640":[58.0771152878817,7.820978130651922],"4641":[58.05796020411036,7.7399082439587605],"4645":[58.15424504474949,7.825310349775075],"4700":[58.26483455423689,7.965122910718822],"4790":[58.23668619684517,8.358409355333247],"4815":[58.50115602304372,8.83799195435906],"4818":[58.47138683613149,8.834168725190278],"4865":[58.76606040626635,8.48422896940841],"4886":[58.403798906234975,8.39839331494619],"4934":[58.634894656915534,8.772386021812787],"5005":[60.39561149982397,5.314966013526352],"5006":[60.385779117569136,5.320836011683617],"5033":[60.4039947066992,5.322105997835011],"5053":[60.375722930784264,5.345661485487187],"5054":[60.373339858937065,5.337778455744464],"5063":[60.36839964107394,5.348678481169838],"5089":[60.35736305631853,5.367730438533859],"5094":[60.3579116122639,5.365111168878977],"5097":[60.356450507879366,5.372821181130373],"5107":[60.50476083584959,5.265110816789826],"5108":[60.52126765262754,5.307891934453405],"5115":[60.46426088269889,5.335392701980251],"5116":[60.460309311532725,5.320513593630482],"5117":[60.47128872481644,5.30348369492848],"5119":[60.459123380705805,5.315005901495812],"5121":[60.463752469514496,5.295895465655465],"5122":[60.463710887827546,5.287945500542551],"5130":[60.46966573098585,5.315691835831736],"5132":[60.46874848969533,5.330262010549498],"5134":[60.465090793790374,5.3617300474864305],"5136":[60.4834353343595,5.273922719491474],"5141":[60.334979988100116,5.265207348182826],"5142":[60.342538073223146,5.26234924117514],"5144":[60.35090040900585,5.287075783314377],"5151":[60.32477407116499,5.284935277836746],"5153":[60.33058260293557,5.316307552096751],"5162":[60.381532080140374,5.308024829928148],"5165":[60.391032694824354,5.264575024254761],"5172":[60.3629708914981,5.227358543020172],"5173":[60.35373475475104,5.224344909088454],"5179":[60.3714468610954,5.194520237111733],"5200":[60.18605758676732,5.470035253642269],"5208":[60.156172696188776,5.433792422150935],"5212":[60.23500886088749,5.454047237677618],"5217":[60.16335491090603,5.364118787500682],"5223":[60.316676665446785,5.364862018535923],"5229":[60.33953905739261,5.50780860322466],"5230":[60.33738949325993,5.344387472281297],"5238":[60.30450986603748,5.352521453034965],"5239":[60.273379854258394,5.276347996933057],"5243":[60.28284631069461,5.351135820979527],"5251":[60.3013718251324,5.296325572870161],"5252":[60.31298239457493,5.283050993938661],"5253":[60.30653595842416,5.29327666044688],"5254":[60.29508563847275,5.275044249839431],"5258":[60.26981648519381,5.255551212049715],"5259":[60.26052627814106,5.242570259729279],"5265":[60.44607736351328,5.451161884224074],"5268":[60.36255553847169,5.47986941464448],"5281":[60.54046071504963,5.34682907658558],"5285":[60.503012902816444,5.660211395943478],"5301":[60.40620350062749,5.204783608947023],"5302":[60.39795471967785,5.203501580076665],"5305":[60.43460425652465,5.2341076566541025],"5308":[60.43440130546537,5.170607581288571],"5310":[60.44297560515013,5.172191501802234],"5315":[60.55861019650819,4.965699625598008],"5337":[60.493099137200815,4.941086007209678],"5350":[60.361538583377275,5.1458885647670884],"5354":[60.3765582228157,5.106594018822052],"5360":[60.32158792875347,5.137673408702717],"5363":[60.42984707990931,4.9987144420241325],"5379":[60.18542934448887,5.048194116313206],"5382":[60.26780099017598,5.104919744312663],"5397":[60.00968071816968,5.145827229558226],"5412":[59.764804569025465,5.429338096093345],"5414":[59.886383965457796,5.518634301058569],"5416":[59.79640645206652,5.519454750862624],"5420":[59.82479528982321,5.272587590666286],"5430":[59.777561365078085,5.1293245465678465],"5450":[59.8370587827873,5.707965218755188],"5454":[59.795927726485935,5.730389783464309],"5455":[59.78609362161283,5.674394157648539],"5462":[59.91990668895546,5.792796663243561],"5463":[59.96588042663972,5.897574930901878],"5515":[59.43460875025118,5.244963535578524],"5516":[59.43433227807818,5.263822998172759],"5529":[59.39805449400473,5.29005026300114],"5534":[59.394409164025795,5.3359624848829155],"5537":[59.3909093195087,5.309089906950974],"5545":[59.35563635508297,5.329138675786543],"5550":[59.54137793008165,5.333729707425885],"5576":[59.55992103266734,5.6991370422111824],"5578":[59.483905295762135,5.730487799973662],"5580":[59.606753719192895,5.826715796593506],"5590":[59.588970988133795,6.116576374945622],"5700":[60.62647073158132,6.44821772916674],"5722":[60.581575996892596,5.888749994233316],"5750":[59.99224211184902,6.566811894916536],"5915":[60.572904258692276,5.3770650925348935],"5955":[60.73333325159074,5.158614865810951],"6006":[62.45787054046264,6.128061139829581],"6010":[62.46549348025715,6.3595300149208835],"6017":[62.458654270561965,6.35366306691271],"6020":[62.43754147265622,6.351916093773449],"6036":[62.41460624294666,6.271580698251819],"6065":[62.3471368842942,5.857439903392831],"6142":[62.10448255748324,5.6978195293288225],"6200":[62.286804581377446,6.841986672491382],"6260":[62.4698533794589,6.624666713606348],"6413":[62.740237116792116,7.142596058178853],"6414":[62.74464676440622,7.145275075053349],"6440":[62.83510406843144,7.223692255609824],"6470":[62.63071839150178,8.108001731215776],"6510":[63.116053022660495,7.722764802401627],"6512":[63.12089806302313,7.758735714275287],"6516":[63.11314789462766,7.7513384664970255],"6650":[62.97848871867562,8.700293429968202],"6652":[62.977396574465295,8.667648341207238],"6699":[63.4035791246782,8.676108198603433],"6718":[61.92678305809411,5.132879071236981],"6770":[61.92364128372259,6.0108478454866345],"6777":[61.92174024657543,5.721574572108915],"6814":[61.447320999701894,5.838941029126655],"6823":[61.733246568945525,6.1772641398619275],"6856":[61.232620013786,7.117880301704558],"6859":[61.170957358939084,6.934063521011024],"6873":[61.39713241664547,7.253696581708683],"6885":[61.242461209768614,7.655088519491183],"6887":[61.14470780268436,7.444834953314121],"6894":[61.139556402067136,6.617073490121909],"6906":[61.59241093427528,5.044734740249408],"7015":[63.428779335695374,10.4187656423204],"7021":[63.41148424159469,10.363079555899912],"7022":[63.401120405869364,10.353237973184404],"7023":[63.399604792476225,10.378559945399964],"7027":[63.393164469560546,10.362991018035192],"7030":[63.42065991229432,10.384496149036183],"7031":[63.41069970499971,10.40185352140975],"7033":[63.407252701647025,10.430504241580335],"7036":[63.39397070135605,10.425699558682213],"7040":[63.449243786308934,10.447520398112205],"7043":[63.43133378620584,10.428077361275768],"7045":[63.430742531953335,10.459635883283656],"7046":[63.42414897078793,10.448077704132984],"7049":[63.411139552895655,10.447781891131063],"7050":[63.408201045744406,10.433668160835449],"7052":[63.4307240006333,10.431688013936943],"7054":[63.421913281900125,10.540872196683722],"7055":[63.4274985006652,10.56714441687277],"7058":[63.42421896438424,10.485010421461094],"7061":[63.43083634484476,10.467537262305225],"7068":[63.435046650690715,10.421206433288935],"7070":[63.42429194515324,10.127055852051823],"7072":[63.347167060514494,10.365149424946475],"7080":[63.347627743258734,10.3430893522522],"7081":[63.37147588130307,10.405763854248713],"7082":[63.34859918574317,10.332343188039822],"7088":[63.355933386931326,10.353271728710133],"7089":[63.35287415528754,10.327284437364815],"7091":[63.36101185749162,10.390071766243477],"7092":[63.34086705552304,10.374482866667131],"7099":[63.38009474565194,10.348508465382317],"7120":[63.69599714562943,10.680995236839191],"7160":[63.77047673775045,9.812500362806688],"7200":[63.29806730719186,9.076612521695425],"7224":[63.298612983382284,10.270086425179908],"7236":[63.106229151961884,10.224504185818425],"7246":[63.526019581429495,9.009489536198764],"7263":[63.68733036962458,8.773678251099975],"7310":[63.31105935457817,9.807373818935718],"7350":[63.30293892366606,10.182051758075268],"7357":[63.253571775430395,10.050697644085465],"7500":[63.46935393018166,10.916392313856276],"7506":[63.47335641588209,10.95593359976867],"7507":[63.48493105140499,10.937624420601258],"7509":[63.48677772751522,10.9569702124892],"7517":[63.44462579578411,10.903152883694615],"7525":[63.460482359997386,11.351970433679321],"7540":[63.23678952735087,10.442094461564206],"7550":[63.274801313689224,10.81659352567359],"7560":[63.42898033125315,10.648514347184074],"7562":[63.44079610193925,10.6025172220994],"7580":[63.22749782602095,11.01698779633858],"7620":[63.68343800839252,11.124815657688027],"7629":[63.80460603151377,11.153568334573828],"7630":[63.610539171515995,11.049449497317418],"7660":[63.65931517754276,12.24709164666208],"7670":[63.857864596693574,11.405496529758077],"7711":[63.9858353632211,11.4412083449306],"7725":[64.02332378754053,11.485934598085056],"7730":[64.11588633834648,11.319878419760453],"7802":[64.46765492919884,11.473522219129954],"7970":[64.81484282493867,11.445119519256684],"8006":[67.28389522435491,14.38200891259908],"8009":[67.29010598898704,14.416458526823034],"8011":[67.29249975440587,14.43593302401577],"8013":[67.26978548968465,14.446174729148805],"8021":[67.27833372853746,14.503631344338826],"8150":[66.87728268885387,13.707015226814658],"8260":[68.0304083427067,15.82404574265538],"8325":[68.4301022239906,15.210240903268192],"8370":[68.16523399582273,13.63725336187328],"8400":[68.70969052044137,15.41270064263012],"8470":[68.6392364150209,14.442265896696519],"8520":[68.41982712028098,17.303734456146834],"8530":[68.5581687656226,17.567735083484937],"8610":[66.31644935491529,14.19716621791367],"8615":[66.3146270980673,14.638147211917333],"8647":[65.8042527298542,13.88767393633701],"8804":[65.99267358751214,12.558249955992837],"8908":[65.47589887661778,12.320202625674172],"9007":[69.64220669937214,18.944678124887044],"9018":[69.69703319030678,19.00072952156047],"9022":[69.67685755652549,19.059291701354436],"9050":[69.22698280230193,19.24055839777653],"9056":[69.40094710256913,18.598235256219706],"9104":[69.68793806388243,18.79447894669834],"9107":[69.68645256674597,18.734725914956307],"9130":[69.962811459253,19.620893681738533],"9146":[69.60377958893245,20.537471334916635],"9151":[69.77858288860904,21.03666680735332],"9300":[69.23484085948193,18.0077913514264],"9325":[69.07952795676974,18.55811759529658],"9360":[69.02804045947478,18.561561964542996],"9403":[68.809372411211,16.49994019465307],"9700":[69.97411251348075,25.379740991350474],"0474":[59.93180540165978,10.761915070903122],"0873":[59.954188934471375,10.759091966984325],"0174":[59.92562329038447,10.749313062637082],"0576":[59.922428548192485,10.786624098907646],"0380":[59.92957051681602,10.646432331673733],"0675":[59.92510678688972,10.86078544971682],"0275":[59.923636463143886,10.6699420585779],"0590":[59.94469087708305,10.807928711240372],"0694":[59.871239950365634,10.846722036135127],"0979":[59.9519714009906,10.923754525711553],"0382":[59.92911307845013,10.64580843171564],"0284":[59.922334844582004,10.637522369048396],"0984":[59.9578805111846,10.916413490285876],"0876":[59.95183707611263,10.7407134639966],"0654":[59.91451214354201,10.781585639643936],"0485":[59.94550726013475,10.777799022146281],"0972":[59.97057029936074,10.899121894959942],"0553":[59.92389633867342,10.765002389952421],"0953":[59.94928781827585,10.858457724676075],"0287":[59.90330041089331,10.677419117673749],"0194":[59.90709295816671,10.759149746638686],"0598":[59.94249655832715,10.827035705194817],"0150":[59.90959122522187,10.734577408249747],"0978":[59.95948671825002,10.905419114305989],"0969":[59.96890227312355,10.922514884444432],"0580":[59.930254148732494,10.805550250577312],"0670":[59.91749977235952,10.844515709041627],"0751":[59.94607582428394,10.644010397960768],"0355":[59.92442541281553,10.721589553065796],"0468":[59.941649281736666,10.761900376120513],"0372":[59.948351063090826,10.723707586666682],"0683":[59.90038637243967,10.8453901674249],"0958":[59.96680289897482,10.870478318762295],"0650":[59.90971506327703,10.774997663433767],"0568":[59.92756598117915,10.77505307163598],"0265":[59.91888395135798,10.703539179194143],"0467":[59.94257581407209,10.756741993088427],"0191":[59.9083361896692,10.759875411214814],"0787":[59.960862730403946,10.66347782851323],"0655":[59.913576632991074,10.783020037235529],"0154":[59.910853477037456,10.747605836668543],"0365":[59.92810046597805,10.719396576696145],"0790":[59.97118019397005,10.66384480622203],"0864":[59.96340751617684,10.726377830377805],"0594":[59.939374287083425,10.836302651978194],"0452":[59.93046400814388,10.734375201579713],"0661":[59.91260954951357,10.801565538632156],"0985":[59.961893696768044,10.923935807550034],"0259":[59.92315936277323,10.720119524438278],"0579":[59.925937681779,10.796601897670502],"0968":[59.97482489438209,10.927194864380882],"0781":[59.96216972092952,10.691227689917426],"0788":[59.970192237119406,10.65147623768761],"0680":[59.886784673984394,10.81198397935397],"0588":[59.94756623523435,10.802980760865385],"0753":[59.94605474035459,10.647572023920349],"0681":[59.891823999906705,10.8106318597563],"0179":[59.917917087997814,10.749998613791929],"0595":[59.945013210579525,10.852023877376059],"0597":[59.94617456068266,10.843494802959828],"0378":[59.94324088807897,10.671348673852869],"0881":[59.9639721290932,10.756280681377078],"0178":[59.92159521329873,10.751875775855853],"0584":[59.93880922904478,10.815681255507615],"0383":[59.93147485520654,10.638473972233475],"0375":[59.936814866976924,10.694221141544615],"0663":[59.91821359981977,10.801336236206469],"0462":[59.93719464243419,10.744320304993959],"0475":[59.93149625093786,10.769575873003644],"0591":[59.949154547103,10.8242508266548],"0454":[59.93154335682201,10.74039074684358],"0356":[59.92655416316877,10.722952348423018]};
+  if(!window.L){
+    await new Promise(function(res){
+      var css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
+      var s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=res;document.head.appendChild(s);
+    });
+  }
+  _kartMap=L.map('peasy-map',{zoomControl:true}).setView([63.5,15.0],5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:18}).addTo(_kartMap);
+  document.getElementById('kart-subtitle').textContent='Laster data…';
+  var resp=await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx');
+  var ab=await resp.arrayBuffer();
+  var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
+  var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  var posMap={};
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i];
+    var pnr=r[9]?String(r[9]).padStart(4,'0'):null;
+    var sted=r[10]||'';
+    if(!pnr||!sted)continue;
+    if(!posMap[pnr])posMap[pnr]={sted:sted,biler:[]};
+    posMap[pnr].biler.push({regnr:r[1],merke:r[6],modell:r[7],status:r[12]||''});
+  }
+  _kartMarkers=[];
+  Object.keys(posMap).forEach(function(pnr){
+    var loc=posMap[pnr];
+    var coords=GEO[pnr];
+    if(!coords)return;
+    var antall=loc.biler.length;
+    var akseptert=loc.biler.filter(function(b){return['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(b.status)!==-1;}).length;
+    var avvist=loc.biler.filter(function(b){return['Avvist by customer','Avvist by admin','Avvist'].indexOf(b.status)!==-1;}).length;
+    var color=akseptert>0?'#00875A':avvist===antall?'#C62828':'#1565C0';
+    var radius=Math.max(7,Math.min(26,7+antall*2));
+    var marker=L.circleMarker([coords[0],coords[1]],{radius:radius,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:0.82});
+    var popup='<b>'+loc.sted+'</b> ('+pnr+')<br>'+antall+' bil'+(antall!==1?'er':'')+(akseptert?'<br>&#x2705; '+akseptert+' akseptert':'')+(avvist?'<br>&#x274C; '+avvist+' avvist':'')+'<br><small>'+loc.biler.slice(0,5).map(function(b){return(b.regnr||'')+' '+(b.merke||'');}).join(', ')+(loc.biler.length>5?'…':'')+'</small>';
+    marker.bindPopup(popup);
+    marker.addTo(_kartMap);
+    _kartMarkers.push({marker:marker,status:loc.biler[0].status});
+  });
+  var tot=Object.values(posMap).reduce(function(s,v){return s+v.biler.length;},0);
+  window._kartPosMap=posMap;
+  document.getElementById('kart-subtitle').textContent=tot+' biler plottet — klikk markør for detaljer';
+  buildKartTabell(posMap,'alle');
+}
+
+function fmtK(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':Math.round(n/1000)+'k';}
+function fmtKm(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':n.toLocaleString('nb-NO')+' km';}
+function buildDagsTabell(evalAll2, todayDate){
+  var pdOps=function(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;};
+  var AVVIST=['avvist by customer','avvist by admin','avvist'];
+  var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
+
+  var evalI   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate;});
+  var avvistI = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
+  var bestiltI= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;});
+  var mottattI= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;});
+  var solgtI  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;});
+  var retI    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate;});
+
+  var grupper=[
+    {label:'Evaluert i dag',emoji:'📋',biler:evalI,color:'#1565C0'},
+    {label:'Avvist i dag',emoji:'❌',biler:avvistI,color:'#C62828'},
+    {label:'Bestilt hent/lev',emoji:'📦',biler:bestiltI,color:'#E65100'},
+    {label:'Mottatt på anlegg',emoji:'🏭',biler:mottattI,color:'#6A1B9A'},
+    {label:'Solgt på auksjon',emoji:'✅',biler:solgtI,color:'#00875A'},
+    {label:'Returnert',emoji:'🔁',biler:retI,color:'#555'}
+  ].filter(function(g){return g.biler.length>0;});
+
+  if(grupper.length===0)return '';
+
+  var rowHtml=function(r,i,isSolgt){
+    var bg=i%2===0?'':'background:rgba(0,66,37,0.02)';
+    var dlh=String(r[3]||'').trim();
+    if(dlh&&dlh!=='-'){var pp=dlh.split('-');if(pp.length===2){var lo=parseInt(pp[0]);var hi=parseInt(pp[1]);if(!isNaN(lo)&&!isNaN(hi))dlh=lo.toLocaleString('nb-NO')+' kr – '+hi.toLocaleString('nb-NO')+' kr';}};
+    if(!dlh)dlh='—';
+    var kmVal=r[22]?parseInt(String(r[22]).replace(/[^\d]/g,'')):NaN;
+    var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'—';
+    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
+    var status=STATUS_NO[r[12]]||r[12]||'—';
+    var extraCols='';
+    if(isSolgt){
+      var budV=r[4]?parseInt(String(r[4]).replace(/[^\d]/g,'')):NaN;
+      var dlavV=r[3]?parseInt(String(r[3]).split('-')[0].replace(/[^\d]/g,'')):NaN;
+      var budStr=!isNaN(budV)?budV.toLocaleString('nb-NO')+' kr':'—';
+      var budColor='var(--muted)';
+      var avvikStr='—', avvikColor='var(--muted)';
+      if(!isNaN(budV)&&!isNaN(dlavV)&&dlavV>0){
+        budColor=budV>=dlavV?'#00875A':'#C62828';
+        var pct=Math.round((budV-dlavV)/dlavV*100);
+        avvikStr=(pct>=0?'+':'')+pct+'%';
+        avvikColor=pct>=0?'#00875A':'#C62828';
+      }
+      extraCols='<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:'+budColor+'">'+budStr+'</td>'
+        +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:'+avvikColor+'">'+avvikStr+'</td>';
+    }
+    return '<tr style="border-bottom:1px solid var(--border);'+bg+'">'
+      +'<td style="padding:8px 12px;font-family:var(--mono);font-weight:700;font-size:12px">'+r[1]+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px">'+kmStr+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px">'+dlh+'</td>'
+      +extraCols
+      +'<td style="padding:8px 12px;font-size:11px;color:var(--muted)">'+status+'</td>'
+      +'</tr>';
+  };
+
+  var out='<div style="max-width:1200px;margin:24px auto 0;display:flex;flex-direction:column;gap:20px">';
+  grupper.forEach(function(g){
+    out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,66,37,0.07)">'
+      +'<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'
+      +'<div style="font-weight:700;font-size:13px;color:'+g.color+'">'+g.emoji+' '+g.label+'</div>'
+      +'<div style="font-family:var(--mono);font-size:11px;color:var(--muted)">'+g.biler.length+' bil'+(g.biler.length!==1?'er':'')+'</div>'
+      +'</div>'
+      +'<table style="width:100%;border-collapse:collapse;table-layout:fixed">'
+      +'<thead><tr style="background:rgba(0,66,37,0.03)">'
+      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:90px">Regnr</th>'
+      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bil</th>'
+      +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:120px">KM</th>'
+      +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:190px">Peasy Est Verdi</th>'
+      +(g.label==='Solgt på auksjon'?'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bud</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Avvik</th>':'')
+      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:140px">Status</th>'
+      +'</tr></thead>'
+      +'<tbody>'+g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon');}).join('')+'</tbody>'
+      +'</table></div>';
+  });
+  out+='</div>';
+  return out;
+}
+</script>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c2</div>
 </body>
 </html>
