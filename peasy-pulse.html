@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c17</title>
+<title>Peasy Pulse v16.03.c18</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -113,11 +113,19 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
       <button class="mode-btn" id="btn-kart" onclick="setMode('kart')">Kart</button>
+      <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Sp&#248;rsm&#229;l</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
 </header>
-<main><div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen&hellip;</div></div></main>
+<main><div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen&hellip;</div></div>
+<section class="mode-section" data-mode="sporsmal" style="display:none">
+  <div class="section-label">Topp sp&#248;rsm&#229;l fra kunder</div>
+  <div id="sporsmal-top10" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:32px"></div>
+  <div class="section-label">Alle sp&#248;rsm&#229;l</div>
+  <div id="sporsmal-alle" style="font-size:13px;line-height:1.8"></div>
+</section>
+</main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
 var TARGETS={evalMottatt:10,mottattSolgt:70,prodDays:3};
@@ -139,9 +147,11 @@ function setMode(m){
   document.getElementById('btn-eval').classList.toggle('active',m==='eval');
   document.getElementById('btn-tiltak').classList.toggle('active',m==='tiltak');
   if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
+  if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
   document.querySelectorAll('.mode-section').forEach(function(el){el.classList.toggle('visible',el.dataset.mode===m);});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
+  if(m==='sporsmal'){loadQuestions();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
 }
@@ -312,7 +322,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c17 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c18 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -937,7 +947,53 @@ function buildDagsTabell(evalAll2, todayDate){
   out+='</div>';
   return out;
 }
+
+async function loadQuestions(){
+  const el10 = document.getElementById('sporsmal-top10');
+  const elAlle = document.getElementById('sporsmal-alle');
+  if(!el10) return;
+  el10.innerHTML = '<p style="color:var(--muted);font-size:13px">Laster...</p>';
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/questions-db.json?t='+Date.now());
+    if(!r.ok){ el10.innerHTML='<p style="color:var(--muted)">Ingen data ennå</p>'; return; }
+    const db = await r.json();
+    if(!db.length){ el10.innerHTML='<p style="color:var(--muted)">Ingen spørsmål registrert ennå</p>'; return; }
+
+    // Topp 10 — grupper like spørsmål
+    const counts = {};
+    db.forEach(q => {
+      const key = q.category + '|' + q.question;
+      counts[key] = (counts[key]||{q, n:0});
+      counts[key].n++;
+    });
+    const sorted = Object.values(counts).sort((a,b)=>b.n-a.n).slice(0,10);
+    const catColor = {pris:'#15803D',prosess:'#1565C0',tilbud:'#7C3AED',annet:'#E65100',ingen:'#667A72'};
+    el10.innerHTML = sorted.map(({q,n})=>`
+      <div style="background:#fff;border:1px solid #D0DDD8;border-radius:12px;padding:16px 18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${catColor[q.category]||'#667A72'}20;color:${catColor[q.category]||'#667A72'}">${q.category}</span>
+          <span style="font-family:monospace;font-weight:700;font-size:13px;color:#004225">${n}x</span>
+        </div>
+        <div style="font-size:13px;color:#004225;line-height:1.5">${q.question}</div>
+      </div>`).join('');
+
+    // Alle spørsmål — nyeste først
+    const alle = [...db].reverse();
+    elAlle.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="border-bottom:1px solid #D0DDD8"><th style="text-align:left;padding:6px 10px;color:#667A72">Dato</th><th style="text-align:left;padding:6px 10px;color:#667A72">Kategori</th><th style="text-align:left;padding:6px 10px;color:#667A72">Spørsmål</th><th style="text-align:left;padding:6px 10px;color:#667A72">Fra</th></tr></thead><tbody>' +
+      alle.map(q=>`<tr style="border-bottom:1px solid rgba(0,66,37,0.05)">
+        <td style="padding:6px 10px;color:#667A72">${q.date}</td>
+        <td style="padding:6px 10px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:${catColor[q.category]||'#667A72'}20;color:${catColor[q.category]||'#667A72'}">${q.category}</span></td>
+        <td style="padding:6px 10px;color:#004225">${q.question}</td>
+        <td style="padding:6px 10px;color:#667A72">${q.from}</td>
+      </tr>`).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    el10.innerHTML='<p style="color:#C62828">Feil: '+e.message+'</p>';
+  }
+}
+
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c17</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c18</div>
 </body>
 </html>
