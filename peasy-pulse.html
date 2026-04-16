@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c19</title>
+<title>Peasy Pulse v16.03.c18</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -322,7 +322,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c19 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c18 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -897,7 +897,7 @@ function buildDagsTabell(evalAll2, todayDate){
     if(!dlh)dlh='—';
     var kmVal=r[22]?parseInt(String(r[22]).replace(/[^\d]/g,'')):NaN;
     var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'—';
-    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','waiting_for_valuation':'Venter vurdering','waiting_for_sign_contract':'Venter signering','waiting_for_preparation':'Klargjøres','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
+    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','waiting_for_valuation':'Venter vurdering','waiting_for_preparation':'Klargjøres','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
     var status=STATUS_NO[r[12]]||r[12]||'—';
     var extraCols='';
     if(isSolgt){
@@ -977,49 +977,23 @@ async function loadQuestions(){
         <div style="font-size:13px;color:#004225;line-height:1.5">${q.question}</div>
       </div>`).join('');
 
-    // Blogg-stil — grupper per dag, nyeste dag øverst
-    const byDay = {};
-    db.filter(q => !q.is_daily_log).forEach(q => {
-      if (!byDay[q.date]) byDay[q.date] = [];
-      byDay[q.date].push(q);
-    });
-    const dagLogger = {};
-    db.filter(q => q.is_daily_log).forEach(q => { dagLogger[q.date] = q; });
-    const days = Object.keys({...byDay,...dagLogger}).sort().reverse();
-    const today = new Date().toISOString().slice(0,10);
-    elAlle.innerHTML = days.map(day => {
-      const qs = byDay[day] || [];
-      const log = dagLogger[day];
-      const antall = qs.length;
-      const dayLabel = day === today ? 'I dag' : day;
-      let h = '<div style="margin-bottom:28px">';
-      h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid rgba(0,66,37,0.15)">';
-      h +      h +      h +      h +      h +      h +      h +    25">' + dayLabel + '</span>';
-      h += '<span style="font-size:11px;color:#667A72;font-family:monospace">' + antall + ' spørsmål fra kunder</span>';
-      if (log) h += '<span style="font-size:10px;color:#aaa;margin-left:auto;font-family:monospace">🕛 ' + (log.emails_checked||0) + ' e-poster sjekket</span>';
-            </div>';
-      if (qs.length === 0) {
-        h += '<p style="font-size:12px;color:#aaa;font-style:italic;padding:4px 0">Ingen kundespørsmål denne dagen</p>';
-      } else {
-        qs.forEach(q => {
-          h += '<div style="background:#fff;border:1px solid #D0DDD8;border-left:3px solid ' + (catColor[q.category]||'#667A72') + ';border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:8px">';
-          h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
-          h += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:' + (catColor[q.category]||'#667A72') + '20;color:' + (catColor[q.category]||'#667A72') + '">' + (q.category||'') + '</span>';
-          h += '<span style="font-size:11px;color:#aaa;font-family:monospace">' + (q.time||'') + '</span>';
-          h += '</div>';
-          h += '<div style="font-size:13px;color:#004225;line-height:1.5;margin-bottom:4px">' + q.question + '</div>';
-          h += '<div style="font-size:11px;color:#667A72"          h += '<div style>';
-        });
-      }
-      h += '</div>';
-      return h;
-    }).join('') || '<p style="color:#667A72;font-size:13px;padding:20px 0">Ingen spørsmål registrert ennå</p>';
+    // Alle spørsmål — nyeste først
+    const alle = [...db].reverse();
+    elAlle.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="border-bottom:1px solid #D0DDD8"><th style="text-align:left;padding:6px 10px;color:#667A72">Dato</th><th style="text-align:left;padding:6px 10px;color:#667A72">Kategori</th><th style="text-align:left;padding:6px 10px;color:#667A72">Spørsmål</th><th style="text-align:left;padding:6px 10px;color:#667A72">Fra</th></tr></thead><tbody>' +
+      alle.map(q=>`<tr style="border-bottom:1px solid rgba(0,66,37,0.05)">
+        <td style="padding:6px 10px;color:#667A72">${q.date}</td>
+        <td style="padding:6px 10px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:${catColor[q.category]||'#667A72'}20;color:${catColor[q.category]||'#667A72'}">${q.category}</span></td>
+        <td style="padding:6px 10px;color:#004225">${q.question}</td>
+        <td style="padding:6px 10px;color:#667A72">${q.from}</td>
+      </tr>`).join('') +
+      '</tbody></table>';
   } catch(e) {
     el10.innerHTML='<p style="color:#C62828">Feil: '+e.message+'</p>';
   }
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c19</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c18</div>
 </body>
 </html>
