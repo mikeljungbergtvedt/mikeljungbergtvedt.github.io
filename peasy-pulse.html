@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c27</title>
+<title>Peasy Pulse v16.03.c28</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -322,7 +322,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c27 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c28 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -784,21 +784,23 @@ function buildKartTabell(posMap,filter,pnrAllowed){
             <option value="ytd">I år</option>
           </select>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap" id="kart-filters">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" id="kart-filters">
           <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
           <button onclick="kartFilter('akseptert')" class="kart-fbtn" data-f="akseptert">Akseptert</button>
           <button onclick="kartFilter('avvist')" class="kart-fbtn" data-f="avvist">Avvist</button>
           <button onclick="kartFilter('solgt')" class="kart-fbtn" data-f="solgt">Solgt</button>
           <button onclick="kartFilter('kjopere')" class="kart-fbtn" data-f="kjopere">Kjøpere</button>
+          <button onclick="kartZoomAlle()" class="kart-fbtn" title="Zoom til alle synlige punkter" style="border-color:rgba(0,66,37,0.2)">⤢ Zoom alle</button>
         </div>
       </div>
     </div>
     <div id="peasy-map" style="height:560px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,66,37,0.10)"></div>
-    <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+    <div id="kart-legend" style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Akseptert / solgt</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:6px;vertical-align:middle"></span>Avvist</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>I prosess</span>
     </div>
+    <div id="kart-histogram" style="display:none;margin-top:20px"></div>
     <div style="margin-top:28px">
       <div id="kart-tabell-tittel" style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Topp steder</div>
       <div id="kart-tabell" style="overflow-x:auto">
@@ -888,7 +890,41 @@ function _kartRender(){
   });
   var thd=document.getElementById('kart-tabell-head');if(thd)thd.style.display='';
   var tt=document.getElementById('kart-tabell-tittel');if(tt)tt.textContent='Topp steder';
+  _setLegend('standard');
+  var hb=document.getElementById('kart-histogram');if(hb)hb.style.display='none';
   if(window._kartPosMap)buildKartTabell(window._kartPosMap,f,pnrAllowed);
+}
+function _setLegend(mode){
+  var el=document.getElementById('kart-legend');if(!el)return;
+  if(mode==='kjopere'){
+    el.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Selger-postnr</span>'
+      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>Kjøper-postnr</span>'
+      +'<span><span style="display:inline-block;width:24px;height:2px;background:#667A72;margin-right:6px;vertical-align:middle"></span>Reise selger → kjøper (tykkere = flere biler)</span>'
+      +'<span style="margin-left:auto;color:var(--muted)"><b style="color:var(--green)">&lt;150 km</b> · <b style="color:#E65100">150–300 km</b> · <b style="color:#C62828">≥300 km</b></span>';
+    el.style.justifyContent='flex-start';
+  }else{
+    el.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Akseptert / solgt</span>'
+      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:6px;vertical-align:middle"></span>Avvist</span>'
+      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>I prosess</span>';
+  }
+}
+function kartZoomAlle(){
+  if(!_kartMap)return;
+  var pts=[];
+  // Kjøpere-modus: bruk _kartBilerKjopere
+  if(_kartFilter==='kjopere' && window._kartBilerKjopere){
+    window._kartBilerKjopere.forEach(function(b){
+      if(b.sellerCoord)pts.push(b.sellerCoord);
+      if(b.buyerCoord)pts.push(b.buyerCoord);
+    });
+  }else{
+    _kartMarkers.forEach(function(it){
+      var ll=it.marker.getLatLng?it.marker.getLatLng():null;
+      if(ll && _kartMap.hasLayer(it.marker))pts.push([ll.lat,ll.lng]);
+    });
+  }
+  if(pts.length<2){_kartMap.setView([63.5,15.0],5);return;}
+  _kartMap.fitBounds(pts,{padding:[40,40],maxZoom:11});
 }
 function _haversineKm(a,b){
   var R=6371,toRad=function(d){return d*Math.PI/180;};
@@ -971,9 +1007,42 @@ function _kartRenderKjopere(){
   var median=sortedD.length?(sortedD.length%2?sortedD[(sortedD.length-1)/2]:Math.round((sortedD[sortedD.length/2-1]+sortedD[sortedD.length/2])/2)):0;
   var avg=dists.length?Math.round(dists.reduce(function(s,d){return s+d;},0)/dists.length):0;
   var maxD=dists.length?Math.max.apply(null,dists):0;
-  document.getElementById('kart-subtitle').innerHTML='<span style="font-family:var(--mono);font-size:12px"><b>'+biler.length+'</b> solgte biler &bull; median <b>'+median+' km</b> &bull; snitt <b>'+avg+' km</b> &bull; lengste <b>'+maxD+' km</b></span>';
+  // Tell biler uten kjøper-koordinater
+  var manglerGeo=biler.filter(function(b){return b.dist==null;}).length;
+  var subStr='<span style="font-family:var(--mono);font-size:12px"><b>'+biler.length+'</b> solgte biler';
+  if(dists.length>0)subStr+=' &bull; median <b>'+median+' km</b> &bull; snitt <b>'+avg+' km</b> &bull; lengste <b>'+maxD+' km</b>';
+  if(manglerGeo>0)subStr+=' &bull; <span style="color:var(--muted)">'+manglerGeo+' uten kj\u00f8per-geo</span>';
+  subStr+='</span>';
+  document.getElementById('kart-subtitle').innerHTML=subStr;
+
+  _setLegend('kjopere');
+  _buildHistogram(dists);
   window._kartBilerKjopere=biler;
   _buildAvstandTabell(biler);
+}
+function _buildHistogram(dists){
+  var hb=document.getElementById('kart-histogram');if(!hb)return;
+  if(!dists||dists.length===0){hb.style.display='none';return;}
+  var b1=dists.filter(function(d){return d<50;}).length;
+  var b2=dists.filter(function(d){return d>=50&&d<150;}).length;
+  var b3=dists.filter(function(d){return d>=150;}).length;
+  var tot=b1+b2+b3;
+  var p1=tot?Math.round(b1/tot*100):0;
+  var p2=tot?Math.round(b2/tot*100):0;
+  var p3=tot?100-p1-p2:0;
+  hb.style.display='block';
+  hb.innerHTML=
+    '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Avstandsfordeling</div>'
+    +'<div style="display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">'
+    +(b1>0?'<div title="'+b1+' biler under 50 km" style="flex:'+b1+';background:#00875A;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b1+(p1>=10?' &middot; '+p1+'%':'')+'</div>':'')
+    +(b2>0?'<div title="'+b2+' biler 50–150 km" style="flex:'+b2+';background:#E65100;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b2+(p2>=10?' &middot; '+p2+'%':'')+'</div>':'')
+    +(b3>0?'<div title="'+b3+' biler 150 km eller mer" style="flex:'+b3+';background:#C62828;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b3+(p3>=10?' &middot; '+p3+'%':'')+'</div>':'')
+    +'</div>'
+    +'<div style="display:flex;margin-top:6px;font-size:10px;color:var(--muted);font-family:var(--mono)">'
+    +'<span style="flex:1">&lt;50 km (lokalt)</span>'
+    +'<span style="flex:1;text-align:center">50–150 km (regionalt)</span>'
+    +'<span style="flex:1;text-align:right">≥150 km (langtransport)</span>'
+    +'</div>';
 }
 function _kartZoomTilReise(idx){
   var biler=window._kartBilerKjopere;
@@ -1213,6 +1282,6 @@ async function loadQuestions(){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c27</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c28</div>
 </body>
 </html>
