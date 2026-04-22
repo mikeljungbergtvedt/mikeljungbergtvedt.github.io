@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c28</title>
+<title>Peasy Pulse v16.03.c29</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -322,7 +322,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c28 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c29 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -822,7 +822,7 @@ function buildKartTabell(posMap,filter,pnrAllowed){
   </div>
 </div>
 <script>
-var _kartInit=false,_kartMarkers=[],_kartMap=null,_kartBuyerMarkers=[],_kartLines=[],_kartFilter='alle',_kartPeriode='all',_kartRowsAll=null,_kartGEO=null;
+var _kartInit=false,_kartMarkers=[],_kartMap=null,_kartBuyerMarkers=[],_kartLines=[],_kartFilter='alle',_kartPeriode='all',_kartRowsAll=null,_kartGEO=null,_isolertReise=null;
 var _AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
 var _AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
 function _kartPeriodeStart(){
@@ -843,12 +843,14 @@ function _kartParseDate(s){
 }
 function kartFilter(f){
   _kartFilter=f;
+  _isolertReise=null;
   document.querySelectorAll('.kart-fbtn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
   if(!_kartMap)return;
   _kartRender();
 }
 function kartPeriode(v){
   _kartPeriode=v;
+  _isolertReise=null;
   if(!_kartMap)return;
   _kartRender();
 }
@@ -932,6 +934,27 @@ function _haversineKm(a,b){
   var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)*Math.sin(dLon/2);
   return Math.round(R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s)));
 }
+function _findCoord(pnr){
+  if(!pnr)return null;
+  if(_kartGEO[pnr])return {coord:_kartGEO[pnr],approx:false};
+  // Fallback 1: samme 3-prefiks (gjennomsnitt av matchende)
+  var pre3=pnr.slice(0,3);
+  var matches3=Object.keys(_kartGEO).filter(function(k){return k.slice(0,3)===pre3;});
+  if(matches3.length){
+    var lat=0,lng=0;
+    matches3.forEach(function(k){lat+=_kartGEO[k][0];lng+=_kartGEO[k][1];});
+    return {coord:[lat/matches3.length,lng/matches3.length],approx:true};
+  }
+  // Fallback 2: samme 2-prefiks
+  var pre2=pnr.slice(0,2);
+  var matches2=Object.keys(_kartGEO).filter(function(k){return k.slice(0,2)===pre2;});
+  if(matches2.length){
+    var lat=0,lng=0;
+    matches2.forEach(function(k){lat+=_kartGEO[k][0];lng+=_kartGEO[k][1];});
+    return {coord:[lat/matches2.length,lng/matches2.length],approx:true};
+  }
+  return null;
+}
 function _kartRenderKjopere(){
   if(!_kartRowsAll||!_kartGEO){document.getElementById('kart-subtitle').textContent='Ingen data';return;}
   var pStart=_kartPeriodeStart();
@@ -947,15 +970,22 @@ function _kartRenderKjopere(){
     if(!sPnr)return;
     var bPnr=r[30]?String(r[30]).padStart(4,'0'):null;
     if(!bPnr)return;
-    var sCoord=_kartGEO[sPnr],bCoord=_kartGEO[bPnr];
+    // Buyer-sted: prøv kolonne AF (31), AG (32), eller utled fra prefiks
+    var bSted=String(r[31]||r[32]||'').replace(/^\d{4}\s*/,'').trim();
+    var sLookup=_findCoord(sPnr);
+    var bLookup=_findCoord(bPnr);
+    var sCoord=sLookup?sLookup.coord:null;
+    var bCoord=bLookup?bLookup.coord:null;
+    var approx=(sLookup&&sLookup.approx)||(bLookup&&bLookup.approx);
     var dist=(sCoord&&bCoord)?_haversineKm(sCoord,bCoord):null;
     biler.push({
       regnr:r[1]||'',
+      merke:r[6]||'', modell:r[7]||'', aar:r[8]||'',
       bil:((r[6]||'')+' '+(r[7]||'')+' '+(r[8]||'')).trim(),
       sellerPnr:sPnr, sellerSted:String(r[10]||'').replace(/^\d{4}\s*/,'')||sPnr,
-      buyerPnr:bPnr,
+      buyerPnr:bPnr, buyerSted:bSted,
       sellerCoord:sCoord, buyerCoord:bCoord,
-      dist:dist,
+      dist:dist, approx:approx,
       sDate:sDate,
       sDateStr:String(r[18]||'').slice(0,10)
     });
@@ -1091,17 +1121,55 @@ function _buildAvstandTabell(biler){
 
   tbody.innerHTML=header+sorted.map(function(b,i){
     var origIdx=bilerIdx[b.regnr+'|'+b.sDateStr];
-    var distStr=b.dist!=null?b.dist+' km':'<span style="color:var(--muted)">—</span>';
+    var distStr=b.dist!=null?(b.approx?'~':'')+b.dist+' km':'<span style="color:var(--muted)">—</span>';
     var distColor=b.dist!=null?(b.dist>=300?'#C62828':b.dist>=150?'#E65100':'var(--green)'):'var(--muted)';
-    return '<tr onclick="_kartZoomTilReise('+origIdx+')" style="border-bottom:0.5px solid rgba(0,66,37,0.06);cursor:pointer;'+(i%2?'background:rgba(0,66,37,0.02)':'')+'" onmouseover="this.style.background=\'rgba(0,135,90,0.08)\'" onmouseout="this.style.background=\''+(i%2?'rgba(0,66,37,0.02)':'')+'\'">'
+    var distTitle=b.approx?'title="Omtrentlig avstand — eksakt postnr-koordinat mangler"':'';
+    var isActive=(_isolertReise===origIdx)?'background:rgba(0,135,90,0.15)':(i%2?'background:rgba(0,66,37,0.02)':'');
+    return '<tr onclick="_kartIsolerReise('+origIdx+',event)" style="border-bottom:0.5px solid rgba(0,66,37,0.06);cursor:pointer;'+isActive+'" onmouseover="if(_isolertReise!=='+origIdx+')this.style.background=\'rgba(0,135,90,0.08)\'" onmouseout="this.style.background=\''+(_isolertReise===origIdx?'rgba(0,135,90,0.15)':(i%2?'rgba(0,66,37,0.02)':''))+'\'">'
       +'<td style="padding:8px 12px;font-family:var(--mono);font-weight:700;font-size:12px;color:#7C3AED">'+b.regnr+'</td>'
-      +'<td style="padding:8px 12px;font-size:12px">'+b.bil+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px"><b>'+(b.merke||'')+'</b> '+(b.modell||'')+(b.aar?' <span style="color:var(--muted)">'+b.aar+'</span>':'')+'</td>'
       +'<td style="padding:8px 12px;font-family:var(--mono);font-size:12px">'+b.sellerPnr+' <span style="color:var(--muted);font-family:var(--sans,inherit);font-weight:400">'+b.sellerSted+'</span></td>'
-      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:12px;color:#1565C0;font-weight:700">'+b.buyerPnr+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:'+distColor+'">'+distStr+'</td>'
+      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:12px;color:#1565C0;font-weight:700">'+b.buyerPnr+(b.buyerSted?' <span style="color:var(--muted);font-family:var(--sans,inherit);font-weight:400">'+b.buyerSted+'</span>':'')+'</td>'
+      +'<td '+distTitle+' style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:'+distColor+'">'+distStr+'</td>'
       +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted)">'+b.sDateStr+'</td>'
       +'</tr>';
   }).join('');
+}
+function _kartIsolerReise(idx,event){
+  if(event)event.stopPropagation();
+  if(_isolertReise===idx){
+    // Klikket samme rad — reset
+    _isolertReise=null;
+    _kartRender();
+    return;
+  }
+  _isolertReise=idx;
+  var biler=window._kartBilerKjopere;
+  if(!biler||!biler[idx])return;
+  var b=biler[idx];
+  // Fjern alt fra kartet
+  _kartLines.forEach(function(l){_kartMap.removeLayer(l);});
+  _kartBuyerMarkers.forEach(function(m){_kartMap.removeLayer(m);});
+  _kartLines=[];_kartBuyerMarkers=[];
+  // Tegn kun denne reisen
+  if(b.sellerCoord && b.buyerCoord){
+    var line=L.polyline([b.sellerCoord,b.buyerCoord],{color:'#00875A',weight:3,opacity:0.85});
+    line.bindPopup('<b>'+b.regnr+'</b><br>'+b.bil+'<br>'+b.sellerPnr+' &rarr; '+b.buyerPnr+(b.dist!=null?' &bull; '+(b.approx?'~':'')+b.dist+' km':''));
+    line.addTo(_kartMap);
+    _kartLines.push(line);
+    var sm=L.circleMarker(b.sellerCoord,{radius:10,fillColor:'#00875A',color:'#fff',weight:2,opacity:1,fillOpacity:0.9});
+    sm.bindPopup('<b>Selger '+b.sellerPnr+'</b><br>'+(b.sellerSted||''));
+    sm.addTo(_kartMap);_kartBuyerMarkers.push(sm);
+    var bm=L.circleMarker(b.buyerCoord,{radius:10,fillColor:'#1565C0',color:'#fff',weight:2,opacity:1,fillOpacity:0.9});
+    bm.bindPopup('<b>Kjøper '+b.buyerPnr+'</b>'+(b.buyerSted?'<br>'+b.buyerSted:''));
+    bm.addTo(_kartMap);_kartBuyerMarkers.push(bm);
+    _kartMap.fitBounds([b.sellerCoord,b.buyerCoord],{padding:[80,80],maxZoom:9});
+  }
+  // Refresh tabell-styling
+  _buildAvstandTabell(biler);
+  // Subtittel
+  var subEl=document.getElementById('kart-subtitle');
+  if(subEl)subEl.innerHTML='<b style="color:var(--green)">Isolert: '+b.regnr+'</b> &middot; '+b.bil+' &middot; <span style="color:var(--muted);cursor:pointer;text-decoration:underline" onclick="_kartIsolerReise('+idx+')">Vis alle igjen</span>';
 }
 async function initKart(){
   if(_kartInit)return;
@@ -1282,6 +1350,6 @@ async function loadQuestions(){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c28</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c29</div>
 </body>
 </html>
