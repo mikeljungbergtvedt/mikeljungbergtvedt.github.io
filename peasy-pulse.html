@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c25</title>
+<title>Peasy Pulse v16.03.c26</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -322,7 +322,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c25 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c26 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -715,13 +715,13 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 
-function buildKartTabell(posMap,filter){
+function buildKartTabell(posMap,filter,pnrAllowed){
   filter=filter||'alle';
   window._kartPosMap=posMap;
   var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
   var AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
   var filterLabels={alle:'Alle biler',akseptert:'Aksepterte biler',avvist:'Avviste biler',solgt:'Solgte biler'};
-  var rows=Object.keys(posMap).map(function(pnr){
+  var rows=Object.keys(posMap).filter(function(pnr){return !pnrAllowed||pnrAllowed[pnr];}).map(function(pnr){
     var loc=posMap[pnr];
     var biler=filter==='alle'?loc.biler:filter==='akseptert'?loc.biler.filter(function(b){return AKSEPTERT.indexOf(b.status)!==-1;}):filter==='avvist'?loc.biler.filter(function(b){return AVVIST.indexOf(b.status)!==-1;}):filter==='solgt'?loc.biler.filter(function(b){return b.status==='sold';}):loc.biler;
     if(biler.length===0)return null;
@@ -773,11 +773,19 @@ function buildKartTabell(posMap,filter){
         <div style="font-size:22px;font-weight:700;color:var(--green)">Hvor kommer bilene fra?</div>
         <div id="kart-subtitle" style="font-size:13px;color:var(--muted);margin-top:4px">Klikk for å laste kart…</div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap" id="kart-filters">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" id="kart-filters">
         <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
         <button onclick="kartFilter('akseptert')" class="kart-fbtn" data-f="akseptert">Akseptert</button>
         <button onclick="kartFilter('avvist')" class="kart-fbtn" data-f="avvist">Avvist</button>
         <button onclick="kartFilter('solgt')" class="kart-fbtn" data-f="solgt">Solgt</button>
+        <button onclick="kartFilter('kjopere')" class="kart-fbtn" data-f="kjopere">Kjøpere</button>
+        <select id="kart-periode" onchange="kartPeriode(this.value)" style="margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 12px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--green);cursor:pointer">
+          <option value="all">Alle</option>
+          <option value="30">30d</option>
+          <option value="90">90d</option>
+          <option value="180">180d</option>
+          <option value="ytd">I år</option>
+        </select>
       </div>
     </div>
     <div id="peasy-map" style="height:560px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,66,37,0.10)"></div>
@@ -807,15 +815,154 @@ function buildKartTabell(posMap,filter){
   </div>
 </div>
 <script>
-var _kartInit=false,_kartMarkers=[],_kartMap=null;
+var _kartInit=false,_kartMarkers=[],_kartMap=null,_kartBuyerMarkers=[],_kartLines=[],_kartFilter='alle',_kartPeriode='all',_kartRowsAll=null,_kartGEO=null;
+var _AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
+var _AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
+function _kartPeriodeStart(){
+  var now=new Date();
+  if(_kartPeriode==='30')return new Date(now.getTime()-30*864e5);
+  if(_kartPeriode==='90')return new Date(now.getTime()-90*864e5);
+  if(_kartPeriode==='180')return new Date(now.getTime()-180*864e5);
+  if(_kartPeriode==='ytd')return new Date(now.getFullYear(),0,1);
+  return null;
+}
+function _kartParseDate(s){
+  if(!s)return null;
+  var t=String(s).trim().slice(0,10);
+  var p=t.split('.');
+  if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);
+  var d=new Date(t);
+  return isNaN(d)?null:d;
+}
 function kartFilter(f){
+  _kartFilter=f;
   document.querySelectorAll('.kart-fbtn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
   if(!_kartMap)return;
+  _kartRender();
+}
+function kartPeriode(v){
+  _kartPeriode=v;
+  if(!_kartMap)return;
+  _kartRender();
+}
+function _kartRender(){
+  // Fjern dynamiske kjøper-lag
+  _kartBuyerMarkers.forEach(function(m){_kartMap.removeLayer(m);});
+  _kartLines.forEach(function(l){_kartMap.removeLayer(l);});
+  _kartBuyerMarkers=[];_kartLines=[];
+
+  var f=_kartFilter;
+  if(f==='kjopere'){
+    // Skjul vanlige selger-markører
+    _kartMarkers.forEach(function(it){_kartMap.removeLayer(it.marker);});
+    _kartRenderKjopere();
+    return;
+  }
+  // Standard-modus med periode-filter på registrert (kol 13)
+  var pStart=_kartPeriodeStart();
+  var pnrAllowed=null;
+  if(pStart && _kartRowsAll){
+    pnrAllowed={};
+    _kartRowsAll.forEach(function(r){
+      var d=_kartParseDate(r[13]);
+      if(!d||d<pStart)return;
+      var pnr=r[9]?String(r[9]).padStart(4,'0'):null;
+      if(!pnr)return;
+      pnrAllowed[pnr]=true;
+    });
+  }
   _kartMarkers.forEach(function(item){
-    var show=f==='alle'?true:f==='akseptert'?['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(item.status)!==-1:f==='avvist'?['Avvist by customer','Avvist by admin','Avvist'].indexOf(item.status)!==-1:f==='solgt'?item.status==='sold':true;
+    var statusOK = f==='alle'?true
+      : f==='akseptert'?_AKSEPTERT.indexOf(item.status)!==-1
+      : f==='avvist'?_AVVIST.indexOf(item.status)!==-1
+      : f==='solgt'?item.status==='sold'
+      : true;
+    var periodOK = !pnrAllowed || pnrAllowed[item.pnr];
+    var show=statusOK && periodOK;
     show?item.marker.addTo(_kartMap):_kartMap.removeLayer(item.marker);
   });
-  if(window._kartPosMap)buildKartTabell(window._kartPosMap,f);
+  if(window._kartPosMap)buildKartTabell(window._kartPosMap,f,pnrAllowed);
+}
+function _kartRenderKjopere(){
+  if(!_kartRowsAll||!_kartGEO){document.getElementById('kart-subtitle').textContent='Ingen data';return;}
+  var pStart=_kartPeriodeStart();
+  var pairs={}; // sellerPnr|buyerPnr -> {sellerPnr,buyerPnr,sellerSted,count,biler}
+  var sellerAgg={}; // sellerPnr -> {sted,count,toBuyers:{buyerPnr:n}}
+  _kartRowsAll.forEach(function(r){
+    var status=String(r[12]||'').toLowerCase();
+    if(status!=='sold' && status.indexOf('solgt')===-1)return;
+    var sDate=_kartParseDate(r[18]);
+    if(!sDate)return;
+    if(pStart && sDate<pStart)return;
+    var sPnr=r[9]?String(r[9]).padStart(4,'0'):null;
+    if(!sPnr && r[10]){var m=String(r[10]).match(/(\d{4})/);if(m)sPnr=m[1];}
+    if(!sPnr)return;
+    var bPnr=r[30]?String(r[30]).padStart(4,'0'):null;
+    if(!bPnr)return;
+    var key=sPnr+'|'+bPnr;
+    if(!pairs[key])pairs[key]={sellerPnr:sPnr,buyerPnr:bPnr,sellerSted:r[10]||'',count:0,biler:[]};
+    pairs[key].count++;
+    pairs[key].biler.push({regnr:r[1],merke:r[6],modell:r[7]});
+    if(!sellerAgg[sPnr])sellerAgg[sPnr]={sted:r[10]||sPnr,count:0,toBuyers:{}};
+    sellerAgg[sPnr].count++;
+    sellerAgg[sPnr].toBuyers[bPnr]=(sellerAgg[sPnr].toBuyers[bPnr]||0)+1;
+  });
+
+  var sellerPnrs={},buyerPnrs={};
+  Object.values(pairs).forEach(function(p){
+    var s=_kartGEO[p.sellerPnr],b=_kartGEO[p.buyerPnr];
+    if(!s||!b)return;
+    var weight=Math.min(6,1+Math.log2(p.count+1));
+    var line=L.polyline([[s[0],s[1]],[b[0],b[1]]],{color:'#667A72',weight:weight,opacity:0.55});
+    var samp=p.biler.slice(0,5).map(function(c){return(c.regnr||'')+' '+(c.merke||'');}).join(', ');
+    line.bindPopup('<b>'+p.sellerPnr+' &rarr; '+p.buyerPnr+'</b><br>'+p.count+' bil'+(p.count!==1?'er':'')+'<br><small>'+samp+(p.biler.length>5?'…':'')+'</small>');
+    line.addTo(_kartMap);
+    _kartLines.push(line);
+    sellerPnrs[p.sellerPnr]=(sellerPnrs[p.sellerPnr]||0)+p.count;
+    buyerPnrs[p.buyerPnr]=(buyerPnrs[p.buyerPnr]||0)+p.count;
+  });
+
+  Object.keys(sellerPnrs).forEach(function(pnr){
+    var c=_kartGEO[pnr];if(!c)return;
+    var n=sellerPnrs[pnr];
+    var radius=Math.max(7,Math.min(22,7+n*2));
+    var mk=L.circleMarker([c[0],c[1]],{radius:radius,fillColor:'#00875A',color:'#fff',weight:2,opacity:1,fillOpacity:0.85});
+    mk.bindPopup('<b>Selger '+pnr+'</b><br>'+n+' solgt');
+    mk.addTo(_kartMap);
+    _kartBuyerMarkers.push(mk);
+  });
+  Object.keys(buyerPnrs).forEach(function(pnr){
+    var c=_kartGEO[pnr];if(!c)return;
+    var n=buyerPnrs[pnr];
+    var radius=Math.max(7,Math.min(22,7+n*2));
+    var mk=L.circleMarker([c[0],c[1]],{radius:radius,fillColor:'#1565C0',color:'#fff',weight:2,opacity:1,fillOpacity:0.85});
+    mk.bindPopup('<b>Kjøper '+pnr+'</b><br>'+n+' kjøpt');
+    mk.addTo(_kartMap);
+    _kartBuyerMarkers.push(mk);
+  });
+
+  var totBiler=Object.values(pairs).reduce(function(s,p){return s+p.count;},0);
+  document.getElementById('kart-subtitle').innerHTML=totBiler+' solgte biler &bull; '+Object.keys(sellerPnrs).length+' selger-postnr &rarr; '+Object.keys(buyerPnrs).length+' kjøper-postnr';
+  _buildKjopereTabell(sellerAgg);
+}
+function _buildKjopereTabell(sellerAgg){
+  var rows=Object.keys(sellerAgg).map(function(pnr){
+    var s=sellerAgg[pnr];
+    var topB=Object.keys(s.toBuyers).sort(function(a,b){return s.toBuyers[b]-s.toBuyers[a];}).slice(0,3);
+    var topStr=topB.map(function(bp){return bp+' ('+s.toBuyers[bp]+')';}).join(', ');
+    return {pnr:pnr,sted:s.sted,count:s.count,top:topStr};
+  }).sort(function(a,b){return b.count-a.count;}).slice(0,30);
+  var tbody=document.getElementById('kart-tabell-body');
+  if(!tbody)return;
+  if(rows.length===0){tbody.innerHTML='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--muted)">Ingen solgte biler i valgt periode</td></tr>';return;}
+  var summary='<tr><td colspan="3" style="padding:10px 12px;background:rgba(0,66,37,0.04);font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px">Topp selger-postnr &rarr; oftest solgt til</td></tr>';
+  tbody.innerHTML=summary+rows.map(function(r,i){
+    return '<tr style="border-bottom:0.5px solid rgba(0,66,37,0.06);'+(i%2?'background:rgba(0,66,37,0.02)':'')+'">'
+      +'<td style="padding:8px 12px;font-family:var(--mono);font-weight:700;font-size:12px">'+r.pnr+' '+(r.sted||'')+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:#00875A">'+r.count+'</td>'
+      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted)">'+r.top+'</td>'
+      +'</tr>';
+  }).join('');
 }
 async function initKart(){
   if(_kartInit)return;
@@ -834,6 +981,8 @@ async function initKart(){
   var ab=await resp.arrayBuffer();
   var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
   var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  _kartRowsAll=rows;
+  _kartGEO=GEO;
   var posMap={};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];
@@ -857,7 +1006,7 @@ async function initKart(){
     var popup='<b>'+loc.sted+'</b> ('+pnr+')<br>'+antall+' bil'+(antall!==1?'er':'')+(akseptert?'<br>&#x2705; '+akseptert+' akseptert':'')+(avvist?'<br>&#x274C; '+avvist+' avvist':'')+'<br><small>'+loc.biler.slice(0,5).map(function(b){return(b.regnr||'')+' '+(b.merke||'');}).join(', ')+(loc.biler.length>5?'…':'')+'</small>';
     marker.bindPopup(popup);
     marker.addTo(_kartMap);
-    _kartMarkers.push({marker:marker,status:loc.biler[0].status});
+    _kartMarkers.push({marker:marker,status:loc.biler[0].status,pnr:pnr});
   });
   var tot=Object.values(posMap).reduce(function(s,v){return s+v.biler.length;},0);
   window._kartPosMap=posMap;
@@ -994,6 +1143,6 @@ async function loadQuestions(){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c25</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c26</div>
 </body>
 </html>
