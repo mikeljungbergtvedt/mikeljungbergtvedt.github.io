@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c58</title>
+<title>Peasy Pulse v16.03.c57</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -110,7 +110,7 @@ canvas{width:100%;border-radius:8px;}
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c58 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c57 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -339,7 +339,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c58 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c57 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1354,7 +1354,8 @@ function buildUkeHtml(){
   h+='<div id="uke-aktivitet-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
   
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">';
-  
+  h+='<div class="section-label" style="margin-top:24px">Inntekt og omsetning</div>';
+  h+='<div id="uke-econ-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
   h+='<div class="section-label" style="margin-top:24px">&#10003; Solgte biler i perioden</div>';
   h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Solgte</div><div class="th-badge" id="uke-solgt-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Pris lav</th><th>Bud (T)</th><th>Peasy fee</th><th>Avvik</th><th>Solgt</th></tr></thead><tbody id="uke-solgt-tbody"></tbody></table></div>';
   h+='<div class="section-label" style="margin-top:24px">&#8617; Returnerte biler i perioden</div>';
@@ -1447,13 +1448,6 @@ function renderUkesrapport(){
     // Beregn 90d-rullerende totaler
     var roll90T={rg:0,bs:0,mt:0,sg:0,rt:0,fee:0,bruttoE:0};
     for(var rw90=0;rw90<12;rw90++){var rrm90=metrics(getCompletedWeekRange(weeksAgo+rw90));roll90T.rg+=rrm90.registrert;roll90T.bs+=rrm90.bestilt;roll90T.mt+=rrm90.mottatt;roll90T.sg+=rrm90.solgt;roll90T.rt+=rrm90.ret;roll90T.fee+=rrm90.peasyFee;roll90T.bruttoE+=rrm90.bruttoOms;}
-    var roll90Prv={rg:0,bs:0,mt:0,sg:0,rt:0,fee:0,bruttoE:0};
-    for(var rwp=12;rwp<24;rwp++){var rrmP=metrics(getCompletedWeekRange(weeksAgo+rwp));roll90Prv.rg+=rrmP.registrert;roll90Prv.bs+=rrmP.bestilt;roll90Prv.mt+=rrmP.mottatt;roll90Prv.sg+=rrmP.solgt;roll90Prv.rt+=rrmP.ret;roll90Prv.fee+=rrmP.peasyFee;roll90Prv.bruttoE+=rrmP.bruttoOms;}
-    var ep90flow=roll90T.rg>0?Math.round(roll90T.bs/roll90T.rg*100):0;
-    var bp90flow=roll90T.mt>0?Math.round(roll90T.sg/roll90T.mt*100):0;
-    var ep90Prv=roll90Prv.rg>0?Math.round(roll90Prv.bs/roll90Prv.rg*100):0;
-    var bp90Prv=roll90Prv.mt>0?Math.round(roll90Prv.sg/roll90Prv.mt*100):0;
-    var ep90delta=ep90flow-ep90Prv,bp90delta=bp90flow-bp90Prv;
     // Pipeline = bestilt 90d - solgt 90d - retur 90d (biler i prosess)
     var pipeline=Math.max(0,roll90T.bs-roll90T.sg-roll90T.rt);
     var inntekt90=roll90T.fee;
@@ -1484,9 +1478,9 @@ function renderUkesrapport(){
     var svg='<svg viewBox="0 0 '+w+' '+hgt+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">';
     svg+='<defs><marker id="arr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#B0BAB5"/></marker><marker id="arrG" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#2E7D32"/></marker><marker id="arrR" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#C62828"/></marker></defs>';
     // Linjer: Leads -> Bestilt (rett), Bestilt -> Mottatt (rett, ingen konv-rate her), Mottatt -> Solgt (opp), Mottatt -> Returnert (ned), Solgt -> Inntekt, Returnert -> Kostnad
-    svg+='<line x1="130" y1="140" x2="290" y2="140" stroke="'+(ep90flow>=20?'#2E7D32':'#C62828')+'" stroke-width="3" marker-end="url(#'+(ep90flow>=20?'arrG':'arrR')+')"/>';
+    svg+='<line x1="130" y1="140" x2="290" y2="140" stroke="'+(ep30>=20?'#2E7D32':'#C62828')+'" stroke-width="3" marker-end="url(#'+(ep30>=20?'arrG':'arrR')+')"/>';
     svg+='<line x1="390" y1="140" x2="550" y2="140" stroke="#B0BAB5" stroke-width="2" marker-end="url(#arr)"/>';
-    svg+='<path d="M 650 140 Q 750 140 750 60 L 830 60" stroke="'+(bp90flow>=70?'#2E7D32':'#C62828')+'" stroke-width="3" fill="none" marker-end="url(#'+(bp90flow>=70?'arrG':'arrR')+')"/>';
+    svg+='<path d="M 650 140 Q 750 140 750 60 L 830 60" stroke="'+(bp30>=70?'#2E7D32':'#C62828')+'" stroke-width="3" fill="none" marker-end="url(#'+(bp30>=70?'arrG':'arrR')+')"/>';
     svg+='<path d="M 650 140 Q 750 140 750 220 L 830 220" stroke="#C62828" stroke-width="2" fill="none" marker-end="url(#arrR)"/>';
     svg+='<line x1="930" y1="60" x2="1040" y2="60" stroke="#2E7D32" stroke-width="2" marker-end="url(#arrG)"/>';
     svg+='<line x1="930" y1="220" x2="1040" y2="220" stroke="#C62828" stroke-width="2" marker-end="url(#arrR)"/>';
@@ -1494,18 +1488,18 @@ function renderUkesrapport(){
     var allNodes=stages.concat([solgtNode,retNode,inntektNode,kostnadNode]);
     for(var i=0;i<allNodes.length;i++){var s=allNodes[i];var fontSize=s.isText?22:36;svg+='<text x="'+s.x+'" y="'+(s.y-50)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" font-weight="700" letter-spacing="1.2" fill="#667A72">'+s.label+'</text><text x="'+s.x+'" y="'+(s.y+5)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="'+fontSize+'" font-weight="900" fill="'+s.col+'">'+s.val+'</text><text x="'+s.x+'" y="'+(s.y+30)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="#888">'+s.sub+'</text>';}
     // Konv-rates
-    // EVAL-AKSEPT (mellom Leads og Bestilt) — 90d med sml vs forrige 90d
-    svg+='<text x="210" y="95" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">EVAL-AKSEPT</text>';
-    svg+='<text x="210" y="122" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="22" font-weight="900" fill="'+(ep90flow>=20?'#2E7D32':'#C62828')+'">'+ep90flow+'%</text>';
-    svg+='<text x="210" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" font-weight="700" fill="'+(ep90delta>=0?'#2E7D32':'#C62828')+'">'+(ep90delta>=0?'▲':'▼')+' '+(ep90delta>=0?'+':'')+ep90delta+'pp vs forrige 90d</text>';
-    svg+='<text x="210" y="180" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" fill="'+(ep90flow>=20?'#2E7D32':'#C62828')+'">Mål 20%'+(ep90flow>=20?' ✓':'')+'</text>';
-    // BUD-AKSEPT (mellom Mottatt og Solgt — over) — 90d
-    svg+='<text x="740" y="30" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">BUD-AKSEPT</text>';
-    svg+='<text x="740" y="50" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="'+(bp90flow>=70?'#2E7D32':'#C62828')+'">'+bp90flow+'%</text>';
-    svg+='<text x="740" y="80" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" fill="'+(bp90delta>=0?'#2E7D32':'#C62828')+'">'+(bp90delta>=0?'▲':'▼')+' '+(bp90delta>=0?'+':'')+bp90delta+'pp vs forrige 90d</text>';
-    // RETUR-RATE (mellom Mottatt og Returnert — under) — 90d
-    svg+='<text x="740" y="260" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">RETUR-RATE</text>';
-    svg+='<text x="740" y="282" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="#C62828">'+(100-bp90flow)+'%</text>';
+    // EVAL-AKSEPT (mellom Leads og Bestilt)
+    svg+='<text x="210" y="95" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">EVAL-AKSEPT 30d</text>';
+    svg+='<text x="210" y="122" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="22" font-weight="900" fill="'+(ep30>=20?'#2E7D32':'#C62828')+'">'+ep30+'%</text>';
+    svg+='<text x="210" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" font-weight="700" fill="'+(epDelta>=0?'#2E7D32':'#C62828')+'">'+(epDelta>=0?'▲':'▼')+' '+(epDelta>=0?'+':'')+epDelta+'pp vs 90d</text>';
+    svg+='<text x="210" y="180" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" fill="'+(ep30>=20?'#2E7D32':'#C62828')+'">Mål 20%'+(ep30>=20?' ✓':'')+'</text>';
+    // BUD-AKSEPT (mellom Mottatt og Solgt — over)
+    svg+='<text x="740" y="30" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">BUD-AKSEPT 30d</text>';
+    svg+='<text x="740" y="50" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="'+(bp30>=70?'#2E7D32':'#C62828')+'">'+bp30+'%</text>';
+    svg+='<text x="740" y="80" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" fill="'+(bpDelta>=0?'#2E7D32':'#C62828')+'">'+(bpDelta>=0?'▲':'▼')+' '+(bpDelta>=0?'+':'')+bpDelta+'pp vs 90d</text>';
+    // RETUR-RATE (mellom Mottatt og Returnert — under)
+    svg+='<text x="740" y="260" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">RETUR-RATE 30d</text>';
+    svg+='<text x="740" y="282" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="#C62828">'+(100-bp30)+'%</text>';
     // Netto-boks helt til hoyre
     svg+='<rect x="1040" y="125" width="140" height="50" rx="8" fill="#fff" stroke="'+nettoCol+'" stroke-width="2"/>';
     svg+='<text x="1110" y="143" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">PEASY NETTO</text>';
@@ -1576,7 +1570,22 @@ function renderUkesrapport(){
         +'</div>';
     }).join('');
   }
-    var fmtKkr=function(n){return n!=null?Math.round(n/1000).toLocaleString('nb-NO')+'k kr':'-';};
+  var econEl=document.getElementById('uke-econ-grid');
+  if(econEl){
+    var fmtKr=function(n){return (n||0).toLocaleString('nb-NO')+' kr';};
+    var snittPris=cur.solgt>0?Math.round(cur.bruttoOms/cur.solgt):0;
+    var deltaPctEcon=function(c,b){if(b===0)return c>0?'+&infin;':'0%';var d=Math.round((c-b)/b*100);return(d>=0?'+':'')+d+'%';};
+    var deltaColEcon=function(c,b,inv){var d=c-b;if(inv)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';};
+    var econ=[
+      {label:'Solgt-omsetning',val:fmtKr(cur.bruttoOms),sub:'Snitt '+fmtKr(snittPris)+' / bil ('+cur.solgt+' biler)',col:'#004225',d:deltaPctEcon(cur.bruttoOms,base30.bruttoOms),dCol:deltaColEcon(cur.bruttoOms,base30.bruttoOms,false)},
+      {label:'AR salaer (2.7%)',val:fmtKr(cur.arSalaer),sub:'Til Autoringen',col:'#1565C0',d:deltaPctEcon(cur.arSalaer,base30.arSalaer),dCol:deltaColEcon(cur.arSalaer,base30.arSalaer,false)},
+      {label:'Peasy inntekt',val:fmtKr(cur.peasyFee),sub:'Sum E - T (solgte biler)',col:'#00875A',d:deltaPctEcon(cur.peasyFee,base30.peasyFee),dCol:deltaColEcon(cur.peasyFee,base30.peasyFee,false)},
+      {label:'No-cure tap',val:'-'+fmtKr(cur.noCureTap),sub:cur.ret+' returnerte x 3 000 kr',col:'#C62828',d:deltaPctEcon(cur.noCureTap,base30.noCureTap),dCol:deltaColEcon(cur.noCureTap,base30.noCureTap,true)},
+      {label:'Peasy netto',val:fmtKr(cur.peasyFee-cur.noCureTap),sub:'Fee minus no-cure tap',col:(cur.peasyFee-cur.noCureTap)>=0?'#2E7D32':'#C62828',d:deltaPctEcon(cur.peasyFee-cur.noCureTap,base30.peasyFee-base30.noCureTap),dCol:deltaColEcon(cur.peasyFee-cur.noCureTap,base30.peasyFee-base30.noCureTap,false),bold:true}
+    ];
+    econEl.innerHTML=econ.map(function(c){return '<div style="background:#fff;border:'+(c.bold?'2px solid '+c.col:'1px solid rgba(0,66,37,0.08)')+';border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:20px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:11px;font-weight:700;color:'+c.dCol+';margin-top:6px">'+c.d+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">vs 30d snitt</div><div style="font-size:10px;color:#aaa;margin-top:6px">'+c.sub+'</div></div>';}).join('');
+  }
+  var fmtKkr=function(n){return n!=null?Math.round(n/1000).toLocaleString('nb-NO')+'k kr':'-';};
   var fmtKm=function(n){return n!=null?n.toLocaleString('nb-NO')+' km':'-';};
   var fmtUkeDate=function(s){if(!s)return '-';var d=String(s).slice(0,10);if(d.indexOf('-')>=0)return d.split('-').reverse().join('.');return d;};
   var solgtTbl=document.getElementById('uke-solgt-tbody'),solgtBadge=document.getElementById('uke-solgt-badge');
@@ -1717,7 +1726,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c58 — slett-funksjon
+// v16.03.c57 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1738,6 +1747,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c58</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c57</div>
 </body>
 </html>
