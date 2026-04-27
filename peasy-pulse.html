@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c68</title>
+<title>Peasy Pulse v16.03.c69</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -103,6 +103,65 @@ canvas{width:100%;border-radius:8px;}
 </style>
 </head>
 <body>
+<div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
+  <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse</div>
+    <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
+    <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
+    <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
+    <button onclick="authCheck()" style="width:100%;padding:12px;background:#004225;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit">Lås opp</button>
+    <div style="font-size:11px;color:#888;margin-top:14px;text-align:center;line-height:1.5">Be Mike om passord hvis du ikke har det.</div>
+  </div>
+</div>
+<script>
+const PWD_HASH='92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1';
+const TOKEN_KEY='peasy-pulse-auth';
+const TOKEN_TTL=30*24*60*60*1000;
+
+async function sha256(t){
+  const buf=new TextEncoder().encode(t);
+  const h=await crypto.subtle.digest('SHA-256',buf);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function authCheck(){
+  const inp=document.getElementById('auth-input');
+  const msg=document.getElementById('auth-msg');
+  msg.textContent='';
+  const hash=await sha256(inp.value);
+  if(hash===PWD_HASH){
+    try{localStorage.setItem(TOKEN_KEY,JSON.stringify({h:hash,t:Date.now()}));}catch(e){}
+    document.getElementById('auth-gate').style.display='none';
+    document.body.style.overflow='auto';
+  }else{
+    msg.textContent='Feil passord';
+    inp.value='';
+    inp.focus();
+  }
+}
+
+function authLogout(){
+  try{localStorage.removeItem(TOKEN_KEY);}catch(e){}
+  location.reload();
+}
+
+(function(){
+  document.body.style.overflow='hidden';
+  try{
+    const raw=localStorage.getItem(TOKEN_KEY);
+    if(raw){
+      const o=JSON.parse(raw);
+      if(o&&o.h===PWD_HASH&&o.t&&(Date.now()-o.t)<TOKEN_TTL){
+        document.getElementById('auth-gate').style.display='none';
+        document.body.style.overflow='auto';
+        return;
+      }
+    }
+  }catch(e){}
+  setTimeout(()=>document.getElementById('auth-input')?.focus(),100);
+})();
+</script>
+
 
 
 <header>
@@ -110,7 +169,7 @@ canvas{width:100%;border-radius:8px;}
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c68 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c69 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -339,7 +398,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c68 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c69 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1766,7 +1825,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c68 — slett-funksjon
+// v16.03.c69 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1787,6 +1846,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c68</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c69</div>
 </body>
 </html>
