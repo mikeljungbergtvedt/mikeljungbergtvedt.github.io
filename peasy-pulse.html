@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c46</title>
+<title>Peasy Pulse v16.03.c47</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -339,7 +339,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c46 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c47 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1357,6 +1357,8 @@ function buildUkeHtml(){
   h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Avviste evalueringer</div><div class="th-badge" id="uke-avvist-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Estimat lav-hoy</th><th>Eval-dato</th></tr></thead><tbody id="uke-avvist-tbody"></tbody></table></div>';
   h+='<div class="section-label" style="margin-top:24px">&#8617; Returnerte biler i perioden</div>';
   h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Returnerte</div><div class="th-badge" id="uke-ret-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Pris lav</th><th>Bud (T)</th><th>Avvik</th><th>No-cure</th><th>Returnert</th></tr></thead><tbody id="uke-ret-tbody"></tbody></table></div>';
+  h+='<div class="section-label" style="margin-top:24px">&#128202; Avviste eval — analyse</div>';
+  h+='<div id="uke-avvist-analyse" style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:18px;margin-bottom:24px"></div>';
   h+='</div>';
   h+='<div class="section-label">Brakett-analyse for uka</div>';
   h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px"></div>';
@@ -1407,7 +1409,7 @@ function renderUkesrapport(){
   var prv=metrics(prev);
   var base30={registrert:0,bestilt:0,mottatt:0,solgt:0,ret:0,ep:0,bp:0};
   for(var bw=1;bw<=4;bw++){var br=getCompletedWeekRange(weeksAgo+bw);var bm=metrics(br);base30.registrert+=bm.registrert;base30.bestilt+=bm.bestilt;base30.mottatt+=bm.mottatt;base30.solgt+=bm.solgt;base30.ret+=bm.ret;base30.ep+=bm.ep;base30.bp+=bm.bp;}
-  base30.registrert/=4;base30.bestilt/=4;base30.mottatt/=4;base30.solgt/=4;base30.ret/=4;base30.ep=Math.round(base30.ep/4);base30.bp=Math.round(base30.bp/4);
+  base30.registrert/=4;base30.bestilt/=4;base30.mottatt/=4;base30.solgt/=4;base30.ret/=4;base30.ep=Math.round(base30.ep/4);base30.bp=Math.round(base30.bp/4);base30.bruttoOms=0;base30.peasyFee=0;base30.arSalaer=0;base30.noCureTap=0;for(var bz=1;bz<=4;bz++){var brz=getCompletedWeekRange(weeksAgo+bz);var bmz=metrics(brz);base30.bruttoOms+=bmz.bruttoOms;base30.peasyFee+=bmz.peasyFee;base30.arSalaer+=bmz.arSalaer;base30.noCureTap+=bmz.noCureTap;}base30.bruttoOms/=4;base30.peasyFee/=4;base30.arSalaer/=4;base30.noCureTap/=4;
   function delta(c,p){if(p===0)return c>0?'+&infin;':'0';var d=Math.round((c-p)/p*100);return(d>=0?'+':'')+d+'%';}
   function deltaPP(c,p){var d=c-p;return(d>=0?'+':'')+d+'pp';}
   function deltaColor(c,p,inverted){var d=c-p;if(inverted)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';}
@@ -1437,13 +1439,15 @@ function renderUkesrapport(){
   if(econEl){
     var fmtKr=function(n){return (n||0).toLocaleString('nb-NO')+' kr';};
     var snittPris=cur.solgt>0?Math.round(cur.bruttoOms/cur.solgt):0;
+    var deltaPctEcon=function(c,b){if(b===0)return c>0?'+&infin;':'0%';var d=Math.round((c-b)/b*100);return(d>=0?'+':'')+d+'%';};
+    var deltaColEcon=function(c,b,inv){var d=c-b;if(inv)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';};
     var econ=[
-      {label:'Solgt-omsetning',val:fmtKr(cur.bruttoOms),sub:'Snitt '+fmtKr(snittPris)+' / bil ('+cur.solgt+' biler)',col:'#004225'},
-      {label:'AR salaer (2.7%)',val:fmtKr(cur.arSalaer),sub:'Til Autoringen',col:'#1565C0'},
-      {label:'Peasy inntekt',val:fmtKr(cur.peasyFee),sub:'Sum E - T (solgte biler)',col:'#00875A'},
-      {label:'No-cure tap',val:'-'+fmtKr(cur.noCureTap),sub:cur.ret+' returnerte x 3 000 kr',col:'#C62828'}
+      {label:'Solgt-omsetning',val:fmtKr(cur.bruttoOms),sub:'Snitt '+fmtKr(snittPris)+' / bil ('+cur.solgt+' biler)',col:'#004225',d:deltaPctEcon(cur.bruttoOms,base30.bruttoOms),dCol:deltaColEcon(cur.bruttoOms,base30.bruttoOms,false)},
+      {label:'AR salaer (2.7%)',val:fmtKr(cur.arSalaer),sub:'Til Autoringen',col:'#1565C0',d:deltaPctEcon(cur.arSalaer,base30.arSalaer),dCol:deltaColEcon(cur.arSalaer,base30.arSalaer,false)},
+      {label:'Peasy inntekt',val:fmtKr(cur.peasyFee),sub:'Sum E - T (solgte biler)',col:'#00875A',d:deltaPctEcon(cur.peasyFee,base30.peasyFee),dCol:deltaColEcon(cur.peasyFee,base30.peasyFee,false)},
+      {label:'No-cure tap',val:'-'+fmtKr(cur.noCureTap),sub:cur.ret+' returnerte x 3 000 kr',col:'#C62828',d:deltaPctEcon(cur.noCureTap,base30.noCureTap),dCol:deltaColEcon(cur.noCureTap,base30.noCureTap,true)}
     ];
-    econEl.innerHTML=econ.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)'+(c.bold?';border:2px solid '+c.col:'')+'"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:'+(c.bold?'24':'20')+'px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:10px;color:#aaa;margin-top:6px">'+c.sub+'</div></div>';}).join('');
+    econEl.innerHTML=econ.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:20px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:11px;font-weight:700;color:'+c.dCol+';margin-top:6px">'+c.d+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">vs 30d snitt</div><div style="font-size:10px;color:#aaa;margin-top:6px">'+c.sub+'</div></div>';}).join('');
   }
   var fmtKkr=function(n){return n!=null?Math.round(n/1000).toLocaleString('nb-NO')+'k kr':'-';};
   var fmtKm=function(n){return n!=null?n.toLocaleString('nb-NO')+' km':'-';};
@@ -1456,6 +1460,30 @@ function renderUkesrapport(){
   }
   var avvistTbl=document.getElementById('uke-avvist-tbody'),avvistBadge=document.getElementById('uke-avvist-badge');
   if(avvistBadge)avvistBadge.textContent=cur.avvist+' biler';
+  var analyseEl=document.getElementById('uke-avvist-analyse');
+  if(analyseEl){
+    if(cur.avvistBiler.length===0)analyseEl.innerHTML='<div style="color:var(--muted);font-style:italic;text-align:center">Ingen avviste eval i uka &mdash; ingen analyse</div>';
+    else{
+      var bracketsList=[{name:'Lav',lo:0,hi:100000,c:'#2E7D32'},{name:'Mid',lo:100000,hi:250000,c:'#1565C0'},{name:'Hoy',lo:250000,hi:400000,c:'#E65100'},{name:'Premium',lo:400000,hi:Infinity,c:'#7B1FA2'}];
+      var bDist=bracketsList.map(function(b){var n=cur.avvistBiler.filter(function(c){return c.dLow!=null&&c.dLow>=b.lo&&c.dLow<b.hi;}).length;var pct=cur.avvistBiler.length>0?Math.round(n/cur.avvistBiler.length*100):0;return {name:b.name,n:n,pct:pct,c:b.c};});
+      var modelCount={};cur.avvistBiler.forEach(function(c){var m=String(c.label||'').split(' ').slice(0,2).join(' ');if(m)modelCount[m]=(modelCount[m]||0)+1;});
+      var topModels=Object.keys(modelCount).map(function(k){return {m:k,n:modelCount[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,5);
+      var dLowAvvist=cur.avvistBiler.filter(function(c){return c.dLow;}).map(function(c){return c.dLow;});
+      var snittDLowAvvist=dLowAvvist.length>0?Math.round(dLowAvvist.reduce(function(s,v){return s+v;},0)/dLowAvvist.length):0;
+      var snittDLowSolgt=0;var dLowSolgt=cur.solgtBiler.filter(function(c){return c.dLow;}).map(function(c){return c.dLow;});if(dLowSolgt.length>0)snittDLowSolgt=Math.round(dLowSolgt.reduce(function(s,v){return s+v;},0)/dLowSolgt.length);
+      var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">';
+      html+='<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Distribusjon per bracket</div>';
+      html+=bDist.map(function(b){var bw=Math.max(b.pct,2);return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px"><div style="width:60px;color:'+b.c+';font-weight:700">'+b.name+'</div><div style="flex:1;background:rgba(0,0,0,0.04);border-radius:4px;height:18px;position:relative"><div style="width:'+bw+'%;background:'+b.c+';height:100%;border-radius:4px"></div></div><div style="width:80px;text-align:right;color:#667A72">'+b.n+' ('+b.pct+'%)</div></div>';}).join('');
+      html+='</div>';
+      html+='<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Top 5 modeller med flest avviste</div>';
+      if(topModels.length===0)html+='<div style="color:var(--muted);font-style:italic;font-size:12px">Ingen modell-info</div>';
+      else html+='<table style="width:100%;font-size:12px"><tbody>'+topModels.map(function(m){return '<tr><td style="padding:4px 0">'+m.m+'</td><td style="text-align:right;font-weight:700;color:#C62828">'+m.n+'</td></tr>';}).join('')+'</tbody></table>';
+      html+='</div>';
+      html+='</div>';
+      html+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.06);font-size:12px;color:#667A72">Snitt D-lav for <strong>avviste</strong>: <strong style="color:#C62828">'+fmtKr(snittDLowAvvist)+'</strong>'+(snittDLowSolgt>0?' &middot; for <strong>solgte</strong>: <strong style="color:#2E7D32">'+fmtKr(snittDLowSolgt)+'</strong> &middot; diff '+(snittDLowAvvist>snittDLowSolgt?'+':'')+Math.round((snittDLowAvvist-snittDLowSolgt)/snittDLowSolgt*100)+'%':'')+'</div>';
+      analyseEl.innerHTML=html;
+    }
+  }
   if(avvistTbl){
     if(cur.avvistBiler.length===0)avvistTbl.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen avviste eval i uka</td></tr>';
     else{var sortedA=cur.avvistBiler.slice().sort(function(a,b){return(new Date(b.evalDate||0))-(new Date(a.evalDate||0));});avvistTbl.innerHTML=sortedA.map(function(c){var range=c.dLow&&c.dHi?c.dLow.toLocaleString('nb-NO')+' &ndash; '+c.dHi.toLocaleString('nb-NO')+' kr':(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-');return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td style="font-size:11px">'+(c.label||'-')+'</td><td style="font-size:11px">'+fmtKm(c.km)+'</td><td>'+range+'</td><td style="color:var(--muted);font-size:11px">'+fmtUkeDate(c.evalDate)+'</td></tr>';}).join('');}
@@ -1496,7 +1524,7 @@ function renderUkesrapport(){
     labels.push('U'+r.weekNum);
     regSerie.push(m.registrert);
     solgtSerie.push(m.solgt);
-    bpSerie.push(m.bp);
+    var bpSum=0,bpN=0;for(var bw2=0;bw2<4;bw2++){var brm=metrics(getCompletedWeekRange(w+bw2));bpSum+=brm.bp;bpN++;}bpSerie.push(Math.round(bpSum/bpN));
   }
   var canvas=document.getElementById('ukeTrendChart');
   if(canvas){
@@ -1562,7 +1590,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c46 — slett-funksjon
+// v16.03.c47 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1583,6 +1611,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c46</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c47</div>
 </body>
 </html>
