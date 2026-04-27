@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c52</title>
+<title>Peasy Pulse v16.03.c53</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -110,7 +110,7 @@ canvas{width:100%;border-radius:8px;}
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c53 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -339,7 +339,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c52 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c53 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1432,14 +1432,14 @@ function renderUkesrapport(){
   var cpl=cur.registrert>0?Math.round(ukeBudsjett/cur.registrert):0;
   var cpl30=base30.registrert>0?Math.round(ukeBudsjett/base30.registrert):0;
   var cplDelta=cpl30>0?Math.round((cpl-cpl30)/cpl30*100):0;
-  var marg=coh.ep/100*(snittFee*coh.bp/100-3000*(1-coh.bp/100));
+  var marg=cur.ep/100*(snittFee*cur.bp/100-3000*(1-cur.bp/100));
   var cplCol=cpl<=marg?'#2E7D32':'#C62828';
   var trioEl=document.getElementById('uke-trio');
   if(trioEl){
     var trio=[
       {label:'Markedsføring (CPL)',val:cpl.toLocaleString('nb-NO')+' kr',sub:'7 000 kr / '+cur.registrert+' leads (uka)',d:'Snitt 30d: '+cpl30.toLocaleString('nb-NO')+' kr',dCol:cpl<=cpl30?'#2E7D32':'#C62828',target:'Marg.verdi: '+Math.round(marg).toLocaleString('nb-NO')+' kr',targetMet:cpl<=marg,col:cplCol,arrow:cpl<=cpl30?'&#9650;':'&#9660;'},
-      {label:'Eval-aksept (volum)',val:coh.ep+'%',sub:'Kohort uke -4 til -2',d:(coh.ep-coh30.ep>=0?'+':'')+(coh.ep-coh30.ep)+'pp',dCol:coh.ep>=coh30.ep?'#2E7D32':'#C62828',target:'Mal: 20%',targetMet:coh.ep>=20,col:coh.ep>=20?'#2E7D32':'#C62828',arrow:coh.ep>=coh30.ep?'&#9650;':'&#9660;'},
-      {label:'Bud-aksept (konvert.)',val:coh.bp+'%',sub:'Kohort uke -4 til -2',d:(coh.bp-coh30.bp>=0?'+':'')+(coh.bp-coh30.bp)+'pp',dCol:coh.bp>=coh30.bp?'#2E7D32':'#C62828',target:'Mal: 70%',targetMet:coh.bp>=70,col:coh.bp>=70?'#2E7D32':'#C62828',arrow:coh.bp>=coh30.bp?'&#9650;':'&#9660;'}
+      {label:'Eval-aksept (volum)',val:cur.ep+'%',sub:cur.bestilt+' av '+cur.registrert+' leads (uka)',d:(cur.ep-base30.ep>=0?'+':'')+(cur.ep-base30.ep)+'pp vs 30d',dCol:cur.ep>=base30.ep?'#2E7D32':'#C62828',target:'Mål: 20%',targetMet:cur.ep>=20,col:cur.ep>=20?'#2E7D32':'#C62828',arrow:cur.ep>=base30.ep?'&#9650;':'&#9660;'},
+      {label:'Bud-aksept (konvert.)',val:cur.bp+'%',sub:cur.solgt+' av '+cur.mottatt+' mottatte (uka)',d:(cur.bp-base30.bp>=0?'+':'')+(cur.bp-base30.bp)+'pp vs 30d',dCol:cur.bp>=base30.bp?'#2E7D32':'#C62828',target:'Mål: 70%',targetMet:cur.bp>=70,col:cur.bp>=70?'#2E7D32':'#C62828',arrow:cur.bp>=base30.bp?'&#9650;':'&#9660;'}
     ];
     trioEl.innerHTML=trio.map(function(c){return '<div style="background:#fff;border:2px solid '+c.col+';border-radius:14px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,66,37,0.08)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:10px">'+c.label+'</div><div style="display:flex;align-items:baseline;gap:10px"><div style="font-size:34px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:18px;color:'+c.dCol+'">'+c.arrow+'</div></div><div style="font-size:12px;font-weight:700;color:'+c.dCol+';margin-top:8px">'+c.d+' vs 30d snitt</div><div style="font-size:11px;color:'+(c.targetMet?'#2E7D32':'#C62828')+';margin-top:4px;font-weight:600">'+c.target+(c.targetMet?' &#10003;':'')+'</div><div style="font-size:11px;color:#aaa;margin-top:6px">'+c.sub+'</div></div>';}).join('');
   }
@@ -1447,12 +1447,12 @@ function renderUkesrapport(){
   if(sumEl){
     var bottleneck='';
     var roi=ukeBudsjett>0?Math.round((cur.peasyFee-cur.noCureTap)/ukeBudsjett*10)/10:0;
-    if(coh.ep<20&&coh.bp<70)bottleneck='<strong style="color:#C62828">&#9888; Begge under mal:</strong> Eval-aksept ('+coh.ep+'%) og Bud-aksept ('+coh.bp+'%) trenger forbedring.';
-    else if(coh.ep<20)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Eval-aksept</strong> ('+coh.ep+'%, mal 20%) &mdash; for fa selgere aksepterer estimatet.';
-    else if(coh.bp<70)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Bud-aksept</strong> ('+coh.bp+'%, mal 70%) &mdash; for mange returnerer etter bud.';
-    else bottleneck='<strong style="color:#2E7D32">&#10003; Begge over mal</strong> &mdash; full pipeline-helse.';
+    if(cur.ep<20&&cur.bp<70)bottleneck='<strong style="color:#C62828">&#9888; Begge under mål:</strong> Eval-aksept ('+cur.ep+'%) og Bud-aksept ('+cur.bp+'%) trenger forbedring.';
+    else if(cur.ep<20)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Eval-aksept</strong> ('+cur.ep+'%, mål 20%) &mdash; for få selgere aksepterer estimatet.';
+    else if(cur.bp<70)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Bud-aksept</strong> ('+cur.bp+'%, mål 70%) &mdash; for mange returnerer etter bud.';
+    else bottleneck='<strong style="color:#2E7D32">&#10003; Begge over mål</strong> &mdash; full pipeline-helse.';
     var profPerLead=Math.round(marg)-cpl;var cplLine=cpl<=marg?'<strong style="color:#2E7D32">Vi tjener '+profPerLead.toLocaleString('nb-NO')+' kr per lead</strong> (marg.verdi '+Math.round(marg).toLocaleString('nb-NO')+' kr &minus; CPL '+cpl.toLocaleString('nb-NO')+' kr). Rom for å øke markedsbudsjett.':'<strong style="color:#C62828">Vi taper '+Math.abs(profPerLead).toLocaleString('nb-NO')+' kr per lead</strong> (CPL '+cpl.toLocaleString('nb-NO')+' kr &gt; marg.verdi '+Math.round(marg).toLocaleString('nb-NO')+' kr).';
-    var margForkl='<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">Marg.verdi = '+coh.ep+'% eval-aksept × ('+snittFee.toLocaleString('nb-NO')+' kr fee × '+coh.bp+'% bud-aksept &minus; 3 000 kr tap × '+(100-coh.bp)+'% returnert) = '+Math.round(marg).toLocaleString('nb-NO')+' kr per lead</div>';sumEl.innerHTML='<div style="margin-bottom:8px">'+bottleneck+'</div><div style="margin-bottom:4px;color:#5C6F69">'+cplLine+'</div>'+margForkl+'<div style="font-size:12px;color:#5C6F69;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;margin-top:10px">ROI markedsføring: <strong>'+roi+'x</strong> &middot; '+ukeBudsjett.toLocaleString('nb-NO')+' kr inn &rarr; '+(cur.peasyFee-cur.noCureTap).toLocaleString('nb-NO')+' kr Peasy netto.</div>';
+    var margForkl='<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">Marg.verdi = '+cur.ep+'% eval-aksept × ('+snittFee.toLocaleString('nb-NO')+' kr fee × '+cur.bp+'% bud-aksept &minus; 3 000 kr tap × '+(100-cur.bp)+'% returnert) = '+Math.round(marg).toLocaleString('nb-NO')+' kr per lead</div>';sumEl.innerHTML='<div style="margin-bottom:8px">'+bottleneck+'</div><div style="margin-bottom:4px;color:#5C6F69">'+cplLine+'</div>'+margForkl+'<div style="font-size:12px;color:#5C6F69;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;margin-top:10px">ROI markedsføring: <strong>'+roi+'x</strong> &middot; '+ukeBudsjett.toLocaleString('nb-NO')+' kr inn &rarr; '+(cur.peasyFee-cur.noCureTap).toLocaleString('nb-NO')+' kr Peasy netto.</div>';
   }
   var grid=document.getElementById('uke-kpi-grid');
   if(grid){
@@ -1630,7 +1630,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c52 — slett-funksjon
+// v16.03.c53 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1651,6 +1651,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c52</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c53</div>
 </body>
 </html>
