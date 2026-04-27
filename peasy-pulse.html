@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c67</title>
+<title>Peasy Pulse v16.03.c68</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -110,7 +110,7 @@ canvas{width:100%;border-radius:8px;}
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c67 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c68 &middot; 27. apr. 2026</span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -339,7 +339,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c67 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c68 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1354,6 +1354,7 @@ function buildUkeHtml(){
   h+='<div id="uke-aktivitet-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
   h+='<div class="section-label" style="margin-top:24px">Marketing &amp; konvertering (90d)</div>';
   h+='<div id="uke-marketing-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
+  h+='<div id="uke-marketing-forklaring" style="background:#fff;border-left:4px solid #00875A;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#0E1F1A;line-height:1.6;width:100%;grid-column:1/-1"></div>';
   
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">';
   h+='<div class="section-label" style="margin-top:24px">Inntekt og omsetning</div>';
@@ -1554,6 +1555,28 @@ function renderUkesrapport(){
       {label:'Bud-aksept',val:bp90flow+'%',sub:'Mål 70%'+(bp90flow>=70?' ✓':''),col:bp90flow>=70?'#2E7D32':'#C62828'}
     ];
     markEl.innerHTML=mark.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:10px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,66,37,0.04)"><div style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:24px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:10px;color:#888;margin-top:8px">'+c.sub+'</div></div>';}).join('');
+    var markFEl=document.getElementById('uke-marketing-forklaring');
+    if(markFEl){
+      var snittBilKr=roll90T.sg>0?Math.round(roll90T.bruttoE/roll90T.sg):0;
+      var snittBilK=Math.round(snittBilKr/1000);
+      var feeBracket=snittBilKr<75000?5900:snittBilKr<125000?7900:9900;
+      var ep_=roll90T.rg>0?Math.round(roll90T.bs/roll90T.rg*100):0;
+      var bp_=roll90T.mt>0?Math.round(roll90T.sg/roll90T.mt*100):0;
+      var ret_=100-bp_;
+      var verdi=Math.round(ep_/100*(feeBracket*bp_/100-3000*ret_/100));
+      var marg=verdi-cpl90;
+      var maksCPL=verdi;
+      var dagensBudsjettUke=7000;
+      var doblet=dagensBudsjettUke*2;
+      var ekstraNetto=Math.round(marg*64);
+      var html='<div style="font-weight:700;color:#00875A;letter-spacing:0.5px;text-transform:uppercase;font-size:11px;margin-bottom:8px">Hva tallene betyr &mdash; og hva du kan gjøre</div>';
+      html+='<p style="margin:6px 0"><strong>1. Vi tjener '+marg.toLocaleString('nb-NO')+' kr per ekstra lead</strong> (verdi '+verdi.toLocaleString('nb-NO')+' kr &minus; CPL '+cpl90.toLocaleString('nb-NO')+' kr) basert på 30d-snittet med '+ep_+'% eval-aksept, '+bp_+'% bud-aksept og '+snittBilK+'k snitt bilverdi (fee-bracket '+feeBracket.toLocaleString('nb-NO')+' kr).</p>';
+      html+='<p style="margin:6px 0"><strong>2. ROI '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+'x</strong> betyr at hver krone i marketing returnerer '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+' kr i Peasy netto &mdash; så lenge konvertering holder seg.</p>';
+      html+='<p style="margin:6px 0"><strong>3. Maksgrensen for CPL</strong> er '+maksCPL.toLocaleString('nb-NO')+' kr. Så lenge CPL er under dette tjener du penger på marginal-leadet. I dag er CPL '+cpl90.toLocaleString('nb-NO')+' kr &mdash; god margin.</p>';
+      html+='<div style="background:#F5F7F5;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:12px"><strong>⚡ Forslag:</strong> Doble budsjettet til '+doblet.toLocaleString('nb-NO')+' kr/uke. Forventet effekt (om CPL holder): ~'+(64*2)+' leads/uke, ~'+ekstraNetto.toLocaleString('nb-NO')+' kr ekstra Peasy netto. Risiko: lav. Mål CPL etter 2 uker &mdash; hvis under '+Math.round(maksCPL*0.5).toLocaleString('nb-NO')+' kr, push videre. Stopp når marg/lead &lt; 200 kr.</div>';
+      html+='<div style="font-size:11px;color:#888;margin-top:8px;font-style:italic">Reell flaskehals akkurat nå: '+(ep_<20?'Eval-aksept ('+ep_+'%, mål 20%) &mdash; flere selgere må akseptere estimatet':bp_<70?'Bud-aksept ('+bp_+'%, mål 70%) &mdash; for mange returnerer etter bud':'Ingen flaskehals &mdash; full pipeline-helse')+'.</div>';
+      markFEl.innerHTML=html;
+    }
   }
   }
   var sumEl=document.getElementById('uke-trio-summary');
@@ -1743,7 +1766,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c67 — slett-funksjon
+// v16.03.c68 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1764,6 +1787,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c67</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c68</div>
 </body>
 </html>
