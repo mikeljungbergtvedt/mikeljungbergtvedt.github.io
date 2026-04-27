@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c39</title>
+<title>Peasy Pulse v16.03.c40</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -113,6 +113,7 @@ canvas{width:100%;border-radius:8px;}
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
+      <button class="mode-btn" id="btn-uke" onclick="setMode('uke')">Ukesrapport</button>
       <button class="mode-btn" id="btn-kart" onclick="setMode('kart')">Kart</button>
       <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Sp&#248;rsm&#229;l</button>
     </div>
@@ -148,12 +149,14 @@ function setMode(m){
   document.getElementById('btn-eval').classList.toggle('active',m==='eval');
   document.getElementById('btn-tiltak').classList.toggle('active',m==='tiltak');
   if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
+  if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
   if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
   if(m==='sporsmal'){loadQuestions();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
+  if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
 }
 
@@ -335,7 +338,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c39 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c40 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -691,7 +694,8 @@ function render(data,rows){
     +'</div>'
     +'<div class="mode-section'+(currentMode==='fin'?' visible':'')+'" data-mode="fin">'+finHtml+'</div>'
     +'<div class="mode-section'+(currentMode==='eval'?' visible':'')+'" data-mode="eval">'+buildEvalHtml(data,rows)+'</div>'
-    +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>';
+    +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>'
+    +'<div class="mode-section'+(currentMode==='uke'?' visible':'')+'" data-mode="uke" id="uke-section">'+buildUkeHtml()+'</div>';
   requestAnimationFrame(function(){
     drawArc(document.getElementById('arc0'),100,'#004225');
     drawArc(document.getElementById('arc1'),Math.min(mR/20*100,100),mOk?'#4CAF50':'#C62828');
@@ -1317,6 +1321,157 @@ function buildDagsTabell(evalAll2, todayDate){
   return out;
 }
 
+
+// === UKESRAPPORT ===
+function isoWeek(d){var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var dayNum=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-dayNum);var yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date-yearStart)/86400000)+1)/7);}
+function getMondayOfWeek(d){var x=new Date(d);x.setHours(0,0,0,0);var day=x.getDay()||7;if(day!==1)x.setDate(x.getDate()-(day-1));return x;}
+function getCompletedWeekRange(weeksAgo){
+  // weeksAgo=1 = forrige fullstendige uke (mandag-søndag)
+  var today=new Date();today.setHours(0,0,0,0);
+  var thisMonday=getMondayOfWeek(today);
+  var monday=new Date(thisMonday);monday.setDate(monday.getDate()-7*weeksAgo);
+  var sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);sunday.setHours(23,59,59,999);
+  return {monday:monday,sunday:sunday,weekNum:isoWeek(monday)};
+}
+function buildUkeHtml(){
+  var h='';
+  h+='<div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap">';
+  h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Velg uke</label>';
+  h+='<select id="ukeVelger" style="font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid rgba(0,66,37,0.2);background:#fff;color:#004225;font-weight:600;cursor:pointer">';
+  for(var w=1;w<=8;w++){
+    var r=getCompletedWeekRange(w);
+    var lbl=w===1?'Forrige uke':w+' uker siden';
+    h+='<option value="'+w+'">'+lbl+' (uke '+r.weekNum+')</option>';
+  }
+  h+='</select></div>';
+  h+='<div id="uke-periode-info" style="padding-bottom:6px;font-size:12px;color:#667A72"></div></div>';
+  h+='<div id="uke-kpi-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:28px"></div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">';
+  h+='<div class="table-card"><div class="th"><div class="th-title">&#10003; Beste pristreff</div><div class="th-badge" id="uke-best-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th></tr></thead><tbody id="uke-best-tbody"></tbody></table></div>';
+  h+='<div class="table-card"><div class="th"><div class="th-title">&#10060; Verste returneringer</div><div class="th-badge" id="uke-worst-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Gap</th></tr></thead><tbody id="uke-worst-tbody"></tbody></table></div>';
+  h+='</div>';
+  h+='<div class="section-label">Brakett-analyse for uka</div>';
+  h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px"></div>';
+  h+='<div class="table-card"><div class="th"><div class="th-title">8-ukers trend</div></div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = registrert per uke. Lysegrønne søyler = solgt per uke. Linje = bud-aksept-rate (mål 70%, høyre akse).</div>';
+  h+='<div style="padding:16px;position:relative;height:260px"><canvas id="ukeTrendChart"></canvas></div></div>';
+  return h;
+}
+function renderUkesrapport(){
+  var sel=document.getElementById('ukeVelger');
+  if(!sel)return;
+  sel.removeEventListener('change',renderUkesrapport);
+  sel.addEventListener('change',renderUkesrapport);
+  var weeksAgo=parseInt(sel.value)||1;
+  var rows=window._lastRows||[];
+  var data=window._lastData||{};
+  var range=getCompletedWeekRange(weeksAgo);
+  var prev=getCompletedWeekRange(weeksAgo+1);
+  var infoEl=document.getElementById('uke-periode-info');
+  if(infoEl){
+    var fmt=function(d){return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short'});};
+    infoEl.textContent=fmt(range.monday)+' &ndash; '+fmt(range.sunday);
+  }
+  function inRange(d,r){return d&&d>=r.monday&&d<=r.sunday;}
+  function pdOps(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
+  var evalAll=rows.slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
+  function metrics(r){
+    var registrert=evalAll.filter(function(row){return inRange(pdOps(row[13]),r);});
+    var bestilt=evalAll.filter(function(row){var d=pdOps(row[15])||pdOps(row[16]);return inRange(d,r);});
+    var mottatt=evalAll.filter(function(row){return inRange(pdOps(row[17]),r);});
+    var solgt=evalAll.filter(function(row){return inRange(pdOps(row[18]),r);});
+    var ret=evalAll.filter(function(row){return inRange(pdOps(row[21]),r);});
+    var ep=registrert.length>0?Math.round(bestilt.filter(function(row){return inRange(pdOps(row[13]),r);}).length/registrert.length*100):0;
+    var bp=mottatt.length>0?Math.round(solgt.length/mottatt.length*100):0;
+    return {registrert:registrert.length,bestilt:bestilt.length,mottatt:mottatt.length,solgt:solgt.length,ret:ret.length,ep:ep,bp:bp,solgtBiler:solgt,retBiler:ret};
+  }
+  var cur=metrics(range);
+  var prv=metrics(prev);
+  function delta(c,p){if(p===0)return c>0?'+&infin;':'0';var d=Math.round((c-p)/p*100);return(d>=0?'+':'')+d+'%';}
+  function deltaPP(c,p){var d=c-p;return(d>=0?'+':'')+d+'pp';}
+  function deltaColor(c,p,inverted){var d=c-p;if(inverted)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';}
+  var grid=document.getElementById('uke-kpi-grid');
+  if(grid){
+    var cards=[
+      {label:'Registrert',val:cur.registrert,d:delta(cur.registrert,prv.registrert),col:deltaColor(cur.registrert,prv.registrert,false)},
+      {label:'Bestilt h/l',val:cur.bestilt,d:delta(cur.bestilt,prv.bestilt),col:deltaColor(cur.bestilt,prv.bestilt,false)},
+      {label:'Mottatt',val:cur.mottatt,d:delta(cur.mottatt,prv.mottatt),col:deltaColor(cur.mottatt,prv.mottatt,false)},
+      {label:'Solgt',val:cur.solgt,d:delta(cur.solgt,prv.solgt),col:deltaColor(cur.solgt,prv.solgt,false)},
+      {label:'Returnert',val:cur.ret,d:delta(cur.ret,prv.ret),col:deltaColor(cur.ret,prv.ret,true)},
+      {label:'Eval-aksept',val:cur.ep+'%',d:deltaPP(cur.ep,prv.ep),col:deltaColor(cur.ep,prv.ep,false),target:'mal 20%',targetMet:cur.ep>=20},
+      {label:'Bud-aksept',val:cur.bp+'%',d:deltaPP(cur.bp,prv.bp),col:deltaColor(cur.bp,prv.bp,false),target:'mal 70%',targetMet:cur.bp>=70}
+    ];
+    grid.innerHTML=cards.map(function(c){
+      var valColor=c.targetMet===false?'#C62828':c.targetMet===true?'#2E7D32':'#004225';
+      return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)">'
+        +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div>'
+        +'<div style="font-size:24px;font-weight:900;line-height:1;color:'+valColor+'">'+c.val+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+c.col+';margin-top:6px">'+c.d+'</div>'
+        +(c.target?'<div style="font-size:9px;color:#aaa;margin-top:2px">'+c.target+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+  var bestEl=document.getElementById('uke-best-tbody'),bestBadge=document.getElementById('uke-best-badge');
+  var beste=cur.solgtBiler.slice().filter(function(c){return c.gap!=null;}).sort(function(a,b){return Math.abs(a.gap)-Math.abs(b.gap);}).slice(0,5);
+  if(bestBadge)bestBadge.textContent=beste.length+' av '+cur.solgt;
+  if(bestEl){
+    if(beste.length===0)bestEl.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen solgte biler i uka</td></tr>';
+    else bestEl.innerHTML=beste.map(function(c){var col=c.gap>=0?'#2E7D32':c.gap>-5?'#E65100':'#C62828';return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td>'+(c.e?c.e.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:'+col+';font-weight:700">'+fmtPct(c.gap)+'</td></tr>';}).join('');
+  }
+  var worstEl=document.getElementById('uke-worst-tbody'),worstBadge=document.getElementById('uke-worst-badge');
+  var verste=cur.retBiler.slice().filter(function(c){return c.gap!=null;}).sort(function(a,b){return a.gap-b.gap;}).slice(0,5);
+  if(worstBadge)worstBadge.textContent=verste.length+' av '+cur.ret;
+  if(worstEl){
+    if(verste.length===0)worstEl.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen returneringer i uka</td></tr>';
+    else worstEl.innerHTML=verste.map(function(c){return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td>'+(c.e?c.e.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:#C62828;font-weight:700">'+fmtPct(c.gap)+'</td></tr>';}).join('');
+  }
+  var brEl=document.getElementById('uke-brackets');
+  if(brEl){
+    var brackets=BRACKETS.map(function(b){
+      var regB=evalAll.filter(function(row){var d=pdOps(row[13]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
+      var bestB=evalAll.filter(function(row){var d=pdOps(row[15])||pdOps(row[16]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
+      var motB=evalAll.filter(function(row){var d=pdOps(row[17]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
+      var solB=cur.solgtBiler.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
+      var ep=regB>0?Math.round(bestB/regB*100):0;
+      var bp=motB>0?Math.round(solB.length/motB*100):0;
+      var gaps=solB.map(function(c){return c.gap;}).filter(function(g){return g!=null;});
+      var avgGap=gaps.length?Math.round(gaps.reduce(function(s,g){return s+g;},0)/gaps.length*10)/10:null;
+      return Object.assign({},b,{reg:regB,solgt:solB.length,ep:ep,bp:bp,avgGap:avgGap});
+    });
+    brEl.innerHTML=brackets.map(function(b){
+      return '<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Registrert</span><span class="bc-val">'+b.reg+'</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.solgt+'</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Eval-aksept</span><span class="bc-val '+(b.ep>=20?'pos':'neg')+'">'+b.ep+'%</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Bud-aksept</span><span class="bc-val '+(b.bp>=70?'pos':'neg')+'">'+b.bp+'%</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Avg gap</span><span class="bc-val '+(b.avgGap>=0?'pos':'neg')+'">'+(b.avgGap!=null?fmtPct(b.avgGap):'-')+'</span></div>'
+        +'</div>';
+    }).join('');
+  }
+  var labels=[],regSerie=[],solgtSerie=[],bpSerie=[];
+  for(var w=8;w>=1;w--){
+    var r=getCompletedWeekRange(w);
+    var m=metrics(r);
+    labels.push('U'+r.weekNum);
+    regSerie.push(m.registrert);
+    solgtSerie.push(m.solgt);
+    bpSerie.push(m.bp);
+  }
+  var canvas=document.getElementById('ukeTrendChart');
+  if(canvas){
+    var ex=Chart.getChart(canvas);if(ex)ex.destroy();
+    new Chart(canvas,{
+      data:{labels:labels,datasets:[
+        {type:'bar',label:'Registrert',data:regSerie,backgroundColor:'rgba(0,66,37,0.55)',yAxisID:'y2',order:3},
+        {type:'bar',label:'Solgt',data:solgtSerie,backgroundColor:'rgba(0,135,90,0.55)',yAxisID:'y2',order:3},
+        {type:'line',label:'Bud-aksept %',data:bpSerie,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:false,borderWidth:2.5,pointRadius:3,tension:0.3,yAxisID:'y',order:1},
+        {type:'line',label:'Mal 70%',data:labels.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:10}},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:'#00875A',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}}
+    });
+  }
+}
+
 async function loadQuestions(){
   const el10 = document.getElementById('sporsmal-top10');
   const elAlle = document.getElementById('sporsmal-alle');
@@ -1366,7 +1521,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c39 — slett-funksjon
+// v16.03.c40 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1387,6 +1542,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c39</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c40</div>
 </body>
 </html>
