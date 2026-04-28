@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c72</title>
+<title>Peasy Pulse v16.03.c73</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -41,7 +41,7 @@ main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
 .on-target::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
 .off-target::after{background:linear-gradient(90deg,var(--red),#EF9A9A);}
 .neutral::after{background:linear-gradient(90deg,var(--yellow),#FFE082);}
-.brackets-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.brackets-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
 .bracket-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);border-top:3px solid var(--bc);}
 .bc-label{font-size:12px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
 .bc-range{font-size:10px;font-weight:500;color:var(--muted);}
@@ -169,7 +169,7 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c72 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c73 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -196,7 +196,8 @@ var BRACKETS=[
   {name:'Lav',range:'0-100k',lo:0,hi:100000,color:'#00875A'},
   {name:'Mid',range:'100-250k',lo:100000,hi:250000,color:'#1565C0'},
   {name:'Hoy',range:'250-400k',lo:250000,hi:400000,color:'#E65100'},
-  {name:'Premium',range:'400k+',lo:400000,hi:9999999,color:'#6A1B9A'}
+  {name:'Premium-Lav',range:'400-600k',lo:400000,hi:600000,color:'#7B1FA2'},
+  {name:'Premium-Hoy',range:'600k+',lo:600000,hi:9999999,color:'#4A148C'}
 ];
 var TILTAK_DATO = '2026-03-24'; // Endre denne datoen og commit for a oppdatere for alle
 var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
@@ -398,7 +399,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c72 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c73 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1429,7 +1430,7 @@ function buildUkeHtml(){
   h+='<div id="uke-avvist-analyse" style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:18px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
   h+='</div>';
   h+='<div class="section-label">Brakett-analyse for uka</div>';
-  h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px"></div>';
+  h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px"></div>';
   h+='<div class="table-card"><div class="th"><div class="th-title">8-ukers trend</div></div>';
   h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = registrert per uke. Lysegrønne søyler = solgt per uke. Linje = bud-aksept-rate (mål 70%, høyre akse).</div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="ukeTrendChart"></canvas></div></div>';
@@ -1700,7 +1701,7 @@ function renderUkesrapport(){
   if(analyseEl){
     if(cur.avvistBiler.length===0)analyseEl.innerHTML='<div style="color:var(--muted);font-style:italic;text-align:center">Ingen avviste eval i uka &mdash; ingen analyse</div>';
     else{
-      var bracketsList=[{name:'Lav',lo:0,hi:100000,c:'#2E7D32'},{name:'Mid',lo:100000,hi:250000,c:'#1565C0'},{name:'Hoy',lo:250000,hi:400000,c:'#E65100'},{name:'Premium',lo:400000,hi:Infinity,c:'#7B1FA2'}];
+      var bracketsList=[{name:'Lav',lo:0,hi:100000,c:'#2E7D32'},{name:'Mid',lo:100000,hi:250000,c:'#1565C0'},{name:'Hoy',lo:250000,hi:400000,c:'#E65100'},{name:'Premium-Lav',lo:400000,hi:600000,c:'#7B1FA2'},{name:'Premium-Hoy',lo:600000,hi:Infinity,c:'#4A148C'}];
       var bDist=bracketsList.map(function(b){var n=cur.avvistBiler.filter(function(c){return c.dLow!=null&&c.dLow>=b.lo&&c.dLow<b.hi;}).length;var pct=cur.avvistBiler.length>0?Math.round(n/cur.avvistBiler.length*100):0;return {name:b.name,n:n,pct:pct,c:b.c};});
       var modelCount={};cur.avvistBiler.forEach(function(c){var m=String(c.label||'').split(' ').slice(0,2).join(' ');if(m)modelCount[m]=(modelCount[m]||0)+1;});
       var topModels=Object.keys(modelCount).map(function(k){return {m:k,n:modelCount[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,5);
@@ -1826,7 +1827,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c72 — slett-funksjon
+// v16.03.c73 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1847,6 +1848,6 @@ async function hideQ(qid, btn) {
   }
 }
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c72</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c73</div>
 </body>
 </html>
