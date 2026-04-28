@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="no">
 <head>
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c73</title>
+<title>Peasy Pulse v16.03.c74</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -41,7 +40,7 @@ main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
 .on-target::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
 .off-target::after{background:linear-gradient(90deg,var(--red),#EF9A9A);}
 .neutral::after{background:linear-gradient(90deg,var(--yellow),#FFE082);}
-.brackets-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.brackets-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
 .bracket-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 4px 24px var(--shadow);border-top:3px solid var(--bc);}
 .bc-label{font-size:12px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
 .bc-range{font-size:10px;font-weight:500;color:var(--muted);}
@@ -99,69 +98,9 @@ canvas{width:100%;border-radius:8px;}
 .kart-fbtn{font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 14px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--green);cursor:pointer;transition:all .15s}
 .kart-fbtn:hover{border-color:var(--accent);color:var(--accent)}
 .kart-fbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
-.uke-mode .dials-section{display:none !important}
 </style>
 </head>
 <body>
-<div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
-  <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse</div>
-    <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
-    <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
-    <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
-    <button onclick="authCheck()" style="width:100%;padding:12px;background:#004225;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit">Lås opp</button>
-    <div style="font-size:11px;color:#888;margin-top:14px;text-align:center;line-height:1.5">Be Mike om passord hvis du ikke har det.</div>
-  </div>
-</div>
-<script>
-const PWD_HASH='92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1';
-const TOKEN_KEY='peasy-pulse-auth';
-const TOKEN_TTL=30*24*60*60*1000;
-
-async function sha256(t){
-  const buf=new TextEncoder().encode(t);
-  const h=await crypto.subtle.digest('SHA-256',buf);
-  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function authCheck(){
-  const inp=document.getElementById('auth-input');
-  const msg=document.getElementById('auth-msg');
-  msg.textContent='';
-  const hash=await sha256(inp.value);
-  if(hash===PWD_HASH){
-    try{localStorage.setItem(TOKEN_KEY,JSON.stringify({h:hash,t:Date.now()}));}catch(e){}
-    document.getElementById('auth-gate').style.display='none';
-    document.body.style.overflow='auto';
-  }else{
-    msg.textContent='Feil passord';
-    inp.value='';
-    inp.focus();
-  }
-}
-
-function authLogout(){
-  try{localStorage.removeItem(TOKEN_KEY);}catch(e){}
-  location.reload();
-}
-
-(function(){
-  document.body.style.overflow='hidden';
-  try{
-    const raw=localStorage.getItem(TOKEN_KEY);
-    if(raw){
-      const o=JSON.parse(raw);
-      if(o&&o.h===PWD_HASH&&o.t&&(Date.now()-o.t)<TOKEN_TTL){
-        document.getElementById('auth-gate').style.display='none';
-        document.body.style.overflow='auto';
-        return;
-      }
-    }
-  }catch(e){}
-  setTimeout(()=>document.getElementById('auth-input')?.focus(),100);
-})();
-</script>
-
 
 
 <header>
@@ -169,25 +108,16 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c73 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
-      <button class="mode-btn" id="btn-uke" onclick="setMode('uke')">Ukesrapport</button>
       <button class="mode-btn" id="btn-kart" onclick="setMode('kart')">Kart</button>
-      <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Sp&#248;rsm&#229;l</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
 </header>
-<main><div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen&hellip;</div></div>
-<section class="mode-section" data-mode="sporsmal" style="display:none">
-  <div class="section-label">Topp sp&#248;rsm&#229;l fra kunder</div>
-  <div id="sporsmal-top10" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:32px"></div>
-  <div class="section-label">Alle sp&#248;rsm&#229;l</div>
-  <div id="sporsmal-alle" style="font-size:13px;line-height:1.8"></div>
-</section>
-</main>
+<main><div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen&hellip;</div></div></main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
 var TARGETS={evalMottatt:10,mottattSolgt:70,prodDays:3};
@@ -196,11 +126,10 @@ var BRACKETS=[
   {name:'Lav',range:'0-100k',lo:0,hi:100000,color:'#00875A'},
   {name:'Mid',range:'100-250k',lo:100000,hi:250000,color:'#1565C0'},
   {name:'Hoy',range:'250-400k',lo:250000,hi:400000,color:'#E65100'},
-  {name:'Premium-Lav',range:'400-600k',lo:400000,hi:600000,color:'#7B1FA2'},
-  {name:'Premium-Hoy',range:'600k+',lo:600000,hi:9999999,color:'#4A148C'}
+  {name:'Premium',range:'400k+',lo:400000,hi:9999999,color:'#6A1B9A'}
 ];
 var TILTAK_DATO = '2026-03-24'; // Endre denne datoen og commit for a oppdatere for alle
-var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
+var currentMode=(function(){try{return localStorage.getItem('peasy-mode')||'ops';}catch(e){return 'ops';}})();
 
 function setMode(m){
   currentMode=m;
@@ -210,14 +139,10 @@ function setMode(m){
   document.getElementById('btn-eval').classList.toggle('active',m==='eval');
   document.getElementById('btn-tiltak').classList.toggle('active',m==='tiltak');
   if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
-  if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
-  if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
-  document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
+  document.querySelectorAll('.mode-section').forEach(function(el){el.classList.toggle('visible',el.dataset.mode===m);});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
-  if(m==='sporsmal'){loadQuestions();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
-  document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
 }
 
@@ -250,28 +175,19 @@ function renderEvalCharts(rows,data){
     var el30=document.getElementById(prefix+'-30');var el90=document.getElementById(prefix+'-90');var elD=document.getElementById(prefix+'-d');
     if(el30){el30.textContent=v30+'%';el30.style.color=c30;}if(el90)el90.textContent=v90+'%';if(elD){elD.textContent=(delta>0?'+':'')+delta+'pp vs 90d';elD.style.color=cD;}
   }
-  setKpi('ep',ep30,ep90,epD,20);setKpi('bp',bp30,bp90,bpD,70);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
+  setKpi('ep',ep30,ep90,epD,20);setKpi('bp',bp30,bp90,bpD,70);
   var days=[],evalPerDay=[],recvPerDay=[],mottPerDay=[],soldPerDay=[];
   for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);evalPerDay.push(0);recvPerDay.push(0);mottPerDay.push(0);soldPerDay.push(0);}
   evalAll.forEach(function(r){var d=parseDate(r[13]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)evalPerDay[idx]++;});
   evalAll.forEach(function(r){var d=parseDate(r[17]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)recvPerDay[idx]++;});
   mottAll.forEach(function(c){var d=parseDate(c.rDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)mottPerDay[idx]++;});
   soldAll.forEach(function(c){var d=parseDate(c.sDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)soldPerDay[idx]++;});
-  function rolling14(num,den){return days.map(function(_,i){var n=0,d=0;for(var j=Math.max(0,i-29);j<=i;j++){n+=num[j];d+=den[j];}return d>=3?Math.round(n/d*100):null;});}
+  function rolling14(num,den){return days.map(function(_,i){var n=0,d=0;for(var j=Math.max(0,i-13);j<=i;j++){n+=num[j];d+=den[j];}return d>=3?Math.round(n/d*100):null;});}
   var evalRate=rolling14(recvPerDay,evalPerDay);
   var budRate=rolling14(soldPerDay,mottPerDay);
   var chartOpts=function(targetPct,lineColor){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){if(ctx.dataset.label==='Rate')return 'Akseptrate: '+(ctx.parsed.y!==null?ctx.parsed.y+'%':'-');if(ctx.dataset.label==='Mal')return 'Mal: '+targetPct+'%';return ctx.dataset.label+': '+ctx.parsed.y+' stk';}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:lineColor,font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}};};
   var c1=document.getElementById('evalTrendChart');
   if(c1){var ex1=Chart.getChart(c1);if(ex1)ex1.destroy();new Chart(c1,{data:{labels:days,datasets:[{type:'bar',label:'Evaluert',data:evalPerDay,backgroundColor:'rgba(0,66,37,0.15)',yAxisID:'y2',order:3},{type:'bar',label:'Mottatt',data:recvPerDay,backgroundColor:'rgba(0,135,90,0.6)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:evalRate,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 20;}),borderColor:'rgba(198,40,40,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(20,'#C62828')});}
-  var cL=document.getElementById('leadsDailyChart');
-  if(cL){var exL=Chart.getChart(cL);if(exL)exL.destroy();
-    var leadsSma30=days.map(function(_,i){var s=0,n=0;for(var j=Math.max(0,i-29);j<=i;j++){s+=evalPerDay[j];n++;}return n>0?+(s/n).toFixed(1):null;});
-    new Chart(cL,{data:{labels:days,datasets:[
-      {type:'bar',label:'Evaluert',data:evalPerDay,backgroundColor:'rgba(0,135,90,0.55)',borderColor:'rgba(0,135,90,0.8)',borderWidth:1,order:2},
-      {type:'line',label:'30d snitt',data:leadsSma30,borderColor:'#004225',backgroundColor:'rgba(0,66,37,0.05)',fill:false,borderWidth:2,pointRadius:0,tension:0.35,order:1}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});
-  }
-  var lS=0,lN=0;for(var li=Math.max(0,evalPerDay.length-30);li<evalPerDay.length;li++){lS+=evalPerDay[li];lN++;}var kl=document.getElementById('leads-30d-kpi');if(kl)kl.textContent=lN>0?(lS/lN).toFixed(1):'-';
   var c2=document.getElementById('budTrendChart');
   if(c2){var ex2=Chart.getChart(c2);if(ex2)ex2.destroy();new Chart(c2,{data:{labels:days,datasets:[{type:'bar',label:'Mottatt',data:mottPerDay,backgroundColor:'rgba(0,66,37,0.15)',yAxisID:'y2',order:3},{type:'bar',label:'Solgt',data:soldPerDay,backgroundColor:'rgba(0,135,90,0.6)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:budRate,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.4)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(70,'#00875A')});}
   var fD=function(s){if(!s)return null;var p=String(s).trim().split('.');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:null;};
@@ -306,8 +222,8 @@ function processData(rows){
     var car={regnr:regnr,label:label,merke:merke,modell:modell,year:year,dLow:dLow,t:t,u:u,rDate:rDate,sDate:sDate,vDate:vDate,km:km,status:status,registrertDato:r[13]};
     if(dLow)data.evaluated.push(car);
     if(rDate)data.mottatt.push(car);
-    if(sDate&&dLow){data.sold.push(Object.assign({},car,{e:r[4]||0,gap:r[4]?(r[4]-dLow)/dLow*100:null}));}
-    if(status&&status.toLowerCase().includes("returned")){data.returned.push(Object.assign({},car,{e:r[4]||0,gap:(r[4]&&dLow)?((r[4]-dLow)/dLow*100):null}));}
+    if(sDate&&dLow&&t){data.sold.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
+    if(vDate&&dLow&&t&&t>0){data.returned.push(Object.assign({},car,{e:t,gap:(t-dLow)/dLow*100}));}
     if(rDate&&!sDate&&!vDate&&!status.toLowerCase().includes("to_be_returned")){var md=parseDate(rDate);data.inProd.push(Object.assign({},car,{daysSinceMottatt:md?Math.floor((Date.now()-md)/86400000):null,mottattDate:md}));}
   }
   return data;
@@ -327,7 +243,7 @@ function bracketStats(data){
 
 function drawArc(svgEl,valuePct,color){var r=46,cx=55,cy=60;var angle=Math.PI-(valuePct/100)*Math.PI;var x=cx+r*Math.cos(angle),y=cy+r*Math.sin(angle);svgEl.innerHTML='<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="rgba(0,66,37,0.08)" stroke-width="8" stroke-linecap="round"/><path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+x+' '+y+'" fill="none" stroke="'+color+'" stroke-width="8" stroke-linecap="round"/><circle cx="'+x+'" cy="'+y+'" r="4" fill="'+color+'"/>';}
 function daysClass(d,t){return d<=t?'days-ok':d<=t*2?'days-warn':'days-over';}
-function statusBadge(s){var map={'received':['&#128203;','b-mottatt','Mottatt på anlegg'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon'],'to_be_returned':['&#10060;','b-ferdig','Til retur'],'waiting_for_transport':['&#128666;','b-produksjon','Venter transport'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter svar'],'contract_signed':['&#128203;','b-produksjon','Kontrakt signert'],'på auksjonen':['&#128296;','b-auksjon','På auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter på bud aksept'],'change owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter på bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter på bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','Venter vurdering'],'waiting_for_preparation':['&#128203;','b-produksjon','Klargjøres'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
+function statusBadge(s){var map={'received':['&#128203;','b-mottatt','Mottatt på anlegg'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon'],'to_be_returned':['&#10060;','b-ferdig','Til retur'],'waiting_for_transport':['&#128666;','b-produksjon','Venter transport'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter svar'],'contract_signed':['&#128203;','b-produksjon','Kontrakt signert'],'på auksjonen':['&#128296;','b-auksjon','På auksjon'],'ready for auction':['&#128296;','b-auksjon','Klar for auksjon'],'under arbeid':['&#127981;','b-produksjon','Under arbeid'],'endelig estimat':['&#128203;','b-mottatt','Estimat sendt'],'solgt':['&#10003;','b-ferdig','Solgt'],'returnert':['&#8617;','b-ferdig','Returnert'],'avvist by customer':['&#10060;','b-ferdig','Avvist'],'avvist by admin':['&#10060;','b-ferdig','Avvist'],'waiting for sale status':['&#128203;','b-produksjon','Venter på bud aksept'],'change owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to be returned':['&#10060;','b-ferdig','Bud avvist'],'waiting for valuation':['&#128203;','b-produksjon','I produksjon'],'sold':['&#10003;','b-ferdig','Solgt'],'new':['&#128203;','b-produksjon','Ny bil'],'waiting_for_sale_reaction':['&#128203;','b-produksjon','Venter på bud aksept'],'waiting_for_sale_status':['&#128203;','b-produksjon','Venter på bud aksept'],'change_owner':['&#128203;','b-produksjon','Venter på salgsmelding'],'to_be_returned':['&#10060;','b-ferdig','Bud avvist'],'waiting_for_valuation':['&#128203;','b-produksjon','I produksjon'],'ready_for_auction':['&#128296;','b-auksjon','Klar for auksjon'],'select_auction_date':['&#128296;','b-auksjon','Klar for auksjon'],'on_auction':['&#128296;','b-auksjon','På auksjon']};var key=Object.keys(map).find(function(k){return s.toLowerCase().includes(k);});var a=key?map[key]:['&#127981;','b-produksjon',s||'Produksjon'];return '<span class="car-badge '+a[1]+'">'+a[0]+' '+a[2]+'</span>';}
 function workHoursElapsed(from){var wS=8,wE=16,now=new Date(),total=0,cur=new Date(from);while(cur<now){var day=cur.getDay();if(day===0||day===6){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var dS=new Date(cur);dS.setHours(wS,0,0,0);var dE=new Date(cur);dE.setHours(wE,0,0,0);if(cur<dS){cur=dS;continue;}if(cur>=dE){cur.setDate(cur.getDate()+1);cur.setHours(wS,0,0,0);continue;}var pE=now<dE?now:dE;total+=Math.floor((pE-cur)/60000);cur=dE;}return{h:Math.floor(total/60),m:total%60,total:Math.floor(total/60)};}
 
 function buildEvalHtml(data,rows){
@@ -348,14 +264,11 @@ function buildEvalHtml(data,rows){
   h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="bp-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div><div style="font-size:10px;color:#aaa;margin-top:4px">Mal: 70%</div></div>';
   h+='</div><div style="height:4px;background:rgba(0,66,37,0.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:70%;background:rgba(0,135,90,0.2);border-radius:99px"></div></div>';
   h+='<div style="font-size:10px;color:#aaa;margin-top:6px">70% = mal &middot; 7 av 10 mottatte biler skal selges på auksjon</div></div></div>';
-  h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Daglige registreringer &mdash; siste 90 dager</div></div>';
-  h+='<div style="padding:12px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="leads-30d-kpi" style="font-size:22px;font-weight:900;color:#004225;line-height:1">&ndash;</div><div style="font-size:10px;color:#aaa">reg / dag</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Søyler = tilbud sendt per dag. Linje = 30-dagers glidende snitt.</div></div>';
-  h+='<div style="padding:16px;position:relative;height:220px"><canvas id="leadsDailyChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Eval-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div style="padding:12px 18px;background:rgba(198,40,40,0.04);border-left:3px solid #C62828;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="eval-30d-kpi" style="font-size:22px;font-weight:900;color:#C62828;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grønne søyler = mottatt. Grå søyler = evaluert. Rød linje = 30-dagers akseptrate. Stiplet = 20%-mål.</div></div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler mottatt. Graa soeyler = antall evaluert. Rød linje = 30-dagers akseptrate. Stiplet = 20%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:24px"><div class="th"><div class="th-title">Bud-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="bud-30d-kpi" style="font-size:22px;font-weight:900;color:#00875A;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grønne søyler = solgt. Grå søyler = mottatt. Grønn linje = 30-dagers salgsrate. Stiplet = 70%-mål.</div></div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese denne:</strong> Grønne søyler = biler solgt. Graa soeyler = mottatt pa anlegg. Gron linje = 14-dagers salgsrate. Stiplet = 70%-mal.</div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div></div>';
   var evalRows=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var d=parseDate(r[13]);if(!d)return false;return String(r[12]||'').trim().toLowerCase()==='endelig estimat';}).sort(function(a,b){return(parseDate(a[13])||0)-(parseDate(b[13])||0);});
   h+='<div class="section-label">Venter pa prissetting / svar fra selger ('+evalRows.length+' biler)</div>';
@@ -399,7 +312,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c73 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c74 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -452,8 +365,8 @@ function renderTiltakCharts(){
 
   // Solgt av kohort (col 18)
   var solgt=kohort.filter(function(r){return r[18]&&String(r[18]).trim();});
-  var paAuksjon=akseptert.filter(function(r){return r[19]&&parseFloat(r[19])>0;});
-  var iProd=akseptert.filter(function(r){var st=String(r[12]||'').toLowerCase();return !(r[19]&&parseFloat(r[19])>0)&&!(r[18]&&String(r[18]).trim())&&!(r[21]&&String(r[21]).trim())&&!st.includes('avvist')&&!st.includes('retur');});
+  var paAuksjon=akseptert.filter(function(r){return r[4]&&parseFloat(r[4])>0;});
+  var iProd=akseptert.filter(function(r){var st=String(r[12]||'').toLowerCase();return !(r[4]&&parseFloat(r[4])>0)&&!(r[18]&&String(r[18]).trim())&&!(r[21]&&String(r[21]).trim())&&!st.includes('avvist')&&!st.includes('retur');});
 
   // Returnert av kohort (col 21)
   var returnert=kohort.filter(function(r){return r[21]&&String(r[21]).trim();});
@@ -628,15 +541,15 @@ function render(data,rows){
   var tdC=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr);}).length;
   var dSC=Math.max(1,Math.floor((Date.now()-CUTOFF.getTime())/86400000));
   var pD=(tE/dSC).toFixed(1);
-  var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (fra 1.11.2025)</div><div class="dials-grid" style="margin-bottom:32px">'
+  var dials='<div class="section-label">Nokkeltall</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral"><div class="dial-label">Evaluert</div><div class="arc-wrap"><svg id="arc0"></svg></div><div class="dial-value">'+tE.toLocaleString('nb-NO')+'</div><div class="dial-unit">biler</div><div class="dial-sub">Tilbud sendt selger</div><div class="target-tag">Fra 1.11.2025</div></div>'
     +'<div class="dial-card '+(mOk?'on-target':'off-target')+'"><div class="dial-label">Evaluert &#8594; Mottatt</div><div class="arc-wrap"><svg id="arc1"></svg></div><div class="dial-value">'+mR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tM+' av '+tE+'</div><div class="dial-sub">Selger aksepterer tilbud</div><div class="target-tag">Mal '+TARGETS.evalMottatt+'%</div></div>'
     +'<div class="dial-card '+(sOk?'on-target':'off-target')+'"><div class="dial-label">Mottatt &#8594; Solgt</div><div class="arc-wrap"><svg id="arc2"></svg></div><div class="dial-value">'+sR+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+tS+' av '+tM+'</div><div class="dial-sub">Høyeste bud akseptert</div><div class="target-tag">Mal '+TARGETS.mottattSolgt+'%</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon na</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">biler pa anlegg</div><div class="dial-sub">Venter vask/foto/test</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card '+(aGs!==null&&aGs>-5?'on-target':'off-target')+'"><div class="dial-label">Avg Bud vs Pris lav</div><div class="arc-wrap"><svg id="arc4"></svg></div><div class="dial-value" style="color:'+(aGs>=0?'#2E7D32':'#C62828')+'">'+(aGs!==null?(aGs>0?'+':'')+aGs.toFixed(1):'-')+'<span style="font-size:14px">%</span></div><div class="dial-unit">Median bud vs Pris lav (solgt)</div><div class="dial-sub">Prisnøyaktighet (median)</div><div class="dial-sub" style="font-size:10px;color:var(--muted);margin-top:2px">Snitt bud: '+(data.sold.filter(function(c){return c.e>0;}).length?Math.round(data.sold.filter(function(c){return c.e>0;}).reduce(function(a,c){return a+c.e;},0)/data.sold.filter(function(c){return c.e>0;}).length/1000)+'k kr':'-')+'</div><div class="target-tag">Dynamisk X%</div></div>'
     +'<div class="dial-card on-target"><div class="dial-label">Total inntekt (U)</div><div class="arc-wrap"><svg id="arc5"></svg></div><div class="dial-value" style="font-size:18px">'+Math.round(tU/1000)+'k</div><div class="dial-unit">kr &middot; snitt '+aU.toLocaleString('nb-NO')+' kr</div><div class="dial-sub">Netto etter no-cure: <strong style="color:'+(nR>0?'#2E7D32':'#C62828')+'">'+Math.round(nR/1000)+'k kr</strong></div><div class="target-tag">Alle solgte biler</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Registrert i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
-    +'</div></div>';
+    +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">biler i dag</div><div class="dial-sub">Snitt: <strong>'+pD+'</strong> / dag siden 1.11.25</div><div class="target-tag">Live</div></div>'
+    +'</div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
   var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
   var opsHtml='';
@@ -693,7 +606,7 @@ function render(data,rows){
       +'</div>';
   }
 
-  opsHtml += dagKort('Registrert i dag', evalToday, 'tilbud sendt', '#004225');
+  opsHtml += dagKort('Leads mottatt i dag', tdC, 'leads i O', '#004225');
   opsHtml += dagKort('Avvist tilbud', avvistToday, 'av evaluert i dag', avvistToday>0?'#C62828':'#2E7D32');
   opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
@@ -734,11 +647,11 @@ function render(data,rows){
   opsHtml+='</div>';
   var c30=Date.now()-30*24*60*60*1000;
   var rS=data.sold.slice().filter(function(c){var d=parseDate(c.sDate);return d&&d>=c30;}).sort(function(a,b){return(parseDate(b.sDate)||0)-(parseDate(a.sDate)||0);}).slice(0,15);
-  var rR=data.returned.slice().sort(function(a,b){return(parseDate(b.vDate)||parseDate(b.rDate)||0)-(parseDate(a.vDate)||parseDate(a.rDate)||0);}).slice(0,15);
+  var rR=data.returned.slice().filter(function(c){var d=parseDate(c.vDate);return d&&d>=c30;}).sort(function(a,b){return(parseDate(b.vDate)||0)-(parseDate(a.vDate)||0);}).slice(0,15);
   opsHtml+='<div class="section-label">Nylig solgt &amp; returnert</div><div class="two-col"><div class="table-card"><div class="th"><div class="th-title">&#10003; Nylig solgt</div><div class="th-badge">'+tS+' totalt</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Solgt</th></tr></thead><tbody>';
-  for(var k=0;k<rS.length;k++){var c=rS[k];var gc=c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';opsHtml+='<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:'+gc+';font-weight:700">'+(c.e?c.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(c.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+(c.sDate?c.sDate.slice(0,10).split('-').reverse().join('.'):'–')+'</td></tr>';}
+  for(var k=0;k<rS.length;k++){var c=rS[k];var gc=c.gap>=0?'#2E7D32':c.gap>-10?'#E65100':'#C62828';opsHtml+='<tr><td><span class="regnr">'+c.regnr+'</span></td><td><span style="font-size:11px">'+(c.label||'-')+'</span></td><td>'+(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:'+gc+';font-weight:700">'+(c.e?c.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(c.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(c.sDate)+'</td></tr>';}
   opsHtml+='</tbody></table></div><div class="table-card"><div class="th"><div class="th-title">&#8617; Nylig returnert</div><div class="th-badge">'+tR+' totalt</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Bud</th><th>Returnert</th></tr></thead><tbody>';
-  for(var l=0;l<rR.length;l++){var cr=rR[l];opsHtml+='<tr><td><span class="regnr">'+cr.regnr+'</span></td><td><span style="font-size:11px">'+(cr.label||'-')+'</span></td><td>'+(cr.dLow?cr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:var(--red);font-weight:700">'+(cr.e?cr.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(cr.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+(cr.vDate?cr.vDate.slice(0,10).split('-').reverse().join('.'):'–')+'</td></tr>';}
+  for(var l=0;l<rR.length;l++){var cr=rR[l];opsHtml+='<tr><td><span class="regnr">'+cr.regnr+'</span></td><td><span style="font-size:11px">'+(cr.label||'-')+'</span></td><td>'+(cr.dLow?cr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:var(--red);font-weight:700">'+(cr.e?cr.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(cr.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+daysAgo(cr.vDate)+'</td></tr>';}
   opsHtml+='</tbody></table></div></div>';
   var finHtml='<div class="section-label">Prisbrakett-analyse &mdash; Pris lav vs Bud</div><div class="brackets-grid">';
   for(var m=0;m<bs.length;m++){var b=bs[m];var xC=b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';finHtml+='<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div><div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">'+b.evalCount+'</span></div><div class="bc-row"><span class="bc-key">Avvist av kunde</span><span class="bc-val '+(b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn')+'">'+b.rejCount+' <span style="color:var(--muted);font-weight:400">('+( b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0)+'%)</span></span></div><div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">'+b.motCount+' <span style="color:var(--muted);font-weight:400">('+b.convRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.soldCount+' <span style="color:var(--muted);font-weight:400">('+b.soldRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val '+(b.retCount>0?'neg':'')+'">'+b.retCount+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val '+(b.avgGapSolgt>=0?'pos':'warn')+'">'+fmtPct(b.avgGapSolgt)+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (ret.)</span><span class="bc-val neg">'+fmtPct(b.avgGapRet)+'</span></div><div class="x-rec"><div class="x-rec-label">Median: bud vs Pris lav</div><div class="x-rec-val" style="color:'+xC+'">'+(b.recX>0?'+':'')+b.recX+'%</div></div></div>';}
@@ -755,8 +668,7 @@ function render(data,rows){
     +'</div>'
     +'<div class="mode-section'+(currentMode==='fin'?' visible':'')+'" data-mode="fin">'+finHtml+'</div>'
     +'<div class="mode-section'+(currentMode==='eval'?' visible':'')+'" data-mode="eval">'+buildEvalHtml(data,rows)+'</div>'
-    +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>'
-    +'<div class="mode-section'+(currentMode==='uke'?' visible':'')+'" data-mode="uke" id="uke-section">'+buildUkeHtml()+'</div>';
+    +'<div class="mode-section'+(currentMode==='tiltak'?' visible':'')+'" data-mode="tiltak" id="tiltak-section">'+buildTiltakHtml()+'</div>';
   requestAnimationFrame(function(){
     drawArc(document.getElementById('arc0'),100,'#004225');
     drawArc(document.getElementById('arc1'),Math.min(mR/20*100,100),mOk?'#4CAF50':'#C62828');
@@ -767,7 +679,6 @@ function render(data,rows){
     drawArc(document.getElementById('arc5'),Math.min(tU/1000000*100,100),'#00875A');
     drawArc(document.getElementById('arc6'),Math.min(tdC/10*100,100),'#1565C0');
     if(currentMode==='eval')renderEvalCharts(rows,data);
-    if(currentMode==='uke')setTimeout(function(){renderUkesrapport();},50);
     drawScatter(window._lastData.sold,window._lastData.returned);
   });
 }
@@ -794,13 +705,13 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 loadData().then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 
-function buildKartTabell(posMap,filter,pnrAllowed){
+function buildKartTabell(posMap,filter){
   filter=filter||'alle';
   window._kartPosMap=posMap;
   var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
   var AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
   var filterLabels={alle:'Alle biler',akseptert:'Aksepterte biler',avvist:'Avviste biler',solgt:'Solgte biler'};
-  var rows=Object.keys(posMap).filter(function(pnr){return !pnrAllowed||pnrAllowed[pnr];}).map(function(pnr){
+  var rows=Object.keys(posMap).map(function(pnr){
     var loc=posMap[pnr];
     var biler=filter==='alle'?loc.biler:filter==='akseptert'?loc.biler.filter(function(b){return AKSEPTERT.indexOf(b.status)!==-1;}):filter==='avvist'?loc.biler.filter(function(b){return AVVIST.indexOf(b.status)!==-1;}):filter==='solgt'?loc.biler.filter(function(b){return b.status==='sold';}):loc.biler;
     if(biler.length===0)return null;
@@ -852,39 +763,24 @@ function buildKartTabell(posMap,filter,pnrAllowed){
         <div style="font-size:22px;font-weight:700;color:var(--green)">Hvor kommer bilene fra?</div>
         <div id="kart-subtitle" style="font-size:13px;color:var(--muted);margin-top:4px">Klikk for å laste kart…</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Periode:</span>
-          <select id="kart-periode" onchange="kartPeriode(this.value)" style="font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 12px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--green);cursor:pointer">
-            <option value="all">Alle</option>
-            <option value="30">30 dager</option>
-            <option value="90">90 dager</option>
-            <option value="180">180 dager</option>
-            <option value="ytd">I år</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" id="kart-filters">
-          <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
-          <button onclick="kartFilter('akseptert')" class="kart-fbtn" data-f="akseptert">Akseptert</button>
-          <button onclick="kartFilter('avvist')" class="kart-fbtn" data-f="avvist">Avvist</button>
-          <button onclick="kartFilter('solgt')" class="kart-fbtn" data-f="solgt">Solgt</button>
-          <button onclick="kartFilter('kjopere')" class="kart-fbtn" data-f="kjopere">Kjøpere</button>
-          <button onclick="kartZoomAlle()" class="kart-fbtn" title="Zoom til alle synlige punkter" style="border-color:rgba(0,66,37,0.2)">⤢ Zoom alle</button>
-        </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="kart-filters">
+        <button onclick="kartFilter('alle')" class="kart-fbtn active" data-f="alle">Alle</button>
+        <button onclick="kartFilter('akseptert')" class="kart-fbtn" data-f="akseptert">Akseptert</button>
+        <button onclick="kartFilter('avvist')" class="kart-fbtn" data-f="avvist">Avvist</button>
+        <button onclick="kartFilter('solgt')" class="kart-fbtn" data-f="solgt">Solgt</button>
       </div>
     </div>
     <div id="peasy-map" style="height:560px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,66,37,0.10)"></div>
-    <div id="kart-legend" style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+    <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Akseptert / solgt</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:6px;vertical-align:middle"></span>Avvist</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>I prosess</span>
     </div>
-    <div id="kart-histogram" style="display:none;margin-top:20px"></div>
     <div style="margin-top:28px">
-      <div id="kart-tabell-tittel" style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Topp steder</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Topp steder</div>
       <div id="kart-tabell" style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead id="kart-tabell-head">
+          <thead>
             <tr style="border-bottom:2px solid var(--border)">
               <th style="text-align:left;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Sted</th>
               <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Totalt</th>
@@ -901,354 +797,15 @@ function buildKartTabell(posMap,filter,pnrAllowed){
   </div>
 </div>
 <script>
-var _kartInit=false,_kartMarkers=[],_kartMap=null,_kartBuyerMarkers=[],_kartLines=[],_kartFilter='alle',_kartPeriode='all',_kartRowsAll=null,_kartGEO=null,_isolertReise=null;
-var _AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
-var _AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
-function _kartPeriodeStart(){
-  var now=new Date();
-  if(_kartPeriode==='30')return new Date(now.getTime()-30*864e5);
-  if(_kartPeriode==='90')return new Date(now.getTime()-90*864e5);
-  if(_kartPeriode==='180')return new Date(now.getTime()-180*864e5);
-  if(_kartPeriode==='ytd')return new Date(now.getFullYear(),0,1);
-  return null;
-}
-function _kartParseDate(s){
-  if(!s)return null;
-  var t=String(s).trim().slice(0,10);
-  var p=t.split('.');
-  if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);
-  var d=new Date(t);
-  return isNaN(d)?null:d;
-}
+var _kartInit=false,_kartMarkers=[],_kartMap=null;
 function kartFilter(f){
-  _kartFilter=f;
-  _isolertReise=null;
   document.querySelectorAll('.kart-fbtn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
   if(!_kartMap)return;
-  _kartRender();
-}
-function kartPeriode(v){
-  _kartPeriode=v;
-  _isolertReise=null;
-  if(!_kartMap)return;
-  _kartRender();
-}
-function _kartRender(){
-  // Fjern dynamiske kjøper-lag
-  _kartBuyerMarkers.forEach(function(m){_kartMap.removeLayer(m);});
-  _kartLines.forEach(function(l){_kartMap.removeLayer(l);});
-  _kartBuyerMarkers=[];_kartLines=[];
-
-  var f=_kartFilter;
-  if(f==='kjopere'){
-    // Skjul vanlige selger-markører
-    _kartMarkers.forEach(function(it){_kartMap.removeLayer(it.marker);});
-    _kartRenderKjopere();
-    return;
-  }
-  // Standard-modus med periode-filter på registrert (kol 13)
-  var pStart=_kartPeriodeStart();
-  var pnrAllowed=null;
-  if(pStart && _kartRowsAll){
-    pnrAllowed={};
-    _kartRowsAll.forEach(function(r){
-      var d=_kartParseDate(r[13]);
-      if(!d||d<pStart)return;
-      var pnr=r[9]?String(r[9]).padStart(4,'0'):null;
-      if(!pnr)return;
-      pnrAllowed[pnr]=true;
-    });
-  }
   _kartMarkers.forEach(function(item){
-    var statusOK = f==='alle'?true
-      : f==='akseptert'?_AKSEPTERT.indexOf(item.status)!==-1
-      : f==='avvist'?_AVVIST.indexOf(item.status)!==-1
-      : f==='solgt'?item.status==='sold'
-      : true;
-    var periodOK = !pnrAllowed || pnrAllowed[item.pnr];
-    var show=statusOK && periodOK;
+    var show=f==='alle'?true:f==='akseptert'?['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'].indexOf(item.status)!==-1:f==='avvist'?['Avvist by customer','Avvist by admin','Avvist'].indexOf(item.status)!==-1:f==='solgt'?item.status==='sold':true;
     show?item.marker.addTo(_kartMap):_kartMap.removeLayer(item.marker);
   });
-  var thd=document.getElementById('kart-tabell-head');if(thd)thd.style.display='';
-  var tt=document.getElementById('kart-tabell-tittel');if(tt)tt.textContent='Topp steder';
-  _setLegend('standard');
-  var hb=document.getElementById('kart-histogram');if(hb)hb.style.display='none';
-  if(window._kartPosMap)buildKartTabell(window._kartPosMap,f,pnrAllowed);
-}
-function _setLegend(mode){
-  var el=document.getElementById('kart-legend');if(!el)return;
-  if(mode==='kjopere'){
-    el.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Selger-postnr</span>'
-      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>Kjøper-postnr</span>'
-      +'<span><span style="display:inline-block;width:24px;height:2px;background:#667A72;margin-right:6px;vertical-align:middle"></span>Reise selger → kjøper (tykkere = flere biler)</span>'
-      +'<span style="margin-left:auto;color:var(--muted)"><b style="color:var(--green)">&lt;150 km</b> · <b style="color:#E65100">150–300 km</b> · <b style="color:#C62828">≥300 km</b></span>';
-    el.style.justifyContent='flex-start';
-  }else{
-    el.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00875A;margin-right:6px;vertical-align:middle"></span>Akseptert / solgt</span>'
-      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:6px;vertical-align:middle"></span>Avvist</span>'
-      +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1565C0;margin-right:6px;vertical-align:middle"></span>I prosess</span>';
-  }
-}
-function kartZoomAlle(){
-  if(!_kartMap)return;
-  var pts=[];
-  // Kjøpere-modus: bruk _kartBilerKjopere
-  if(_kartFilter==='kjopere' && window._kartBilerKjopere){
-    window._kartBilerKjopere.forEach(function(b){
-      if(b.sellerCoord)pts.push(b.sellerCoord);
-      if(b.buyerCoord)pts.push(b.buyerCoord);
-    });
-  }else{
-    _kartMarkers.forEach(function(it){
-      var ll=it.marker.getLatLng?it.marker.getLatLng():null;
-      if(ll && _kartMap.hasLayer(it.marker))pts.push([ll.lat,ll.lng]);
-    });
-  }
-  if(pts.length<2){_kartMap.setView([63.5,15.0],5);return;}
-  _kartMap.fitBounds(pts,{padding:[40,40],maxZoom:11});
-}
-function _haversineKm(a,b){
-  var R=6371,toRad=function(d){return d*Math.PI/180;};
-  var dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);
-  var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)*Math.sin(dLon/2);
-  return Math.round(R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s)));
-}
-function _findCoord(pnr){
-  if(!pnr)return null;
-  if(_kartGEO[pnr])return {coord:_kartGEO[pnr],approx:false};
-  // Fallback 1: samme 3-prefiks (gjennomsnitt av matchende)
-  var pre3=pnr.slice(0,3);
-  var matches3=Object.keys(_kartGEO).filter(function(k){return k.slice(0,3)===pre3;});
-  if(matches3.length){
-    var lat=0,lng=0;
-    matches3.forEach(function(k){lat+=_kartGEO[k][0];lng+=_kartGEO[k][1];});
-    return {coord:[lat/matches3.length,lng/matches3.length],approx:true};
-  }
-  // Fallback 2: samme 2-prefiks
-  var pre2=pnr.slice(0,2);
-  var matches2=Object.keys(_kartGEO).filter(function(k){return k.slice(0,2)===pre2;});
-  if(matches2.length){
-    var lat=0,lng=0;
-    matches2.forEach(function(k){lat+=_kartGEO[k][0];lng+=_kartGEO[k][1];});
-    return {coord:[lat/matches2.length,lng/matches2.length],approx:true};
-  }
-  return null;
-}
-function _kartRenderKjopere(){
-  if(!_kartRowsAll||!_kartGEO){document.getElementById('kart-subtitle').textContent='Ingen data';return;}
-  var pStart=_kartPeriodeStart();
-  var biler=[]; // én entry per solgt bil med kjent kjøper-pnr
-  _kartRowsAll.forEach(function(r){
-    var status=String(r[12]||'').toLowerCase();
-    if(status!=='sold' && status.indexOf('solgt')===-1)return;
-    var sDate=_kartParseDate(r[18]);
-    if(!sDate)return;
-    if(pStart && sDate<pStart)return;
-    var sPnr=r[9]?String(r[9]).padStart(4,'0'):null;
-    if(!sPnr && r[10]){var m=String(r[10]).match(/(\d{4})/);if(m)sPnr=m[1];}
-    if(!sPnr)return;
-    var bPnr=r[30]?String(r[30]).padStart(4,'0'):null;
-    if(!bPnr)return;
-    // Buyer-sted: prøv kolonne AF (31), AG (32), eller utled fra prefiks
-    var bSted=String(r[31]||r[32]||'').replace(/^\d{4}\s*/,'').trim();
-    var sLookup=_findCoord(sPnr);
-    var bLookup=_findCoord(bPnr);
-    var sCoord=sLookup?sLookup.coord:null;
-    var bCoord=bLookup?bLookup.coord:null;
-    var approx=(sLookup&&sLookup.approx)||(bLookup&&bLookup.approx);
-    var dist=(sCoord&&bCoord)?_haversineKm(sCoord,bCoord):null;
-    biler.push({
-      regnr:r[1]||'',
-      merke:r[6]||'', modell:r[7]||'', aar:r[8]||'',
-      bil:((r[6]||'')+' '+(r[7]||'')+' '+(r[8]||'')).trim(),
-      sellerPnr:sPnr, sellerSted:String(r[10]||'').replace(/^\d{4}\s*/,'')||sPnr,
-      buyerPnr:bPnr, buyerSted:bSted,
-      sellerCoord:sCoord, buyerCoord:bCoord,
-      dist:dist, approx:approx,
-      sDate:sDate,
-      sDateStr:String(r[18]||'').slice(0,10)
-    });
-  });
-
-  // Aggregér per pair for linjer
-  var pairAgg={};
-  biler.forEach(function(b){
-    if(!b.sellerCoord||!b.buyerCoord)return;
-    var key=b.sellerPnr+'|'+b.buyerPnr;
-    if(!pairAgg[key])pairAgg[key]={sellerPnr:b.sellerPnr,buyerPnr:b.buyerPnr,sellerCoord:b.sellerCoord,buyerCoord:b.buyerCoord,count:0,samples:[]};
-    pairAgg[key].count++;
-    if(pairAgg[key].samples.length<5)pairAgg[key].samples.push(b.regnr+' '+b.bil);
-  });
-
-  var sellerPnrs={},buyerPnrs={};
-  Object.values(pairAgg).forEach(function(p){
-    var weight=Math.min(6,1+Math.log2(p.count+1));
-    var line=L.polyline([p.sellerCoord,p.buyerCoord],{color:'#667A72',weight:weight,opacity:0.55});
-    line.bindPopup('<b>'+p.sellerPnr+' &rarr; '+p.buyerPnr+'</b><br>'+p.count+' bil'+(p.count!==1?'er':'')+'<br><small>'+p.samples.join(', ')+(p.count>5?'…':'')+'</small>');
-    line.addTo(_kartMap);
-    _kartLines.push(line);
-    sellerPnrs[p.sellerPnr]=(sellerPnrs[p.sellerPnr]||0)+p.count;
-    buyerPnrs[p.buyerPnr]=(buyerPnrs[p.buyerPnr]||0)+p.count;
-  });
-
-  Object.keys(sellerPnrs).forEach(function(pnr){
-    var c=_kartGEO[pnr];if(!c)return;
-    var n=sellerPnrs[pnr];
-    var radius=Math.max(7,Math.min(22,7+n*2));
-    var mk=L.circleMarker([c[0],c[1]],{radius:radius,fillColor:'#00875A',color:'#fff',weight:2,opacity:1,fillOpacity:0.85});
-    mk.bindPopup('<b>Selger '+pnr+'</b><br>'+n+' solgt');
-    mk.addTo(_kartMap);
-    _kartBuyerMarkers.push(mk);
-  });
-  Object.keys(buyerPnrs).forEach(function(pnr){
-    var c=_kartGEO[pnr];if(!c)return;
-    var n=buyerPnrs[pnr];
-    var radius=Math.max(7,Math.min(22,7+n*2));
-    var mk=L.circleMarker([c[0],c[1]],{radius:radius,fillColor:'#1565C0',color:'#fff',weight:2,opacity:1,fillOpacity:0.85});
-    mk.bindPopup('<b>Kjøper '+pnr+'</b><br>'+n+' kjøpt');
-    mk.addTo(_kartMap);
-    _kartBuyerMarkers.push(mk);
-  });
-
-  // Stats
-  var dists=biler.map(function(b){return b.dist;}).filter(function(d){return d!=null;});
-  var sortedD=dists.slice().sort(function(a,b){return a-b;});
-  var median=sortedD.length?(sortedD.length%2?sortedD[(sortedD.length-1)/2]:Math.round((sortedD[sortedD.length/2-1]+sortedD[sortedD.length/2])/2)):0;
-  var avg=dists.length?Math.round(dists.reduce(function(s,d){return s+d;},0)/dists.length):0;
-  var maxD=dists.length?Math.max.apply(null,dists):0;
-  // Tell biler uten kjøper-koordinater
-  var manglerGeo=biler.filter(function(b){return b.dist==null;}).length;
-  var subStr='<span style="font-family:var(--mono);font-size:12px"><b>'+biler.length+'</b> solgte biler';
-  if(dists.length>0)subStr+=' &bull; median <b>'+median+' km</b> &bull; snitt <b>'+avg+' km</b> &bull; lengste <b>'+maxD+' km</b>';
-  if(manglerGeo>0)subStr+=' &bull; <span style="color:var(--muted)">'+manglerGeo+' uten kj\u00f8per-geo</span>';
-  subStr+='</span>';
-  document.getElementById('kart-subtitle').innerHTML=subStr;
-
-  _setLegend('kjopere');
-  _buildHistogram(dists);
-  window._kartBilerKjopere=biler;
-  _buildAvstandTabell(biler);
-}
-function _buildHistogram(dists){
-  var hb=document.getElementById('kart-histogram');if(!hb)return;
-  if(!dists||dists.length===0){hb.style.display='none';return;}
-  var b1=dists.filter(function(d){return d<50;}).length;
-  var b2=dists.filter(function(d){return d>=50&&d<150;}).length;
-  var b3=dists.filter(function(d){return d>=150;}).length;
-  var tot=b1+b2+b3;
-  var p1=tot?Math.round(b1/tot*100):0;
-  var p2=tot?Math.round(b2/tot*100):0;
-  var p3=tot?100-p1-p2:0;
-  hb.style.display='block';
-  hb.innerHTML=
-    '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Avstandsfordeling</div>'
-    +'<div style="display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">'
-    +(b1>0?'<div title="'+b1+' biler under 50 km" style="flex:'+b1+';background:#00875A;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b1+(p1>=10?' &middot; '+p1+'%':'')+'</div>':'')
-    +(b2>0?'<div title="'+b2+' biler 50–150 km" style="flex:'+b2+';background:#E65100;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b2+(p2>=10?' &middot; '+p2+'%':'')+'</div>':'')
-    +(b3>0?'<div title="'+b3+' biler 150 km eller mer" style="flex:'+b3+';background:#C62828;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700">'+b3+(p3>=10?' &middot; '+p3+'%':'')+'</div>':'')
-    +'</div>'
-    +'<div style="display:flex;margin-top:6px;font-size:10px;color:var(--muted);font-family:var(--mono)">'
-    +'<span style="flex:1">&lt;50 km (lokalt)</span>'
-    +'<span style="flex:1;text-align:center">50–150 km (regionalt)</span>'
-    +'<span style="flex:1;text-align:right">≥150 km (langtransport)</span>'
-    +'</div>';
-}
-function _kartZoomTilReise(idx){
-  var biler=window._kartBilerKjopere;
-  if(!biler||!biler[idx])return;
-  var b=biler[idx];
-  if(!b.sellerCoord||!b.buyerCoord){return;}
-  _kartMap.fitBounds([b.sellerCoord,b.buyerCoord],{padding:[80,80],maxZoom:9});
-}
-var _avstandSort='dist_desc';
-function _setAvstandSort(s){
-  _avstandSort=s;
-  if(window._kartBilerKjopere)_buildAvstandTabell(window._kartBilerKjopere);
-}
-function _buildAvstandTabell(biler){
-  var thd=document.getElementById('kart-tabell-head');if(thd)thd.style.display='none';
-  var tt=document.getElementById('kart-tabell-tittel');if(tt)tt.textContent='Solgte biler — sortert etter avstand';
-  var sorted=biler.slice();
-  if(_avstandSort==='dist_desc')sorted.sort(function(a,b){return (b.dist||-1)-(a.dist||-1);});
-  else if(_avstandSort==='dist_asc')sorted.sort(function(a,b){return (a.dist==null?9e9:a.dist)-(b.dist==null?9e9:b.dist);});
-  else if(_avstandSort==='dato_desc')sorted.sort(function(a,b){return b.sDate-a.sDate;});
-  else if(_avstandSort==='dato_asc')sorted.sort(function(a,b){return a.sDate-b.sDate;});
-
-  var tbody=document.getElementById('kart-tabell-body');
-  if(!tbody)return;
-  if(sorted.length===0){tbody.innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted)">Ingen solgte biler i valgt periode</td></tr>';return;}
-
-  var arrow=function(field){
-    if(_avstandSort===field+'_desc')return ' ▼';
-    if(_avstandSort===field+'_asc')return ' ▲';
-    return '';
-  };
-  var nextSort=function(field){return _avstandSort===field+'_desc'?field+'_asc':field+'_desc';};
-
-  var header='<tr style="background:rgba(0,66,37,0.06);border-bottom:1px solid var(--border)">'
-    +'<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green)">Regnr</th>'
-    +'<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green)">Bil</th>'
-    +'<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green)">Selger</th>'
-    +'<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green)">Kjøper-pnr</th>'
-    +'<th onclick="_setAvstandSort(\''+nextSort('dist')+'\')" style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);cursor:pointer">Avstand'+arrow('dist')+'</th>'
-    +'<th onclick="_setAvstandSort(\''+nextSort('dato')+'\')" style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);cursor:pointer">Solgt'+arrow('dato')+'</th>'
-    +'</tr>';
-
-  // Behold idx fra original biler-array for zoom
-  var bilerIdx={};
-  biler.forEach(function(b,i){bilerIdx[b.regnr+'|'+b.sDateStr]=i;});
-
-  tbody.innerHTML=header+sorted.map(function(b,i){
-    var origIdx=bilerIdx[b.regnr+'|'+b.sDateStr];
-    var distStr=b.dist!=null?(b.approx?'~':'')+b.dist+' km':'<span style="color:var(--muted)">—</span>';
-    var distColor=b.dist!=null?(b.dist>=300?'#C62828':b.dist>=150?'#E65100':'var(--green)'):'var(--muted)';
-    var distTitle=b.approx?'title="Omtrentlig avstand — eksakt postnr-koordinat mangler"':'';
-    var isActive=(_isolertReise===origIdx)?'background:rgba(0,135,90,0.15)':(i%2?'background:rgba(0,66,37,0.02)':'');
-    return '<tr onclick="_kartIsolerReise('+origIdx+',event)" style="border-bottom:0.5px solid rgba(0,66,37,0.06);cursor:pointer;'+isActive+'" onmouseover="if(_isolertReise!=='+origIdx+')this.style.background=\'rgba(0,135,90,0.08)\'" onmouseout="this.style.background=\''+(_isolertReise===origIdx?'rgba(0,135,90,0.15)':(i%2?'rgba(0,66,37,0.02)':''))+'\'">'
-      +'<td style="padding:8px 12px;font-family:var(--mono);font-weight:700;font-size:12px;color:#7C3AED">'+b.regnr+'</td>'
-      +'<td style="padding:8px 12px;font-size:12px"><b>'+(b.merke||'')+'</b> '+(b.modell||'')+(b.aar?' <span style="color:var(--muted)">'+b.aar+'</span>':'')+'</td>'
-      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:12px">'+b.sellerPnr+' <span style="color:var(--muted);font-family:var(--sans,inherit);font-weight:400">'+b.sellerSted+'</span></td>'
-      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:12px;color:#1565C0;font-weight:700">'+b.buyerPnr+(b.buyerSted?' <span style="color:var(--muted);font-family:var(--sans,inherit);font-weight:400">'+b.buyerSted+'</span>':'')+'</td>'
-      +'<td '+distTitle+' style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:'+distColor+'">'+distStr+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted)">'+b.sDateStr+'</td>'
-      +'</tr>';
-  }).join('');
-}
-function _kartIsolerReise(idx,event){
-  if(event)event.stopPropagation();
-  if(_isolertReise===idx){
-    // Klikket samme rad — reset
-    _isolertReise=null;
-    _kartRender();
-    return;
-  }
-  _isolertReise=idx;
-  var biler=window._kartBilerKjopere;
-  if(!biler||!biler[idx])return;
-  var b=biler[idx];
-  // Fjern alt fra kartet
-  _kartLines.forEach(function(l){_kartMap.removeLayer(l);});
-  _kartBuyerMarkers.forEach(function(m){_kartMap.removeLayer(m);});
-  _kartLines=[];_kartBuyerMarkers=[];
-  // Tegn kun denne reisen
-  if(b.sellerCoord && b.buyerCoord){
-    var line=L.polyline([b.sellerCoord,b.buyerCoord],{color:'#00875A',weight:3,opacity:0.85});
-    line.bindPopup('<b>'+b.regnr+'</b><br>'+b.bil+'<br>'+b.sellerPnr+' &rarr; '+b.buyerPnr+(b.dist!=null?' &bull; '+(b.approx?'~':'')+b.dist+' km':''));
-    line.addTo(_kartMap);
-    _kartLines.push(line);
-    var sm=L.circleMarker(b.sellerCoord,{radius:10,fillColor:'#00875A',color:'#fff',weight:2,opacity:1,fillOpacity:0.9});
-    sm.bindPopup('<b>Selger '+b.sellerPnr+'</b><br>'+(b.sellerSted||''));
-    sm.addTo(_kartMap);_kartBuyerMarkers.push(sm);
-    var bm=L.circleMarker(b.buyerCoord,{radius:10,fillColor:'#1565C0',color:'#fff',weight:2,opacity:1,fillOpacity:0.9});
-    bm.bindPopup('<b>Kjøper '+b.buyerPnr+'</b>'+(b.buyerSted?'<br>'+b.buyerSted:''));
-    bm.addTo(_kartMap);_kartBuyerMarkers.push(bm);
-    _kartMap.fitBounds([b.sellerCoord,b.buyerCoord],{padding:[80,80],maxZoom:9});
-  }
-  // Refresh tabell-styling
-  _buildAvstandTabell(biler);
-  // Subtittel
-  var subEl=document.getElementById('kart-subtitle');
-  if(subEl)subEl.innerHTML='<b style="color:var(--green)">Isolert: '+b.regnr+'</b> &middot; '+b.bil+' &middot; <span style="color:var(--muted);cursor:pointer;text-decoration:underline" onclick="_kartIsolerReise('+idx+')">Vis alle igjen</span>';
+  if(window._kartPosMap)buildKartTabell(window._kartPosMap,f);
 }
 async function initKart(){
   if(_kartInit)return;
@@ -1267,8 +824,6 @@ async function initKart(){
   var ab=await resp.arrayBuffer();
   var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
   var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
-  _kartRowsAll=rows;
-  _kartGEO=GEO;
   var posMap={};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];
@@ -1292,7 +847,7 @@ async function initKart(){
     var popup='<b>'+loc.sted+'</b> ('+pnr+')<br>'+antall+' bil'+(antall!==1?'er':'')+(akseptert?'<br>&#x2705; '+akseptert+' akseptert':'')+(avvist?'<br>&#x274C; '+avvist+' avvist':'')+'<br><small>'+loc.biler.slice(0,5).map(function(b){return(b.regnr||'')+' '+(b.merke||'');}).join(', ')+(loc.biler.length>5?'…':'')+'</small>';
     marker.bindPopup(popup);
     marker.addTo(_kartMap);
-    _kartMarkers.push({marker:marker,status:loc.biler[0].status,pnr:pnr});
+    _kartMarkers.push({marker:marker,status:loc.biler[0].status});
   });
   var tot=Object.values(posMap).reduce(function(s,v){return s+v.biler.length;},0);
   window._kartPosMap=posMap;
@@ -1307,22 +862,22 @@ function buildDagsTabell(evalAll2, todayDate){
   var AVVIST=['avvist by customer','avvist by admin','avvist'];
   var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
 
-  var evalI   = evalAll2.filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate;});
-  var avvistI = evalAll2.filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
+  var evalI   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate;});
+  var leadsI  = (rows||[]).slice(1).filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate;});
+  var avvistI = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
   var bestiltI= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;});
   var mottattI= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;});
   var solgtI  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;});
-  var retI    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate&&String(r[12]||""  ).toLowerCase().includes("returned");});
+  var retI    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate;});
 
   var grupper=[
-    {label:'Registrert i dag',emoji:'📋',biler:evalI,color:'#1565C0'},
-    {label:'Estimat sendt ut i dag',emoji:'📤',biler:[],color:'#888',placeholder:true},
+    {label:'Leads mottatt i dag',emoji:'📋',biler:leadsI,color:'#1565C0'},
     {label:'Avvist i dag',emoji:'❌',biler:avvistI,color:'#C62828'},
     {label:'Bestilt hent/lev',emoji:'📦',biler:bestiltI,color:'#E65100'},
     {label:'Mottatt på anlegg',emoji:'🏭',biler:mottattI,color:'#6A1B9A'},
     {label:'Solgt på auksjon',emoji:'✅',biler:solgtI,color:'#00875A'},
     {label:'Returnert',emoji:'🔁',biler:retI,color:'#555'}
-  ];
+  ].filter(function(g){return g.biler.length>0;});
 
   if(grupper.length===0)return '';
 
@@ -1333,11 +888,11 @@ function buildDagsTabell(evalAll2, todayDate){
     if(!dlh)dlh='—';
     var kmVal=r[22]?parseInt(String(r[22]).replace(/[^\d]/g,'')):NaN;
     var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'—';
-    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','waiting_for_sign_contract':'Venter pa signering','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','waiting_for_valuation':'I produksjon','waiting_for_preparation':'Klargjøres','to_be_returned':'Til retur','change_owner':'Venter salgsmelding','ar_car_created':'Opprettet','waiting_for_sign_contract':'Venter signering','returnert':'Returnert','returned':'Returnert','Endelig estimat':'Venter pa evaluering','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
+    var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter transport','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'Venter transport','to_be_returned':'Til retur','Endelig estimat':'Estimat sendt','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
     var status=STATUS_NO[r[12]]||r[12]||'—';
     var extraCols='';
     if(isSolgt){
-      var budV=r[19]?parseInt(String(r[19]).replace(/[^\d]/g,'')):NaN;
+      var budV=r[4]?parseInt(String(r[4]).replace(/[^\d]/g,'')):NaN;
       var dlavV=r[3]?parseInt(String(r[3]).split('-')[0].replace(/[^\d]/g,'')):NaN;
       var budStr=!isNaN(budV)?budV.toLocaleString('nb-NO')+' kr':'—';
       var budColor='var(--muted)';
@@ -1377,477 +932,13 @@ function buildDagsTabell(evalAll2, todayDate){
       +(g.label==='Solgt på auksjon'?'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bud</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Avvik</th>':'')
       +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:140px">Status</th>'
       +'</tr></thead>'
-      +'<tbody>'+(g.biler.length===0?'<tr><td colspan="7" style="padding:14px 18px;text-align:center;color:var(--muted);font-size:11px;font-style:italic">'+(g.placeholder?'Venter på "Estimat sendt"-kolonne fra Andrey i ERP public report':'Ingen biler i dag')+'</td></tr>':g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon');}).join(''))+'</tbody>'
+      +'<tbody>'+g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon');}).join('')+'</tbody>'
       +'</table></div>';
   });
   out+='</div>';
   return out;
 }
-
-
-// === UKESRAPPORT ===
-function isoWeek(d){var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var dayNum=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-dayNum);var yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date-yearStart)/86400000)+1)/7);}
-function getMondayOfWeek(d){var x=new Date(d);x.setHours(0,0,0,0);var day=x.getDay()||7;if(day!==1)x.setDate(x.getDate()-(day-1));return x;}
-function getCompletedWeekRange(weeksAgo){
-  // weeksAgo=1 = forrige fullstendige uke (mandag-søndag)
-  var today=new Date();today.setHours(0,0,0,0);
-  var thisMonday=getMondayOfWeek(today);
-  var monday=new Date(thisMonday);monday.setDate(monday.getDate()-7*weeksAgo);
-  var sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);sunday.setHours(23,59,59,999);
-  return {monday:monday,sunday:sunday,weekNum:isoWeek(monday)};
-}
-function buildUkeHtml(){
-  var h='';
-  h+='<div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap">';
-  h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Velg uke</label>';
-  h+='<select id="ukeVelger" style="font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid rgba(0,66,37,0.2);background:#fff;color:#004225;font-weight:600;cursor:pointer">';
-  for(var w=1;w<=8;w++){
-    var r=getCompletedWeekRange(w);
-    var lbl=w===1?'Forrige uke':w+' uker siden';
-    h+='<option value="'+w+'">'+lbl+' (uke '+r.weekNum+')</option>';
-  }
-  h+='</select></div>';
-  h+='<div id="uke-periode-info" style="padding-bottom:6px;font-size:12px;color:#667A72"></div></div>';
-  h+='<div class="section-label" style="margin-top:18px">Pulsen &mdash; siste 30 dager</div>';
-  h+='<div id="uke-flow" style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:14px;padding:24px 18px 18px;margin-bottom:14px;width:100%;grid-column:1/-1;box-shadow:0 4px 16px rgba(0,66,37,0.06)"></div>';
-  h+='<div id="uke-trio-summary" style="background:#fff;border-left:4px solid #004225;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#0E1F1A;width:100%;grid-column:1/-1"></div>';
-  h+='<div class="section-label" style="margin-top:24px">Denne uka &mdash; aktivitet</div>';
-  h+='<div id="uke-aktivitet-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
-  h+='<div class="section-label" style="margin-top:24px">Marketing &amp; konvertering (90d)</div>';
-  h+='<div id="uke-marketing-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
-  h+='<div id="uke-marketing-forklaring" style="background:#fff;border-left:4px solid #00875A;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#0E1F1A;line-height:1.6;width:100%;grid-column:1/-1"></div>';
-  
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">';
-  h+='<div class="section-label" style="margin-top:24px">Inntekt og omsetning</div>';
-  h+='<div id="uke-econ-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
-  h+='<div class="section-label" style="margin-top:24px">&#10003; Solgte biler i perioden</div>';
-  h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Solgte</div><div class="th-badge" id="uke-solgt-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Pris lav</th><th>Bud (T)</th><th>Peasy fee</th><th>Avvik</th><th>Solgt</th></tr></thead><tbody id="uke-solgt-tbody"></tbody></table></div>';
-  h+='<div class="section-label" style="margin-top:24px">&#8617; Returnerte biler i perioden</div>';
-  h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Returnerte</div><div class="th-badge" id="uke-ret-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Pris lav</th><th>Bud (T)</th><th>Avvik</th><th>No-cure</th><th>Returnert</th></tr></thead><tbody id="uke-ret-tbody"></tbody></table></div>';
-  h+='<div class="section-label" style="margin-top:24px">&#10060; Avviste eval i perioden</div>';
-  h+='<div class="table-card" style="margin-bottom:16px;width:100%;grid-column:1/-1"><div class="th"><div class="th-title">Avviste evalueringer</div><div class="th-badge" id="uke-avvist-badge">&ndash;</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>KM</th><th>Estimat lav-hoy</th><th>Eval-dato</th></tr></thead><tbody id="uke-avvist-tbody"></tbody></table></div>';
-  h+='<div class="section-label" style="margin-top:24px">&#128202; Avviste eval — analyse</div>';
-  h+='<div id="uke-avvist-analyse" style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:18px;margin-bottom:24px;width:100%;grid-column:1/-1"></div>';
-  h+='</div>';
-  h+='<div class="section-label">Brakett-analyse for uka</div>';
-  h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px"></div>';
-  h+='<div class="table-card"><div class="th"><div class="th-title">8-ukers trend</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = registrert per uke. Lysegrønne søyler = solgt per uke. Linje = bud-aksept-rate (mål 70%, høyre akse).</div>';
-  h+='<div style="padding:16px;position:relative;height:260px"><canvas id="ukeTrendChart"></canvas></div></div>';
-  return h;
-}
-function renderUkesrapport(){
-  var sel=document.getElementById('ukeVelger');
-  if(!sel)return;
-  sel.removeEventListener('change',renderUkesrapport);
-  sel.addEventListener('change',renderUkesrapport);
-  var weeksAgo=parseInt(sel.value)||1;
-  var rows=window._lastRows||[];
-  var data=window._lastData||{};
-  var range=getCompletedWeekRange(weeksAgo);
-  var prev=getCompletedWeekRange(weeksAgo+1);
-  var infoEl=document.getElementById('uke-periode-info');
-  if(infoEl){
-    var fmt=function(d){return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short'});};
-    infoEl.innerHTML=fmt(range.monday)+' &ndash; '+fmt(range.sunday);
-  }
-  function inRange(d,r){return d&&d>=r.monday&&d<=r.sunday;}
-  function pdOps(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
-  var evalAll=rows.slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
-  function metrics(r){
-    var registrert=evalAll.filter(function(row){return inRange(pdOps(row[13]),r);});
-    var bestilt=evalAll.filter(function(row){var d=pdOps(row[15])||pdOps(row[16]);return inRange(d,r);});
-    var mottatt=evalAll.filter(function(row){return inRange(pdOps(row[17]),r);});
-    var solgt=evalAll.filter(function(row){return inRange(pdOps(row[18]),r);});
-    var ret=evalAll.filter(function(row){return inRange(pdOps(row[21]),r)&&String(row[12]||'').toLowerCase().includes('returned');});
-    var avvist=evalAll.filter(function(row){var d=pdOps(row[13]);return inRange(d,r)&&String(row[12]||'').toLowerCase().includes('avvist by customer');});
-    var feeFromT=function(t){if(!t)return null;if(t<75000)return 5900;if(t<125000)return 7900;return 9900;};var enrich=function(row){var dLow=parseDLow(row[3]);var dHi=null;var ar=String(row[3]||'').replace(/[\s\u00a0]/g,'').split('-');if(ar.length>1)dHi=parseInt(ar[1])||null;var e=row[4]?parseInt(String(row[4]).replace(/[\s\u00a0]/g,''))||null:null;var t=row[19]?parseInt(String(row[19]).replace(/[\s\u00a0]/g,''))||null:null;var fee=feeFromT(t);var gap=(t&&dLow)?((t-dLow)/dLow*100):null;var lbl=[row[6]||'',row[7]||'',row[8]||''].filter(Boolean).join(' ');var km=row[22]?parseInt(row[22])||null:null;return {regnr:row[1],label:lbl,dLow:dLow,dHi:dHi,e:e,t:t,fee:fee,gap:gap,km:km,sDate:row[18]||null,vDate:row[21]||null,evalDate:row[13]||null};};
-    var solgtBiler=solgt.map(enrich);
-    var retBiler=ret.map(enrich);
-    var avvistBiler=avvist.map(enrich);
-    var ep=registrert.length>0?Math.round(bestilt.length/registrert.length*100):0;
-    var bp=mottatt.length>0?Math.round(solgt.length/mottatt.length*100):0;
-    var bruttoOms=solgtBiler.reduce(function(s,c){return s+(c.t||0);},0);
-    var bruttoE=solgtBiler.reduce(function(s,c){return s+(c.e||0);},0);var arSalaer=Math.round(bruttoE*0.027);
-    var peasyFee=solgtBiler.reduce(function(s,c){return s+(c.fee||0);},0);
-    var noCureTap=ret.length*3000;
-    var peasyNetto=peasyFee-noCureTap;
-    return {registrert:registrert.length,bestilt:bestilt.length,mottatt:mottatt.length,solgt:solgt.length,ret:ret.length,avvist:avvist.length,ep:ep,bp:bp,solgtBiler:solgtBiler,retBiler:retBiler,avvistBiler:avvistBiler,bruttoOms:bruttoOms,arSalaer:arSalaer,peasyFee:peasyFee,noCureTap:noCureTap,peasyNetto:peasyNetto};
-  }
-  var cur=metrics(range);
-  var prv=metrics(prev);
-  var base30={registrert:0,bestilt:0,mottatt:0,solgt:0,ret:0,ep:0,bp:0};
-  for(var bw=1;bw<=4;bw++){var br=getCompletedWeekRange(weeksAgo+bw);var bm=metrics(br);base30.registrert+=bm.registrert;base30.bestilt+=bm.bestilt;base30.mottatt+=bm.mottatt;base30.solgt+=bm.solgt;base30.ret+=bm.ret;base30.ep+=bm.ep;base30.bp+=bm.bp;}
-  base30.registrert/=4;base30.bestilt/=4;base30.mottatt/=4;base30.solgt/=4;base30.ret/=4;base30.ep=Math.round(base30.ep/4);base30.bp=Math.round(base30.bp/4);base30.bruttoOms=0;base30.peasyFee=0;base30.arSalaer=0;base30.noCureTap=0;for(var bz=1;bz<=4;bz++){var brz=getCompletedWeekRange(weeksAgo+bz);var bmz=metrics(brz);base30.bruttoOms+=bmz.bruttoOms;base30.peasyFee+=bmz.peasyFee;base30.arSalaer+=bmz.arSalaer;base30.noCureTap+=bmz.noCureTap;}base30.bruttoOms/=4;base30.peasyFee/=4;base30.arSalaer/=4;base30.noCureTap/=4;
-  function delta(c,p){if(p===0)return c>0?'+&infin;':'0';var d=Math.round((c-p)/p*100);return(d>=0?'+':'')+d+'%';}
-  function deltaPP(c,p){var d=c-p;return(d>=0?'+':'')+d+'pp';}
-  function deltaColor(c,p,inverted){var d=c-p;if(inverted)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';}
-  var snittFee=cur.solgt>0?Math.round(cur.peasyFee/cur.solgt):7900;
-  function cohortMetrics(weeksBack){
-    var rgSum=0,bsSum=0,mtSum=0,sgSum=0;
-    for(var ck=2;ck<=4;ck++){
-      var ckRange=getCompletedWeekRange(weeksBack+ck);
-      var ckm=metrics(ckRange);
-      rgSum+=ckm.registrert;bsSum+=ckm.bestilt;mtSum+=ckm.mottatt;sgSum+=ckm.solgt;
-    }
-    return {ep:rgSum>0?Math.round(bsSum/rgSum*100):0,bp:mtSum>0?Math.round(sgSum/mtSum*100):0};
-  }
-  var coh=cohortMetrics(weeksAgo);
-  var coh30=cohortMetrics(weeksAgo+4);
-  var roll30={rg:0,bs:0,mt:0,sg:0};for(var rw=0;rw<4;rw++){var rrm=metrics(getCompletedWeekRange(weeksAgo+rw));roll30.rg+=rrm.registrert;roll30.bs+=rrm.bestilt;roll30.mt+=rrm.mottatt;roll30.sg+=rrm.solgt;}
-  var ep30=roll30.rg>0?Math.round(roll30.bs/roll30.rg*100):0;
-  var bp30=roll30.mt>0?Math.round(roll30.sg/roll30.mt*100):0;
-  var roll90={rg:0,bs:0,mt:0,sg:0};for(var rw2=0;rw2<12;rw2++){var rrm2=metrics(getCompletedWeekRange(weeksAgo+rw2));roll90.rg+=rrm2.registrert;roll90.bs+=rrm2.bestilt;roll90.mt+=rrm2.mottatt;roll90.sg+=rrm2.solgt;}
-  var ep90=roll90.rg>0?Math.round(roll90.bs/roll90.rg*100):0;
-  var bp90=roll90.mt>0?Math.round(roll90.sg/roll90.mt*100):0;
-  var epDelta=ep30-ep90,bpDelta=bp30-bp90;
-  var ukeBudsjett=7000;
-  var cpl=cur.registrert>0?Math.round(ukeBudsjett/cur.registrert):0;
-  var cpl30=base30.registrert>0?Math.round(ukeBudsjett/base30.registrert):0;
-  var cplDelta=cpl30>0?Math.round((cpl-cpl30)/cpl30*100):0;
-  var marg=ep30/100*(snittFee*bp30/100-3000*(1-bp30/100));
-  var cplCol=cpl<=marg?'#2E7D32':'#C62828';
-  var flowEl=document.getElementById('uke-flow');
-  if(flowEl){
-    // Beregn 90d-rullerende totaler
-    var roll90T={rg:0,bs:0,mt:0,sg:0,rt:0,fee:0,bruttoE:0};
-    for(var rw90=0;rw90<4;rw90++){var rrm90=metrics(getCompletedWeekRange(weeksAgo+rw90));roll90T.rg+=rrm90.registrert;roll90T.bs+=rrm90.bestilt;roll90T.mt+=rrm90.mottatt;roll90T.sg+=rrm90.solgt;roll90T.rt+=rrm90.ret;roll90T.fee+=rrm90.peasyFee;roll90T.bruttoE+=rrm90.bruttoOms;}
-    // Pipeline = bestilt 90d - solgt 90d - retur 90d (biler i prosess)
-    var pipeline=Math.max(0,roll90T.bs-roll90T.sg-roll90T.rt);
-    var inntekt90=roll90T.fee;
-    var kostnad90=roll90T.rt*3000;
-    var arSalaer90=Math.round(roll90T.bruttoE*0.027);
-    var netto90=inntekt90-kostnad90;
-    var snittPris90=roll90T.sg>0?Math.round(roll90T.bruttoE/roll90T.sg):0;
-    var w=1200,hgt=300;
-    var inntekt=cur.peasyFee,kostnad=cur.noCureTap,netto=inntekt-kostnad;
-    var fmtKr1=function(n){return (n<0?'-':'')+Math.abs(n).toLocaleString('nb-NO')+' kr';};
-    var fmtKr1=function(n){return (n<0?'-':'')+Math.abs(n).toLocaleString('nb-NO')+' kr';};
-    var cpl90=cur.registrert>0?Math.round(7000/cur.registrert):0;
-    var stages=[
-      {x:80,y:140,label:'LEADS',val:roll90T.rg,sub:'CPL '+cpl90.toLocaleString('nb-NO')+' kr',col:'#5C6F69'},
-      {x:340,y:140,label:'BESTILT',val:roll90T.bs,sub:'30d',col:'#5C6F69'},
-      {x:600,y:140,label:'MOTTATT',val:roll90T.mt,sub:'30d',col:'#5C6F69'}
-    ];
-    var solgtNode={x:880,y:60,label:'SOLGT',val:roll90T.sg,sub:'Snitt '+(roll90T.sg>0?Math.round(roll90T.bruttoE/roll90T.sg/1000):0)+'k kr/bil',col:'#2E7D32'};
-    var retNode={x:880,y:220,label:'RETURNERT',val:roll90T.rt,sub:'30d',col:'#C62828'};
-    var inntektNode={x:1100,y:60,label:'INNTEKT',val:fmtKr1(inntekt90),sub:'Peasy fee',col:'#2E7D32',isText:true};
-    var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:roll90T.rt+' x 3 000 kr',col:retOk?'#5C6F69':'#C62828',isText:true};
-    var nettoCol=netto90>=0?'#2E7D32':'#C62828';
-    var conv=[
-      {x1:80,x2:340,y:140,label:'EVAL-AKSEPT 30d',pct:ep30+'%',target:'Mål 20%',col:ep30>=20?'#2E7D32':'#C62828',delta:(epDelta>=0?'+':'')+epDelta+'pp vs 90d',arrow:epDelta>=0?'▲':'▼',arrowCol:epDelta>=0?'#2E7D32':'#C62828',met:ep30>=20},
-      {x1:600,x2:880,y:60,label:'BUD-AKSEPT 30d',pct:bp30+'%',target:'Mål 70%',col:bp30>=70?'#2E7D32':'#C62828',delta:(bpDelta>=0?'+':'')+bpDelta+'pp vs 90d',arrow:bpDelta>=0?'▲':'▼',arrowCol:bpDelta>=0?'#2E7D32':'#C62828',met:bp30>=70,split:true},
-      {x1:600,x2:880,y:220,label:'RETUR-RATE 30d',pct:(100-bp30)+'%',target:'Mål <30%',col:(100-bp30)<30?'#2E7D32':'#C62828',delta:'',arrow:'',arrowCol:'#888',met:(100-bp30)<30,split:true,nopct:false}
-    ];
-    var svg='<svg viewBox="0 0 '+w+' '+hgt+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">';
-    svg+='<defs><marker id="arr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#B0BAB5"/></marker><marker id="arrG" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#2E7D32"/></marker><marker id="arrR" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#C62828"/></marker></defs>';
-    // Linjer: Leads -> Bestilt (rett), Bestilt -> Mottatt (rett, ingen konv-rate her), Mottatt -> Solgt (opp), Mottatt -> Returnert (ned), Solgt -> Inntekt, Returnert -> Kostnad
-    svg+='<line x1="130" y1="140" x2="290" y2="140" stroke="'+(ep30>=20?'#2E7D32':'#C62828')+'" stroke-width="3" marker-end="url(#'+(ep30>=20?'arrG':'arrR')+')"/>';
-    svg+='<line x1="390" y1="140" x2="550" y2="140" stroke="#B0BAB5" stroke-width="2" marker-end="url(#arr)"/>';
-    svg+='<path d="M 650 140 Q 750 140 750 60 L 830 60" stroke="'+(bp30>=70?'#2E7D32':'#C62828')+'" stroke-width="3" fill="none" marker-end="url(#'+(bp30>=70?'arrG':'arrR')+')"/>';
-    var retOk=(100-bp30)<30;svg+='<path d="M 650 140 Q 750 140 750 220 L 830 220" stroke="'+(retOk?'#2E7D32':'#C62828')+'" stroke-width="2" fill="none" marker-end="url(#'+(retOk?'arrG':'arrR')+')"/>';
-    svg+='<line x1="930" y1="60" x2="1040" y2="60" stroke="#2E7D32" stroke-width="2" marker-end="url(#arrG)"/>';
-    svg+='<line x1="930" y1="220" x2="1040" y2="220" stroke="'+(retOk?'#2E7D32':'#C62828')+'" stroke-width="2" marker-end="url(#'+(retOk?'arrG':'arrR')+')"/>';
-    // Stages tekst
-    var allNodes=stages.concat([solgtNode,retNode,inntektNode,kostnadNode]);
-    for(var i=0;i<allNodes.length;i++){var s=allNodes[i];var fontSize=s.isText?22:36;svg+='<text x="'+s.x+'" y="'+(s.y-50)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" font-weight="700" letter-spacing="1.2" fill="#667A72">'+s.label+'</text><text x="'+s.x+'" y="'+(s.y+5)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="'+fontSize+'" font-weight="900" fill="'+s.col+'">'+s.val+'</text><text x="'+s.x+'" y="'+(s.y+30)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="#888">'+s.sub+'</text>';}
-    // Konv-rates
-    // EVAL-AKSEPT (mellom Leads og Bestilt)
-    svg+='<text x="210" y="95" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">EVAL-AKSEPT 30d</text>';
-    svg+='<text x="210" y="122" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="22" font-weight="900" fill="'+(ep30>=20?'#2E7D32':'#C62828')+'">'+ep30+'%</text>';
-
-    svg+='<text x="210" y="180" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" fill="'+(ep30>=20?'#2E7D32':'#C62828')+'">Mål 20%'+(ep30>=20?' ✓':'')+'</text>';
-    // BUD-AKSEPT (mellom Mottatt og Solgt — over)
-    svg+='<text x="740" y="30" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">BUD-AKSEPT 30d</text>';
-    svg+='<text x="740" y="50" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="'+(bp30>=70?'#2E7D32':'#C62828')+'">'+bp30+'%</text>';
-
-    // RETUR-RATE (mellom Mottatt og Returnert — under)
-    svg+='<text x="740" y="260" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">RETUR-RATE 30d</text>';
-    svg+='<text x="740" y="282" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="#C62828">'+(100-bp30)+'%</text>';
-    // Netto-boks helt til hoyre
-    svg+='<rect x="1040" y="125" width="140" height="50" rx="8" fill="#fff" stroke="'+nettoCol+'" stroke-width="2"/>';
-    svg+='<text x="1110" y="143" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">PEASY NETTO</text>';
-    svg+='<text x="1110" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="16" font-weight="900" fill="'+nettoCol+'">'+fmtKr1(netto90)+'</text>';
-    svg+='</svg>';
-    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Alle tall i flow = rullerende 30 dager. Pipeline ('+pipeline+' biler) = bestilt minus solgt og returnert &mdash; biler som fortsatt er i prosessen.</div>';
-    flowEl.innerHTML=svg+footnote;
-  }
-  var trioEl=null;if(trioEl){
-    var trio=[
-      {label:'Markedsføring (CPL)',val:cpl.toLocaleString('nb-NO')+' kr',sub:'7 000 kr / '+cur.registrert+' leads (uka)',d:'Snitt 30d: '+cpl30.toLocaleString('nb-NO')+' kr',dCol:cpl<=cpl30?'#2E7D32':'#C62828',target:'Marg.verdi: '+Math.round(marg).toLocaleString('nb-NO')+' kr',targetMet:cpl<=marg,col:cplCol,arrow:cpl<=cpl30?'&#9650;':'&#9660;'},
-      {label:'Eval-aksept (volum)',val:cur.ep+'%',sub:cur.bestilt+' av '+cur.registrert+' leads (uka)',d:(cur.ep-base30.ep>=0?'+':'')+(cur.ep-base30.ep)+'pp vs 30d',dCol:cur.ep>=base30.ep?'#2E7D32':'#C62828',target:'Mål: 20%',targetMet:cur.ep>=20,col:cur.ep>=20?'#2E7D32':'#C62828',arrow:cur.ep>=base30.ep?'&#9650;':'&#9660;'},
-      {label:'Bud-aksept (konvert.)',val:cur.bp+'%',sub:cur.solgt+' av '+cur.mottatt+' mottatte (uka)',d:(cur.bp-base30.bp>=0?'+':'')+(cur.bp-base30.bp)+'pp vs 30d',dCol:cur.bp>=base30.bp?'#2E7D32':'#C62828',target:'Mål: 70%',targetMet:cur.bp>=70,col:cur.bp>=70?'#2E7D32':'#C62828',arrow:cur.bp>=base30.bp?'&#9650;':'&#9660;'}
-    ];
-    trioEl.innerHTML=trio.map(function(c){return '<div style="background:#fff;border:2px solid '+c.col+';border-radius:14px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,66,37,0.08)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:10px">'+c.label+'</div><div style="display:flex;align-items:baseline;gap:10px"><div style="font-size:34px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:18px;color:'+c.dCol+'">'+c.arrow+'</div></div><div style="font-size:12px;font-weight:700;color:'+c.dCol+';margin-top:8px">'+c.d+' vs 30d snitt</div><div style="font-size:11px;color:'+(c.targetMet?'#2E7D32':'#C62828')+';margin-top:4px;font-weight:600">'+c.target+(c.targetMet?' &#10003;':'')+'</div><div style="font-size:11px;color:#aaa;margin-top:6px">'+c.sub+'</div></div>';}).join('');
-  }
-  var ep90flow=roll90T.rg>0?Math.round(roll90T.bs/roll90T.rg*100):0;
-  var bp90flow=roll90T.mt>0?Math.round(roll90T.sg/roll90T.mt*100):0;
-  var snittFee90=roll90T.sg>0?Math.round(roll90T.fee/roll90T.sg):7900;
-  var cpl90=cur.registrert>0?Math.round(7000/cur.registrert):0;
-  var verdiPerLead=Math.round(ep90flow/100*(snittFee90*bp90flow/100-3000*(1-bp90flow/100)));
-  var margPerLead=verdiPerLead-cpl90;
-  var roi90=cpl90>0?(verdiPerLead/cpl90).toFixed(1).replace('.',','):'0';
-  var aktEl=document.getElementById('uke-aktivitet-grid');
-  if(aktEl){
-    var deltaPctU=function(c,b){if(b===0)return c>0?'+∞':'0%';var d=Math.round((c-b)/b*100);return(d>=0?'+':'')+d+'%';};
-    var deltaColU=function(c,b,inv){var d=c-b;if(inv)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';};
-    var omsUke=cur.bruttoOms;
-    var snittBilUke=cur.solgt>0?Math.round(omsUke/cur.solgt):0;
-    var inntektUke=cur.peasyFee-cur.noCureTap;
-    var arrUke=Math.round(omsUke*0.027);
-    var snittBil30=base30.solgt>0?Math.round(base30.bruttoOms/base30.solgt):0;
-    var inntekt30=base30.peasyFee-base30.noCureTap;
-    var arr30=Math.round(base30.bruttoOms*0.027);
-    var akt=[
-      {label:'Nye leads',val:cur.registrert,sub:'Snitt '+(roll90T.rg/90).toFixed(1).replace('.',',')+' / dag'},
-      {label:'Nye bestilt',val:cur.bestilt,sub:null},
-      {label:'Inn på anlegg',val:cur.mottatt,sub:null},
-      {label:'Solgt',val:cur.solgt,sub:null},
-      {label:'Returnert',val:cur.ret,sub:null}
-    ];
-    aktEl.innerHTML=akt.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:10px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,66,37,0.04)"><div style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:28px;font-weight:900;line-height:1;color:#004225">'+c.val+'</div>'+(c.sub?'<div style="font-size:10px;color:#888;margin-top:8px">'+c.sub+'</div>':'')+'</div>';}).join('');
-  var markEl=document.getElementById('uke-marketing-grid');
-  if(markEl){
-    var mark=[
-      {label:'CPL',val:cpl90.toLocaleString('nb-NO')+' kr',sub:'7 000 kr / '+cur.registrert+' leads (uka)',col:'#004225'},
-      {label:'Verdi / lead',val:verdiPerLead.toLocaleString('nb-NO')+' kr',sub:'Marg '+(margPerLead>=0?'+':'')+margPerLead.toLocaleString('nb-NO')+' kr',col:margPerLead>=0?'#2E7D32':'#C62828'},
-      {label:'ROI marketing',val:roi90+'x',sub:'Per krone i marketing',col:'#004225'},
-      {label:'Eval-aksept',val:ep90flow+'%',sub:'Mål 20%'+(ep90flow>=20?' ✓':''),col:ep90flow>=20?'#2E7D32':'#C62828'},
-      {label:'Bud-aksept',val:bp90flow+'%',sub:'Mål 70%'+(bp90flow>=70?' ✓':''),col:bp90flow>=70?'#2E7D32':'#C62828'}
-    ];
-    markEl.innerHTML=mark.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:10px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,66,37,0.04)"><div style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:24px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:10px;color:#888;margin-top:8px">'+c.sub+'</div></div>';}).join('');
-    var markFEl=document.getElementById('uke-marketing-forklaring');
-    if(markFEl){
-      var snittBilKr=roll90T.sg>0?Math.round(roll90T.bruttoE/roll90T.sg):0;
-      var snittBilK=Math.round(snittBilKr/1000);
-      var feeBracket=snittBilKr<75000?5900:snittBilKr<125000?7900:9900;
-      var ep_=roll90T.rg>0?Math.round(roll90T.bs/roll90T.rg*100):0;
-      var bp_=roll90T.mt>0?Math.round(roll90T.sg/roll90T.mt*100):0;
-      var ret_=100-bp_;
-      var verdi=Math.round(ep_/100*(feeBracket*bp_/100-3000*ret_/100));
-      var marg=verdi-cpl90;
-      var maksCPL=verdi;
-      var dagensBudsjettUke=7000;
-      var doblet=dagensBudsjettUke*2;
-      var ekstraNetto=Math.round(marg*64);
-      var html='<div style="font-weight:700;color:#00875A;letter-spacing:0.5px;text-transform:uppercase;font-size:11px;margin-bottom:8px">Hva tallene betyr &mdash; og hva du kan gjøre</div>';
-      html+='<p style="margin:6px 0"><strong>1. Vi tjener '+marg.toLocaleString('nb-NO')+' kr per ekstra lead</strong> (verdi '+verdi.toLocaleString('nb-NO')+' kr &minus; CPL '+cpl90.toLocaleString('nb-NO')+' kr) basert på 30d-snittet med '+ep_+'% eval-aksept, '+bp_+'% bud-aksept og '+snittBilK+'k snitt bilverdi (fee-bracket '+feeBracket.toLocaleString('nb-NO')+' kr).</p>';
-      html+='<p style="margin:6px 0"><strong>2. ROI '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+'x</strong> betyr at hver krone i marketing returnerer '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+' kr i Peasy netto &mdash; så lenge konvertering holder seg.</p>';
-      html+='<p style="margin:6px 0"><strong>3. Maksgrensen for CPL</strong> er '+maksCPL.toLocaleString('nb-NO')+' kr. Så lenge CPL er under dette tjener du penger på marginal-leadet. I dag er CPL '+cpl90.toLocaleString('nb-NO')+' kr &mdash; god margin.</p>';
-      html+='<div style="background:#F5F7F5;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:12px"><strong>⚡ Forslag:</strong> Doble budsjettet til '+doblet.toLocaleString('nb-NO')+' kr/uke. Forventet effekt (om CPL holder): ~'+(64*2)+' leads/uke, ~'+ekstraNetto.toLocaleString('nb-NO')+' kr ekstra Peasy netto. Risiko: lav. Mål CPL etter 2 uker &mdash; hvis under '+Math.round(maksCPL*0.5).toLocaleString('nb-NO')+' kr, push videre. Stopp når marg/lead &lt; 200 kr.</div>';
-      html+='<div style="font-size:11px;color:#888;margin-top:8px;font-style:italic">Reell flaskehals akkurat nå: '+(ep_<20?'Eval-aksept ('+ep_+'%, mål 20%) &mdash; flere selgere må akseptere estimatet':bp_<70?'Bud-aksept ('+bp_+'%, mål 70%) &mdash; for mange returnerer etter bud':'Ingen flaskehals &mdash; full pipeline-helse')+'.</div>';
-      markFEl.innerHTML=html;
-    }
-  }
-  }
-  var sumEl=document.getElementById('uke-trio-summary');
-  if(sumEl){
-    var bottleneck='';
-    var ukeBudsjett30=30000;var netto30=roll90T.fee-(roll90T.rt*3000);var roi=ukeBudsjett30>0?Math.round(netto30/ukeBudsjett30*10)/10:0;
-    if(ep30<20&&bp30<70)bottleneck='<strong style="color:#C62828">&#9888; Begge under mål (30d):</strong> Eval-aksept ('+ep30+'%) og Bud-aksept ('+bp30+'%) trenger forbedring.';
-    else if(ep30<20)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Eval-aksept</strong> ('+ep30+'% siste 30d, mål 20%) &mdash; for få selgere aksepterer estimatet.';
-    else if(bp30<70)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Bud-aksept</strong> ('+bp30+'% siste 30d, mål 70%) &mdash; for mange returnerer etter bud.';
-    else bottleneck='<strong style="color:#2E7D32">&#10003; Begge over mål (30d)</strong> &mdash; full pipeline-helse.';
-    var profPerLead=Math.round(marg)-cpl;var cplLine=cpl<=marg?'<strong style="color:#2E7D32">Vi tjener '+profPerLead.toLocaleString('nb-NO')+' kr per lead</strong> (marg.verdi '+Math.round(marg).toLocaleString('nb-NO')+' kr &minus; CPL '+cpl.toLocaleString('nb-NO')+' kr). Rom for å øke markedsbudsjett.':'<strong style="color:#C62828">Vi taper '+Math.abs(profPerLead).toLocaleString('nb-NO')+' kr per lead</strong> (CPL '+cpl.toLocaleString('nb-NO')+' kr &gt; marg.verdi '+Math.round(marg).toLocaleString('nb-NO')+' kr).';
-    var margForkl='<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">Marg.verdi = '+ep30+'% eval-aksept (30d) × ('+snittFee.toLocaleString('nb-NO')+' kr fee × '+bp30+'% bud-aksept (30d) &minus; 3 000 kr tap × '+(100-bp30)+'% returnert) = '+Math.round(marg).toLocaleString('nb-NO')+' kr per lead</div>';sumEl.innerHTML='<div style="margin-bottom:8px">'+bottleneck+'</div><div style="margin-bottom:4px;color:#5C6F69">'+cplLine+'</div>'+margForkl+'<div style="font-size:12px;color:#5C6F69;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;margin-top:10px">ROI markedsføring (30d): <strong>'+roi+'x</strong> &middot; '+ukeBudsjett30.toLocaleString('nb-NO')+' kr inn &rarr; '+netto30.toLocaleString('nb-NO')+' kr Peasy netto.</div>';
-  }
-  var grid=document.getElementById('uke-kpi-grid');
-  if(grid){
-    var cards=[
-      {label:'Registrert',val:cur.registrert,d:delta(cur.registrert,base30.registrert),col:deltaColor(cur.registrert,base30.registrert,false)},
-      {label:'Bestilt h/l',val:cur.bestilt,d:delta(cur.bestilt,base30.bestilt),col:deltaColor(cur.bestilt,base30.bestilt,false)},
-      {label:'Mottatt',val:cur.mottatt,d:delta(cur.mottatt,base30.mottatt),col:deltaColor(cur.mottatt,base30.mottatt,false)},
-      {label:'Solgt',val:cur.solgt,d:delta(cur.solgt,base30.solgt),col:deltaColor(cur.solgt,base30.solgt,false)},
-      {label:'Returnert',val:cur.ret,d:delta(cur.ret,base30.ret),col:deltaColor(cur.ret,base30.ret,true)}
-    ];
-    grid.innerHTML=cards.map(function(c){
-      var valColor=c.targetMet===false?'#C62828':c.targetMet===true?'#2E7D32':'#004225';
-      return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)">'
-        +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div>'
-        +'<div style="font-size:24px;font-weight:900;line-height:1;color:'+valColor+'">'+c.val+'</div>'
-        +'<div style="font-size:11px;font-weight:700;color:'+c.col+';margin-top:6px">'+c.d+'</div>'
-        +'<div style="font-size:9px;color:#aaa;margin-top:2px">vs 30d snitt</div>'
-        +(c.target?'<div style="font-size:9px;color:#aaa;margin-top:2px">'+c.target+'</div>':'')
-        +'</div>';
-    }).join('');
-  }
-  var econEl=document.getElementById('uke-econ-grid');
-  if(econEl){
-    var fmtKr=function(n){return (n||0).toLocaleString('nb-NO')+' kr';};
-    var snittPris=cur.solgt>0?Math.round(cur.bruttoOms/cur.solgt):0;
-    var deltaPctEcon=function(c,b){if(b===0)return c>0?'+&infin;':'0%';var d=Math.round((c-b)/b*100);return(d>=0?'+':'')+d+'%';};
-    var deltaColEcon=function(c,b,inv){var d=c-b;if(inv)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';};
-    var econ=[
-      {label:'Solgt-omsetning',val:fmtKr(cur.bruttoOms),sub:'Snitt '+fmtKr(snittPris)+' / bil ('+cur.solgt+' biler)',col:'#004225',d:deltaPctEcon(cur.bruttoOms,base30.bruttoOms),dCol:deltaColEcon(cur.bruttoOms,base30.bruttoOms,false)},
-      {label:'AR salaer (2.7%)',val:fmtKr(cur.arSalaer),sub:'Til Autoringen',col:'#1565C0',d:deltaPctEcon(cur.arSalaer,base30.arSalaer),dCol:deltaColEcon(cur.arSalaer,base30.arSalaer,false)},
-      {label:'Peasy inntekt',val:fmtKr(cur.peasyFee),sub:'Sum E - T (solgte biler)',col:'#00875A',d:deltaPctEcon(cur.peasyFee,base30.peasyFee),dCol:deltaColEcon(cur.peasyFee,base30.peasyFee,false)},
-      {label:'No-cure tap',val:'-'+fmtKr(cur.noCureTap),sub:cur.ret+' returnerte x 3 000 kr',col:'#C62828',d:deltaPctEcon(cur.noCureTap,base30.noCureTap),dCol:deltaColEcon(cur.noCureTap,base30.noCureTap,true)},
-      {label:'Peasy netto',val:fmtKr(cur.peasyFee-cur.noCureTap),sub:'Fee minus no-cure tap',col:(cur.peasyFee-cur.noCureTap)>=0?'#2E7D32':'#C62828',d:deltaPctEcon(cur.peasyFee-cur.noCureTap,base30.peasyFee-base30.noCureTap),dCol:deltaColEcon(cur.peasyFee-cur.noCureTap,base30.peasyFee-base30.noCureTap,false),bold:true}
-    ];
-    econEl.innerHTML=econ.map(function(c){return '<div style="background:#fff;border:'+(c.bold?'2px solid '+c.col:'1px solid rgba(0,66,37,0.08)')+';border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:20px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:10px;color:#aaa;margin-top:8px">'+c.sub+'</div></div>';}).join('');
-  }
-  var fmtKkr=function(n){return n!=null?Math.round(n/1000).toLocaleString('nb-NO')+'k kr':'-';};
-  var fmtKm=function(n){return n!=null?n.toLocaleString('nb-NO')+' km':'-';};
-  var fmtUkeDate=function(s){if(!s)return '-';var d=String(s).slice(0,10);if(d.indexOf('-')>=0)return d.split('-').reverse().join('.');return d;};
-  var solgtTbl=document.getElementById('uke-solgt-tbody'),solgtBadge=document.getElementById('uke-solgt-badge');
-  if(solgtBadge)solgtBadge.textContent=cur.solgt+' biler';
-  if(solgtTbl){
-    if(cur.solgtBiler.length===0)solgtTbl.innerHTML='<tr><td colspan="8" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen solgte biler i uka</td></tr>';
-    else{var sorted=cur.solgtBiler.slice().sort(function(a,b){return(new Date(b.sDate||0))-(new Date(a.sDate||0));});solgtTbl.innerHTML=sorted.map(function(c){var col=c.gap>=0?'#2E7D32':c.gap>-5?'#E65100':'#C62828';return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td style="font-size:11px">'+(c.label||'-')+'</td><td style="font-size:11px">'+fmtKm(c.km)+'</td><td>'+fmtKr(c.dLow)+'</td><td><strong>'+fmtKr(c.t)+'</strong></td><td style="color:#00875A;font-weight:700">'+fmtKr(c.fee)+'</td><td style="color:'+col+';font-weight:700">'+fmtPct(c.gap)+'</td><td style="color:var(--muted);font-size:11px">'+fmtUkeDate(c.sDate)+'</td></tr>';}).join('');}
-  }
-  var avvistTbl=document.getElementById('uke-avvist-tbody'),avvistBadge=document.getElementById('uke-avvist-badge');
-  if(avvistBadge)avvistBadge.textContent=cur.avvist+' biler';
-  var analyseEl=document.getElementById('uke-avvist-analyse');
-  if(analyseEl){
-    if(cur.avvistBiler.length===0)analyseEl.innerHTML='<div style="color:var(--muted);font-style:italic;text-align:center">Ingen avviste eval i uka &mdash; ingen analyse</div>';
-    else{
-      var bracketsList=[{name:'Lav',lo:0,hi:100000,c:'#2E7D32'},{name:'Mid',lo:100000,hi:250000,c:'#1565C0'},{name:'Hoy',lo:250000,hi:400000,c:'#E65100'},{name:'Premium-Lav',lo:400000,hi:600000,c:'#7B1FA2'},{name:'Premium-Hoy',lo:600000,hi:Infinity,c:'#4A148C'}];
-      var bDist=bracketsList.map(function(b){var n=cur.avvistBiler.filter(function(c){return c.dLow!=null&&c.dLow>=b.lo&&c.dLow<b.hi;}).length;var pct=cur.avvistBiler.length>0?Math.round(n/cur.avvistBiler.length*100):0;return {name:b.name,n:n,pct:pct,c:b.c};});
-      var modelCount={};cur.avvistBiler.forEach(function(c){var m=String(c.label||'').split(' ').slice(0,2).join(' ');if(m)modelCount[m]=(modelCount[m]||0)+1;});
-      var topModels=Object.keys(modelCount).map(function(k){return {m:k,n:modelCount[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,5);
-      var dLowAvvist=cur.avvistBiler.filter(function(c){return c.dLow;}).map(function(c){return c.dLow;});
-      var snittDLowAvvist=dLowAvvist.length>0?Math.round(dLowAvvist.reduce(function(s,v){return s+v;},0)/dLowAvvist.length):0;
-      var snittDLowSolgt=0;var dLowSolgt=cur.solgtBiler.filter(function(c){return c.dLow;}).map(function(c){return c.dLow;});if(dLowSolgt.length>0)snittDLowSolgt=Math.round(dLowSolgt.reduce(function(s,v){return s+v;},0)/dLowSolgt.length);
-      var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">';
-      html+='<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Distribusjon per bracket</div>';
-      html+=bDist.map(function(b){var bw=Math.max(b.pct,2);return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px"><div style="width:60px;color:'+b.c+';font-weight:700">'+b.name+'</div><div style="flex:1;background:rgba(0,0,0,0.04);border-radius:4px;height:18px;position:relative"><div style="width:'+bw+'%;background:'+b.c+';height:100%;border-radius:4px"></div></div><div style="width:80px;text-align:right;color:#667A72">'+b.n+' ('+b.pct+'%)</div></div>';}).join('');
-      html+='</div>';
-      html+='<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:12px">Top 5 modeller med flest avviste</div>';
-      if(topModels.length===0)html+='<div style="color:var(--muted);font-style:italic;font-size:12px">Ingen modell-info</div>';
-      else html+='<table style="width:100%;font-size:12px"><tbody>'+topModels.map(function(m){return '<tr><td style="padding:4px 0">'+m.m+'</td><td style="text-align:right;font-weight:700;color:#C62828">'+m.n+'</td></tr>';}).join('')+'</tbody></table>';
-      html+='</div>';
-      html+='</div>';
-      html+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.06);font-size:12px;color:#667A72">Snitt D-lav for <strong>avviste</strong>: <strong style="color:#C62828">'+fmtKr(snittDLowAvvist)+'</strong>'+(snittDLowSolgt>0?' &middot; for <strong>solgte</strong>: <strong style="color:#2E7D32">'+fmtKr(snittDLowSolgt)+'</strong> &middot; diff '+(snittDLowAvvist>snittDLowSolgt?'+':'')+Math.round((snittDLowAvvist-snittDLowSolgt)/snittDLowSolgt*100)+'%':'')+'</div>';
-      analyseEl.innerHTML=html;
-    }
-  }
-  if(avvistTbl){
-    if(cur.avvistBiler.length===0)avvistTbl.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen avviste eval i uka</td></tr>';
-    else{var sortedA=cur.avvistBiler.slice().sort(function(a,b){return(new Date(b.evalDate||0))-(new Date(a.evalDate||0));});avvistTbl.innerHTML=sortedA.map(function(c){var range=c.dLow&&c.dHi?c.dLow.toLocaleString('nb-NO')+' &ndash; '+c.dHi.toLocaleString('nb-NO')+' kr':(c.dLow?c.dLow.toLocaleString('nb-NO')+' kr':'-');return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td style="font-size:11px">'+(c.label||'-')+'</td><td style="font-size:11px">'+fmtKm(c.km)+'</td><td>'+range+'</td><td style="color:var(--muted);font-size:11px">'+fmtUkeDate(c.evalDate)+'</td></tr>';}).join('');}
-  }
-  var retTbl=document.getElementById('uke-ret-tbody'),retBadge=document.getElementById('uke-ret-badge');
-  if(retBadge)retBadge.textContent=cur.ret+' biler';
-  if(retTbl){
-    if(cur.retBiler.length===0)retTbl.innerHTML='<tr><td colspan="8" style="padding:14px;text-align:center;color:var(--muted);font-style:italic">Ingen returneringer i uka</td></tr>';
-    else{var sortedR=cur.retBiler.slice().sort(function(a,b){return(new Date(b.vDate||0))-(new Date(a.vDate||0));});retTbl.innerHTML=sortedR.map(function(c){return '<tr><td><span class="regnr">'+c.regnr+'</span></td><td style="font-size:11px">'+(c.label||'-')+'</td><td style="font-size:11px">'+fmtKm(c.km)+'</td><td>'+fmtKr(c.dLow)+'</td><td>'+fmtKr(c.t)+'</td><td style="color:#C62828;font-weight:700">'+fmtPct(c.gap)+'</td><td style="color:#C62828;font-weight:700">-3 000 kr</td><td style="color:var(--muted);font-size:11px">'+fmtUkeDate(c.vDate)+'</td></tr>';}).join('');}
-  }
-  var brEl=document.getElementById('uke-brackets');
-  if(brEl){
-    var brackets=BRACKETS.map(function(b){
-      var regB=evalAll.filter(function(row){var d=pdOps(row[13]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
-      var bestB=evalAll.filter(function(row){var d=pdOps(row[15])||pdOps(row[16]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
-      var motB=evalAll.filter(function(row){var d=pdOps(row[17]);return inRange(d,range)&&parseDLow(row[3])>=b.lo&&parseDLow(row[3])<b.hi;}).length;
-      var solB=cur.solgtBiler.filter(function(c){return c.dLow>=b.lo&&c.dLow<b.hi;});
-      var ep=regB>0?Math.round(bestB/regB*100):0;
-      var bp=motB>0?Math.round(solB.length/motB*100):0;
-      var gaps=solB.map(function(c){return c.gap;}).filter(function(g){return g!=null;});
-      var avgGap=gaps.length?Math.round(gaps.reduce(function(s,g){return s+g;},0)/gaps.length*10)/10:null;
-      return Object.assign({},b,{reg:regB,solgt:solB.length,ep:ep,bp:bp,avgGap:avgGap});
-    });
-    brEl.innerHTML=brackets.map(function(b){
-      return '<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Registrert</span><span class="bc-val">'+b.reg+'</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.solgt+'</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Eval-aksept</span><span class="bc-val '+(b.ep>=20?'pos':'neg')+'">'+b.ep+'%</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Bud-aksept</span><span class="bc-val '+(b.bp>=70?'pos':'neg')+'">'+b.bp+'%</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Avg gap</span><span class="bc-val '+(b.avgGap>=0?'pos':'neg')+'">'+(b.avgGap!=null?fmtPct(b.avgGap):'-')+'</span></div>'
-        +'</div>';
-    }).join('');
-  }
-  var labels=[],regSerie=[],solgtSerie=[],bpSerie=[];
-  for(var w=8;w>=1;w--){
-    var r=getCompletedWeekRange(w);
-    var m=metrics(r);
-    labels.push('U'+r.weekNum);
-    regSerie.push(m.registrert);
-    solgtSerie.push(m.solgt);
-    var bpSum=0,bpN=0;for(var bw2=0;bw2<4;bw2++){var brm=metrics(getCompletedWeekRange(w+bw2));bpSum+=brm.bp;bpN++;}bpSerie.push(Math.round(bpSum/bpN));
-  }
-  var canvas=document.getElementById('ukeTrendChart');
-  if(canvas){
-    var ex=Chart.getChart(canvas);if(ex)ex.destroy();
-    new Chart(canvas,{
-      data:{labels:labels,datasets:[
-        {type:'bar',label:'Registrert',data:regSerie,backgroundColor:'rgba(0,66,37,0.55)',yAxisID:'y2',order:3},
-        {type:'bar',label:'Solgt',data:solgtSerie,backgroundColor:'rgba(0,135,90,0.55)',yAxisID:'y2',order:3},
-        {type:'line',label:'Bud-aksept %',data:bpSerie,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:false,borderWidth:2.5,pointRadius:3,tension:0.3,yAxisID:'y',order:1},
-        {type:'line',label:'Mal 70%',data:labels.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:10}},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:'#00875A',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}}
-    });
-  }
-}
-
-async function loadQuestions(){
-  const el10 = document.getElementById('sporsmal-top10');
-  const elAlle = document.getElementById('sporsmal-alle');
-  if(!el10) return;
-  el10.innerHTML = '<p style="color:var(--muted);font-size:13px">Laster...</p>';
-  try {
-    const PULSE_API = 'http://100.121.97.112:8420';
-    let r; try { r = await fetch(PULSE_API + '/pulse-questions?t='+Date.now(), { signal: AbortSignal.timeout(2500) }); if (!r.ok) throw new Error('status ' + r.status); } catch (e) { r = await fetch('https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/peasy-questions.json?t='+Date.now()); }
-    if(!r.ok){ el10.innerHTML='<p style="color:var(--muted)">Ingen data ennå</p>'; return; }
-    const dbAll = await r.json();
-    const db = (Array.isArray(dbAll) ? dbAll : Object.values(dbAll)).filter(q => !q.hidden);
-    if(!db.length){ el10.innerHTML='<p style="color:var(--muted)">Ingen spørsmål registrert ennå</p>'; return; }
-
-    // Topp 10 — grupper like spørsmål
-    const counts = {};
-    db.forEach(q => {
-      const key = q.category + '|' + q.question;
-      counts[key] = (counts[key]||{q, n:0});
-      counts[key].n++;
-    });
-    const sorted = Object.values(counts).sort((a,b)=>b.n-a.n).slice(0,10);
-    const catColor = {pris:'#15803D',prosess:'#1565C0',tilbud:'#7C3AED',annet:'#E65100',ingen:'#667A72'};
-    el10.innerHTML = sorted.map(({q,n})=>`
-      <div style="background:#fff;border:1px solid #D0DDD8;border-radius:12px;padding:16px 18px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${catColor[q.category]||'#667A72'}20;color:${catColor[q.category]||'#667A72'}">${q.category}</span>
-          <span style="font-family:monospace;font-weight:700;font-size:13px;color:#004225">${n}x</span>
-        </div>
-        <div style="font-size:13px;color:#004225;line-height:1.5">${q.question}</div>
-      </div>`).join('');
-
-    // Alle spørsmål — nyeste først
-    const alle = [...db].reverse();
-    elAlle.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
-      '<thead><tr style="border-bottom:1px solid #D0DDD8"><th style="text-align:left;padding:6px 10px;color:#667A72">Dato</th><th style="text-align:left;padding:6px 10px;color:#667A72">Kategori</th><th style="text-align:left;padding:6px 10px;color:#667A72">Spørsmål</th><th style="text-align:left;padding:6px 10px;color:#667A72">Fra</th><th style="width:30px"></th></tr></thead><tbody>' +
-      alle.map(q=>`<tr style="border-bottom:1px solid rgba(0,66,37,0.05)" data-qid="${q.id||''}">
-        <td style="padding:6px 10px;color:#667A72">${q.date}</td>
-        <td style="padding:6px 10px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:${catColor[q.category]||'#667A72'}20;color:${catColor[q.category]||'#667A72'}">${q.category}</span></td>
-        <td style="padding:6px 10px;color:#004225">${q.question}</td>
-        <td style="padding:6px 10px;color:#667A72">${q.from}</td>
-        <td style="padding:6px 10px;text-align:center;width:30px"><button onclick="hideQ('${q.id||''}', this)" title="Skjul fra Pulse" style="background:transparent;border:0;cursor:pointer;color:#C62828;font-size:14px;padding:2px 6px;border-radius:4px" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='transparent'">✕</button></td>
-      </tr>`).join('') +
-      '</tbody></table>';
-  } catch(e) {
-    el10.innerHTML='<p style="color:#C62828">Feil: '+e.message+'</p>';
-  }
-}
-
-
-// v16.03.c73 — slett-funksjon
-async function hideQ(qid, btn) {
-  if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
-  if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
-  btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = '...';
-  try {
-    const r = await fetch('http://100.121.97.112:8420/hide-question', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ hash: qid })
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    // Fjern raden visuelt
-    const row = btn.closest('tr');
-    if (row) row.style.transition = 'opacity 0.3s'; if (row) row.style.opacity = '0';
-    setTimeout(() => { if (row) row.remove(); }, 300);
-  } catch (e) {
-    alert('Kunne ikke skjule: ' + e.message + '\n\nSjekk at peasy-track v3.9 kjører på Mini.');
-    btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '✕';
-  }
-}
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c73</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c74</div>
 </body>
 </html>
