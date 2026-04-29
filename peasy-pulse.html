@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c99</title>
+<title>Peasy Pulse v16.03.c100</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -25,7 +25,7 @@ header{background:var(--green);min-height:88px;padding:18px 40px 14px;display:fl
 main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
 .section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;margin-top:40px;}
 .section-label:first-child{margin-top:0;}
-.dials-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.dials-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;}
 .dial-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px 16px 16px;box-shadow:0 4px 24px var(--shadow);text-align:center;position:relative;overflow:hidden;}
 .dial-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .arc-wrap{display:none;}
@@ -169,7 +169,7 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c99 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c100 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -445,7 +445,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c99 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c100 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -695,7 +695,14 @@ function render(data,rows){
   var mott30c=(rows||[]).slice(1).filter(function(r){if(!r[17])return false;var d=parseDate(r[17]);return d&&d>=d30From;}).length;
   var retur30c=Math.max(0,mott30c-sold30c);
   var returKost=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
-  var nettoSum30=aU30*sold30c-returKost*retur30c;
+  var prodKostUnder=(window.peasyConfig&&window.peasyConfig.prodKostUnder35k)||2250;
+  var prodKostOver=(window.peasyConfig&&window.peasyConfig.prodKostOver35k)||2750;
+  // Split solgte 30d etter Pris lav (D=r[3])
+  var sold30Under=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var pl=parseDLow(r[3]);return pl&&pl<=35000;}).length;
+  var sold30Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var pl=parseDLow(r[3]);return pl&&pl>35000;}).length;
+  var sumProdKost30=sold30Under*prodKostUnder+sold30Over*prodKostOver+retur30c*returKost;
+  var snittProdKost30=sold30c>0?Math.round(sumProdKost30/sold30c):0;
+  var nettoSum30=aU30*sold30c-sumProdKost30;
   var cplKontrakt30=sold30c>0?Math.round(spend30/sold30c):0;
   var roi30=cplKontrakt30>0?(nettoSum30/sold30c/cplKontrakt30):0;
   var eval30arr=(data.evaluated||[]).filter(function(c){var d=parseDate(c.eDate||c.aDate||c.sDate);return d&&d.getTime()>=d30ms;});
@@ -713,6 +720,7 @@ function render(data,rows){
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon nå</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">Biler på anlegg</div><div class="dial-sub">I produksjon</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt bilverdi</div><div class="arc-wrap"><svg id="arc7"></svg></div><div class="dial-value" style="font-size:22px">Kr. '+aE30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum omsetning kr '+(aE30*sold30arr.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+sold30arr.length+' solgte</div><div class="target-tag">30 dager</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt Peasy inntekt</div><div class="arc-wrap"><svg id="arc8"></svg></div><div class="dial-value" style="font-size:22px">Kr. '+aU30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum inntekt kr '+(aU30*uVals30.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+uVals30.length+' solgte</div><div class="target-tag">30 dager</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Snitt prod kost</div><div class="arc-wrap"><svg id="arc10"></svg></div><div class="dial-value" style="font-size:22px">Kr. '+snittProdKost30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">Sum kr '+sumProdKost30.toLocaleString('nb-NO')+' &middot; '+retur30c+' retur</div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Kost pr lead</div><div class="arc-wrap"><svg id="arc9"></svg></div><div class="dial-value" style="font-size:22px">Kr. '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">ROI <strong>'+roi30.toFixed(1)+'x</strong> <span style="color:#888;font-weight:400">(inkl returbiler)</span></div><div class="target-tag">Siste 30d</div></div>'
     +'</div></div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
@@ -1913,7 +1921,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c99 — slett-funksjon
+// v16.03.c100 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2023,6 +2031,6 @@ var _origSetMode=window.setMode;
 window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();};
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c99</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c100</div>
 </body>
 </html>
