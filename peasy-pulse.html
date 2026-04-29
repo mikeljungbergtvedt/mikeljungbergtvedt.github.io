@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c95</title>
+<title>Peasy Pulse v16.03.c96</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -169,13 +169,14 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c95 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c96 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
       <button class="mode-btn" id="btn-uke" onclick="setMode('uke')">Ukesrapport</button>
       <button class="mode-btn" id="btn-kart" onclick="setMode('kart')">Kart</button>
       <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Sp&#248;rsm&#229;l</button>
+        <button class="mode-btn" id="btn-innst" onclick="setMode('innst')">Innstillinger</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
@@ -186,6 +187,43 @@ function authLogout(){
   <div id="sporsmal-top10" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:32px"></div>
   <div class="section-label">Alle sp&#248;rsm&#229;l</div>
   <div id="sporsmal-alle" style="font-size:13px;line-height:1.8"></div>
+</section>
+
+<section class="mode-section" data-mode="innst" id="innst-section" style="display:none">
+<div style="max-width:900px;margin:0 auto;padding:20px">
+<h2 style="margin-top:0">Pulse-innstillinger</h2>
+<p style="color:#666;font-size:13px">Endringer her oppdaterer alle ROI/CPL-beregninger i Pulse. Lagre til GitHub for å gjøre endringene varige.</p>
+
+<h3>Retur-kost</h3>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
+<input type="number" id="innst-retur" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per returnert bil</span>
+</div>
+
+<h3>Markedsførings-perioder</h3>
+<table id="innst-perioder-tbl" style="width:100%;border-collapse:collapse;margin-bottom:12px">
+<thead><tr style="background:#f5f5f5;text-align:left"><th style="padding:8px">Fra</th><th style="padding:8px">Til (tom = løpende)</th><th style="padding:8px">Kr/dag</th><th style="padding:8px">Slett</th></tr></thead>
+<tbody></tbody>
+</table>
+<button onclick="innstAddPeriode()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer;margin-bottom:24px">+ Legg til periode</button>
+
+<h3>GitHub PAT-token</h3>
+<p style="font-size:12px;color:#666">Lagres kun lokalt i din browser (localStorage). Brukes til å commit'e <code>peasy-config.json</code> til repoet.</p>
+<input type="password" id="innst-token" placeholder="ghp_... eller github_pat_..." style="width:100%;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:8px" />
+<div style="display:flex;gap:8px;margin-bottom:24px">
+<button onclick="innstSaveTokenLocal()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer">Lagre token lokalt</button>
+<button onclick="innstClearToken()" style="padding:6px 14px;background:#fff5f5;border:1px solid #C62828;color:#C62828;border-radius:6px;cursor:pointer">Slett token</button>
+</div>
+
+<div style="border-top:1px solid #ddd;padding-top:16px;margin-top:16px">
+<button onclick="innstSaveToGitHub()" style="padding:10px 20px;background:#2E7D32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px">Lagre til GitHub</button>
+<span id="innst-status" style="margin-left:12px;font-size:13px"></span>
+</div>
+
+<details style="margin-top:24px">
+<summary style="cursor:pointer;color:#666;font-size:13px">Vis JSON</summary>
+<pre id="innst-json" style="background:#f5f5f5;padding:12px;border-radius:6px;font-size:12px;overflow:auto"></pre>
+</details>
+</div>
 </section>
 </main>
 <script>
@@ -399,7 +437,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c95 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c96 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1867,7 +1905,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c95 — slett-funksjon
+// v16.03.c96 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1887,7 +1925,92 @@ async function hideQ(qid, btn) {
     btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '✕';
   }
 }
+
+// === Innstillinger-tab ===
+function innstRender(){
+  var c=window.peasyConfig||{returKost:3000,marketingPerioder:[]};
+  document.getElementById('innst-retur').value=c.returKost;
+  var tbody=document.querySelector('#innst-perioder-tbl tbody');
+  tbody.innerHTML='';
+  (c.marketingPerioder||[]).forEach(function(p,i){
+    var tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid #eee';
+    tr.innerHTML='<td style="padding:8px"><input type="date" value="'+(p.fra||'')+'" data-i="'+i+'" data-k="fra" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="date" value="'+(p.til||'')+'" data-i="'+i+'" data-k="til" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="number" value="'+p.krPerDag+'" data-i="'+i+'" data-k="krPerDag" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;width:100px" /></td><td style="padding:8px"><button onclick="innstDeletePeriode('+i+')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:4px;padding:4px 10px;cursor:pointer">X</button></td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('innst-json').textContent=JSON.stringify(c,null,2);
+  // Token preview
+  var tok=localStorage.getItem('peasyGithubToken')||'';
+  document.getElementById('innst-token').value=tok;
+}
+function innstUpdate(el){
+  var i=parseInt(el.dataset.i),k=el.dataset.k,v=el.value;
+  if(k==='krPerDag')v=parseInt(v)||0;
+  if(k==='til'&&!v)v=null;
+  window.peasyConfig.marketingPerioder[i][k]=v;
+  document.getElementById('innst-retur').onchange=function(){window.peasyConfig.returKost=parseInt(this.value)||0;innstRender();};
+  document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);
+}
+function innstAddPeriode(){
+  if(!window.peasyConfig.marketingPerioder)window.peasyConfig.marketingPerioder=[];
+  window.peasyConfig.marketingPerioder.push({fra:new Date().toISOString().slice(0,10),til:null,krPerDag:1000});
+  innstRender();
+}
+function innstDeletePeriode(i){
+  if(!confirm('Slette periode?'))return;
+  window.peasyConfig.marketingPerioder.splice(i,1);
+  innstRender();
+}
+function innstSaveTokenLocal(){
+  var t=document.getElementById('innst-token').value.trim();
+  if(!t){alert('Tom token');return;}
+  localStorage.setItem('peasyGithubToken',t);
+  document.getElementById('innst-status').textContent='Token lagret lokalt';
+  document.getElementById('innst-status').style.color='#2E7D32';
+}
+function innstClearToken(){
+  localStorage.removeItem('peasyGithubToken');
+  document.getElementById('innst-token').value='';
+  document.getElementById('innst-status').textContent='Token slettet';
+  document.getElementById('innst-status').style.color='#C62828';
+}
+function innstSaveToGitHub(){
+  var token=localStorage.getItem('peasyGithubToken')||document.getElementById('innst-token').value.trim();
+  if(!token){alert('Mangler GitHub token. Lagre token først.');return;}
+  // Sync retur-kost
+  window.peasyConfig.returKost=parseInt(document.getElementById('innst-retur').value)||3000;
+  var status=document.getElementById('innst-status');
+  status.textContent='Henter SHA...';
+  status.style.color='#666';
+  fetch('https://api.github.com/repos/mikeljungbergtvedt/mikeljungbergtvedt.github.io/contents/peasy-config.json',{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}})
+    .then(function(r){return r.json();})
+    .then(function(info){
+      var sha=info.sha;
+      var content=JSON.stringify(window.peasyConfig,null,2)+'\n';
+      var b64=btoa(unescape(encodeURIComponent(content)));
+      status.textContent='Skriver til GitHub...';
+      return fetch('https://api.github.com/repos/mikeljungbergtvedt/mikeljungbergtvedt.github.io/contents/peasy-config.json',{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'Pulse-config oppdatert via Innstillinger',content:b64,sha:sha})});
+    })
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(res.commit){
+        status.textContent='Lagret! Pulse rekalkulerer ved neste reload.';
+        status.style.color='#2E7D32';
+      }else{
+        status.textContent='Feil: '+(res.message||'ukjent');
+        status.style.color='#C62828';
+      }
+    })
+    .catch(function(err){
+      status.textContent='Feil: '+err.message;
+      status.style.color='#C62828';
+    });
+}
+// Hook setMode for innst-tab
+var _origSetMode=window.setMode;
+window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();};
+
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c95</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c96</div>
 </body>
 </html>
