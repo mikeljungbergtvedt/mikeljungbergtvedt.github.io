@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c98</title>
+<title>Peasy Pulse v16.03.c99</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -169,7 +169,7 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c98 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c99 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -197,6 +197,14 @@ function authLogout(){
 <h3>Retur-kost</h3>
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
 <input type="number" id="innst-retur" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per returnert bil</span>
+</div>
+
+<h3>Prod kost solgte biler</h3>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+<input type="number" id="innst-prod-under" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per solgt bil med Pris lav (D) &le; 35 000</span>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
+<input type="number" id="innst-prod-over" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per solgt bil med Pris lav (D) &gt; 35 000</span>
 </div>
 
 <h3>Markedsførings-perioder</h3>
@@ -437,7 +445,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c98 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c99 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -863,7 +871,7 @@ function drawScatter(sold,returned){
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 
 // Load config først, deretter data
-var peasyConfig={returKost:3000,marketingPerioder:[{fra:'2025-11-01',til:null,krPerDag:1000}]};
+var peasyConfig={returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,marketingPerioder:[{fra:'2025-11-01',til:null,krPerDag:1000}]};
 function loadConfig(){return fetch('peasy-config.json?cb='+Date.now()).then(function(r){return r.json();}).then(function(c){peasyConfig=c;window.peasyConfig=c;}).catch(function(){window.peasyConfig=peasyConfig;});}
 // Beregn marketing spend over en periode (fraDate, tilDate)
 function beregneSpend(fraDate,tilDate){var sum=0;(peasyConfig.marketingPerioder||[]).forEach(function(p){var pFra=new Date(p.fra);var pTil=p.til?new Date(p.til):new Date();var overlapFra=fraDate>pFra?fraDate:pFra;var overlapTil=tilDate<pTil?tilDate:pTil;if(overlapTil>overlapFra){var dager=Math.ceil((overlapTil-overlapFra)/86400000);sum+=dager*p.krPerDag;}});return sum;}
@@ -1905,7 +1913,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c98 — slett-funksjon
+// v16.03.c99 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -1928,8 +1936,10 @@ async function hideQ(qid, btn) {
 
 // === Innstillinger-tab ===
 function innstRender(){
-  var c=window.peasyConfig||{returKost:3000,marketingPerioder:[]};
+  var c=window.peasyConfig||{returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,marketingPerioder:[]};
   document.getElementById('innst-retur').value=c.returKost;
+  document.getElementById('innst-prod-under').value=c.prodKostUnder35k||2250;
+  document.getElementById('innst-prod-over').value=c.prodKostOver35k||2750;
   var tbody=document.querySelector('#innst-perioder-tbl tbody');
   tbody.innerHTML='';
   (c.marketingPerioder||[]).forEach(function(p,i){
@@ -1979,6 +1989,8 @@ function innstSaveToGitHub(){
   if(!token){alert('Mangler GitHub token. Lagre token først.');return;}
   // Sync retur-kost
   window.peasyConfig.returKost=parseInt(document.getElementById('innst-retur').value)||3000;
+  window.peasyConfig.prodKostUnder35k=parseInt(document.getElementById('innst-prod-under').value)||2250;
+  window.peasyConfig.prodKostOver35k=parseInt(document.getElementById('innst-prod-over').value)||2750;
   var status=document.getElementById('innst-status');
   status.textContent='Henter SHA...';
   status.style.color='#666';
@@ -2011,6 +2023,6 @@ var _origSetMode=window.setMode;
 window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();};
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c98</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c99</div>
 </body>
 </html>
