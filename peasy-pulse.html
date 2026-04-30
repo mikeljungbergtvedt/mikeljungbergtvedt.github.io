@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c110</title>
+<title>Peasy Pulse v16.03.c111</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -169,7 +169,7 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c110 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c111 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -445,7 +445,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c110 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c111 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -708,6 +708,7 @@ function render(data,rows){
   var roi30=cplKontrakt30>0?(nettoSum30/sold30c/cplKontrakt30):0;
   // Netto inntekt per solgt bil = snitt fee - snitt prod kost - lead-kost
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
+  var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
   var eval30arr=(data.evaluated||[]).filter(function(c){var d=parseDate(c.eDate||c.aDate||c.sDate);return d&&d.getTime()>=d30ms;});
   var mott30arr=(data.mottatt||[]).filter(function(c){var d=parseDate(c.rDate);return d&&d.getTime()>=d30ms;});
@@ -727,6 +728,7 @@ function render(data,rows){
     +'<div class="dial-card neutral"><div class="dial-label">Snitt prod kost</div><div class="arc-wrap"><svg id="arc10"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+snittProdKost30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">Sum kr '+sumProdKost30.toLocaleString('nb-NO')+' &middot; '+retur30c+' retur</div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Kost pr lead</div><div class="arc-wrap"><svg id="arc9"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">ROI <strong>'+roi30.toFixed(1)+'x</strong> <span style="color:#888;font-weight:400">(inkl returbiler)</span></div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Netto per solgt</div><div class="arc-wrap"><svg id="arc11"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500;color:'+(nettoPerSolgt30>0?'#2E7D32':'#C62828')+'">Kr. '+Math.round(nettoPerSolgt30).toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgt bil</div><div class="dial-sub">Fee '+aU30.toLocaleString('nb-NO')+' &minus; prod '+snittProdKost30.toLocaleString('nb-NO')+' &minus; lead '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="target-tag">Siste 30d</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Lead → Solgt</div><div class="arc-wrap"><svg id="arc12"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">'+lead2sold30.toFixed(1)+'%</div><div class="dial-unit">'+sold30c+' av '+leads30d+' leads</div><div class="dial-sub">Total konvertering</div><div class="target-tag">Siste 30d</div></div>'
     +'</div></div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
   var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
@@ -1950,7 +1952,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c110 — slett-funksjon
+// v16.03.c111 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2060,6 +2062,6 @@ var _origSetMode=window.setMode;
 window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();};
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c110</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c111</div>
 </body>
 </html>
