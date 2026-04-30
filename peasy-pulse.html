@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c108</title>
+<title>Peasy Pulse v16.03.c109</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -169,7 +169,7 @@ function authLogout(){
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c108 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c109 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -445,7 +445,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c108 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c109 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1528,7 +1528,7 @@ function buildUkeHtml(){
   h+='<div class="section-label">Brakett-analyse for uka</div>';
   h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px"></div>';
   h+='<div class="table-card"><div class="th"><div class="th-title">8-ukers trend</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = Leads mottatt per uke. Lysegrønne søyler = solgt per uke. Linje = 8-ukers rullende bud-aksept-snitt (mål 70%, venstre akse).</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = Leads mottatt per uke. Lysegrønne søyler = solgt per uke. Linje = bud-aksept-snitt over hele 8-uke perioden (mål 70%, venstre akse).</div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="ukeTrendChart"></canvas></div></div>';
   return h;
 }
@@ -1884,8 +1884,12 @@ function renderUkesrapport(){
     labels.push('U'+r.weekNum);
     regSerie.push(m.registrert);
     solgtSerie.push(m.solgt);
-    var bpSum=0,bpN=0;for(var bw2=0;bw2<8;bw2++){var brm=metrics(getCompletedWeekRange(w+bw2));if(brm.bp!=null&&!isNaN(brm.bp)){bpSum+=brm.bp;bpN++;}}bpSerie.push(bpN>0?Math.round(bpSum/bpN):null);
+    bpSerie.push(null);
   }
+  // Flat linje: totalsnitt over hele 8-uke perioden
+  var bpFlatSum=0,bpFlatN=0;for(var fw=1;fw<=8;fw++){var fbm=metrics(getCompletedWeekRange(fw));if(fbm.bp!=null&&!isNaN(fbm.bp)){bpFlatSum+=fbm.bp;bpFlatN++;}}
+  var bpFlat=bpFlatN>0?Math.round(bpFlatSum/bpFlatN):null;
+  bpSerie=bpSerie.map(function(){return bpFlat;});
   var canvas=document.getElementById('ukeTrendChart');
   if(canvas){
     var ex=Chart.getChart(canvas);if(ex)ex.destroy();
@@ -1950,7 +1954,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c108 — slett-funksjon
+// v16.03.c109 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2060,6 +2064,6 @@ var _origSetMode=window.setMode;
 window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();};
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c108</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c109</div>
 </body>
 </html>
