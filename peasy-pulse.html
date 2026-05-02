@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.03.c114</title>
+<title>Peasy Pulse v16.03.c115</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -21,6 +21,8 @@ header{background:var(--green);min-height:88px;padding:18px 40px 14px;display:fl
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
 .mode-toggle{display:flex;background:rgba(255,255,255,0.1);border-radius:99px;padding:3px;gap:2px;}
 .mode-btn{font-size:11px;font-weight:600;padding:5px 14px;border-radius:99px;border:none;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:rgba(255,255,255,0.65);background:transparent;}
+header{position:sticky;top:0;z-index:100;background:var(--green);box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+.hamburger-btn{display:none;background:transparent;border:none;cursor:pointer;padding:8px 12px;color:#fff;font-size:22px;line-height:1;}
 .mode-btn.active{background:var(--yellow);color:var(--green);}
 main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
 .section-label{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;margin-top:40px;}
@@ -90,7 +92,7 @@ canvas{width:100%;border-radius:8px;}
 .loading{text-align:center;padding:80px;color:var(--muted);font-size:14px;}
 .spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.dials-grid{grid-template-columns:repeat(2,1fr);}.brackets-grid{grid-template-columns:repeat(2,1fr);}.two-col{grid-template-columns:1fr;}header{padding:0 20px;}main{padding:24px 16px 60px;}}
+@media(max-width:900px){.dials-grid{grid-template-columns:repeat(2,1fr);}.brackets-grid{grid-template-columns:repeat(2,1fr);}.two-col{grid-template-columns:1fr;}header{padding:0 14px;}main{padding:24px 16px 60px;}.mode-toggle{display:none !important;}.mode-toggle.open{display:flex !important;position:fixed;top:56px;right:0;left:0;background:var(--green);flex-direction:column;align-items:stretch;padding:12px;gap:6px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,0.3);}.mode-toggle.open .mode-btn{width:100%;text-align:left;padding:10px 14px;font-size:14px;}.mode-toggle.open span{display:none;}.hamburger-btn{display:flex !important;}}
 .sla-bar-wrap{height:5px;background:rgba(0,66,37,0.08);border-radius:99px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;}
 .sla-bar{height:100%;border-radius:99px;transition:width 0.4s;}
 .chart-explain{font-size:11px;color:var(--muted);padding:8px 18px 10px;line-height:1.6;border-bottom:1px solid var(--border);background:rgba(0,66,37,0.015);}
@@ -168,8 +170,9 @@ function authLogout(){
   <div class="logo"><img src="https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"></div><div id="tk-ep-bar-before"></div>
   <div class="header-right">
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
-    <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c114 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+    <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
+      <div class="mode-toggle">
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.03.c115 &middot; 27. apr. 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -263,6 +266,7 @@ var TILTAK_DATO = '2026-03-24'; // Endre denne datoen og commit for a oppdatere 
 var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
 
 function setMode(m){
+  document.querySelector('.mode-toggle')?.classList.remove('open');
   currentMode=m;
   try{localStorage.setItem('peasy-mode',m);}catch(e){}
   document.getElementById('btn-ops').classList.toggle('active',m==='ops');
@@ -459,7 +463,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c114 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.03.c115 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1966,7 +1970,7 @@ async function loadQuestions(){
 }
 
 
-// v16.03.c114 — slett-funksjon
+// v16.03.c115 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2120,6 +2124,6 @@ function markRender(){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c114</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.03.c115</div>
 </body>
 </html>
