@@ -325,11 +325,7 @@ footer{background:#fff;padding:64px 24px 32px;border-top:1px solid rgba(0,66,37,
 <p class="proof-quote">Vi er nye. Men kundene <em>er allerede overbevist</em>.</p>
 </div>
 
-<div class="rv-grid">
-<div class="rv-card">
-<div class="rv-stars">★★★★★</div>
-<blockquote>"Kjapp og god prosess. Fylte ut skjema mandag, fikk prisestimat timer senere, godtok mandag kveld. Bilen hentet tirsdag morgen, på auksjon tirsdag en uke senere til en pris godt innenfor estimatet og penger på konto på torsdag 9 dager etter vi bestemte oss for å gå for Peasy."</blockquote>
-<div class="rv-foot"><div class="rv-avatar">A</div><div><div class="rv-name">Johannes Nessa</div><div class="rv-time">for 2 måneder siden</div></div></div>
+<div class="rv-grid" id="rv-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray);font-size:14px">Laster anmeldelser …</div></div>
 </div>
 <div class="rv-card">
 <div class="rv-stars">★★★★★</div>
@@ -431,6 +427,9 @@ footer{background:#fff;padding:64px 24px 32px;border-top:1px solid rgba(0,66,37,
 document.querySelectorAll('.faq-q').forEach(q=>q.addEventListener('click',()=>q.parentElement.classList.toggle('open')));
 const search=document.querySelector('.faq-search');
 if(search){search.addEventListener('input',e=>{const v=e.target.value.toLowerCase().trim();document.querySelectorAll('.faq-item').forEach(item=>{const txt=item.textContent.toLowerCase();item.style.display=(!v||txt.includes(v))?'':'none';});});}
+
+(async()=>{try{const r=await fetch('peasy-reviews.json?cb='+Date.now());const j=await r.json();const grid=document.getElementById('rv-grid');if(!grid||!j.reviews)return;const cards=j.reviews.slice(0,5).map(rv=>{const name=rv.authorAttribution?.displayName||'Anonym kunde';const time=rv.relativePublishTimeDescription||'';const text=(rv.text?.text||'').replace(/\n/g,' ').slice(0,400);const init=name[0]?.toUpperCase()||'?';return `<div class="rv-card"><div class="rv-stars">★★★★★</div><blockquote>"${text}"</blockquote><div class="rv-foot"><div class="rv-avatar">${init}</div><div><div class="rv-name">${name}</div><div class="rv-time">${time}</div></div></div></div>`;}).join('');grid.innerHTML=cards;const rt=document.querySelector('.proof-rating strong');if(rt&&j.rating)rt.textContent=j.rating.toString().replace('.',',')+' av 5';}catch(e){console.error('rev',e);}})();
+
 </script>
 </body>
 </html>
