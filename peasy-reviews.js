@@ -54,7 +54,7 @@
           gLogo(22)+
           '<span style="font-weight:600;color:#1f2937;font-size:15px">Anmeldelser p\u00e5 Google</span>'+
         '</div>'+
-        '<h2 style="font-size:clamp(28px,4vw,42px);font-weight:700;color:#1f2937;margin:0 0 16px;letter-spacing:-0.02em">Tusenvis av norske bileiere har valgt Peasy</h2>'+
+        '<h2 style="font-size:clamp(28px,4vw,42px);font-weight:700;color:#1f2937;margin:0 0 16px;letter-spacing:-0.02em">Vi er nye. Men kundene er allerede overbevist.</h2>'+
         '<div style="display:inline-flex;align-items:center;gap:12px;font-size:18px;color:#4b5563">'+
           stars(rating,22,2)+
           '<span><strong style="color:#1f2937">'+rating.toFixed(1).replace('.',',')+' av 5</strong> &middot; '+count+' anmeldelser</span>'+
