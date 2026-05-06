@@ -274,7 +274,7 @@ footer{background:#fff;padding:64px 24px 32px;border-top:1px solid rgba(0,66,37,
 </style>
 </head>
 <body>
-<div class="demo-banner">DEMO v3.31 · forhåndsvisning av ny peasy.no — ikke produksjon · <a href="https://peasy.no">tilbake til live</a></div>
+<div class="demo-banner">DEMO v3.35 · forhåndsvisning av ny peasy.no — ikke produksjon · <a href="https://peasy.no">tilbake til live</a></div>
 
 <nav class="nav">
 <div class="nav-inner">
@@ -388,9 +388,10 @@ footer{background:#fff;padding:64px 24px 32px;border-top:1px solid rgba(0,66,37,
 <section class="form-section" id="start">
 <h2>Få estimat på 4 timer*</h2>
 <p class="form-sub">Send reg.nr. og kilometerstand. Vi gir deg et ærlig estimat basert på live markedsdata fra Finn.</p>
-<form class="estimate-form" onsubmit="event.preventDefault();alert('Demo — sendes ikke');">
-<input class="reg" placeholder="AB12345" maxlength="7">
-<input type="text" placeholder="Kilometerstand">
+<form id="peasy-form" class="estimate-form" action="https://account.peasy.no/guest/car_add" method="GET">
+<input type="hidden" name="step" value="search">
+<input class="reg" name="reg_number" placeholder="AB12345" maxlength="7" autocomplete="off" spellcheck="false" required>
+<input type="text" name="mileage" placeholder="Kilometerstand">
 <button type="submit" class="btn-submit">Få estimat →</button>
 </form>
 <div class="form-trust">
@@ -609,6 +610,31 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const m=document.ge
 </script>
 <script>
 (async()=>{try{const r=await fetch('peasy-reviews.json?cb='+Date.now());const j=await r.json();const grid=document.getElementById('rv-grid');if(!grid||!j.reviews)return;const sorted=[...j.reviews].sort((a,b)=>(b.publishTime||'').localeCompare(a.publishTime||''));const cards=sorted.slice(0,5).map(rv=>{let name=rv.authorAttribution?.displayName||'Anonym kunde';name=name.split(' ').map(w=>w?w[0].toUpperCase()+w.slice(1).toLowerCase():w).join(' ');const time=rv.relativePublishTimeDescription||'';const text=(rv.text?.text||'').replace(/\n/g,' ').slice(0,400);const init=name[0]?.toUpperCase()||'?';return `<div class="rv-card"><div class="rv-stars">★★★★★</div><blockquote>"${text}"</blockquote><div class="rv-foot"><div class="rv-avatar">${init}</div><div><div class="rv-name">${name}</div><div class="rv-time">${time}</div></div></div></div>`;}).join('');grid.innerHTML=cards;const rt=document.querySelector('.proof-rating strong');if(rt&&j.rating)rt.textContent=j.rating.toString().replace('.',',')+' av 5';}catch(e){console.error('rev',e);}})();
+</script>
+<script>
+// UTM + click ID passthrough — preserves marketing attribution
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const tracked = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid','ttclid','msclkid'];
+  const form = document.getElementById('peasy-form');
+  if(!form) return;
+  tracked.forEach(key => {
+    const val = params.get(key);
+    if(val){
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = val;
+      form.appendChild(input);
+    }
+  });
+  // dataLayer push on submit (for GTM)
+  form.addEventListener('submit', function(){
+    if(window.dataLayer){
+      window.dataLayer.push({event:'lead_form_submit', form_id:'peasy-form'});
+    }
+  });
+})();
 </script>
 </body>
 </html>
