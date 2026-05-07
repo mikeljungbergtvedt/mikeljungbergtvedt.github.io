@@ -1,0 +1,2554 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peasy Sysdok v11.19</title>
+<style>
+:root{
+  --bg:#F7F9F8;--fg:#0E1F1A;--muted:#5C6F69;--accent:#004225;
+  --card:#fff;--border:#D5DCD8;--code:#0E2018;--codefg:#7EE787;
+  --warn:#E65100;--blue:#1565C0;--purple:#7C3AED;--red:#C62828;--green:#2E7D32;
+  --toc-w:280px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.55;font-size:14px;
+}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:var(--toc-w) 1fr;min-height:100vh}
+nav.toc{
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:var(--card);border-right:1px solid var(--border);
+  padding:24px 16px 40px;
+}
+main{padding:32px 40px 80px;max-width:920px}
+
+@media (max-width: 800px){
+  .layout{grid-template-columns:1fr}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}
+  main{padding:24px 20px 60px}
+}
+
+/* TOC */
+nav.toc h1{font-size:14px;margin:0 0 4px;letter-spacing:0;font-weight:700}
+nav.toc .ver{color:var(--muted);font-size:11px;margin-bottom:24px;letter-spacing:0.5px}
+nav.toc .group{margin-bottom:18px}
+nav.toc .group-label{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:6px;padding:0 6px;
+}
+nav.toc a{
+  display:block;padding:5px 10px;border-radius:5px;
+  color:var(--fg);text-decoration:none;font-size:13px;line-height:1.4;
+}
+nav.toc a:hover{background:#E8EFE9}
+nav.toc a.active{background:var(--accent);color:#fff;font-weight:600}
+
+/* Headings */
+h1.page{font-size:24px;letter-spacing:-0.5px;margin:0 0 4px;font-weight:700}
+.page-sub{color:var(--muted);font-size:12px;margin-bottom:32px}
+h2{font-size:20px;margin:48px 0 8px;color:var(--accent);font-weight:700;scroll-margin-top:24px}
+h3{font-size:16px;margin:24px 0 8px;font-weight:700;scroll-margin-top:24px}
+h4{font-size:14px;margin:16px 0 4px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+section{margin-bottom:24px}
+
+/* Blocks */
+code{background:#0E2018;color:var(--codefg);padding:1px 6px;border-radius:4px;
+     font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+pre{background:#0E2018;color:var(--codefg);padding:14px 16px;border-radius:8px;
+    overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+    line-height:1.5;margin:8px 0}
+pre code{background:none;padding:0;color:var(--codefg)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+      padding:18px 22px;margin:14px 0}
+.card h3:first-child,.card h4:first-child{margin-top:0}
+
+table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:11px;letter-spacing:0.5px;
+   text-transform:uppercase;background:#F0F4F2}
+
+ul,ol{padding-left:22px;margin:6px 0}
+li{margin:4px 0}
+
+.chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;
+      padding:3px 9px;border-radius:99px;text-transform:uppercase;margin-right:6px;
+      vertical-align:middle}
+.chip-new{background:#E6F3E9;color:var(--green);border:1px solid var(--green)}
+.chip-changed{background:#FFEBE0;color:var(--warn);border:1px solid var(--warn)}
+.chip-removed{background:#FBE0E0;color:var(--red);border:1px solid var(--red)}
+.chip-stable{background:#E0EBFA;color:var(--blue);border:1px solid var(--blue)}
+.chip-warn{background:#FFF8E0;color:#A56500;border:1px solid #A56500}
+
+.callout{padding:14px 18px;border-radius:8px;margin:12px 0;font-size:13px;
+         border-left:4px solid var(--muted)}
+.callout-warn{background:#FFF3E0;border-left-color:var(--warn)}
+.callout-tip{background:#E8F5E9;border-left-color:var(--green)}
+.callout-info{background:#E3F2FD;border-left-color:var(--blue)}
+.callout-critical{background:#FFEBEE;border-left-color:var(--red)}
+.callout strong:first-child{display:block;margin-bottom:4px;font-size:11px;
+                            letter-spacing:1px;text-transform:uppercase}
+
+.kv{display:grid;grid-template-columns:180px 1fr;gap:8px 16px;
+    background:#F0F4F2;padding:14px 18px;border-radius:8px;margin:10px 0;font-size:13px}
+.kv .k{color:var(--muted);font-weight:600}
+
+.module-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);
+             border-radius:8px;padding:18px 22px;margin:14px 0}
+.module-card[data-type="track"]{border-left-color:var(--warn)}
+.module-card[data-type="auto"]{border-left-color:var(--green)}
+.module-card[data-type="pulse"]{border-left-color:var(--blue)}
+.module-card .name{font-size:18px;font-weight:700;margin:0}
+.module-card .meta{color:var(--muted);font-size:11px;margin:2px 0 14px;
+                   letter-spacing:0.3px}
+
+.kbd{display:inline-block;padding:1px 6px;border:1px solid var(--border);
+     border-bottom-width:2px;border-radius:4px;background:#fff;
+     font-family:'IBM Plex Mono',monospace;font-size:11px}
+
+footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);
+       color:var(--muted);font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h1>Peasy Sysdok</h1>
+  <div class="ver">v11.12 — 28. apr. 2026</div>
+
+  <div class="group">
+    <div class="group-label">Start her</div>
+    <a href="#ai-onboarding">AI-onboarding</a>
+    <a href="#kom-i-gang">Kom i gang (mennesker)</a>
+    <a href="#kjente-feller">Kjente feller</a>
+  </div>
+
+  <div class="group">
+    <div class="group-label">System</div>
+    <a href="#oversikt">Oversikt</a>
+    <a href="#peasy-auto">peasy-auto (eval)</a>
+    <a href="#peasy-track">peasy-track (mail)</a>
+    <a href="#peasy-pulse">peasy-pulse (dashboard)</a>
+  </div>
+
+  <div class="group">
+    <div class="group-label">Design</div>
+    <a href="#markedsforing">Markedsføring</a>
+    <a href="#pricing">Prisingsfilosofi</a>
+    <a href="#feedback-loop">360 feedback-loop</a>
+    <a href="#segmenter">Segmenter & spread</a>
+  </div>
+
+  <div class="group">
+    <div class="group-label">Drift</div>
+    <a href="#credentials">Credentials</a>
+    <a href="#deploy">Deploy-rutiner</a>
+    <a href="#fil-locations">Fil-lokasjoner</a>
+    <a href="#kjente-bugs">Kjente bugs</a>
+  </div>
+
+  <div class="group">
+    <div class="group-label">Annet</div>
+    <a href="#changelog">Changelog (lenke)</a>
+  </div>
+</nav>
+
+<main>
+
+<h1 class="page">Peasy systemreferanse</h1>
+<div style="background:#f0f9ff;border-left:4px solid #0284c7;padding:20px;margin:20px 0;border-radius:8px">
+<h2 id="ny-ai-quickstart" style="margin-top:0;color:#0c4a6e">Ny AI? Start her.</h2>
+<p><strong>Du leser sysdok nå.</strong> Levende kart for Peasy-systemene. Mike (founder/operator) jobber på MacBook Pro, deployer til Mac Mini hvor botene kjører. Pulse på GitHub Pages. Forsiden i WordPress på peasy.no. FAQ-data i ERP (Autoringen).</p>
+
+<h3>Hvor kjører hva</h3>
+<table>
+<tr><th>System</th><th>Kjører på</th><th>Tilgang</th><th>Repo</th></tr>
+<tr><td><strong>peasy-auto.js</strong> (eval-bot)</td><td>Mac Mini</td><td><code>ssh bot@100.121.97.112</code> (Tailscale)</td><td><code>github.com/mikeljungbergtvedt/peasy-bot</code> (privat)</td></tr>
+<tr><td><strong>peasy-track.js</strong> (e-post-bot)</td><td>Mac Mini</td><td>samme</td><td>samme</td></tr>
+<tr><td><strong>peasy-pulse.html</strong> (dashboard)</td><td>GitHub Pages</td><td><code>https://mikeljungbergtvedt.github.io/peasy-pulse.html</code></td><td><code>github.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io</code></td></tr>
+<tr><td><strong>peasy.no</strong> (forside)</td><td>WordPress hos kunde</td><td><code>https://peasy.no/wp-admin</code></td><td>tema i <code>/wp-content/themes/peasy/</code></td></tr>
+<tr><td><strong>FAQ-data</strong></td><td>ERP (Autoringen)</td><td><code>https://biladministrasjon.no/settings/peasy_faq</code></td><td>CKEditor 5, ingen kode-repo</td></tr>
+<tr><td><strong>ERP backend</strong></td><td>Autoringen sin server</td><td><code>https://api.biladministrasjon.no/</code></td><td>ekstern</td></tr>
+</table>
+
+<h3>Tilgangs-cheatsheet</h3>
+<div class="kv">
+<span class="k">SSH til Mini</span><span><code>ssh bot@100.121.97.112</code></span>
+<span class="k">ttyd (browser-terminal)</span><span><code>http://100.121.97.112:7682/</code></span>
+<span class="k">Tailscale IP</span><span><code>100.121.97.112</code></span>
+<span class="k">Node-bin (Mini)</span><span><code>/Users/bot/.nvm/versions/node/v24.14.0/bin/node</code></span>
+<span class="k">OneDrive (Mini)</span><span><code>/Users/bot/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></span>
+<span class="k">OneDrive (MBP)</span><span><code>~/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></span>
+<span class="k">Pulse-kilde (Mini)</span><span><code>/Users/bot/mikeljungbergtvedt.github.io/peasy-pulse.html</code></span>
+<span class="k">peasy-auto kilde</span><span><code>/Users/bot/peasy-auto/peasy-auto.js</code></span>
+<span class="k">peasy-track kilde</span><span><code>/Users/bot/peasy-track/</code></span>
+<span class="k">.env-filer</span><span><code>/Users/bot/peasy-auto/.env</code> + <code>/Users/bot/peasy-track/.env</code></span>
+<span class="k">Sysdok</span><span><code>OneDrive/.../Dokumentasjon/sysdok-v11_NN.html</code> (siste = høyest NN)</span>
+</div>
+
+<h3>Datakilder &amp; API-er</h3>
+<div class="kv">
+<span class="k">ERP XLSX (Pulse data)</span><span><code>https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx</code></span>
+<span class="k">ERP write kommentar</span><span><code>POST /c2b_module/driveno/{id}/comments</code></span>
+<span class="k">ERP write pris</span><span><code>PUT</code> på <code>price_final_min/max</code></span>
+<span class="k">FAQ read</span><span><code>GET /c2b_module/faqs?locale=no</code> (krever auth)</span>
+<span class="k">FAQ write</span><span>kun via UI: <code>biladministrasjon.no/settings/peasy_faq</code></span>
+<span class="k">EWS innboks</span><span><code>exchange.tornado.email</code> &mdash; post@peasy.no, polling hver 5 min</span>
+<span class="k">Finn.no</span><span>scrapes for sammenligning, sort low-to-high for floor</span>
+<span class="k">Telegram</span><span>eval-kort + alarmer, bot-token i .env</span>
+</div>
+
+<h3>AI-modeller i bruk</h3>
+<div class="kv">
+<span class="k">Haiku</span><span><code>claude-haiku-4-5-20251001</code> &mdash; anchor-valg, klassifisering, summary</span>
+<span class="k">Sonnet 4</span><span>FAQ-tekst-forslag i peasy-track</span>
+<span class="k">Opus (denne tråden)</span><span>Claude.ai Opus 4.7 for stor-bilde-arbeid</span>
+</div>
+
+<h3>Standard deploy</h3>
+<table>
+<tr><th>Hva</th><th>Kommando</th></tr>
+<tr><td>peasy-auto.js</td><td><code>scp peasy-auto.js bot@100.121.97.112:~/peasy-auto/ &amp;&amp; ssh bot@100.121.97.112 'killall node; sleep 3; cd ~/peasy-auto &amp;&amp; node --check peasy-auto.js &amp;&amp; nohup node peasy-auto.js &gt; logs/out.log 2&gt;&amp;1 &amp;'</code></td></tr>
+<tr><td>Pulse</td><td>Rediger på Mini, <code>git add &amp;&amp; commit &amp;&amp; push</code> &mdash; live etter ~30 sek</td></tr>
+<tr><td>Sysdok</td><td>Skriv ny v11_NN i OneDrive &mdash; synker auto til MBP</td></tr>
+<tr><td>WP forside</td><td>Manuelt i WP-admin (post=5), klikk Oppdater (#publish)</td></tr>
+<tr><td>FAQ</td><td>Manuelt i ERP CKEditor, klikk Lagre</td></tr>
+</table>
+
+<h3>Mike sin arbeidsflyt &mdash; HUSK</h3>
+<ul>
+<li><strong>1 ting av gangen.</strong> Før/etter-format, vent på godkjenning, så neste.</li>
+<li><strong>Aldri gjette versjoner.</strong> ls filsystemet først.</li>
+<li><strong>Aldri patche samme fil flere ganger.</strong> Skriv komplett ny fil og deploy én gang.</li>
+<li><strong>Aldri ttyd-paste store heredocs</strong> &mdash; ttyd korrumperer kontrolltegn. Bruk <code>cat &gt; /tmp/x.py &lt;&lt; PYEOF</code> + python3 /tmp/x.py.</li>
+<li><strong>Norske karakterer:</strong> les filer som binary før base64 for GitHub API. Aldri <code>btoa(unescape(encodeURIComponent()))</code> &mdash; korrumperer ø/å/æ.</li>
+<li><strong>node --check</strong> alltid før deploy.</li>
+<li><strong>Når Mike sier "data is gone":</strong> revert umiddelbart, forklar etterpå.</li>
+<li><strong>Konsistens-bot kjør:</strong> Mike limer inn FLERE forslag, Claude HOLDER KJEFT til "ferdig"-signal, organiserer i kø, Mike godkjenner samlet.</li>
+<li><strong>Mike er direkte og terse.</strong> Diskuter først, implementer etter godkjenning. Ikke spm åpenbare ting.</li>
+</ul>
+
+<h3>Forretningsmodell &amp; økonomi (kritisk kontekst)</h3>
+<ul>
+<li><strong>C2B used car platform</strong> &mdash; mottar biler fra private selgere, auksjonerer til 1500 forhandlere via Autoringen.</li>
+<li><strong>Marketing spend:</strong> 1000 kr/dag siden 1.11.2025 (CPL-beregning bruker dette).</li>
+<li><strong>Fee-tiers:</strong> 5900/7900/9900 kr + 4000 kr ekstra over 125k Pris lav.</li>
+<li><strong>Konverteringsmål:</strong> 20% leads aksepterer estimat, 70% av mottatte selges.</li>
+<li><strong>Pris-filosofi:</strong> Anchor (Finn floor) × 0.88 - Peasy fee = D mid × 0.95/1.05 = D lav/høy. Est T = D lav × (1 + recX%).</li>
+</ul>
+</div>
+
+<div class="page-sub">v11.12 · sist oppdatert 28. april 2026 · gjeldende sannhet</div>
+
+<div class="callout callout-info">
+  <strong>Om dette dokumentet</strong>
+  Dette er gjeldende referanse. All historikk ligger i <code>sysdok-changelog.html</code>. Hvis du finner uoverensstemmelser mellom dette dokumentet og kjørende kode, oppdater dokumentet — koden er sannhet.
+</div>
+
+
+<!-- ============================================================
+     INNHOLDSFORTEGNELSE (v11.7)
+============================================================ -->
+<div class="card" id="toc" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:20px 28px;margin-bottom:32px">
+<h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#334155;margin-bottom:14px">Innhold</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 24px;font-size:13px;line-height:1.9">
+  <a href="#ai-onboarding" style="color:#0f766e;text-decoration:none">🤖 AI-onboarding</a>
+  <a href="#kom-i-gang" style="color:#0f766e;text-decoration:none">🚀 Kom i gang (mennesker)</a>
+  <a href="#kjente-feller" style="color:#0f766e;text-decoration:none">⚠️ Kjente feller</a>
+  <a href="#oversikt" style="color:#0f766e;text-decoration:none">🗺️ Systemoversikt</a>
+  <a href="#peasy-auto" style="color:#0f766e;text-decoration:none">🚗 peasy-auto (v18.03.dr3)</a>
+  <a href="#peasy-track" style="color:#0f766e;text-decoration:none">📧 peasy-track (v3.6)</a>
+  <a href="#peasy-pulse" style="color:#0f766e;text-decoration:none">📊 peasy-pulse (v16.03.c29)</a>
+  <a href="#konsistens" style="color:#0f766e;text-decoration:none">🛡️ Konsistens-sjekk</a>
+  <a href="#erp-faqs-modul" style="color:#0f766e;text-decoration:none">📝 erp-faqs.js modul</a>
+  <a href="#erp-api" style="color:#0f766e;text-decoration:none">🔌 ERP API-endepunkter</a>
+  <a href="#markedsforing" style="color:#0f766e;text-decoration:none">📣 Markedsføring</a>
+  <a href="#pricing" style="color:#0f766e;text-decoration:none">💰 Prisingsfilosofi</a>
+  <a href="#feedback-loop" style="color:#0f766e;text-decoration:none">🔄 360 feedback-loop</a>
+  <a href="#segmenter" style="color:#0f766e;text-decoration:none">📐 Segmenter &amp; spread</a>
+  <a href="#credentials" style="color:#0f766e;text-decoration:none">🔐 Credentials</a>
+  <a href="#deploy" style="color:#0f766e;text-decoration:none">🚢 Deploy-rutiner</a>
+  <a href="#fil-locations" style="color:#0f766e;text-decoration:none">📂 Fil-lokasjoner</a>
+  <a href="#ny-ai-quickstart" style="color:#0c4a6e;text-decoration:none;font-weight:700">⚡ Ny AI? Start her</a>
+  <a href="#endringslogg-2026-04-28-kveld" style="color:#0f766e;text-decoration:none">📅 Endringslogg 28.04 kveld</a>
+  <a href="#peasy-no-webside" style="color:#0f766e;text-decoration:none">🌐 peasy.no webside</a>
+  <a href="#endringslogg-2026-04-28" style="color:#0f766e;text-decoration:none">📅 Endringslogg 28.04.26</a>
+  <a href="#kjente-bugs" style="color:#0f766e;text-decoration:none">🐛 Kjente bugs</a>
+  <a href="#versjonshistorikk" style="color:#0f766e;text-decoration:none">📜 Versjonshistorikk</a>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="ai-onboarding">AI-onboarding</h2>
+<p>Hvis du er en ny AI-instans (Claude eller annet) som hjelper Mike med Peasy: les denne seksjonen først. Den oppsummerer alt vi har lært av tidligere sesjoner som har gått galt.</p>
+
+<div class="card">
+<h3>De fem viktigste tingene å vite</h3>
+<ol>
+  <li><strong>Mike eier en C2B-bilplattform i Norge</strong> som heter Peasy (under selskapet Autoringenas). Boter kjører på en Mac Mini hjemme hos Mike, koblet til via Tailscale.</li>
+  <li><strong>Du har ttyd-tilgang</strong> til Mini via Chrome MCP. Bruk det. Ikke spør Mike om å gjøre ting du selv kan gjøre. Se <a href="#tilganger">Tilganger</a>.</li>
+  <li><strong>Tre hoved-komponenter:</strong> peasy-auto (priser biler, kjører automatisk), peasy-track (overvåker mail), peasy-pulse (dashboard). Se <a href="#oversikt">Oversikt</a>.</li>
+  <li><strong>Aldri patch en fil mer enn én gang.</strong> Hvis en fil må endres via ttyd: bruk ett Python-kall med alle erstatninger, ikke iterer. For peasy-auto.js: be Mike laste opp filen, patch i sandbox, lever komplett ny fil. Se unntak-boks under.</li>
+  <li><strong>Backup hoerer hjemme i OD, ikke ~/peasy-auto/.</strong> Kjorende mapper pa Mini er flyktige. OD synker til MBP og gir reell trygghet. Skriv ALLTID bade ny versjon og backup av gamle til OD med eksplisitte versjonsnummer i filnavn.</li>
+  <li><strong>Mike er travel.</strong> Korte svar. Gjør ting istedenfor å forklare. Spør én ting om gangen hvis du må spørre.</li>
+</ol>
+</div>
+
+<div class="card" id="tilganger">
+<h3>Hva du har tilgang til</h3>
+<table>
+<tr><th>Tilgang</th><th>Hvordan</th><th>Bruk til</th></tr>
+<tr><td>Mac Mini terminal</td><td>Chrome MCP → ttyd-tab på <code>http://100.121.97.112:7682/</code></td><td>Alt: file ops, deploy, debug</td></tr>
+<tr><td>GitHub API</td><td>Token i <code>.env</code> som <code>GITHUB_TOKEN</code></td><td>Push til Pages-repo (Pulse, FAQ-filer)</td></tr>
+<tr><td>Web search</td><td>web_search-verktøy</td><td>Sjekk dokumentasjon for tredjeparts-systemer (Tornado, EWS, etc.)</td></tr>
+<tr><td>Anthropic API</td><td>Mike's egen key i <code>.env</code></td><td>Boter kaller Haiku/Sonnet for klassifisering</td></tr>
+<tr><td>Pulse i nettleser</td><td>Chrome MCP → tab med <code>peasy-pulse.html</code></td><td>JS console-debug, DOM-inspeksjon</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>SSH til Mini — passordfri oppsett (MBP)</h3>
+<p>Boten&rsquo;s SSH-tilkobling fra MBP skal <strong>ikke</strong> kreve passord. Hvis du blir bedt om passord eller passphrase — oppsettet er ødelagt. Her er løsningen.</p>
+
+<div class="callout callout-info">
+<strong>Én gang, på MBP (overlever restart):</strong>
+<pre>cat &gt;&gt; ~/.ssh/config &lt;&lt; 'EOF'
+
+Host 100.121.97.112
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519
+EOF</pre>
+<p>Dette gjør at macOS automatisk henter SSH-keyen fra keychain for tilkoblinger til Mini.</p>
+</div>
+
+<div class="callout callout-warn">
+<strong>Midlertidig fix i samme økt (hvis du bare vil unngå passphrase-prompt nå):</strong>
+<pre>ssh-add --apple-use-keychain ~/.ssh/id_ed25519</pre>
+<p>Laster keyen inn i ssh-agent og lagrer passphrase i Mac keychain. Keyen holder seg til terminalen eller Mac restartes. Bruk <code>~/.ssh/config</code>-varianten over for permanent fix.</p>
+</div>
+
+<h4>Når må du kjøre disse?</h4>
+<table>
+<tr><th>Symptom</th><th>Fix</th></tr>
+<tr><td>Første gangs setup på ny MBP</td><td>Begge — først <code>ssh-copy-id</code> (hvis nøkkel mangler), så legg til i <code>~/.ssh/config</code></td></tr>
+<tr><td>Etter Mac-restart, første SSH spør om passphrase</td><td><code>ssh-add --apple-use-keychain</code> én gang, eller stol på <code>~/.ssh/config</code></td></tr>
+<tr><td>scp/ssh spør om &quot;bot@100.121.97.112 Password&quot;</td><td>SSH-keyen er ikke på Mini — kjør <code>ssh-copy-id bot@100.121.97.112</code></td></tr>
+<tr><td>Spør om &quot;Enter passphrase for key&quot;</td><td><code>ssh-add --apple-use-keychain ~/.ssh/id_ed25519</code></td></tr>
+</table>
+
+<h4>Verifiser at det virker</h4>
+<pre>ssh bot@100.121.97.112 "whoami"
+# Skal returnere &quot;bot&quot; uten passord-prompt</pre>
+
+<h3>Slik bruker du ttyd</h3>
+<p>I JavaScript-kall mot ttyd-tab:</p>
+<pre>window.term.paste('din kommando her\n')</pre>
+<p>Trailing <code>\n</code> er nødvendig for å trigge enter. <code>window.term.paste</code> er den eneste pålitelige måten — ikke prøv å simulere klikk eller tastatur.</p>
+
+<div class="callout callout-warn">
+<strong>ttyd paste-korrupsjon</strong>
+Store Python-heredocs (mer enn ~20 linjer) får linjer kollapset under paste. Workaround:
+<ul>
+  <li>Skriv scriptet til fil først via flere små paster, eller</li>
+  <li>Bruk <code>cat &gt; /tmp/script.py &lt;&lt; "EOF"</code> + paste innhold + <code>EOF</code> + <code>python3 /tmp/script.py</code></li>
+  <li>For helt korte ting: bruk curl direkte istedenfor Python</li>
+</ul>
+</div>
+</div>
+
+<div class="card">
+<h3>Filer pa OD: rediger DIREKTE, ikke overfoer</h3>
+<div class="callout callout-critical">
+<strong>Felle som har kostet timer</strong>
+Hvis en fil ligger i OD pa Mini, RIDIGER DEN DIREKTE via ttyd. Ikke skriv en lokal kopi i ditt sandbox-miljoe og prov a overfor den. Du har full lese/skrive-tilgang til OD via ttyd hele tiden. En enlinjes Python-kommando i ttyd kan lese, modifisere og skrive en fil i OD pa under 10 sekunder.
+<br><br>
+<strong>Riktig:</strong>
+<pre>window.term.paste("python3 -c "f='/Users/bot/.../OD/sysdok-v11_2.html'; h=open(f).read(); h=h.replace('OLD','NEW'); open(f,'w').write(h)"
+")</pre>
+<strong>Feil:</strong> Lage en lokal versjon i sandbox, base64-encode den, splitte i 15 biter, paste hver bit over ttyd. Det vil feile, og du vil bruke 30 minutter pa det.
+<br><br>
+Hvis du tenker "jeg har tilgang fra sandbox til X men ikke Y" — du har sannsynligvis feil. Du har kun ttyd som tilgang til Mike sine systemer. Bruk ttyd til ALT.
+</div>
+
+<div class="callout callout-critical">
+<strong>Unntak: peasy-auto.js-patching</strong>
+Selv om regelen "rediger direkte i OD via ttyd" gjelder for sysdok og HTML, er peasy-auto.js en sensitiv produksjonsfil som kjører live. For den: Mike laster opp fila fra OD inn i Claude-chatten direkte. Du patcher i sandbox med Python + <code>assert string in h</code> for hver erstatning, kjører <code>node --check</code>, og leverer komplett ny versjonert fil. Mike kjører scp fra MBP.
+<br><br>
+<strong>Hvorfor:</strong> 69 KB Python-patch-script over ttyd-paste kræsjer konsekvent på unicode-escape, linjekollapset-heredoc, emoji-eskaping. Historisk tidsbruk for denne feilen: 1 time+. Opplastet fil + sandbox-patch tar 5 min.
+</div>
+
+<h3>Lærte feil bot-deploy (22. april 2026)</h3>
+<table>
+<tr><th>Feil</th><th>Riktig</th></tr>
+<tr><td>Gjette sti til fila (<code>~/Downloads/</code>, <code>~/peasy-auto/</code>)</td><td>Les sysdok først. Fila ligger i <code>~/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code> på både Mini og MBP</td></tr>
+<tr><td>Bruk <code>node</code> uten full path i SSH</td><td>Bruk <code>/Users/bot/.nvm/versions/node/v24.14.0/bin/node</code> — NVM er ikke i PATH for non-interactive SSH</td></tr>
+<tr><td>Python triple-quoted med <code>\u{1F5BC}</code> escape</td><td>Bruk faktisk emoji-tegn som UTF-8 literal i patch-scriptet. Python tolker <code>\u</code> inni triple-quote som unicode-escape uansett</td></tr>
+<tr><td>Gjette linjeindentering ved patching</td><td><code>cat -A filnavn</code> eller Python <code>repr(line)</code> for å se faktisk whitespace. carLine har 2 spaces foran <code>]</code>, ikke 4</td></tr>
+<tr><td>Filnavn versus <code>const VERSION</code> mismatch</td><td>Verifiser alltid <code>grep "const VERSION" peasy-auto.js</code> før patch. Filnavn kan si "dq3" mens innhold sier "dp2"</td></tr>
+<tr><td>GitHub push protection-block → bypass-link</td><td>Aldri bruk bypass. <code>git reset HEAD~1</code> hvis committen er øverst, roter secrets, fjern <code>.env</code> fra git med <code>git rm --cached</code></td></tr>
+<tr><td>Lese bot-fila fra Mini via base64-over-ttyd</td><td>Be Mike laste opp fila direkte i chat. 69 KB over paste-kanal er upålitelig</td></tr>
+<tr><td>Hardkodet token i git remote URL</td><td><code>git remote set-url origin https://github.com/...git</code> uten token. Token leses fra <code>.env</code> eller <code>gh auth</code></td></tr>
+</table>
+
+<h3>Optimal bot-endrings-flyt (mål: 5 min)</h3>
+<ol>
+  <li>Mike laster opp peasy-auto.js fra OD-Dokumentasjon direkte i chat</li>
+  <li>Claude verifiserer <code>const VERSION</code> og finner ankerstrenger med grep i sandbox</li>
+  <li>Claude patcher i sandbox med Python + <code>assert old in h</code> for hver erstatning</li>
+  <li>Claude kjører <code>node --check</code> før levering</li>
+  <li>Claude leverer komplett fil med versjonert filnavn (<code>peasy-auto-v18.03.dr.js</code>)</li>
+  <li>Mike scper fra MBP-terminal: <code>scp &lt;OD-sti&gt;/peasy-auto-v18.03.dr.js bot@100.121.97.112:~/peasy-auto/peasy-auto.js && ssh bot@100.121.97.112 "killall node; ..."</code></li>
+</ol>
+
+<h3>OneDrive-stier (kritisk å huske)</h3>
+<table>
+<tr><th>Maskin</th><th>Sti til Dokumentasjon-mappe</th></tr>
+<tr><td>Mini (bot-bruker)</td><td><code>/Users/bot/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></td></tr>
+<tr><td>MBP (mike)</td><td><code>/Users/mikeljungberg-tvedt/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></td></tr>
+</table>
+<p>OneDrive er montert som filsystem på Mini — du kan lese/skrive direkte med Python uten OneDrive API.</p>
+<p>Sync MBP → Mini tar typisk 1-3 min. Hvis det ikke kommer: restart OneDrive-app på Mini:</p>
+<pre>osascript -e 'quit app "OneDrive"' && open -a OneDrive</pre>
+</div>
+
+<div class="card">
+<h3>Forventet arbeidsflyt</h3>
+<ol>
+  <li>Mike beskriver et problem eller endring.</li>
+  <li>Du svarer kort med plan.</li>
+  <li>Mike godkjenner.</li>
+  <li>Du gjør jobben i ttyd.</li>
+  <li>Du verifiserer (sjekker at det faktisk virker, ikke bare rapporterer "OK").</li>
+  <li>Mike bekrefter eller korrigerer.</li>
+</ol>
+<p><strong>Ikke gjør:</strong> spør om bekreftelse på trivielle ting; foreslå tre alternativer når én er åpenbart best; skriv lange forklaringer i stedet for å gjøre.</p>
+</div>
+
+<div class="card">
+<h3>Hvordan oppdatere denne sysdok'en — og når</h3>
+<div class="callout callout-warn">
+<strong>AI-instruks (oppdatert 4. mai 2026):</strong> AI-en (Claude) skal holde denne sysdoken 100% oppdatert til enhver tid. Sysdoken er <em>kilden til sannhet</em> for systemets tilstand.
+</div>
+<h4>Krav til AI</h4>
+<ul>
+<li><strong>Versjonsstrenger</strong> oppdateres umiddelbart når ny versjon deployes (Pulse, peasy-auto, peasy-track)</li>
+<li><strong>Endringslogg-seksjon</strong> legges til ved hver versjons-deploy med dato, deploy-tidspunkt og endringer</li>
+<li><strong>Versjonshistorikk-tabell</strong> oppdateres med ny rad øverst (Live), forrige stable flyttes ned</li>
+<li><strong>Formler og definisjoner</strong> dokumenteres i sysdok når de etableres (f.eks. Eval-aksept-kohort, Bud-aksept-kohort)</li>
+<li><strong>Kjente buger</strong> dokumenteres i relevant seksjon</li>
+<li><strong>Filnavn-konvensjon:</strong> <code>sysdok-vXX_YY.html</code> (alltid ny fil ved oppdatering)</li>
+<li><strong>Plassering:</strong> <code>/Users/bot/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code> på Mini, syncer til MBP via OneDrive</li>
+<li><strong>Ingen emoji i sysdok</strong> — bruk "trofe-ikon", "sjekkmerke", "kryss" osv. i prosa istedenfor</li>
+<li><strong>Markedsføringsansvar (fra mai 2026):</strong> Claude bygger Meta-kampanjer for Mike. Det betyr: kreativ-tekst, audience-spec, budsjett, A/B-test-design, oppfølgings-rapport. Mike godkjenner og publiserer i Ads Manager. Claude initierer ikke spend-endringer — bare foreslår og venter på OK.</li>
+<li><strong>Kampanjeanalyse-mal:</strong> Når Mike ber om kampanjerapport for periode X-Y, bygg HTML med 8 standard-seksjoner (sammendrag, leads ERP, spend-eksperiment, Meta, GA, sync-sjekk, hovedfunn, neste steg). Se <a href="#markedsforing">Markedsføring-seksjonen</a> for full mal og datakilder.</li>
+</ul>
+<h4>Strategi for oppdatering</h4>
+<ol>
+<li>Kopier siste versjon (cp v_X.html v_X+1.html)</li>
+<li>Bytt versjonsstrenger med <code>str.replace</code> (ikke regex)</li>
+<li>Legg til ny endringslogg-seksjon</li>
+<li>Verifiser med grep at antall forekomster er som forventet</li>
+<li>Fil syncer automatisk til MBP via OneDrive</li>
+</ol>
+
+<h4>Når du SKAL oppdatere</h4>
+<ul>
+  <li>Versjons-bump på en bot (track, auto, pulse) → oppdater badge i module-card og evt. detaljer</li>
+  <li>Ny .env-variabel lagt til → oppdater <a href="#credentials">Credentials</a></li>
+  <li>Credentials rotert (passord, token) → oppdater umiddelbart</li>
+  <li>Ny fil i <code>~/peasy-track/</code> eller <code>~/peasy-auto/</code> → oppdater fil-tabell</li>
+  <li>Ny Telegram-kommando lagt til → oppdater kommando-tabell</li>
+  <li>Bug oppdaget → legg i <a href="#kjente-bugs">Kjente bugs</a> som "Åpen"</li>
+  <li>Bug fikset → flytt fra "Åpen" til "Løste" i samme tabell</li>
+  <li>Ny tilgang/ressurs som hjelper deg jobbe (annen API, ny mappe, etc.)</li>
+  <li>Du brukte mer enn 10 min på å finne ut av noe → legg det inn så neste AI slipper</li>
+</ul>
+
+<h4>Når du IKKE skal oppdatere</h4>
+<ul>
+  <li>Midlertidige eksperimenter som kanskje rulles tilbake</li>
+  <li>Spesifikke debug-sesjoner — sysdok er referanse, ikke loggbok</li>
+  <li>Ting som kun gjelder én tråd/sak — bruk userMemories for det</li>
+</ul>
+
+<h4>Hvordan</h4>
+<ol>
+  <li>Filen ligger i OD: <code>OD/Dokumentasjon/sysdok-v11_X.html</code></li>
+  <li>Hent gjeldende versjon med ttyd: <code>cat /Users/bot/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/sysdok-v11_X.html</code></li>
+  <li>For små endringer: bruk Python-script med <code>assert old in html</code> + replace (samme mønster som Pulse-patching)</li>
+  <li>For større strukturelle endringer: skriv komplett ny versjon</li>
+  <li>Bump siste tall: v11.0 → v11.1, v11.1 → v11.2 osv. Major bump (v11→v12) kun ved redesign</li>
+  <li>Oppdater datoen i header (<code>v11.X — DD. mnd. YYYY</code>) og badge i toc</li>
+  <li>Lagre tilbake i samme OD-mappe — OneDrive synker til MBP</li>
+  <li>Legg én linje i <code>sysdok-changelog.html</code></li>
+</ol>
+
+<h4>Patch-akkumulering er forbudt</h4>
+<p>Ikke lag <code>sysdok-patch-vX.html</code>-filer som beskriver "hva som er annerledes". Det blir umulig å lese over tid. Oppdater hovedfila direkte. Hvis du er usikker på en endring, spør Mike.</p>
+
+<div class="callout callout-tip">
+<strong>Tommelfingerregel</strong>
+Hvis du nettopp svarte Mike noe han kunne lest fra sysdok — sysdok manglet det. Legg det inn nå.
+</div>
+</div>
+
+<div class="card">
+<h3>Kjente fallgruver (oppsummert — full liste under <a href="#kjente-bugs">Kjente bugs</a>)</h3>
+<ul>
+  <li>Telegram inline-knapper har 60 sek timeout. Svar callback umiddelbart.</li>
+  <li>EWS GetItem returnerer 500 hvis du kombinerer <code>BaseShape=Default</code> med <code>AdditionalProperties</code> som duplikerer Body.</li>
+  <li>GitHub Pages cache kan lagge 1-3 min etter push. <code>raw.githubusercontent.com?t=&lt;timestamp&gt;</code> er alltid friskt.</li>
+  <li>Pulse SPM-fane har egen render-logikk — sett <code>style.display</code> direkte, ikke class toggle.</li>
+  <li>launchd KeepAlive kan restarte boten før <code>launchctl unload</code> tar effekt. Bruk <code>pkill -9</code> i tillegg.</li>
+  <li>Norske tegn (æøå) kan korrupte ved <code>btoa</code> i nettleser. Bruk <code>latin-1</code> ved Python b64-encoding av Pulse HTML.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="kom-i-gang">Kom i gang (mennesker)</h2>
+<p>For Mike eller andre operatører som skal jobbe på systemet manuelt.</p>
+
+<div class="card">
+<h4>Tilgang Mini fra MBP</h4>
+<pre>ssh bot@100.121.97.112    # via Tailscale
+# eller åpne ttyd i nettleser:
+open http://100.121.97.112:7682/</pre>
+
+<h4>Sjekk hva som kjører</h4>
+<pre>pgrep -af peasy-auto
+pgrep -af peasy-track
+launchctl list | grep peasy</pre>
+
+<h4>Sjekk siste logger</h4>
+<pre>tail -30 /Users/bot/peasy-auto/logs/out.log
+tail -30 /Users/bot/peasy-track/nohup.out</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="kjente-feller">Kjente feller — første gang</h2>
+<p>Ting som har bitt oss tidligere. Sjekk disse hvis noe ser rart ut.</p>
+
+<table>
+<tr><th>Symptom</th><th>Vanligvis fordi</th></tr>
+<tr><td><code>FindItem feilet 401</code></td><td>EWS-passord utdatert i <code>.env</code> — sjekk webmail.tornado.email</td></tr>
+<tr><td><code>GetItem 500</code></td><td>Ugyldig SOAP — for mange AdditionalProperties som duplikerer BaseShape</td></tr>
+<tr><td><code>query is too old</code></td><td>Bot brukte for lang tid før <code>answerCallbackQuery</code></td></tr>
+<tr><td>Pulse SPM-fanen tom</td><td>Track pusher til feil fil-navn ELLER setMode bruker class-toggle som inline style overstyrer</td></tr>
+<tr><td>40+ duplikat-pending</td><td>Bootstrap kjørte på nytt fordi <code>seen-emails.json</code> var tom — sjekk filen</td></tr>
+<tr><td>Bot rebooter umiddelbart etter pkill</td><td>launchd KeepAlive — kjør <code>launchctl unload</code> først, deretter <code>pkill -9</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="oversikt">Systemoversikt</h2>
+
+<div class="module-card" data-type="auto">
+<p class="name">peasy-auto</p>
+<p class="meta">v18.04.b · /Users/bot/peasy-auto/peasy-auto.js · cron-styrt 07-17 hver time</p>
+<p>Henter biler fra ERP, scraper Finn for komparatorer, lar Haiku velge anker, beregner D-priser og sender eval-kort til Telegram + skriver til ERP.</p>
+<a href="#peasy-auto">→ Detaljer</a>
+</div>
+
+<div class="module-card" data-type="track">
+<p class="name">peasy-track</p>
+<p class="meta">v3.9 · /Users/bot/peasy-track/peasy-track.js · launchd KeepAlive</p>
+<p>Overvåker innboks, varsler Telegram, klassifiserer kunde-spørsmål med Haiku, manuell godkjenning til Pulse SPM-fane. Lærer av dine svar (sent-mappe), bygger FAQ-database.</p>
+<a href="#peasy-track">→ Detaljer</a>
+</div>
+
+<div class="module-card" data-type="pulse">
+<p class="name">peasy-pulse</p>
+<p class="meta">v16.03.c136 · GitHub Pages · live dashboard</p>
+<p>Dashboard som viser ERP-status, prisbrackets, evalueringer, kart, og spørsmål fra track. Henter data live fra ERP XLSX og <code>peasy-questions.json</code>.</p>
+<a href="#peasy-pulse">→ Detaljer</a>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="peasy-auto">peasy-auto <span style="font-size:13px;font-weight:400;color:#64748b">v18.04.b · 4. mai 2026</span></h2>
+<p class="page-sub">Eval-bot · v18.04.a (live) · cron 07-17</p>
+
+<h3>Hovedfunksjon</h3>
+<p>Plukker biler fra ERP-status "estimating_ar_temp" eller "estimating_ar_final", scraper Finn-listings for samme modell/år/km/drivstoff, lar Haiku velge ankerpris, kjører prismatematikken, skriver tilbake til ERP og sender eval-kort til Telegram.</p>
+
+<div class="kv">
+<span class="k">Repo</span><span><code>github.com/mikeljungbergtvedt/peasy-bot</code> (privat)</span>
+<span class="k">Mappe</span><span><code>/Users/bot/peasy-auto/</code></span>
+<span class="k">Kjøretid</span><span>07:00 – 17:00 hver hele time</span>
+<span class="k">Telegram-bot</span><span>Felles eval-bot (<code>TELEGRAM_TOKEN</code>)</span>
+<span class="k">Modell</span><span>claude-haiku-4-5-20251001 for ankervalg</span>
+</div>
+
+<h3>Datafiler</h3>
+<table>
+<tr><td><code>seen-cars.json</code></td><td>Behandlede ERP-IDer</td></tr>
+<tr><td><code>logs/out.log</code></td><td>Stdout/stderr</td></tr>
+</table>
+
+<h3>Endringer i v18.04.b (4. mai 2026 — LIVE)</h3>
+<div class="callout callout-warn">
+<strong>Status:</strong> v18.04.b er deployet 4. mai 2026 kl 10:00. PID 36055 på Mini. Versjonert kopi i OneDrive: <code>peasy-auto-v18.04.b.js</code> (74218 bytes).
+</div>
+<h4>1. Telegram inline-button "Send eval"</h4>
+<p>Eval-kort sender med inline keyboard:</p>
+<pre><code>reply_markup: {
+  inline_keyboard: [[{
+    text: "Send eval",
+    callback_data: "confirm:${erpId}"
+  }]]
+}</code></pre>
+<p>Bot lagrer mapping <code>_evalRegnrMap[erpId] = regnr</code> i minnet når kortet sendes.</p>
+<h4>2. Callback-handler for confirm-knapp</h4>
+<p><code>pollTelegramCommands()</code> håndterer <code>update.callback_query</code>:</p>
+<ul>
+<li>Henter <code>erpId</code> fra <code>callback_data</code></li>
+<li>Kaller <code>confirmFinalEstimate(erpId, token)</code></li>
+<li>Svarer på chat: <code>Eval sendt for {regnr} HH:MM DD.MM.YYYY</code></li>
+</ul>
+<h4>3. ERP confirm-endpoint</h4>
+<table>
+<tr><th>Felt</th><th>Verdi</th></tr>
+<tr><td>Method</td><td><code>POST</code></td></tr>
+<tr><td>URL</td><td><code>https://api.biladministrasjon.no/c2b_module/peasy/processing/update/{erpId}/final_estimate/confirm</code></td></tr>
+<tr><td>Headers</td><td>Authorization: Bearer, Content-Type: application/json</td></tr>
+<tr><td>Body</td><td><code>{}</code> (tom — bruker eksisterende ERP-state)</td></tr>
+</table>
+<p><strong>Kritisk forskjell</strong> fra eval-bot "Lagre data":</p>
+<ul>
+<li>POST, ikke PUT</li>
+<li><code>/final_estimate/confirm</code>, ikke <code>/final_estimate</code></li>
+<li>Body kan være tom — alle required-felter må være lagret av bot via PUT først</li>
+</ul>
+<h4>4. Kjent begrensning</h4>
+<p><code>_evalRegnrMap</code> er in-memory — tapes ved bot-restart. Hvis bruker klikker "Send eval" etter restart, mottas regnr ikke i suksess-meldingen.</p>
+<h3>Endringer i v18.04.a (30. april 2026 — forrige stable)</h3>
+<div class="callout callout-warn">
+<strong>Status:</strong> v18.04.a er deployet 30. april 2026 kl 09:30. PID 1778 på Mini. Versjonert kopi lagret i OneDrive som <code>peasy-auto-v18.04.a.js</code>.
+</div>
+<p>To endringer fra v18.03.dr4 til v18.04.a:</p>
+<h4>1. Henter <code>car.description</code> i tillegg til <code>self_declaration.comment</code></h4>
+<p>ERP har <strong>to separate kommentar-felter</strong> på Drive-biler:</p>
+<table>
+<tr><td><code>detail.car.description</code></td><td>"Bildata"-fanen i ERP — selger sin generelle bilbeskrivelse</td></tr>
+<tr><td><code>detail.car.self_declaration.comment</code></td><td>"Selvdeklarasjon"-fanen i ERP — selger svar på spesifikke spørsmål</td></tr>
+</table>
+<p>Tidligere hentet bot kun det første som var fylt ut. Eval-kortet viste bare én av dem — ofte gikk verdifull bil-info tapt.</p>
+
+<h4>2. Dedupe-logikk for SELGERKOMMENTAR-feltet</h4>
+<p>Ny kode (linje 1189 i peasy-auto.js) henter begge feltene separat og kombinerer dem smart:</p>
+<pre>var carDesc = detail?.car?.description || null;
+var sdSelf = detail?.car?.self_declaration?.comment || detail?.self_declaration?.comment || null;
+// Dedupe: hvis identiske, vis kun én. Slipp falsy.
+if (carDesc &amp;&amp; sdSelf &amp;&amp; carDesc.trim()===sdSelf.trim()) sdComment = sdSelf;
+else if (carDesc &amp;&amp; sdSelf) sdComment = sdSelf + "\n\nBILBESKRIVELSE: " + carDesc;
+else sdComment = sdSelf || carDesc || null;</pre>
+<p><strong>Resultat på eval-kortet:</strong></p>
+<ul>
+<li>Begge identiske → vis kun én linje SELGERKOMMENTAR</li>
+<li>Begge ulike → SELGERKOMMENTAR <code>+ \n\nBILBESKRIVELSE: ...</code></li>
+<li>Bare én fylt ut → vis den</li>
+<li>Begge tomme → SELGERKOMMENTAR "–"</li>
+</ul>
+
+<h4>Deploy-kommando for v18.04.b aktivering</h4>
+<p>Bruker <strong>NY</strong> pkill-kommando som kun dreper auto-bot (ikke track-bot):</p>
+<pre>pkill -f "peasy-auto/peasy-auto.js" &amp;&amp; sleep 2 &amp;&amp; cd ~/peasy-auto &amp;&amp; nohup /Users/bot/.nvm/versions/node/v24.14.0/bin/node peasy-auto.js &gt; logs/out.log 2&gt;&amp;1 &amp;</pre>
+<p>Tidligere brukt <code>killall node</code> drepte BEGGE bots. Track-bot mistet sin in-memory state og prosesserte 30+ mails på nytt etter restart.</p>
+
+<h4>Versjonshistorikk peasy-auto</h4>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v18.04.b</code></td><td>04.05.2026</td><td><strong>Live</strong> — Telegram inline-button + ERP confirm-endpoint</td></tr>
+<tr><td><code>v18.04.a</code></td><td>30.04.2026</td><td>Forrige stable — car.description + dedupe BILBESKRIVELSE</td></tr>
+<tr><td><code>v18.03.dr4</code></td><td>27.04.2026</td><td>Forrige stabile</td></tr>
+<tr><td><code>v18.03.dr</code></td><td>22.04.2026</td><td>Bildeikon i eval-kort (henter <code>detail.car.files.length</code>)</td></tr>
+</table>
+
+<div class="callout callout-warn">
+<strong>Kjent issue: km-band fallback</strong>
+Linje 770 har <code>for (const band of [kmBand, kmBand*1.5, kmBand*2, 999999])</code> — fallback til 999999 drar inn outliers (eks. 338k km på en bil med 139k km). Foreslått fix: erstatt med <code>kmBand*3</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="peasy-track">peasy-track <span style="font-size:13px;font-weight:400;color:#64748b">v3.9 · 30. april 2026</span></h2>
+<p class="page-sub">Mail-bot · v3.9 · launchd</p>
+
+<h3>Hovedfunksjon</h3>
+<ol>
+  <li>Poll inbox hvert 5 min via EWS</li>
+  <li>Hopp over alle mails fra <code>@peasy.no</code></li>
+  <li>Send hver mail til Telegram (<code>@EasyPeasyEmailBot</code>)</li>
+  <li>Klassifiser med Haiku → kunde-spørsmål?</li>
+  <li>Hvis ja → pending-kø med Telegram-knapper</li>
+  <li>Du trykker ✅ → push til Pulse SPM-fane</li>
+  <li>Poll sentitems hver 4. time → lær fra dine svar</li>
+  <li>3 kunder med samme topic_key uten FAQ-dekning → Sonnet-forslag til ny FAQ</li>
+</ol>
+
+<div class="kv">
+<span class="k">Mappe</span><span><code>/Users/bot/peasy-track/</code></span>
+<span class="k">launchd</span><span><code>~/Library/LaunchAgents/com.peasy.track.plist</code></span>
+<span class="k">Logg</span><span><code>~/peasy-track/nohup.out</code></span>
+<span class="k">Telegram-bot</span><span><code>@EasyPeasyEmailBot</code> (token <code>TELEGRAM_TOKEN_TRACK</code>)</span>
+<span class="k">EWS</span><span><code>https://exchange.tornado.email/EWS/Exchange.asmx</code></span>
+<span class="k">Modeller</span><span>Haiku 4.5 for klassifisering, Sonnet 4 for FAQ-forslag</span>
+</div>
+
+<h3>Datafiler i <code>~/peasy-track/</code></h3>
+<table>
+<tr><th>Fil</th><th>Innhold</th></tr>
+<tr><td><code>peasy-track.js</code></td><td>Hovedscript</td></tr>
+<tr><td><code>.env</code></td><td>Credentials og config</td></tr>
+<tr><td><code>seen-emails.json</code></td><td>Behandlede inbox-IDer</td></tr>
+<tr><td><code>seen-sent.json</code></td><td>Behandlede sent-IDer</td></tr>
+<tr><td><code>daily-log.json</code></td><td>Alle mottatte mails (dato-gruppert)</td></tr>
+<tr><td><code>questions-db.json</code></td><td>Lokal speil av godkjente spm</td></tr>
+<tr><td><code>pending-questions.json</code></td><td>Spm som venter på godkjenning</td></tr>
+<tr><td><code>tg-offset.json</code></td><td>Telegram getUpdates offset</td></tr>
+<tr><td><code>learned-faq.json</code></td><td>Sammenkoblede tråder (Q + ditt svar)</td></tr>
+<tr><td><code>static-faq.json</code></td><td>FAQ scrapet fra peasy.no</td></tr>
+<tr><td><code>faq-candidates.json</code></td><td>Topic_keys med 3+ tråder</td></tr>
+</table>
+
+<h3>Telegram-kommandoer</h3>
+<table>
+<tr><th>Kommando</th><th>Effekt</th></tr>
+<tr><td><code>/help</code></td><td>Vis kommando-oversikt</td></tr>
+<tr><td><code>/pending</code></td><td>Liste ventende spm med ID</td></tr>
+<tr><td><code>/approve &lt;id&gt;</code></td><td>Godkjenn pending uten knapp</td></tr>
+<tr><td><code>/skip &lt;id&gt;</code></td><td>Skip pending uten knapp</td></tr>
+<tr><td><code>/faq</code></td><td>Liste FAQ-kandidater</td></tr>
+<tr><td><code>/insight</code></td><td>Ukentlig oversikt</td></tr>
+<tr><td><code>/stats</code></td><td>Total statistikk</td></tr>
+<tr><td><code>/learned</code></td><td>Siste 10 lærte tråder</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h3>FAQ-loopen — hvordan track lærer og bygger FAQ</h3>
+<p>Dette er kjernen i hvordan track-boten gjør Peasy bedre over tid. Hver mail blir en datapunkt; over uker bygges et bilde av hva kunder faktisk lurer på, og hva som mangler i FAQ.</p>
+
+<svg viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg" style="background:#fff;border:1px solid #D5DCD8;border-radius:8px;margin:14px 0">
+  <style>
+    .box{fill:#fff;stroke:#004225;stroke-width:1.5;rx:6}
+    .box-erp{fill:#E8F5E9;stroke:#2E7D32}
+    .box-tg{fill:#E3F2FD;stroke:#1565C0}
+    .box-pulse{fill:#FFEBE0;stroke:#E65100}
+    .box-bot{fill:#F0F4F2;stroke:#5C6F69}
+    .lbl{font:600 12px 'IBM Plex Sans',sans-serif;fill:#0E1F1A}
+    .lbl-sm{font:500 10px 'IBM Plex Sans',sans-serif;fill:#5C6F69}
+    .arrow{stroke:#5C6F69;stroke-width:1.5;fill:none;marker-end:url(#arr)}
+    .arrow-thick{stroke:#004225;stroke-width:2.2;fill:none;marker-end:url(#arrG)}
+  </style>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5C6F69"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#004225"/>
+    </marker>
+  </defs>
+
+  <!-- Kunde -->
+  <rect x="20" y="30" width="120" height="50" class="box" rx="6"/>
+  <text x="80" y="52" text-anchor="middle" class="lbl">Kunde</text>
+  <text x="80" y="68" text-anchor="middle" class="lbl-sm">sender e-post</text>
+
+  <!-- Inbox -->
+  <rect x="200" y="30" width="120" height="50" class="box box-bot" rx="6"/>
+  <text x="260" y="52" text-anchor="middle" class="lbl">post@peasy.no</text>
+  <text x="260" y="68" text-anchor="middle" class="lbl-sm">Tornado EWS inbox</text>
+
+  <!-- Track bot -->
+  <rect x="380" y="30" width="160" height="50" class="box box-bot" rx="6"/>
+  <text x="460" y="52" text-anchor="middle" class="lbl">peasy-track</text>
+  <text x="460" y="68" text-anchor="middle" class="lbl-sm">poller hver 5 min</text>
+
+  <!-- Haiku klassifisering -->
+  <rect x="600" y="30" width="140" height="50" class="box box-bot" rx="6"/>
+  <text x="670" y="52" text-anchor="middle" class="lbl">Haiku 4.5</text>
+  <text x="670" y="68" text-anchor="middle" class="lbl-sm">spm? + topic_key</text>
+
+  <!-- Telegram pending -->
+  <rect x="380" y="130" width="160" height="50" class="box box-tg" rx="6"/>
+  <text x="460" y="152" text-anchor="middle" class="lbl">Telegram: pending</text>
+  <text x="460" y="168" text-anchor="middle" class="lbl-sm">[godkjenn] [skip]</text>
+
+  <!-- Pulse SPM -->
+  <rect x="600" y="130" width="140" height="50" class="box box-pulse" rx="6"/>
+  <text x="670" y="152" text-anchor="middle" class="lbl">Pulse SPM-fane</text>
+  <text x="670" y="168" text-anchor="middle" class="lbl-sm">peasy-questions.json</text>
+
+  <!-- Du svarer -->
+  <rect x="20" y="230" width="120" height="50" class="box" rx="6"/>
+  <text x="80" y="252" text-anchor="middle" class="lbl">Du svarer</text>
+  <text x="80" y="268" text-anchor="middle" class="lbl-sm">via webmail</text>
+
+  <!-- Sentitems -->
+  <rect x="200" y="230" width="120" height="50" class="box box-bot" rx="6"/>
+  <text x="260" y="252" text-anchor="middle" class="lbl">Sentitems</text>
+  <text x="260" y="268" text-anchor="middle" class="lbl-sm">poll hver 4 time</text>
+
+  <!-- Learned faq -->
+  <rect x="380" y="230" width="160" height="50" class="box box-bot" rx="6"/>
+  <text x="460" y="252" text-anchor="middle" class="lbl">learned-faq.json</text>
+  <text x="460" y="268" text-anchor="middle" class="lbl-sm">Q + ditt svar + topic_key</text>
+
+  <!-- 3x trigger -->
+  <rect x="600" y="230" width="140" height="50" class="box box-bot" rx="6"/>
+  <text x="670" y="252" text-anchor="middle" class="lbl">3x-trigger</text>
+  <text x="670" y="268" text-anchor="middle" class="lbl-sm">samme topic_key</text>
+
+  <!-- ERP FAQ -->
+  <rect x="20" y="350" width="160" height="60" class="box box-erp" rx="6"/>
+  <text x="100" y="372" text-anchor="middle" class="lbl">ERP FAQ</text>
+  <text x="100" y="388" text-anchor="middle" class="lbl-sm">/c2b_module/faqs</text>
+  <text x="100" y="402" text-anchor="middle" class="lbl-sm">23 entries</text>
+
+  <!-- Match mot FAQ -->
+  <rect x="240" y="350" width="160" height="60" class="box box-bot" rx="6"/>
+  <text x="320" y="372" text-anchor="middle" class="lbl">Match mot FAQ</text>
+  <text x="320" y="388" text-anchor="middle" class="lbl-sm">Haiku 4.5 sjekker</text>
+  <text x="320" y="402" text-anchor="middle" class="lbl-sm">om dekket</text>
+
+  <!-- Sonnet forslag -->
+  <rect x="440" y="350" width="160" height="60" class="box box-bot" rx="6"/>
+  <text x="520" y="372" text-anchor="middle" class="lbl">Sonnet 4</text>
+  <text x="520" y="388" text-anchor="middle" class="lbl-sm">foreslår ny FAQ</text>
+  <text x="520" y="402" text-anchor="middle" class="lbl-sm">basert på dine svar</text>
+
+  <!-- Telegram FAQ-forslag -->
+  <rect x="640" y="350" width="100" height="60" class="box box-tg" rx="6"/>
+  <text x="690" y="372" text-anchor="middle" class="lbl">Telegram</text>
+  <text x="690" y="388" text-anchor="middle" class="lbl-sm">FAQ-forslag</text>
+  <text x="690" y="402" text-anchor="middle" class="lbl-sm">[godkjenn]</text>
+
+  <!-- Du legger i ERP -->
+  <rect x="20" y="440" width="180" height="30" class="box box-erp" rx="6"/>
+  <text x="110" y="460" text-anchor="middle" class="lbl">Du legger inn i ERP FAQ manuelt</text>
+
+  <!-- Pilene -->
+  <path d="M 140 55 L 200 55" class="arrow"/>
+  <path d="M 320 55 L 380 55" class="arrow"/>
+  <path d="M 540 55 L 600 55" class="arrow"/>
+  <path d="M 670 80 L 670 110 L 460 110 L 460 130" class="arrow"/>
+  <path d="M 540 155 L 600 155" class="arrow-thick"/>
+  
+  <path d="M 80 80 Q 80 200 80 230" class="arrow" stroke-dasharray="4,3"/>
+  <path d="M 140 255 L 200 255" class="arrow"/>
+  <path d="M 320 255 L 380 255" class="arrow"/>
+  <path d="M 540 255 L 600 255" class="arrow"/>
+  
+  <path d="M 670 280 L 670 320 L 320 320 L 320 350" class="arrow"/>
+  <path d="M 180 380 L 240 380" class="arrow"/>
+  <path d="M 400 380 L 440 380" class="arrow" stroke-dasharray="4,3"/>
+  <text x="420" y="372" text-anchor="middle" class="lbl-sm">ikke dekket</text>
+  <path d="M 600 380 L 640 380" class="arrow"/>
+  <path d="M 690 410 L 690 425 L 110 425 L 110 440" class="arrow-thick"/>
+
+  <!-- Legend -->
+  <text x="20" y="20" class="lbl-sm">→ datafyt    ⇒ kritisk vei    -- intern handling</text>
+</svg>
+
+<h4>Stegene forklart</h4>
+<ol>
+  <li><strong>Kunde sender e-post</strong> til <code>post@peasy.no</code>.</li>
+  <li><strong>Track poller inbox</strong> hvert 5. minutt via EWS, varsler Telegram umiddelbart, klassifiserer hver e-post med Haiku 4.5: <em>er det et kundespørsmål?</em> + tildel <code>topic_key</code>.</li>
+  <li><strong>Pending → manuell godkjenning</strong> i Telegram. Du trykker ✅ eller ❌. Godkjente havner i <code>peasy-questions.json</code> som vises i Pulse SPM-fane.</li>
+  <li><strong>Du svarer kunden</strong> via webmail. Track poller Sentitems-mappen hver 4. time, kobler ditt svar til godkjent spørsmål via <code>ConversationId</code>, og lagrer hele tråden i <code>learned-faq.json</code>.</li>
+  <li><strong>3x-trigger</strong>: når 3+ kunder har samme <code>topic_key</code> i learned-faq, sjekker boten mot ERP FAQ (23 aktive Q+A) via Haiku 4.5.</li>
+  <li><strong>Hvis ikke dekket</strong>: Sonnet 4 foreslår ny FAQ-tekst basert på dine 3 svar. Sendes til Telegram med [✅ Godkjenn FAQ].</li>
+  <li><strong>Du godkjenner</strong> → status <code>approved</code>. <em>Boten oppdaterer ikke ERP automatisk</em> — du må legge inn i biladministrasjon.no/settings/peasy_faq selv. Da er loopen lukket: neste gang samme spm dukker opp, dekkes det av FAQ.</li>
+</ol>
+
+<div class="callout callout-tip">
+<strong>Hvorfor dette designet</strong>
+Manuelt-i-loop sikrer at både kunde-spm og FAQ-tekster speiler ditt språk og dine prioriteringer. Boten gjør det tunge: sortere, klassifisere, koble svar, telle, foreslå. Du gjør det viktige: bestemme hva som er en faktisk FAQ-kandidat og hvordan den skal formuleres. Over uker konvergerer FAQ mot å dekke ~80 % av innkommende spm.
+</div>
+
+<h4>Viktige tekniske detaljer</h4>
+<table>
+<tr><th>Detalj</th><th>Verdi</th></tr>
+<tr><td>FAQ-endpoint (ERP)</td><td><code>GET https://api.biladministrasjon.no/c2b_module/faqs?locale=no</code></td></tr>
+<tr><td>FAQ-respons-struktur</td><td><code>j.data.data.data</code> (3 nivåer dypt!) — array av <code>{id, title, content, is_active, order_column}</code></td></tr>
+<tr><td>Filter</td><td><code>is_active === true</code>, sortert på <code>order_column</code></td></tr>
+<tr><td>Token-cache</td><td>1 time, deretter ny login</td></tr>
+<tr><td>Scraping-frekvens</td><td>Ved oppstart + hver natt 03:00</td></tr>
+<tr><td>3x-terskel</td><td>3 kunder med samme topic_key. Konfigureres via <code>FAQ_TRIGGER_N</code></td></tr>
+<tr><td>Modeller</td><td>Haiku 4.5 for klassifisering+matching, Sonnet 4 KUN for FAQ-tekstforslag</td></tr>
+<tr><td>Estimert kostnad</td><td>~$8-10/mnd</td></tr>
+</table>
+
+
+<h3>FAQ-oppdatering via JS — best practice (v11.16)</h3>
+<div class="callout callout-tip">
+<strong>Mål: &lt; 60 sek per FAQ-endring.</strong> ERP bruker Vue 3 + Quasar + CKEditor 5. Bruk JS via javascript_tool, IKKE klikk-by-klikk.
+</div>
+
+<h4>DOM-fakta</h4>
+<ul>
+<li><strong>28 FAQ</strong> per 30. apr 2026</li>
+<li><strong>Tittel:</strong> <code>document.querySelectorAll('input[type="text"]')</code> filtrert på <code>value.length &gt; 5</code>. Idx 0 = Q1.</li>
+<li><strong>Svartekst:</strong> <code>document.querySelectorAll('.ck-content')</code>. Idx 0 = Q1.</li>
+<li><strong>CKEditor 5 instance:</strong> <code>el.closest('.ck-editor').ckeditorInstance</code> — KUN denne API-en oppdaterer Vue-modellen. <strong>IKKE bruk innerHTML</strong>.</li>
+<li><strong>Lagre:</strong> Global. Filter buttons på textContent === 'Lagre'.</li>
+</ul>
+
+<h4>Fallgruver fra 30. apr 2026</h4>
+<ul>
+<li>setData via innerHTML lagres IKKE — bruk ckeditorInstance.setData(html)</li>
+<li>Tittel krever 2 events: input + change. Begge nødvendige.</li>
+<li>F5 reload tar 10-15 sek — verifiser via DOM rett etter Lagre.</li>
+<li>Lagre er global — alle 28 FAQs samtidig.</li>
+</ul>
+
+<h4>Kjørbar oppskrift</h4>
+<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;">// FAQ helpers
+const setVal = (el, v) =&gt; {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, v);
+  el.dispatchEvent(new Event('input', {bubbles: true}));
+  el.dispatchEvent(new Event('change', {bubbles: true}));
+};
+const getTitles = () =&gt; Array.from(document.querySelectorAll('input[type="text"]'))
+  .filter(i =&gt; i.value &amp;&amp; i.value.length &gt; 5);
+const getCk = () =&gt; Array.from(document.querySelectorAll('.ck-content'));
+const setBody = (idx, html) =&gt; getCk()[idx].ckeditorInstance.setData(html);  // FIX v11.17: ckeditorInstance er på .ck-content direkte, IKKE på .ck-editor (gir TypeError)
+const setTitle = (idx, txt) =&gt; setVal(getTitles()[idx], txt);
+const clickAddBtnUnder = (idx) =&gt; {
+  let cur = getTitles()[idx].parentElement;
+  for (let i = 0; i &lt; 15; i++) {
+    const btn = Array.from(cur.querySelectorAll('button')).find(b =&gt; b.textContent.trim() === 'Legge til');
+    if (btn) { btn.click(); return true; }
+    cur = cur.parentElement;
+    if (!cur) return false;
+  }
+};
+const clickSave = () =&gt; Array.from(document.querySelectorAll('button'))
+  .find(b =&gt; b.textContent.trim() === 'Lagre').click();
+
+// Eksempel: oppdater Q14 svar
+setBody(13, '&lt;p&gt;Ny svartekst...&lt;/p&gt;');
+clickSave();</pre>
+
+<h4>Korreksjoner v11.17 (lært 30. apr 2026)</h4>
+<div class="callout callout-warn">
+<strong>Kritisk fix:</strong> ckeditorInstance er pÃ¥ .ck-content elementet direkte, ikke pÃ¥ .ck-editor-foreldreelementet. Bruk <code>getCk()[idx].ckeditorInstance.setData(html)</code> — <strong>IKKE</strong> <code>.closest('.ck-editor').ckeditorInstance</code> (gir TypeError: Cannot read properties of undefined).
+</div>
+
+<h5>Off-by-one mellom input-array og ck-content-array</h5>
+<ul>
+<li><code>document.querySelectorAll('input[type="text"]')</code> har <strong>sÃ¸kefelt pÃ¥ idx 0</strong> (tom verdi pÃ¥ toppen av siden).</li>
+<li><code>document.querySelectorAll('.ck-content')</code> har <strong>ingen sÃ¸kefelt</strong> — idx 0 = Q1.</li>
+<li>Konsekvens: ufiltrert <code>allInputs[N+1]</code> tilsvarer <code>ckContents[N]</code>. Filtrert <code>getTitles()[N]</code> tilsvarer <code>ckContents[N]</code>.</li>
+</ul>
+
+<h5>Ny FAQ via "Legge til" — input har tom verdi</h5>
+<p>NÃ¥r du klikker "Legge til"-knappen lages en ny rad med <strong>tom tittel-input</strong>. Den blir filtrert ut av <code>getTitles()</code> (filter krever <code>value.length &gt; 5</code>). For Ã¥ finne den, bruk ufiltrert array:</p>
+<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;">// Etter clickAddBtnUnder(idx):
+const allInputs = Array.from(document.querySelectorAll('input[type="text"]'));
+// Ny tom rad er pÃ¥ idx (originalIdx+2) i ufiltrert array
+// (originalIdx+1 fordi sÃ¸kefelt-offset, +1 fordi ny rad er etter clicked)
+const newRowIdx = originalFilteredIdx + 2;
+setVal(allInputs[newRowIdx], '15. Ny FAQ-tittel');
+
+// Svar settes via ck-content (uten sÃ¸kefelt-offset)
+const ckContents = Array.from(document.querySelectorAll('.ck-content'));
+const ckIdx = newRowIdx - 1;
+ckContents[ckIdx].ckeditorInstance.setData('&lt;p&gt;Svartekst&lt;/p&gt;');</pre>
+
+<h5>CKEditor 5 stripper inline-style pÃ¥ visse elementer</h5>
+<ul>
+<li><strong>Strippet:</strong> <code>&lt;ul style="color:#eab308"&gt;</code> — fargen blir borte etter Lagre.</li>
+<li><strong>Bevart:</strong> <code>&lt;span style="color:#e11d48; font-weight:bold;"&gt;</code> og <code>&lt;p&gt;</code>-nivÃ¥.</li>
+<li>For Ã¥ farge en liste: wrap hele <code>&lt;ul&gt;</code> i <code>&lt;div style="color:#eab308"&gt;</code> i stedet.</li>
+</ul>
+
+<h5>Lagre-knappen er silent</h5>
+<p>Etter <code>clickSave()</code> kommer ingen toast/banner. Vue oppdaterer state in-memory umiddelbart. Verifiser med ny <code>getCk()[idx].innerText</code>-sjekk — IKKE F5 (den tar 10-15 sek og er unÃ¸dvendig).</p>
+
+<h4>Tidsbudsjett</h4>
+<table>
+<tr><td>Hent FAQ i minne</td><td>2 sek</td></tr>
+<tr><td>Vurder endring</td><td>10 sek</td></tr>
+<tr><td>Skriv JS-batch</td><td>15 sek</td></tr>
+<tr><td>Kjør + verifiser</td><td>5 sek</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>&lt; 60 sek</strong></td></tr>
+</table>
+
+<h4>IKKE gjør dette</h4>
+<ul>
+<li>IKKE screenshot for å "se" — bruk getTitles() + getCk()</li>
+<li>IKKE click via koordinater — bruk JS click()</li>
+<li>IKKE F5 for verifisering — sjekk DOM direkte</li>
+<li>IKKE read_page — 28 FAQs sprenger 50000 char limit</li>
+</ul>
+
+<h3>Oppdatere FAQ-tekst i ERP — riktig metode</h3>
+<p>FAQ-tekster oppdateres <strong>via UI-en på <code>biladministrasjon.no/settings/peasy_faq</code></strong>, ikke via API. Det finnes ikke noe PUT/PATCH-endpoint for FAQ — alle forsøk på <code>PUT /c2b_module/faqs</code>, <code>PUT /c2b_module/faqs/{id}</code> osv. returnerer 404 eller 500. ERP-frontend bruker CKEditor 5 og lagrer alle 24 FAQs samlet via en intern Lagre-knapp.</p>
+
+<h4>Programmatisk via Chrome MCP (rask)</h4>
+<p>Når du må endre én eller flere FAQ-tekster og vil unngå manuell editing:</p>
+<ol>
+  <li>Naviger til <code>https://biladministrasjon.no/settings/peasy_faq</code></li>
+  <li>Hver FAQ rendrer en CKEditor 5-instans. Hent den via <code>document.querySelectorAll('.ck-editor__editable')</code> — index matcher rekkefølgen på siden (index 0 = FAQ 1, index 7 = FAQ 8, osv.)</li>
+  <li>Hent editor-instansen via <code>el.ckeditorInstance</code> (legacy CKEDITOR finnes ikke — kun CKEditor 5)</li>
+  <li>Sett ny HTML med <code>editor.setData(newHtml)</code></li>
+  <li>Klikk <strong>Lagre</strong>-knappen nederst på siden — det er én knapp som lagrer alle FAQs samlet</li>
+  <li>Verifiser via <code>GET /c2b_module/faqs?locale=no</code> — sjekk at <code>j.data.data.data.find(f =&gt; f.id === ID).content</code> inneholder den nye teksten</li>
+</ol>
+
+<h4>Eksempel-snutt</h4>
+<pre style="background:#f1f5f9;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto"><code>// Oppdater FAQ med visningsnr 8 (id=24 i databasen)
+const editables = document.querySelectorAll('.ck-editor__editable');
+const editor = editables[7].ckeditorInstance;  // 0-indeksert: index 7 = FAQ 8
+editor.setData('&lt;p&gt;Ny tekst her...&lt;/p&gt;');
+
+// Klikk Lagre
+[...document.querySelectorAll('button')]
+  .find(b =&gt; /lagre/i.test(b.textContent))
+  .click();
+
+// Verifiser (vent ~2s for HTTP-respons)
+const r = await fetch('https://api.biladministrasjon.no/c2b_module/faqs?locale=no',
+  { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('auth-token') }});
+const d = await r.json();
+console.log(d.data.data.data.find(f =&gt; f.id === 24).content);</code></pre>
+
+<h4>Viktige fallgruver</h4>
+<ul>
+  <li><strong>FAQ-id vs visningsnr:</strong> ID i databasen (<code>id=24</code>) er IKKE det samme som visningsnummer på siden (<code>"8. Hvordan beregner Peasy verdien..."</code>). Visningsnummer er det første tallet i <code>title</code>. CKEditor-array-index er <code>visningsnr - 1</code>.</li>
+  <li><strong>Ikke prøv API-PUT:</strong> Selv om GET-endepunktet finnes, gir alle skriveoperasjoner 404 eller 500. Bruk UI eller CKEditor-API som over.</li>
+  <li><strong>Token-tilgang:</strong> <code>localStorage.getItem('auth-token')</code> krever at brukeren er innlogget i ERP-fanen. Token gyldighet ~1 time.</li>
+  <li><strong>Norske tegn:</strong> Bruk HTML-entiteter i <code>setData()</code>: <code>&amp;aring;</code>, <code>&amp;oslash;</code>, <code>&amp;aelig;</code>, <code>&amp;ndash;</code>, <code>&amp;mdash;</code>. Unngå literal Unicode for sikker round-trip.</li>
+  <li><strong>Bekreftelse:</strong> Etter klikk på Lagre kommer en grønn "Vellykket"-toast øverst til høyre. Hvis ingen toast — sjekk console for feil.</li>
+</ul>
+
+<h4>Manuelt via UI (når du foretrekker det)</h4>
+<ol>
+  <li>Gå til <code>biladministrasjon.no/settings/peasy_faq</code></li>
+  <li>Scroll til ønsket FAQ (visningsnummer i tittel)</li>
+  <li>Rediger direkte i CKEditor — eller klikk <strong>Source</strong>-knappen for å redigere HTML</li>
+  <li>Klikk <strong>Lagre</strong> nederst på siden</li>
+</ol>
+
+
+<h2 id="peasy-pulse">peasy-pulse <span style="font-size:13px;font-weight:400;color:#64748b">v16.03.c136 · 4. mai 2026</span></h2>
+<p class="page-sub">Dashboard · v16.03.c73 · GitHub Pages</p>
+<h3>Eval-aksept og Bud-aksept — sentrale aksept-funksjoner</h3>
+<p>Pulse bruker to globale funksjoner som autoritativ kilde for alle 7d/30d/90d-beregninger. Definert i Pulse-script (c133):</p>
+<table>
+<tr><th>Metric</th><th>Kohort (nevner)</th><th>Akseptert (teller)</th></tr>
+<tr><td><strong>Eval-aksept</strong></td><td><code>r[14]</code> (kol O = SD mottatt på) har dato i periode <strong>OG</strong> <code>r[3]</code> (kol D = AR verdi) ikke tom</td><td><code>r[15]</code> (kol P = Gire bestilt) ELLER <code>r[16]</code> (kol Q = Levere selv) har dato</td></tr>
+<tr><td><strong>Bud-aksept</strong></td><td><code>r[17]</code> (kol R = Mottatt) har dato i periode <strong>OG</strong> (<code>r[18]</code> ELLER <code>r[21]</code> har dato — avsluttet auksjon)</td><td><code>r[18]</code> (kol S = Solgt på) har dato</td></tr>
+</table>
+<p><strong>API:</strong> <code>window.getEvalAksept(daysBack)</code> og <code>window.getBudAksept(daysBack)</code> returnerer <code>{kohort, aksept, pct}</code> for Eval og <code>{avsluttet, solgt, retur, pct}</code> for Bud.</p>
+<p><strong>Filosofi:</strong> 30d Eval-aksept er bare ett tall — alle steder det presenteres skal vise samme verdi. Sentral funksjon eliminerer driving inkonsistens.</p>
+<h3>Hvor verdiene presenteres på Pulse</h3>
+<table>
+<tr><th>Fane</th><th>Plassering</th><th>Eval-aksept</th><th>Bud-aksept</th></tr>
+<tr><td>Operasjonelt</td><td>Nøkkelkort 2 og 3 (DOM-overstyrt i requestAnimationFrame)</td><td>30d</td><td>30d</td></tr>
+<tr><td>Operasjonelt</td><td>Pulse-tekst-rad i header</td><td>7d</td><td>7d</td></tr>
+<tr><td>Evaluert</td><td>KPI-kort venstre/høyre med 30d/90d split</td><td>30d + 90d</td><td>30d + 90d</td></tr>
+<tr><td>Ukesrapport</td><td>Pulsen-flow-diagram (siste 30d)</td><td>30d</td><td>30d</td></tr>
+<tr><td>Ukesrapport</td><td>Bottleneck-kommentar-boks</td><td>30d</td><td>30d</td></tr>
+</table>
+<h3>Mål</h3>
+<ul><li><strong>Eval-aksept:</strong> 20%</li><li><strong>Bud-aksept:</strong> 70%</li></ul>
+<h3>Endringer c107 → c136 (4. mai 2026)</h3>
+<ul>
+<li><strong>c133:</strong> Sentral <code>getEvalAksept()</code> / <code>getBudAksept()</code> — erstatter 6+ ulike beregninger</li>
+<li><strong>c134:</strong> Ukesrapport ep30/bp30/ep90/bp90 bruker nå sentral funksjon</li>
+<li><strong>c135:</strong> Operasjonelt mR/sR bruker sentral funksjon (arc + farge)</li>
+<li><strong>c136:</strong> DOM-overstyring i requestAnimationFrame for nøkkelkort 2/3 dial-value+farge — sikrer at tall vist matcher sentral funksjon</li>
+<li><strong>c130-c132:</strong> Ukesrapport: Nye leads snitt /7, Solgt-kort viser solgt/(solgt+ret), 100% solgt-rate trigger trofe-ikon + kommentar-felt</li>
+<li><strong>c124-c127:</strong> Refaktor til <code>buildVenterPaSvarHtml(rows)</code>, vises på både Operasjonelt og Evaluert. Label endret til "Venter pa evaluering"</li>
+<li><strong>c115-c123:</strong> Mobile responsive — sticky header + hamburger-meny under 900px, overflow-x på tabeller, viewport-fix</li>
+<li><strong>c107-c114:</strong> 90d-rullerende, kort 10 Lead→Solgt, dials-grid, marketing-fane CPL-sone + skaleringstabell</li>
+</ul>
+<h3>Kjent bug</h3>
+<p><strong>BT36183 duplikat-rad i kildedata:</strong> Samme regnr telles 2x i alle Pulse-statistikker fordi to identiske rader finnes (en med <code>r[15]</code> utfylt, en med <code>r[16]</code> utfylt). Fix avventes — dedupliser kildedata eller dedupliser per regnr i sentralfunksjoner.</p>
+
+<h3>Hovedfunksjon</h3>
+<p>Live-dashboard på <code>mikeljungbergtvedt.github.io/peasy-pulse.html</code>. Henter ERP XLSX-rapport, beregner recX per bracket, viser nøkkeltall, evalueringer, kart, tiltak og spørsmål.</p>
+
+<div class="kv">
+<span class="k">Repo</span><span><code>mikeljungbergtvedt/mikeljungbergtvedt.github.io</code></span>
+<span class="k">Live URL</span><span>https://mikeljungbergtvedt.github.io/peasy-pulse.html</span>
+<span class="k">Datakilder</span><span>ERP XLSX (<code>dhqui7Hkl54</code>) + <code>peasy-questions.json</code></span>
+</div>
+
+<h3>Faner</h3>
+<table>
+<tr><td><code>ops</code></td><td>Operasjonelt — dagstabell, status-flyt</td></tr>
+<tr><td><code>fin</code></td><td>Finansiell — bracket-oversikt, scatter</td></tr>
+<tr><td><code>eval</code></td><td>Evalueringer — sist 30/90 dager, charts</td></tr>
+<tr><td><code>tiltak</code></td><td>Tiltak — recX og bracket-marginer</td></tr>
+<tr><td><code>uke</code></td><td>Ukesrapport — Pulsen 90d-flow + ukentlig aktivitet, økonomi og marketing</td></tr>
+<tr><td><code>kart</code></td><td>Kart over hentepunkter (Leaflet)</td></tr>
+<tr><td><code>sporsmal</code></td><td>Spørsmål fra track-bot, topp 10 + alle</td></tr>
+</table>
+
+<h3>Ukesrapport-fanen (v16.03.c73)</h3>
+<p>Ukesrapport-fanen er strukturert i 5 seksjoner som svarer hver sin egen forretnings-spørsmål:</p>
+<table>
+<tr><td><strong>Pulsen — siste 90 dager</strong></td><td>SVG-flow: LEADS → BESTILT → MOTTATT → SOLGT/RETURNERT → INNTEKT/KOSTNAD → Peasy netto. Alle tall er rullerende 90d-totaler. Konverterings-prosenter på piler. Pile-farger: grønn hvis innen mål (eval ≥20%, bud ≥70%, retur &lt;30%), rød ellers.</td></tr>
+<tr><td><strong>Sammendrag-boks</strong></td><td>Flaskehals-tekst (auto), marg.verdi-forklaring, ROI markedsføring.</td></tr>
+<tr><td><strong>Denne uka — aktivitet</strong></td><td>5 kort med ukens enheter: Nye leads (m/snitt per dag 90d), Nye bestilt, Inn på anlegg, Solgt, Returnert. Ingen sammenligninger på øvrige.</td></tr>
+<tr><td><strong>Inntekt og omsetning</strong></td><td>5 kort i kr: Solgt-omsetning (m/snitt per bil), AR salær 2.7%, Peasy inntekt (sum E−T), No-cure tap, Peasy netto. Ingen "vs 30d snitt"-linjer.</td></tr>
+<tr><td><strong>Marketing &amp; konvertering (90d)</strong></td><td>5 kort: CPL (1000 kr/dag budsjett), Verdi/lead, ROI marketing, Eval-aksept (mål 20%), Bud-aksept (mål 70%).</td></tr>
+<tr><td><strong>Tabeller</strong></td><td>Solgte / Returnerte / Avviste eval — full bredde.</td></tr>
+</table>
+
+<div class="callout callout-info">
+<strong>Periodisering — kritisk å forstå</strong><br>
+Ukens aktivitet er rent regnskap: antall hendelser i kategorien denne uka. Konverterings-prosenter beregnes <strong>aldri</strong> på ukestall fordi en bil bruker 1-3 uker fra lead til solgt. 90d-vinduet er stort nok til at kohorter "har gått gjennom" hele løpet. Marketing-raden er også 90d-basert.
+</div>
+
+<h3>Peasy fee per bil (T-bracket)</h3>
+<p>Pulsen og økonomi-kortene bruker fast fee-bracket basert på T (netto til selger):</p>
+<table>
+<tr><td>T &lt; 75 000 kr</td><td>Fee 5 900 kr</td></tr>
+<tr><td>T 75 000 – 124 999 kr</td><td>Fee 7 900 kr</td></tr>
+<tr><td>T ≥ 125 000 kr</td><td>Fee 9 900 kr</td></tr>
+</table>
+<p>Kilden er <code>peasy-auto.js</code> CONFIG.fee-arrayet. Beslutning: alle Peasy fee-tall i Pulse skal beregnes via T-bracket, ikke E−T (E−T kan være feilaktig pga avrundinger).</p>
+
+<h3>Marketing-modell (1000 kr/dag fra 1.11.2025)</h3>
+<p><strong>UTDATERT FRA v16.03.c100:</strong> Per-lead-formel droppet til fordel for per-solgt-bil-fokus. Se ny seksjon "Per solgt bil-metrics" under.</p>
+<table>
+<tr><td>CPL (per lead)</td><td>(1000 × dager) / antall leads i perioden</td></tr>
+<tr><td>Kost pr lead solgt</td><td>spend30 / sold30c — vises som kort 8 "Kost pr lead" i toppraden</td></tr>
+<tr><td>ROI marketing (30d)</td><td>nettoSum30 / sold30c / cplKontrakt30 — typisk 3.1x</td></tr>
+<tr><td>Peasy netto 90d</td><td>Sum Peasy fee 90d − returKost × returnerte 90d − vektet prod kost × solgte 90d</td></tr>
+</table>
+
+<h3>Per solgt bil-metrics (v16.03.c100–c107, 30. april 2026)</h3>
+<p>Pulse fokuserer på <strong>4 ekte metrics per solgt bil</strong> i stedet for abstrakte per-lead-tall (86% av leads konverterer ikke):</p>
+<table>
+<tr><th>Metric</th><th>Formel</th><th>Eksempel</th></tr>
+<tr><td>1. Snitt Peasy fee per solgt</td><td><code>aU30</code> (snitt T-bracket fee 30d)</td><td>7 422 kr</td></tr>
+<tr><td>2. Snitt prod kost per solgt (inkl retur)</td><td><code>sumProdKost30 / sold30c</code></td><td>3 583 kr</td></tr>
+<tr><td>3. Snitt kost per lead solgt</td><td><code>cplKontrakt30 = spend30 / sold30c</code></td><td>1 250 kr</td></tr>
+<tr><td>4. <strong>Netto inntekt per solgt bil</strong></td><td><code>aU30 − snittProdKost30 − cplKontrakt30</code></td><td><strong>2 589 kr</strong></td></tr>
+</table>
+<p>Beregning: 7 422 − 3 583 − 1 250 = 2 589 kr per solgt bil. ROI = 2 589 / 1 250 = 3.1x.</p>
+
+<h3>9 nøkkelkort i toppraden (Operasjonelt-fanen)</h3>
+<p>Grid endret fra 7 → 9 kolonner i v16.03.c100–c103. Kort 7–9 er nye:</p>
+<table>
+<tr><th>#</th><th>Kort</th><th>Verdi</th><th>Sub-tekst</th></tr>
+<tr><td>1</td><td>LEADS MOTTATT I DAG</td><td>5</td><td>Snitt 9.7/dag (sum 292 · CPL 103 kr)</td></tr>
+<tr><td>2</td><td>EVALUERT → MOTTATT</td><td>11%</td><td>33 av 295 · Mål 20%</td></tr>
+<tr><td>3</td><td>MOTTATT → SOLGT</td><td>73%</td><td>24 av 33 · Mål 70%</td></tr>
+<tr><td>4</td><td>I PRODUKSJON NÅ</td><td>9</td><td>Live</td></tr>
+<tr><td>5</td><td>SNITT BILVERDI</td><td>113 388 kr</td><td>Sum oms 2 721 312 / 24 solgte</td></tr>
+<tr><td>6</td><td>SNITT PEASY INNTEKT</td><td>7 422 kr</td><td>Sum 170 706 / 23 solgte</td></tr>
+<tr><td>7</td><td><strong>SNITT PROD KOST</strong> <span style="color:#2E7D32">NY</span></td><td>3 583 kr</td><td>Sum 86 000 · 9 retur</td></tr>
+<tr><td>8</td><td>KOST PR LEAD</td><td>1 250 kr</td><td>ROI 3.1x (inkl returbiler)</td></tr>
+<tr><td>9</td><td><strong>NETTO PER SOLGT</strong> <span style="color:#2E7D32">NY</span></td><td>2 589 kr</td><td>Fee 7 422 − prod 3 583 − lead 1 250</td></tr>
+</table>
+
+<h3>Per-bil prod kost-split (vektet snitt)</h3>
+<p>Solgte biler splittes etter <strong>kolonne D (Endelig AR verdi / Pris lav)</strong> i ERP XLSX:</p>
+<table>
+<tr><td>D ≤ 35 000 kr</td><td>prod kost = <code>prodKostUnder35k</code> (default 2 250)</td></tr>
+<tr><td>D &gt; 35 000 kr</td><td>prod kost = <code>prodKostOver35k</code> (default 2 750)</td></tr>
+<tr><td>Returnerte biler</td><td>retur kost = <code>returKost</code> (default 2 500)</td></tr>
+</table>
+<p>Vektet snitt 90d: <code>(s90U × prodKostUnder + s90O × prodKostOver) / (s90U + s90O)</code> der s90U/s90O er antall solgte 90d under/over 35k.</p>
+
+<h3>peasy-config.json (live config)</h3>
+<p>Live JSON-fil på GitHub Pages som styrer prod kost og retur-verdier. Endring krever ingen redeploy av HTML.</p>
+<p><strong>URL:</strong> <code>https://mikeljungbergtvedt.github.io/peasy-config.json</code></p>
+<p><strong>Filplassering på Mini:</strong> <code>/Users/bot/mikeljungbergtvedt.github.io/peasy-config.json</code></p>
+<pre>{
+  "returKost": 2500,
+  "prodKostUnder35k": 2250,
+  "prodKostOver35k": 2750,
+  "marketingPerioder": [
+    {
+      "fra": "2025-11-01",
+      "til": null,
+      "krPerDag": 1000
+    }
+  ]
+}</pre>
+<p>Pulse-HTML laster denne ved <code>fetch('peasy-config.json')</code> ved sideoppstart. Defaults i kode: <code>peasyConfig = {returKost: 3000, prodKostUnder35k: 2250, prodKostOver35k: 2750, ...}</code> som fallback hvis JSON-fila ikke kan lastes.</p>
+
+<h3>Innstillinger-tab</h3>
+<p>Egen tab i Pulse (lagt til i v16.03.c96, utvidet i c99) med 3 input-felt:</p>
+<table>
+<tr><td><code>innst-retur</code></td><td>Retur-kost per returnert bil (kr)</td></tr>
+<tr><td><code>innst-prod-under</code></td><td>Prod kost per solgt bil med Pris lav (D) ≤ 35 000 (kr)</td></tr>
+<tr><td><code>innst-prod-over</code></td><td>Prod kost per solgt bil med Pris lav (D) &gt; 35 000 (kr)</td></tr>
+</table>
+<p><strong>Funksjoner i scope:</strong></p>
+<ul>
+<li><code>innstRender()</code> — leser <code>window.peasyConfig</code> og fyller input-felt</li>
+<li><code>innstSaveToGitHub()</code> — sender PUT mot GitHub API for å oppdatere <code>peasy-config.json</code></li>
+<li>onchange på hver input → oppdaterer <code>window.peasyConfig</code> in-memory → alle Pulse-tall recomputes via <code>innstRender()</code></li>
+</ul>
+
+<h3>GitHub PAT-flow ("Lagre til GitHub"-knapp)</h3>
+<p>For å lagre Innstillinger-endringer permanent uten manuell git-push:</p>
+<ul>
+<li><strong>PAT-type:</strong> Fine-grained Personal Access Token</li>
+<li><strong>Repo:</strong> <code>mikeljungbergtvedt/mikeljungbergtvedt.github.io</code></li>
+<li><strong>Permissions:</strong> Contents: Read+write (kun denne repo)</li>
+<li><strong>API-endepunkt:</strong> <code>PUT /repos/mikeljungbergtvedt/mikeljungbergtvedt.github.io/contents/peasy-config.json</code></li>
+<li><strong>Token lagring:</strong> in-memory (ikke localStorage av sikkerhetsgrunner)</li>
+<li><strong>Flow:</strong> Klikk "Lagre til GitHub" → prompt for PAT → PUT med base64-encoded JSON → SHA fetched fresh før PUT</li>
+</ul>
+
+<h3>window._netto30 (cross-scope eksponering)</h3>
+<p>Kort 9 (Netto per solgt) beregnes i Operasjonelt-render-scope. Ukerapport-fanen har egen scope og kan ikke direkte aksessere <code>aU30</code>, <code>snittProdKost30</code>, <code>cplKontrakt30</code>. Løsning:</p>
+<pre>window._netto30 = {
+  fee: aU30,
+  prodKost: snittProdKost30,
+  leadKost: cplKontrakt30,
+  netto: nettoPerSolgt30,
+  sold30: sold30c,
+  retur30: retur30c,
+  spend30: spend30,
+  roi30: roi30
+};</pre>
+<p>Ukerapport-prosa leser <code>window._netto30</code> for å vise <strong>identiske tall</strong> som kort 9 (kritisk for konsistens).</p>
+
+
+<div class="callout callout-tip">
+<strong>Patch-mønster for Pulse</strong>
+Pulse-HTML er for stor til å skrive på nytt. Bruk Python-script: <code>cat &gt; /tmp/patch.py</code>, paste linje-for-linje, så <code>python3 /tmp/patch.py</code>. Husk <code>assert old in html</code> før replace, og bump versjon i bunnen.
+</div>
+
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     KONSISTENS-SJEKK (v3.6, 22. april 2026)
+============================================================ -->
+<h2 id="konsistens">Konsistens-sjekk <span style="font-size:13px;font-weight:400;color:#64748b">peasy-track v3.9 · 30. april 2026</span></h2>
+
+<p>Introdusert 22. april 2026. Alle e-poster (innkommende, utgående, interne) kjøres gjennom en konsistens-sjekk som sammenligner innholdet mot ERP FAQ (23 stk) og vilkår. Mike får Telegram-varsel ved konflikt eller ved forslag til FAQ-oppdatering.</p>
+
+<div class="card">
+<h3>Arbeidsflyt-diagram</h3>
+<svg viewBox="0 0 820 560" xmlns="http://www.w3.org/2000/svg" style="background:#fff;border:1px solid #D5DCD8;border-radius:8px;margin:14px 0">
+  <style>
+    .k-box{fill:#fff;stroke:#004225;stroke-width:1.5}
+    .k-erp{fill:#E8F5E9;stroke:#2E7D32}
+    .k-tg{fill:#E3F2FD;stroke:#1565C0}
+    .k-bot{fill:#F0F4F2;stroke:#5C6F69}
+    .k-ai{fill:#FFF3E0;stroke:#E65100}
+    .k-warn{fill:#FFEBEE;stroke:#C62828}
+    .k-lbl{font:600 12px 'IBM Plex Sans',sans-serif;fill:#0E1F1A}
+    .k-sm{font:500 10px 'IBM Plex Sans',sans-serif;fill:#5C6F69}
+    .k-arrow{stroke:#5C6F69;stroke-width:1.5;fill:none;marker-end:url(#karr)}
+    .k-thick{stroke:#C62828;stroke-width:2.2;fill:none;marker-end:url(#karrR)}
+  </style>
+  <defs>
+    <marker id="karr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5C6F69"/></marker>
+    <marker id="karrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#C62828"/></marker>
+  </defs>
+
+  <!-- rad 1: mail inn/ut -->
+  <rect x="20" y="20" width="160" height="50" class="k-box" rx="6"/>
+  <text x="100" y="42" text-anchor="middle" class="k-lbl">Mail inn/ut</text>
+  <text x="100" y="58" text-anchor="middle" class="k-sm">EWS poll 5 min</text>
+
+  <rect x="220" y="20" width="180" height="50" class="k-bot" rx="6"/>
+  <text x="310" y="42" text-anchor="middle" class="k-lbl">peasy-track::processMail</text>
+  <text x="310" y="58" text-anchor="middle" class="k-sm">logger ALLE — inn, ut, intern</text>
+
+  <!-- rad 2: kontekst -->
+  <rect x="440" y="20" width="180" height="50" class="k-bot" rx="6"/>
+  <text x="530" y="42" text-anchor="middle" class="k-lbl">refreshContextCache</text>
+  <text x="530" y="58" text-anchor="middle" class="k-sm">1t cache</text>
+
+  <rect x="660" y="20" width="140" height="50" class="k-erp" rx="6"/>
+  <text x="730" y="38" text-anchor="middle" class="k-lbl">ERP</text>
+  <text x="730" y="54" text-anchor="middle" class="k-sm">/faqs + /terms</text>
+
+  <!-- rad 3: classify + consistency -->
+  <rect x="220" y="120" width="180" height="50" class="k-ai" rx="6"/>
+  <text x="310" y="142" text-anchor="middle" class="k-lbl">classify() Haiku</text>
+  <text x="310" y="158" text-anchor="middle" class="k-sm">er det kundespørsmål?</text>
+
+  <rect x="440" y="120" width="180" height="50" class="k-ai" rx="6"/>
+  <text x="530" y="142" text-anchor="middle" class="k-lbl">checkConsistency() Haiku</text>
+  <text x="530" y="158" text-anchor="middle" class="k-sm">ok / conflict / suggestion</text>
+
+  <!-- rad 4: dual pending -->
+  <rect x="180" y="230" width="180" height="60" class="k-tg" rx="6"/>
+  <text x="270" y="252" text-anchor="middle" class="k-lbl">Pending-kort</text>
+  <text x="270" y="268" text-anchor="middle" class="k-sm">[✅ godkjenn] [❌ skip]</text>
+  <text x="270" y="283" text-anchor="middle" class="k-sm">→ peasy-questions.json</text>
+
+  <rect x="430" y="230" width="200" height="60" class="k-warn" rx="6"/>
+  <text x="530" y="252" text-anchor="middle" class="k-lbl">⚠️ Konsistens-varsel</text>
+  <text x="530" y="268" text-anchor="middle" class="k-sm">conflict/suggestion</text>
+  <text x="530" y="283" text-anchor="middle" class="k-sm">→ consistency-pending.json</text>
+
+  <!-- rad 5: handlinger -->
+  <rect x="430" y="340" width="200" height="80" class="k-tg" rx="6"/>
+  <text x="530" y="362" text-anchor="middle" class="k-lbl">Mike trykker</text>
+  <text x="530" y="378" text-anchor="middle" class="k-sm">[✅ Oppdater FAQ]</text>
+  <text x="530" y="392" text-anchor="middle" class="k-sm">[❌ Skip] [👁 Gjennomgått]</text>
+
+  <rect x="430" y="460" width="200" height="60" class="k-bot" rx="6"/>
+  <text x="530" y="482" text-anchor="middle" class="k-lbl">erp-faqs.js</text>
+  <text x="530" y="498" text-anchor="middle" class="k-sm">publishFaqUpdate(id, content)</text>
+  <text x="530" y="513" text-anchor="middle" class="k-sm">→ PUT /c2b_module/faqs</text>
+
+  <rect x="680" y="460" width="120" height="60" class="k-erp" rx="6"/>
+  <text x="740" y="482" text-anchor="middle" class="k-lbl">ERP FAQ</text>
+  <text x="740" y="498" text-anchor="middle" class="k-sm">oppdatert</text>
+  <text x="740" y="513" text-anchor="middle" class="k-sm">→ cron sync WP</text>
+
+  <!-- piler -->
+  <path d="M 180 45 L 220 45" class="k-arrow"/>
+  <path d="M 400 45 L 440 45" class="k-arrow"/>
+  <path d="M 620 45 L 660 45" class="k-arrow"/>
+
+  <path d="M 310 70 L 310 120" class="k-arrow"/>
+  <path d="M 530 70 L 530 120" class="k-arrow"/>
+
+  <path d="M 310 170 L 280 230" class="k-arrow"/>
+  <path d="M 530 170 L 530 230" class="k-thick"/>
+
+  <path d="M 530 290 L 530 340" class="k-arrow"/>
+  <path d="M 530 420 L 530 460" class="k-thick"/>
+  <path d="M 630 490 L 680 490" class="k-arrow"/>
+</svg>
+</div>
+
+<div class="card">
+<h3>Hva konsistens-sjekken faktisk gjør</h3>
+<p><strong>For hver mail</strong> (uansett avsender):</p>
+<ol>
+  <li><code>refreshContextCache()</code> henter 23 FAQ-er + aktive vilkår fra ERP (cachet i 1 time)</li>
+  <li><code>checkConsistency(mail)</code> spør Haiku 4.5: motsier eller supplerer mailen FAQ/vilkår?</li>
+  <li>Haiku returnerer JSON: <code>{status: "ok" | "conflict" | "suggestion", conflict, suggests_faq_update, faq_id, new_info}</code></li>
+  <li>Hvis ikke <code>ok</code>: Telegram-kort sendes med inline-knapper</li>
+</ol>
+
+<h3>Telegram-handlinger</h3>
+<table>
+<tr><th>Knapp</th><th>Effekt</th><th>Callback</th></tr>
+<tr><td>✅ Oppdater FAQ</td><td>Kaller <code>publishFaqUpdate()</code> direkte — FAQ live i ERP innen sekunder. WP-cron syncer innen timen.</td><td><code>cons_ok:ID</code></td></tr>
+<tr><td>❌ Skip</td><td>Markerer som skipped, ingen endring</td><td><code>cons_no:ID</code></td></tr>
+<tr><td>👁 Gjennomgått</td><td>For konflikt-varsler: markerer at Mike har sett det</td><td><code>cons_ack:ID</code></td></tr>
+</table>
+
+<h3>Nye filer</h3>
+<table>
+<tr><td><code>~/peasy-track/consistency-pending.json</code></td><td>Alle konsistens-varsler (åpne + historikk)</td></tr>
+<tr><td><code>~/peasy-track/peasy-context-cache.json</code></td><td>Cache av 23 FAQ + vilkår, refreshet 1x/t</td></tr>
+</table>
+
+<h3>Hvorfor ALLE mails, ikke bare kundehenvendelser?</h3>
+<p>Formålet er konsistens i <strong>alt vi sier</strong>. Hvis Mike svarer en kunde på en måte som avviker fra FAQ, skal han få varsel. Hvis en intern mail forteller om en ny rutine som bør inn i FAQ, skal han få forslag. Klassifisering-loopen (<code>classify()</code>) er fortsatt filtrert til eksterne — konsistens er bredere.</p>
+
+<h3>v3.9 (30. april 2026) — array→object fix i seen-emails.json</h3>
+<div class="callout callout-warn">
+<strong>Bug funnet:</strong> Etter restart av track-bot prosesserte den 30+ mails på nytt, selv om de allerede var arkivert. Årsaken var en data-mismatch mellom <code>prebuild-seen.js</code> og <code>peasy-track.js</code>.
+</div>
+
+<h4>Symptom</h4>
+<p>Etter <code>killall node</code> + restart av peasy-track viste loggen <code>mail: 30+ nye</code> selv om Inbox ikke hadde mottatt nye mails siden forrige poll. Bot-en duplikatprosesserte og sendte gamle mails til Telegram på nytt.</p>
+
+<h4>Root cause: data-format mismatch</h4>
+<table>
+<tr><th>Fil</th><th>Skriver format</th><th>Leser format</th></tr>
+<tr><td><code>prebuild-seen.js</code> (linje 39)</td><td><code>JSON.stringify(ids)</code> → <strong>ARRAY</strong> <code>["id1","id2",...]</code></td><td>—</td></tr>
+<tr><td><code>peasy-track.js</code> (linje 56)</td><td><code>saveJSON(SEEN_FILE, seen)</code> → <strong>OBJECT</strong> <code>{"id1":true,"id2":true}</code></td><td><code>loadJSON(SEEN_FILE, {})</code> forventer OBJECT</td></tr>
+</table>
+<p>Når prebuild-seen.js hadde kjørt sist (skrev array), og peasy-track lest fila som OBJECT, ble alle eksisterende mail-IDer behandlet som "ikke sett før" fordi <code>seen[id]</code> på en array gir <code>undefined</code> (matcher ikke string-keys).</p>
+
+<h4>Fix (linje 56 i peasy-track.js)</h4>
+<p>Konverterer array → object ved oppstart hvis fila er i array-format:</p>
+<pre>// FØR
+let seen = loadJSON(SEEN_FILE, {});
+
+// ETTER
+let _seenRaw = loadJSON(SEEN_FILE, {});
+let seen = Array.isArray(_seenRaw) 
+  ? Object.fromEntries(_seenRaw.map(id =&gt; [id, true])) 
+  : _seenRaw;</pre>
+<p>Robust mot begge formater. Neste <code>saveJSON</code> skriver tilbake som OBJECT, så fila normaliseres ved første poll etter restart.</p>
+
+<h4>Verifisert ved deploy</h4>
+<p>Etter restart med fix:</p>
+<pre>peasy-track v3.9 startet (user=post@peasy.no)
+Bootstrap inbox: <strong>1178 allerede sett</strong>
+Bootstrap sent: <strong>86 allerede sett</strong>
+mail: 17 nye  ← reelle nye mails siden forrige poll, ikke duplikater</pre>
+
+<h4>Annen bug (ikke fikset ennå)</h4>
+<p><code>fetchIds</code> i peasy-track.js (linje 109) har <code>MaxEntriesReturned="50"</code>:</p>
+<pre>const soap = `&lt;m:FindItem Traversal="Shallow"&gt;...
+&lt;m:IndexedPageItemView MaxEntriesReturned="50" Offset="0" BasePoint="Beginning"/&gt;...`;</pre>
+<p>Hver poll henter alltid <strong>de 50 nyeste mailene</strong> fra Inbox (sortert etter mottakelsestid synkende). Hvis det kommer mer enn 50 mails på 5 minutter mellom polls, mister bot eldre mails. I praksis ikke et problem siden Inbox har få mails (de fleste er arkivert), men er en <strong>kjent begrensning</strong>.</p>
+
+<h4>Deploy-rutine for track-bot</h4>
+<p><strong>VIKTIG:</strong> Bruk pkill med spesifikk path, ikke <code>killall node</code>:</p>
+<pre>pkill -f "peasy-track/peasy-track.js" &amp;&amp; sleep 2 &amp;&amp; cd ~/peasy-track &amp;&amp; nohup /Users/bot/.nvm/versions/node/v24.14.0/bin/node peasy-track.js &gt; logs/out.log 2&gt;&amp;1 &amp;</pre>
+<p>Tidligere brukt <code>killall node</code> drepte BEGGE bots samtidig.</p>
+
+<h4>Versjonshistorikk peasy-track</h4>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v3.9</code></td><td>30.04.2026</td><td><strong>Live</strong> — array→object fix i seen-emails. Ingen duplikat-prosessering ved restart.</td></tr>
+<tr><td><code>v3.7</code></td><td>23.04.2026</td><td>Sonnet-generert FAQ-tekst basert på observasjon + eksisterende FAQ</td></tr>
+</table>
+
+<h3>v3.7 (23. april 2026) — Sonnet-generert FAQ-tekst</h3>
+<p>Opprinnelig v3.6 hadde to bugs som ble funnet i produksjon:</p>
+<ol>
+  <li><strong>Haiku brukte visningsnummer i stedet for ERP-id.</strong> Da en mail foreslo oppdatering av &quot;FAQ #11&quot; (visningsposisjon = Hva må jeg gjøre før henting), skrev boten til FAQ med ERP-id 11, som er <em>en helt annen FAQ</em> (Hva skjer hvis bilen har lån). Feil FAQ ble overskrevet.</li>
+  <li><strong><code>suggests_faq_update</code> var Haikus metabeskrivelse, ikke ferdig FAQ-tekst.</strong> Boten skrev beskrivelsen direkte som FAQ-innhold. Resultat: FAQ-en begynte med &quot;FAQ #11 bør presiseres om...&quot; i stedet for faktisk FAQ-tekst.</li>
+</ol>
+
+<p><strong>Fikser i v3.7:</strong></p>
+<ul>
+  <li>Haiku får nå begge ID-er i prompt: <code>[visningsnr 11, erp_id 10] Hva må jeg gjøre før...</code>. Må eksplisitt returnere <code>erp_id</code>.</li>
+  <li>Ny funksjon <code>generateFaqRewrite()</code> — kaller Sonnet med eksisterende FAQ-content + Haikus observasjon → produserer ferdig HTML-formatert ny FAQ-tekst.</li>
+  <li>Telegram-kortet viser både Haikus observasjon OG Sonnets ferdige tekst før du publiserer. Knapp endret fra &quot;✅ Oppdater FAQ&quot; til &quot;✅ Publiser&quot;.</li>
+  <li>Sjekker at <code>erp_id</code> faktisk finnes i ERP før PUT.</li>
+  <li>Tvinger cache-refresh etter publisering (så neste mail ser oppdatert FAQ).</li>
+  <li>Hvis Sonnet feiler: kort bytter til &quot;👁 Gjennomgått&quot;-knapp, publisering blokkeres.</li>
+</ul>
+
+<h3>Lærte feil (23. april 2026)</h3>
+<table>
+<tr><th>Feil</th><th>Symptom</th><th>Fix</th></tr>
+<tr><td>FAQ-visningsnummer forvekslet med ERP-id</td><td>FAQ med ID 11 (Utestående lån) ble overskrevet med tekst som skulle inn i FAQ med order_column 11 (Henting/levering)</td><td>Prompt viser eksplisitt BEGGE ID-er. Svaret valideres: erp_id må finnes i ERP før PUT.</td></tr>
+<tr><td>AI-metabeskrivelse skrevet som FAQ-innhold</td><td>FAQ begynte med &quot;FAQ #X bør presiseres...&quot; i stedet for faktisk tekst til sluttbruker</td><td>Sonnet steg-2: eksisterende FAQ + observasjon → ferdig HTML. Telegram-kort viser diff før publisering.</td></tr>
+<tr><td>Cache ikke invalidert etter FAQ-oppdatering</td><td>Nye mails ble vurdert mot UTDATERT FAQ i opptil 1 time etter vellykket publisering</td><td><code>contextCache.ts = 0</code> settes etter hver vellykket PUT.</td></tr>
+</table>
+
+<h3>Rollback når noe går galt</h3>
+<p>Alle FAQ-endringer har backup i <code>~/peasy-track/faq-backups/faqs-{timestamp}.json</code>. For å rollback-e KUN én FAQ (f.eks. id=11) uten å røre de andre:</p>
+<pre># 1. Lag en updates.json med riktig tekst for den ene FAQ-en
+cat &gt; rollback-id11.json &lt;&lt; 'EOF'
+[
+  {
+    &quot;id&quot;: 11,
+    &quot;title&quot;: &quot;15. Hva skjer hvis bilen min har utestående lån?&quot;,
+    &quot;content&quot;: &quot;&lt;p&gt;Hvis bilen har lån...&lt;/p&gt;&quot;
+  }
+]
+EOF
+
+# 2. Apply
+cd ~/peasy-track &amp;&amp; node erp-faqs.js update rollback-id11.json --apply</pre>
+<p>For å restore ALT fra en backup (skriver hele lista):</p>
+<pre>cd ~/peasy-track
+node erp-faqs.js restore faq-backups/faqs-2026-04-22T20-00-08.json --apply</pre>
+</div>
+
+
+<!-- ============================================================
+     ERP-FAQS.JS MODUL (22. april 2026)
+============================================================ -->
+<h2 id="erp-faqs-modul">erp-faqs.js modul <span style="font-size:13px;font-weight:400;color:#64748b">CLI + programmatisk API</span></h2>
+
+<p>Modul i <code>~/peasy-track/erp-faqs.js</code>. Lar deg lese og skrive FAQ-er i ERP programmatisk. Brukes direkte av konsistens-loopen, og manuelt via CLI for bulk-endringer.</p>
+
+<div class="card">
+<h3>CLI-kommandoer</h3>
+<pre>cd ~/peasy-track
+
+# Vis alle 23 FAQ-er sortert etter order_column
+node erp-faqs.js list
+
+# Vis full JSON for én FAQ
+node erp-faqs.js get 9
+
+# Dry-run: merge updates.json med live state, vis diff
+node erp-faqs.js update updates.json
+
+# Faktisk skriv (tar backup først)
+node erp-faqs.js update updates.json --apply
+
+# Restaurer fra tidligere backup
+node erp-faqs.js restore faq-backups/faqs-TIMESTAMP.json --apply</pre>
+</div>
+
+<div class="card">
+<h3>Programmatisk API</h3>
+<pre>const { publishFaqUpdate } = require('./erp-faqs');
+
+// Oppdater én FAQ
+await publishFaqUpdate([
+  { id: 9, content: '&lt;p&gt;Ny tekst...&lt;/p&gt;' }
+], [], { dryRun: false });
+
+// Bulk oppdatering av flere
+await publishFaqUpdate([
+  { id: 9, title: 'Ny tittel', content: '...' },
+  { id: 23, content: '...' }
+], [], { dryRun: false });</pre>
+</div>
+
+<div class="card">
+<h3>Sikkerhet</h3>
+<ul>
+  <li><strong>Backup automatisk</strong> til <code>~/peasy-track/faq-backups/faqs-{ISO-timestamp}.json</code> før hver PUT</li>
+  <li><strong>Default dry-run</strong> — må eksplisitt <code>--apply</code> for å skrive</li>
+  <li><strong>Ingen partial PUT</strong> — modulen henter alltid live state og merger trygt</li>
+  <li><strong>No-op deteksjon</strong> — hopper over PUT hvis ingenting endret seg</li>
+  <li><strong>Rollback</strong> via <code>restore</code>-kommando</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>updates.json format</h3>
+<pre>[
+  {
+    "id": 9,
+    "title": "9. Kan jeg levere bilen selv?",
+    "content": "&lt;p&gt;HTML-innhold...&lt;/p&gt;"
+  },
+  {
+    "id": 23,
+    "content": "&lt;p&gt;Kun content endres, tittel bevares&lt;/p&gt;"
+  }
+]</pre>
+<p>Bare felt du oppgir endres. <code>id</code> er påkrevd. <code>is_active</code> og <code>order_column</code> bevares automatisk.</p>
+</div>
+
+
+<!-- ============================================================
+     ERP API-ENDEPUNKTER (22. april 2026)
+============================================================ -->
+<h2 id="erp-api">ERP API-endepunkter</h2>
+
+<p>Base URL: <code>https://api.biladministrasjon.no</code>. Auth: <code>POST /auth/login</code> med <code>{email, password}</code> → token på <code>data.data.token.token</code>. Alle kall krever <code>Authorization: Bearer {token}</code>.</p>
+
+<div class="card">
+<table>
+<tr><th>Endepunkt</th><th>Metode</th><th>Bruk</th></tr>
+<tr><td><code>/auth/login</code></td><td>POST</td><td>Logg inn, få Bearer-token (utløper automatisk)</td></tr>
+<tr><td><code>/c2b_module/driveno/processing/estimating_ar_final</code></td><td>GET</td><td>Liste 3 (biler til prising), <code>?per_page=100</code></td></tr>
+<tr><td><code>/c2b_module/driveno/{id}</code></td><td>GET</td><td>Bil-detaljer. <code>data.car.files</code> = bilder (brukes i eval-kort)</td></tr>
+<tr><td><code>/c2b_module/driveno/{id}</code></td><td>PUT</td><td>Skriv pris (D lav/høy, auction type, heftelser, eiere)</td></tr>
+<tr><td><code>/c2b_module/driveno/{id}/comments</code></td><td>POST</td><td>Legg til kommentar på bil</td></tr>
+<tr><td><code>/c2b_module/faqs?locale=no</code></td><td>GET</td><td>Alle FAQ-er (23 stk). Returnerer <code>{data:{data:[...]}}</code>. <strong>Uten</strong> <code>?locale=no</code> → 500.</td></tr>
+<tr><td><code>/c2b_module/faqs</code></td><td>PUT</td><td>Skriv ALLE FAQ-er. Payload: <code>{items:[...], locale:"no", removedIds:[]}</code>. <strong>Ingen partial</strong> — hele lista må sendes.</td></tr>
+<tr><td><code>/c2b_module/terms</code></td><td>GET</td><td>Vilkår (<code>text_norwegian</code>, <code>is_active</code>). 1 aktiv versjon om gangen.</td></tr>
+<tr><td><code>/c2b_module/terms/{id}</code></td><td>PUT</td><td>Oppdater vilkår. (Dev-ref: <code>api.erp.biladministrasjon.dev.soft.team</code>)</td></tr>
+<tr><td><code>/public/reports/peasy/dhqui7Hkl54?output=xlsx</code></td><td>GET</td><td>XLSX-rapport for Pulse (alle biler alle statuser)</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Respons-struktur: FAQ</h3>
+<p>API returnerer nøstet: <code>{data: {data: [{id, title, content, is_active, order_column}, ...]}}</code>. Bruk fallback: <code>j.data?.data?.data || j.data?.data || j.data</code>.</p>
+
+<h3>Respons-struktur: Terms</h3>
+<p>Tilsvarende: <code>{data: {data: {data: [{id, is_active, text_norwegian, ...}]}}}</code>.</p>
+
+<h3>Viktige felt</h3>
+<ul>
+  <li><code>order_column</code> i FAQ bestemmer <strong>visningsrekkefølge</strong> på peasy.no, ikke <code>id</code>. ID-er er interne og spredte.</li>
+  <li><code>is_active: true</code> for FAQ/terms som skal vises offentlig</li>
+  <li>FAQ <code>content</code> er HTML — støtter <code>&lt;p&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;ul&gt;</code>, <code>&lt;li&gt;</code>, <code>&lt;br&gt;</code></li>
+</ul>
+</div>
+
+
+<h2 id="pricing">Prisingsfilosofi</h2>
+<p><em>Selger er emosjonell. Markedet er rasjonelt. Vi bygger en bro.</em></p>
+
+<h3>Prisformel (v18.03.dr3+)</h3>
+<table>
+<tr><td>Anker</td><td>Snitt 3 billigste Finn-comps (etter funnel)</td></tr>
+<tr><td>Margin</td><td>clamp(12% av anker, min, maks) per bracket &mdash; se Brackets-tabell</td></tr>
+<tr><td>Brutto</td><td>Anker minus margin (intern variabel, het tidligere "T" i bot-koden)</td></tr>
+<tr><td>Peasy fee (U)</td><td>Brutto &lt; 75k &rarr; 5 900 / Brutto &lt; 125k &rarr; 7 900 / ellers 9 900 kr</td></tr>
+<tr><td>D mid</td><td>Brutto minus fee</td></tr>
+<tr><td>D lav</td><td>D mid &times; (1 - spread)</td></tr>
+<tr><td>D h&oslash;y</td><td>MIN(D mid &times; (1 + spread), laveste-komp &times; 0.95) &mdash; comp-cap p&aring; &oslash;vre kant</td></tr>
+<tr><td>Est T</td><td>D lav &times; (1 + recX). Kun til intern bruk i eval-kort. recX = histogram-snitt fra Pulse.</td></tr>
+<tr><td>T (i ERP / Pulse-data)</td><td>Forhandlers h&oslash;yeste bud i auksjon &mdash; auksjon-utfall, ikke input til kalkylen</td></tr>
+</table>
+<div class="callout callout-warn">
+<strong>Variabelnavn-forvirring</strong><br>
+I XLSX-rapport fra ERP heter kolonne 19 for forhandler-bud "T". I bot-koden heter ogs&aring; mellomvariabelen anker-margin <code>T</code>, som skapte forvirring i fellesspr&aring;k. Fra v18.03.dr3 kalles den "Brutto" i eval-kortet for &aring; unng&aring; sammenblanding. Variabelnavnet i koden er fortsatt <code>T</code> men semantisk er det "Brutto til selger f&oslash;r fee".
+</div>
+
+<h3>Brackets &mdash; 5 segmenter (v18.03.dr3+)</h3>
+<table>
+<tr><th>Bracket</th><th>Anker-range</th><th>Margin min</th><th>Margin maks</th></tr>
+<tr><td>Lav</td><td>0&ndash;100k</td><td>8 000 kr</td><td>12 000 kr</td></tr>
+<tr><td>Mid</td><td>100&ndash;250k</td><td>12 000 kr</td><td>22 000 kr</td></tr>
+<tr><td>H&oslash;y</td><td>250&ndash;400k</td><td>22 000 kr</td><td>35 000 kr</td></tr>
+<tr><td>Premium-Lav</td><td>400&ndash;600k</td><td>35 000 kr</td><td>50 000 kr</td></tr>
+<tr><td>Premium-H&oslash;y</td><td>600k+</td><td>50 000 kr</td><td>70 000 kr</td></tr>
+</table>
+<p>Margin = clamp(12% av anker, min, maks) per bracket. Anker minus margin = brutto. Brutto minus Peasy fee = D mid.</p>
+
+<h3>Spread (D lav/h&oslash;y) &mdash; segment-spesifikk</h3>
+<table>
+<tr><th>Slitasje-segment</th><th>Spread</th><th>Trigger</th></tr>
+<tr><td>Normal</td><td>&plusmn;5% (10% total)</td><td>km &lt; 100 000 OG km/&aring;r &le; 25 000</td></tr>
+<tr><td>Highkm</td><td>&plusmn;7.5% (15% total)</td><td>km &ge; 100 000 ELLER km/&aring;r &gt; 25 000</td></tr>
+</table>
+<p><strong>Hvorfor bredere spread for highkm:</strong> Verksted-timepris er lik uansett bilverdi. Slitte biler har h&oslash;yere sannsynlighet for p&aring;kost &rarr; bredere spread mellom D lav og D h&oslash;y dekker dette.</p>
+
+<h3>Comp-cap p&aring; D h&oslash;y (v18.03.dr2+)</h3>
+<div class="callout callout-info">
+<strong>Regel</strong><br>
+D h&oslash;y skal alltid v&aelig;re lavere enn laveste Finn-komp &times; 0.95. Gjelder alle 5 brackets.
+</div>
+<pre>const lowestComp = Math.min(...pool.map(c =&gt; c.price));
+const dHoyCap = Math.round(lowestComp * 0.95 / 1000) * 1000;
+
+if (dHoyCap &lt; dHoy) {
+  if (dHoyCap &lt; dLav) {
+    compCapFlag = 'COMP_CAP_UNDER_DLAV';   // Alvorlig &mdash; QA m&aring; sjekke
+    dHoy = dLav + 5000;                     // Minimal spread
+  } else {
+    dHoy = dHoyCap;                         // Klipp ned til cap
+    compCapApplied = true;
+  }
+}</pre>
+
+<p><strong>Eksempel ZT55724 AUDI A8 2018, 130k km, anker 672k:</strong></p>
+<ul>
+<li>Margin maks 70 000 kr (12% capped Premium-H&oslash;y)</li>
+<li>Brutto 602 000, fee 9 900, D mid 592 100</li>
+<li>Spread highkm &plusmn;7.5% &rarr; D lav 548 000, D h&oslash;y_raw 642 000</li>
+<li>Laveste komp 649 900 &rarr; cap = 617 000</li>
+<li>D h&oslash;y = 617 000 (cap aktiv) &rarr; selger ser 548 000 &ndash; 617 000</li>
+</ul>
+
+<h3>Eval-kort flagg (v18.03.dr3+)</h3>
+<table>
+<tr><th>Flagg</th><th>Trigger</th><th>Vises som</th></tr>
+<tr><td><code>compCapApplied</code></td><td>D h&oslash;y klippet til cap</td><td>&#128737;&#65039; Comp-cap: D h&oslash;y klippet til laveste komp X &times; 0.95</td></tr>
+<tr><td><code>COMP_CAP_UNDER_DLAV</code></td><td>Cap er lavere enn D lav</td><td>&#128681; FLAGG: Comp-cap under D lav &mdash; QA sjekk anker</td></tr>
+</table>
+
+<h3>recX</h3>
+<p>recX = median((bud &minus; dLav) / dLav) for solgte biler siden 2025-11-01, |xPct| &lt; 0.5. Oppdateres nattlig 22:00 av kveldspuls (peasy-auto.js) fra XLSX-rapport.</p>
+<h4>brackets.json &mdash; 6 keys (v18.03.dr3+)</h4>
+<pre>{
+  "lav": -0.071,
+  "mid": -0.128,
+  "hoy": -0.027,
+  "premium": -0.084,        // vektet snitt av premiumLav+premiumHoy &mdash; bot bruker denne
+  "premiumLav": -0.092,     // 400-600k &mdash; kun for Pulse QA-visning
+  "premiumHoy": -0.076,     // 600k+   &mdash; kun for Pulse QA-visning
+  "updated": "..."
+}</pre>
+<p><strong>peasy-auto.js getRecX-fallback:</strong> for Premium-Lav leser bot <code>premiumLav</code> hvis tilgjengelig, ellers <code>premium</code>, ellers PDEC1-default. Samme for Premium-H&oslash;y. Lav/Mid/H&oslash;y bruker direkte bracket-key.</p>
+<div class="callout callout-info">
+<strong>Bug-fiks i kveldspuls (v18.03.dr3)</strong><br>
+Tidligere versjoner (dr og eldre) hadde en bug der variabelen <code>t</code> ble brukt i stedet for <code>bud</code> p&aring; to linjer (~1442-1444). Konsekvens: <code>!undefined</code> alltid true &rarr; alle biler hoppet over &rarr; brackets.json oppdatert aldri. Fila l&aring; med samme verdier siden 2026-04-14. Fix i dr3: bytt <code>t</code> til <code>bud</code>. F&oslash;rste oppdatering kommer ved n&aelig;ste kveldspuls-kj&oslash;ring kl 22:00.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="feedback-loop">360 feedback-loop</h2>
+<p>Pulse kalibrerer recX → recX går inn i peasy-auto via <code>peasy-brackets.json</code> → auto bruker recX i ankervalg → eval ender i ERP → ERP-data går tilbake til Pulse.</p>
+
+<div class="callout callout-info">
+<strong>Hva inngår i recX</strong>
+Kun solgte biler. Returnerte biler (selger avviste budet) vises i Pulse for observasjon men inngår ikke i recX-kalibreringen.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="segmenter">Segmenter &amp; spread</h2>
+<p><strong>To uavhengige akser:</strong></p>
+<ol>
+<li><strong>Pris-bracket</strong> (Lav / Mid / H&oslash;y / Premium-Lav / Premium-H&oslash;y) bestemmer margin (kr-buffer mellom anker og brutto)</li>
+<li><strong>Slitasje-segment</strong> (normal / highkm) bestemmer spread (% rundt D mid for D lav/h&oslash;y)</li>
+</ol>
+<p>Spread reflekterer p&aring;kost-buffer: verksted-timepris er lik for alle bilverdier, men slitte biler har h&oslash;yere sannsynlighet for p&aring;kost &rarr; bredere spread.</p>
+<p>Comp-cap (D h&oslash;y &le; laveste komp &times; 0.95) gjelder alle brackets og overstyrer spread n&aring;r anker er for h&oslash;y vs Finn-markedet.</p>
+<p>Finn-s&oslash;k bruker egen funnel (km-band, drivstoff, drivtype, karosseri, kW) f&oslash;r anker beregnes &mdash; se peasy-auto.js <code>getFinnComps()</code>.</p>
+
+<!-- ============================================================ -->
+<!-- ============================================================
+     MARKEDSFØRING (v11.19 — 6. mai 2026)
+============================================================ -->
+<h2 id="markedsforing">Markedsføring</h2>
+<p class="page-sub">Kampanjer · sporing · attribusjon · rapporter</p>
+
+<div class="callout callout-info">
+<strong>Filosofi</strong>
+Peasy markedsføres aktivt via Meta. Drive markedsføres ikke (ennå). Alle kampanjer per dags dato (mai 2026) er Peasy-rettet. Standard daglig spend ~1 000 kr på Peasy. Eksperimenter dokumenteres i denne seksjonen, ikke som ad-hoc terminal-kommandoer.
+</div>
+
+<h3>Datakilder</h3>
+<table>
+<tr><th>Kilde</th><th>Hva den gir</th><th>Hvordan hente</th></tr>
+<tr>
+  <td><strong>ERP public XLSX</strong></td>
+  <td>Daglige leads med kilde (peasy / driveno). Autoritativ kilde for "ekte" leads.</td>
+  <td><code>curl -s 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx' -o /tmp/erp.xlsx</code> · Parse med <code>openpyxl</code> eller <code>xlsx</code> npm-pakken.</td>
+</tr>
+<tr>
+  <td><strong>Meta Ads Manager</strong></td>
+  <td>Spend, impressions, reach, results per kampanje. Pixel-events (view content, purchase).</td>
+  <td>Eksport via UI: <code>adsmanager.facebook.com/adsmanager/manage/campaigns</code> → velg datoperiode → "Export" → CSV. Ads-konto <code>act=1246486857247332</code>.</td>
+</tr>
+<tr>
+  <td><strong>Google Analytics 4</strong></td>
+  <td>Sessions per kanal (Direct/Paid Search/Paid Social/Organic/Referral), engasjementsandel, landing pages.</td>
+  <td>UI: <code>analytics.google.com</code> property <code>a368095920p504688431</code>. Trafikkanskaffelse-rapport. Last ned via Del → Last ned filen.</td>
+</tr>
+<tr>
+  <td><strong>Pulse (Innstillinger-fanen)</strong></td>
+  <td>Daglig leads-graf (peasy/driveno-split). Ferskeste kilde for løpende monitorering.</td>
+  <td><code>https://mikeljungbergtvedt.github.io/peasy-pulse.html</code> → Innstillinger</td>
+</tr>
+</table>
+
+<h3>Henting av leads-fordeling Peasy vs Drive</h3>
+<p>Standard analyse-snutt på Mini, kjøres i <code>/tmp</code>:</p>
+<pre>cd /tmp &amp;&amp; source venv/bin/activate
+curl -s 'https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx' -o erp.xlsx
+
+python3 &lt;&lt;'EOF'
+import openpyxl, datetime as dt
+from collections import defaultdict
+wb = openpyxl.load_workbook('erp.xlsx', data_only=True)
+ws = wb.active
+counts = defaultdict(lambda: defaultdict(int))
+for row in ws.iter_rows(min_row=2, values_only=True):
+    sd_mottatt = row[14]  # kol O
+    src = (row[2] or '').lower()  # kol C kilde-felt — verifiser med ERP
+    if isinstance(sd_mottatt, dt.datetime):
+        d = sd_mottatt.date()
+        key = 'peasy' if 'peasy' in src else 'driveno' if 'drive' in src else 'other'
+        counts[d][key] += 1
+EOF</pre>
+
+<div class="callout callout-warn">
+<strong>Kilde-felt — verifiser før bruk</strong>
+"Kilde" på lead i ERP er ikke 100% standardisert. Sjekk med Mike eller åpne en bil-rad i ERP for å se hvilket felt som faktisk har "peasy" / "driveno". Ikke gjett.
+</div>
+
+<h3>Standard kampanjeperiode-rapport</h3>
+<p>Når Mike spør "kan du analysere kampanjeperioden X til Y", bygger Claude en HTML-rapport med disse seksjonene:</p>
+<ol>
+<li><strong>Sammendrag</strong> — total spend, total leads, CPL snitt, CPL marginal</li>
+<li><strong>Leads (ERP)</strong> — månedlig tabell Peasy vs Drive (Dager, Total, Per dag, Sum)</li>
+<li><strong>Spend-eksperiment</strong> — hvis perioden inkluderer en spend-endring: før/under/etter-tabell med dag-snitt</li>
+<li><strong>Meta-kampanjer</strong> — tabell per kampanje (spend, impressions, reach, results, status)</li>
+<li><strong>Google Analytics</strong> — kanaltabell (Direct/Paid Search/Paid Social/Organic/Referral) med økter, andel, engasjementsandel</li>
+<li><strong>Synkroniseringssjekk</strong> — Meta spend/purchases vs GA Paid Social-økter vs ERP Peasy-leads. Forklarer attribusjons-gap.</li>
+<li><strong>Hovedfunn</strong> — kausale observasjoner, ikke korrelasjoner uten støtte</li>
+<li><strong>Anbefalte neste steg</strong> — konkrete, handlingsbare</li>
+</ol>
+<p>Filnavn-konvensjon: <code>peasy-kampanjeanalyse-YYYY-MM-DD_YYYY-MM-DD.html</code> i OD/Dokumentasjon/. Første referanse-rapport (1.11.25 – 5.5.26) ligger der.</p>
+
+<h3>Kampanjeoppsett (Meta) — Claude lager kampanjer fremover</h3>
+<div class="callout callout-tip">
+<strong>Ny ansvarsfordeling fra mai 2026</strong>
+Claude bygger Meta-kampanjer for Mike fremover. Det betyr: kreativ-tekst, audience-spec, budsjettforslag, A/B-test-design, og oppfølgings-rapport etter at kampanjen har kjørt. Mike godkjenner og publiserer i Ads Manager. Claude initierer aldri spend-endringer — bare foreslår og venter på OK.
+</div>
+
+<h4>Hva Claude leverer ved ny kampanje</h4>
+<ol>
+<li><strong>Brief</strong> — mål (leads / awareness / retargeting), målgruppe, budsjett, varighet, KPI-mål, success-kriterium</li>
+<li><strong>Annonsetekst</strong> — primær tekst, headline, beskrivelse, CTA. På norsk. 2-3 varianter for split-test.</li>
+<li><strong>Audience-spec</strong> — geografi, alder, interesser, lookalike-grunnlag (basert på eksisterende leads-segmentering der mulig)</li>
+<li><strong>Bilde-/videospesifikasjon</strong> — beskrivelse av visuelt innhold. Mike eller designer lager selve filen.</li>
+<li><strong>Mål for evaluering</strong> — hvilke KPI-er som skal sjekkes i ettertid, hvilken dato evalueringen skal skje</li>
+</ol>
+
+<h4>Kanon-kampanjer (per mai 2026)</h4>
+<table>
+<tr><th>Navn</th><th>Type</th><th>Budsjett/dag</th><th>Status</th></tr>
+<tr><td>Konvertering: Selge bilen (Vekstloop)</td><td>Konvertering</td><td>~750 kr</td><td>Aktiv</td></tr>
+<tr><td>Konvertering: Retargeting (Vekstloop)</td><td>Retargeting</td><td>~150 kr</td><td>Aktiv</td></tr>
+<tr><td>Konvertering (Purchase): Selge bilen</td><td>Purchase-event</td><td>—</td><td>Inaktiv</td></tr>
+<tr><td>Peasy trafikk til web</td><td>Trafikk</td><td>—</td><td>Inaktiv</td></tr>
+</table>
+
+<h4>Læring fra spend-eksperimentet 15.–29. mars 2026</h4>
+<ul>
+<li><strong>Marginal CPL ~217 kr</strong> ved dobling av spend (1 000 → 2 000 kr/dag)</li>
+<li>Peasy-leads: 9,1/dag (før) → 13,7/dag (under) → 7,4/dag (etter) = +50% under perioden</li>
+<li>Drive er upåvirket — kampanjene treffer kun Peasy-funnelen</li>
+<li>Test-design: minimum 14 dager per fase for å fjerne ukedags-effekter</li>
+</ul>
+
+<h3>GTM &amp; attribusjon (planlagt)</h3>
+<p>Per mai 2026 har vi ingen UTM-discipline på Meta-annonser, så GA viser 41,5% Direct (uvanlig høy andel). Andrey (soft.team) lager:</p>
+<ul>
+<li>GTM-kopi for staging-domenet</li>
+<li>Endpoints for FAQ + Terms i HTML-versjonen</li>
+<li>Registreringslenke-parametre for å spore Meta→landing→ERP-lead presist</li>
+</ul>
+<p>Klaro/Cookie kommer senere som compiled add-on for cross-domain consent (peasy.no ↔ account.peasy.no).</p>
+
+<h3>Pulse-integrasjon (foreslått)</h3>
+<p>Innstillinger-fanen har allerede daglig leads-graf. Foreslått utvidelse:</p>
+<ul>
+<li><strong>Meta-spend overlay</strong> — daglig spend som sekundær Y-akse</li>
+<li><strong>Marginal CPL</strong> — løpende beregning siste 30 dager</li>
+<li><strong>Kampanjeperiode-marker</strong> — vertikale linjer ved kampanjestart/-slutt for visuell sammenligning</li>
+</ul>
+<p>Ikke implementert ennå. Krever Meta-API-integrasjon eller manuell CSV-upload.</p>
+
+
+<h2 id="credentials">Credentials</h2>
+
+<div class="callout callout-critical">
+<strong>&#128274; Peasy Pulse &mdash; passord-tilgang (v16.03.c73+)</strong><br>
+Pulse er passord-beskyttet siden 27. april 2026. Hele siden er l&aring;st bak SHA-256 hash-verifisering.
+<div class="kv" style="margin-top:10px">
+<span class="k">Passord</span><span><code>Hemsedal2026!</code></span>
+<span class="k">SHA-256 hash</span><span style="font-family:monospace;font-size:11px;word-break:break-all"><code>92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1</code></span>
+<span class="k">Token-varighet</span><span>30 dager (localStorage per nettleser/enhet)</span>
+<span class="k">Logg ut</span><span>Lenke oppe til h&oslash;yre i header</span>
+<span class="k">Setup</span><span>Hash er injectet i <code>peasy-pulse.html</code> i en <code>const PWD_HASH</code>-variabel</span>
+</div>
+</div>
+
+<div class="callout callout-info">
+<strong>Hvis passordet glemmes eller m&aring; endres</strong>
+<ol style="margin:8px 0 0 18px;padding:0">
+<li>Velg nytt passord (12+ tegn, blanding bokstaver/tall/symboler, ikke gjenbruk fra andre kontoer)</li>
+<li>Generer hash p&aring; Mini: <code>echo -n 'NyttPassord' | shasum -a 256 | awk '{print $1}'</code></li>
+<li>P&aring; Mini, oppdater Pulse-fila:<pre>cd ~/mikeljungbergtvedt.github.io
+sed -i '' "s/92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1/NY_HASH/" peasy-pulse.html
+git add peasy-pulse.html &amp;&amp; git commit -m "Rotate Pulse passord" &amp;&amp; git push</pre></li>
+<li>Oppdater denne sysdok-en med nytt passord og hash</li>
+<li>Varsle alle som har tilgang muntlig (Signal/telefon, ikke epost)</li>
+</ol>
+</div>
+
+<div class="callout callout-warn">
+<strong>Hvem skal ha passord</strong><br>
+Sysdok inneholder n&aring; passordet i klartekst. Den deles kun med personer som skal ha full tilgang til Peasy-systemet (Mike, eventuelle co-founders/operasjon, ikke utviklere som kun bygger). Sysdok-fila ligger i OneDrive Dokumentasjon-mappa &mdash; begrens hvem som synker den til sin enhet.
+</div>
+
+<div class="callout callout-tip">
+<strong>Backup &mdash; hvis Pulse l&aring;ses helt ute</strong>
+<ol style="margin:8px 0 0 18px;padding:0">
+<li><strong>HTML-kilden er offentlig p&aring; GitHub</strong> (repo: <code>mikeljungbergtvedt/mikeljungbergtvedt.github.io</code>). Hash-verifisering er klientside &mdash; hvis noen graver i HTML kan de teknisk sett kj&oslash;re passord-cracking, men det er en overkommelig sikkerhet for sensitivitetsniv&aring;et.</li>
+<li><strong>N&oslash;d-rollback:</strong> Lag en commit som fjerner auth-gate-blokken via git revert til pre-c69 commit:<pre>cd ~/mikeljungbergtvedt.github.io
+git log --oneline | grep "c69"
+# Finn commit-hash, kj&oslash;r:
+git revert &lt;hash&gt; --no-edit &amp;&amp; git push
+# Da er Pulse &aring;pen igjen p&aring; c68-versjon</pre></li>
+<li><strong>Local copy:</strong> Mike har alltid en kopi av peasy-pulse.html i OneDrive Dokumentasjon. Den kan &aring;pnes direkte fra disk uten passord (filen er den samme, men auth-gate viser ikke fordi den kj&oslash;res lokalt fra fil og localStorage er per origin).</li>
+<li><strong>Reset av en annen brukers token:</strong> Be vedkommende &aring;pne Pulse, kj&oslash;r i nettleser-konsoll: <code>localStorage.removeItem('peasy-pulse-auth'); location.reload();</code> &mdash; da m&aring; de logge inn p&aring; nytt med oppdatert passord.</li>
+</ol>
+</div>
+
+<h3>Andre credentials</h3>
+
+<div class="callout callout-critical">
+<strong>Sensitiv informasjon</strong>
+Disse credentials er gjeldende per 21. apr. 2026. Hvis du roterer en, oppdater her umiddelbart.
+</div>
+
+<div class="kv">
+<span class="k">EWS / Mail</span><span><code>post@peasy.no</code> / <code>Born2025!</code> · webmail: <a href="https://exchange.tornado.email">exchange.tornado.email</a></span>
+<span class="k">ERP</span><span><code>post@peasy.no</code> / <code>Born2025!</code> · <code>https://api.biladministrasjon.no</code></span>
+<span class="k">GitHub</span><span><code>ghp_x0PyHSGPtH22TAcdScey2dV4CL8JU24S22ss</code></span>
+<span class="k">Anthropic</span><span>I <code>.env</code> som <code>ANTHROPIC_API_KEY</code></span>
+<span class="k">Telegram (felles)</span><span>Bot-token <code>8601623470:AAH...</code> · chat <code>8743185026</code></span>
+<span class="k">Telegram (track)</span><span><code>@EasyPeasyEmailBot</code> · token <code>8267707007:AAE...</code></span>
+<span class="k">Mac Mini</span><span>SSH/Tailscale <code>bot@100.121.97.112</code> · ttyd <code>http://100.121.97.112:7682/</code></span>
+<span class="k">WordPress (peasy.no)</span><span><code>mike@autoringen.no</code> / <code>Born2025!</code> · <a href="https://peasy.no/wp-admin">peasy.no/wp-admin</a></span>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="deploy">Deploy-rutiner</h2>
+
+<h3>peasy-track</h3>
+<pre>python3 ~/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/deploy-track-v3.X.py</pre>
+<p>Scriptet gjør: launchctl unload + pkill -9 → kopier → syntax-sjekk → launchctl load → vis logg.</p>
+
+<h3>peasy-auto</h3>
+<pre>python3 ~/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/deploy-v18_03_X.py</pre>
+
+<h3 id="pulse-claude-rule" style="background:#fee2e2;border-left:4px solid #dc2626;padding:16px;margin:16px 0">⚠️ Pulse-patch fra Claude — ABSOLUTT REGEL</h3>
+<div style="background:#fef2f2;padding:16px;border-radius:8px;margin-bottom:16px">
+<p><strong>Claude leverer alltid ÉN ferdig <code>sed</code>-kommando i chatten. Mike kopierer og kjører selv i ttyd. Ferdig.</strong></p>
+<p>Claude skal ALDRI:</p>
+<ul>
+<li>Sende kommandoer til ttyd via Chrome-extension (term._core._onData.fire) — heredoc bryter, dquote&gt; henger, output blokkeres av safety-pattern, neste kommando bygger på ødelagt state</li>
+<li>Bruke Python heredoc med flerlinjet kode via Chrome-injection — feil escape gir parse error</li>
+<li>Iterere på samme patch flere ganger — hvis sed feiler, lever ny kommando, ikke prøv på nytt</li>
+</ul>
+<p><strong>Riktig flow (tar 30 sek):</strong></p>
+<ol>
+<li>Claude finner eksakt streng som skal byttes via <code>fetch('https://mikeljungbergtvedt.github.io/peasy-pulse.html')</code> i Chrome</li>
+<li>Claude bygger én <code>sed -i.bak "s|gammel|ny|" peasy-pulse.html &amp;&amp; sed -i.bak "s|v16.03.cN|v16.03.cN+1|g" peasy-pulse.html &amp;&amp; rm -f *.bak &amp;&amp; git add peasy-pulse.html &amp;&amp; git commit -m "cN+1 beskrivelse" &amp;&amp; git pull --rebase &amp;&amp; git push</code></li>
+<li>Claude limer kommandoen i chat som kodeblokk</li>
+<li>Mike kopierer og kjører i ttyd</li>
+<li>Mike limer output tilbake</li>
+<li>Claude verifiserer via <code>fetch()</code> at v live på GitHub Pages</li>
+</ol>
+<p><strong>Når sed ikke kan brukes</strong> (multi-linje endringer, kompleks logikk): Claude lager hele Python-script-fila <code>/tmp/cN.py</code> via en <strong>base64-encoded</strong> kommando levert i chat. Mike kjører <code>echo '...' | base64 -d &gt; /tmp/cN.py &amp;&amp; python3 /tmp/cN.py &amp;&amp; ...</code>. Aldri heredoc i chat-leverte kommandoer.</p>
+</div>
+<h3>peasy-pulse — GitHub commit-rutine</h3>
+<p>Pulse er en stor HTML-fil som patches via Python på Mini, deretter committes og pushes til GitHub Pages. <strong>Aldri force-push.</strong> Versjon bumpes (<code>v16.03.cN</code> → <code>v16.03.cN+1</code>) hver gang.</p>
+
+<pre>cd ~/mikeljungbergtvedt.github.io &amp;&amp; cat &gt; /tmp/cN.py &lt;&lt; 'PYEOF'
+# -*- coding: utf-8 -*-
+h = open('peasy-pulse.html', encoding='utf-8').read()
+
+old = "..."  # eksakt streng som skal byttes
+new = "..."  # ny streng
+assert old in h, 'streng ikke funnet'
+h = h.replace(old, new)
+
+h = h.replace('v16.03.cN', 'v16.03.cN+1')  # bump versjon
+open('peasy-pulse.html', 'w', encoding='utf-8').write(h)
+print('OK')
+PYEOF
+python3 /tmp/cN.py &amp;&amp; git add peasy-pulse.html &amp;&amp; git commit -m "cN+1 kort beskrivelse" &amp;&amp; git push</pre>
+
+<div class="callout callout-tip">
+<strong>Hvis push blir rejected:</strong><br>
+Fordi <code>auto-update Peasy report</code>-cron kan ha pushet i mellomtiden:
+<pre>git pull --rebase &amp;&amp; git push</pre>
+Aldri <code>git push --force</code>.
+</div>
+
+<h4>Norske bokstaver i Python heredoc</h4>
+<p>Bruk <strong>Unicode escapes</strong> (<code>\u00e5</code> for å, <code>\u00f8</code> for ø, <code>\u00e6</code> for æ) i Python-strenger som skal inn i Pulse — ellers risikerer du dobbel UTF-8-encoding når heredocen tolkes.</p>
+
+<h4>Anchor-strenger i replace</h4>
+<p>Hvis assertion <code>'streng ikke funnet'</code> feiler:</p>
+<ol>
+<li>Sjekk indentering: ofte 2 mellomrom i Pulse, ikke 4</li>
+<li>Sjekk spesialtegn (æøå, kolonn-strenger som <code>r[19]</code>, etc.) — disse kan rendres ulikt i terminalen vs. i fila</li>
+<li>Bruk <code>grep -n "anker" peasy-pulse.html</code> for å se eksakt streng</li>
+<li>For lengre blokker: bygg anchor programmatisk i Python (<code>h.find()</code> + slice) i stedet for å kopiere lange strings inn i heredoc</li>
+</ol>
+
+<div class="callout callout-warn">
+<strong>Markdown auto-link bryter heredoc</strong><br>
+Hvis Python-koden inneholder uttrykk som <code>akt.map(...)</code>, kan markdown-rendering konvertere det til autolink. Når dette limes inn i terminalen, blir Python-koden ødelagt. Løsning: skriv alltid Python-koden i en kodeblokk (```bash) som ikke konverterer auto-links — eller bygg lange JS-strenger programmatisk via <code>h.find()</code>-slice.
+</div>
+
+<h3>peasy-pulse — patch-pattern (anbefalt)</h3>
+<pre># 1. Sjekk versjon
+grep "v16\.03\.c" peasy-pulse.html | head -1
+
+# 2. Liten heredoc — bygg lange blokker programmatisk
+cat &gt; /tmp/cN.py &lt;&lt; 'PYEOF'
+h = open('peasy-pulse.html', encoding='utf-8').read()
+
+ANCHOR = "var akt=["
+END = ".join('');"
+i = h.find(ANCHOR)
+j = h.find(END, i)
+old_block = h[i:j+len(END)]
+
+new_block = (
+"var akt=[\n"
+"  ...\n"
+"];\n"
+"aktEl.innerHTML=akt.map(...).join('');"
+)
+h = h.replace(old_block, new_block, 1)
+h = h.replace('v16.03.cN', 'v16.03.cN+1')
+open('peasy-pulse.html', 'w', encoding='utf-8').write(h)
+PYEOF
+
+# 3. Kjør og commit
+python3 /tmp/cN.py &amp;&amp; git add peasy-pulse.html &amp;&amp; git commit -m "cN+1 ..." &amp;&amp; git push</pre>
+
+
+<!-- ============================================================ -->
+
+<h2 id="peasy-no-webside">peasy.no webside <span style="font-size:13px;font-weight:400;color:#64748b">WordPress &middot; live</span></h2>
+<p class="page-sub">Live forside-administrasjon og FAQ-administrasjon</p>
+
+<h3>Tilgangspunkter</h3>
+<div class="kv">
+<span class="k">Live forside</span><span><code>https://peasy.no/</code></span>
+<span class="k">WP-admin forside</span><span><code>https://peasy.no/wp-admin/post.php?post=5&amp;action=edit</code></span>
+<span class="k">FAQ-redigering</span><span><code>https://biladministrasjon.no/settings/peasy_faq</code> (CKEditor 5)</span>
+<span class="k">FAQ API (read)</span><span><code>GET https://api.biladministrasjon.no/c2b_module/faqs?locale=no</code> &mdash; krever auth</span>
+<span class="k">Live preview</span><span><code>https://peasy.no/?preview_id=5&amp;preview_nonce=...&amp;preview=true</code></span>
+</div>
+
+<h3>Forside-blokker (post=5)</h3>
+<table>
+<tr><th>Pos</th><th>ACF-layout</th><th>Innhold</th><th>Bakgrunn</th></tr>
+<tr><td>1</td><td><code>hp_block_6</code></td><td>Hero &mdash; "Send oss reg.nr."</td><td>hvit</td></tr>
+<tr><td>2</td><td><code>hp_block_13</code></td><td>Trygghet &mdash; "Levert av bilbransjens st&oslash;rste"</td><td>hvit</td></tr>
+<tr><td>3</td><td><code>hp_block_7</code></td><td>"Slik selger du bilen din med Peasy &mdash; p&aring; 1, 2, 3" (3 trinn)</td><td>beige</td></tr>
+<tr><td>4</td><td><code>hp_block_8</code></td><td>"Velg oss fordi vi bryr oss"</td><td>hvit</td></tr>
+<tr><td>5</td><td><code>hp_block_5</code></td><td>FAQ-tittel "Vanlige sp&oslash;rsm&aring;l"</td><td>beige</td></tr>
+<tr><td>6</td><td><code>hp_block_14</code></td><td>Testimonials</td><td>hvit</td></tr>
+<tr><td>7</td><td><code>hp_block_15</code></td><td>Eiere</td><td>hvit</td></tr>
+<tr><td>8</td><td><code>hp_block_10</code></td><td>Footer Banner</td><td>m&oslash;rk</td></tr>
+</table>
+
+<h3>FAQ-administrasjon</h3>
+<p>Alle FAQ-er redigeres i ERP under <code>biladministrasjon.no/settings/peasy_faq</code>. Hver FAQ har tittel-input og CKEditor 5 body. Endringer lagres ved klikk p&aring; <code>Lagre</code>-knapp (gir "Vellykket"-toast).</p>
+
+<h4>Live FAQ-rekkefølge (per 28.04.2026)</h4>
+<table>
+<tr><th>Nr</th><th>Sp&oslash;rsm&aring;l</th></tr>
+<tr><td>1</td><td>Hvem er Peasy, og kan jeg stole p&aring; dere?</td></tr>
+<tr><td>2</td><td>Hva koster det &aring; bruke Peasy?</td></tr>
+<tr><td>3</td><td>Hva slags biler kan jeg selge gjennom Peasy? <strong>(NY 28.04)</strong></td></tr>
+<tr><td>4</td><td>Hvorfor f&aring;r jeg bedre betalt for bilen gjennom Peasy?</td></tr>
+<tr><td>5</td><td>Hvorfor skal jeg velge Peasy fremfor &aring; selge selv?</td></tr>
+<tr><td>6</td><td>Hvordan fungerer hele Peasy-konseptet?</td></tr>
+<tr><td>7</td><td>Hvor lang tid tar hele prosessen?</td></tr>
+<tr><td>8</td><td>Hvordan beregner Peasy estimatet p&aring; bilen min?</td></tr>
+<tr><td>9</td><td>Hvordan vet jeg at estimatet er rettferdig?</td></tr>
+<tr><td>10</td><td>Jeg har f&aring;tt estimat &mdash; hva skjer n&aring;? <strong>(NY 28.04)</strong></td></tr>
+<tr><td>11</td><td>Kan jeg levere bilen selv, og i s&aring; fall til hvilken adresse?</td></tr>
+<tr><td>12</td><td>Henter dere bilen gratis, og i hvilke omr&aring;der?</td></tr>
+<tr><td>13</td><td>Hva m&aring; jeg gj&oslash;re f&oslash;r bilen hentes / leveres?</td></tr>
+<tr><td>14</td><td>Hva er NAF/Viking-takseringen, og hvorfor er den n&oslash;dvendig?</td></tr>
+<tr><td>15</td><td>Kan jeg se auksjonen eller vite hvem som byr?</td></tr>
+<tr><td>16</td><td>Hvordan f&oslash;lger jeg prosessen?</td></tr>
+<tr><td>17</td><td>Hva skjer hvis bilen min har utest&aring;ende l&aring;n?</td></tr>
+<tr><td>18</td><td>Hva skjer hvis l&aring;net er st&oslash;rre enn budet? <strong>(NY 28.04)</strong></td></tr>
+<tr><td>19</td><td>Hvordan signerer jeg kontrakten, og hva inneholder den?</td></tr>
+<tr><td>20</td><td>Hva er salgsmeldingen via SMS, og hvorfor trengs den?</td></tr>
+<tr><td>21</td><td>Er det forpliktende &aring; selge bilen til dere...?</td></tr>
+<tr><td>22</td><td>Kan jeg ombestemme meg etter &aring; ha sagt ja til salget?</td></tr>
+<tr><td>23</td><td>Hva skjer hvis jeg avviser budet?</td></tr>
+<tr><td>24</td><td>Hva skjer hvis ingen byr p&aring; bilen min?</td></tr>
+<tr><td>25</td><td>Hva skjer hvis jeg ikke svarer p&aring; e-postene deres?</td></tr>
+<tr><td>26</td><td>Hvem har ansvar for reklamasjoner etter salg? <strong>(NY 28.04)</strong></td></tr>
+</table>
+
+<h4>FAQ-tone &amp; konsistens-prinsipper</h4>
+<ul>
+<li><strong>"1500 forhandlere"</strong> &mdash; ikke "4000", "tusenvis", "1500+ kj&oslash;pere", "profesjonelle kj&oslash;pere"</li>
+<li><strong>"NAF eller Viking takserer"</strong> / <strong>"NAF/Viking-taksering"</strong> &mdash; ikke "test"</li>
+<li><strong>"estimat"</strong> &mdash; ikke "verdivurdering", "verdsetter"</li>
+<li><strong>"innvendig og utvendig"</strong> &mdash; eksplisitt p&aring; vask</li>
+<li><strong>"Vi indikerer, lover ikke"</strong> &mdash; fjernet "best mulig", "presist", "garantert pris"</li>
+<li><strong>"etter at du har akseptert budet"</strong> &mdash; ikke "etter aksept"</li>
+<li><strong>"Vi optimaliserer for flest mulig bud og h&oslash;yest mulig pris til deg"</strong> &mdash; &aring;rsak-virkning, ikke selvros</li>
+<li><strong>Enkel tone &mdash; "ikke vrang"</strong></li>
+</ul>
+
+<h3>Forside hp_block_7 &mdash; "Slik selger du bilen din med Peasy &mdash; p&aring; 1, 2, 3"</h3>
+<p>Hovedblokk for prosess-forklaring p&aring; live forside, plassert mellom Trygghet og "Velg oss". Bygd som ACF flexible content med 3 rader (steg).</p>
+
+<div class="kv">
+<span class="k">Hovedtittel-felt</span><span><code>field_68e6c3bfbd185</code></span>
+<span class="k">Steg-tittel-felt</span><span><code>field_68e6c3917ffa0</code> (per row)</span>
+<span class="k">Steg-tekst-felt</span><span><code>field_68e6c393ea052</code> (per row)</span>
+<span class="k">Repeater</span><span><code>field_68e6c38cf418e</code> (Add Row-knapp)</span>
+</div>
+
+<h4>Innhold (per 28.04.2026)</h4>
+<p><strong>Hovedtittel:</strong> Slik selger du bilen din med Peasy &mdash; p&aring; 1, 2, 3</p>
+<p><strong>Steg 1 "Registrer og f&aring; estimat":</strong> Send oss reg.nr. og litt info om bilen. Du f&aring;r et prisestimat innen 4 timer p&aring; hverdager (08&ndash;16). Estimatet f&aring;r du p&aring; e-post med lenke til Min Side.</p>
+<p><strong>Steg 2 "Vi klargj&oslash;r og auksjonerer":</strong> Godkjenner du estimatet i Min Side, klikker du "G&aring; videre" og velger gratis henting eller selvlevering. N&aring;r bilen ankommer v&aring;rt anlegg, vasker vi den innvendig og utvendig, fotograferer, og NAF eller Viking takserer. Deretter konkurrerer 1500 forhandlere om bilen din.</p>
+<p><strong>Steg 3 "Du velger om du selger":</strong> Du f&aring;r h&oslash;yeste bud p&aring; Min Side. Aksepterer du, signerer du digitalt og pengene er p&aring; konto innen 2&ndash;3 virkedager. Avviser du, henter du bilen kostnadsfritt.</p>
+
+<p><em>Merk: Tema-grafikken er hardkodet for 2 trinn. Steg 3 har ekstra spacing via <code>\n\n</code> i body-textarea. For permanent fix m&aring; tema-php/css i <code>/wp-content/themes/peasy/</code> oppdateres til 3 trinn.</em></p>
+
+<h3>Hero-bilde (pending)</h3>
+<p>N&aring;v&aelig;rende: <code>Firefly_Kandulageetbildesomillustr263863RWU-1920w.webp</code> (smilende kvinne &mdash; generisk).</p>
+<p>M&aring;l: konkurranse-narrativ &mdash; "1500 forhandlere kjemper om DIN bil". Foresl&aring;tt Grok/Firefly-prompt: tom p-plass fra fugleperspektiv, &eacute;n bil sentralt, lys-stripler/piler fra alle andre plasser konvergerer p&aring; bilen, tech-aesthetic, gull-time. <strong>Status: ikke produsert.</strong></p>
+
+<!-- ============================================================
+     ENDRINGSLOGG - 30. APRIL 2026 (DAGENS INNSATS)
+     ============================================================ -->
+<h2 id="endringslogg-2026-04-30">Endringslogg &mdash; 30. april 2026 <span style="font-size:13px;font-weight:400;color:#64748b">major Pulse-omstrukturering + bot-fixes</span></h2>
+
+<h3>Pulse v16.03.c87→c107</h3>
+<p>Stor omstrukturering av Pulse-dashbordet med fokus på ekte per-solgt-bil-metrics:</p>
+<table>
+<tr><th>Versjon</th><th>Endring</th></tr>
+<tr><td><code>c87–c93</code></td><td>7 keytall-cards reworked til 30d-basis</td></tr>
+<tr><td><code>c94</code></td><td><code>peasy-config.json</code> opprettet på GitHub Pages</td></tr>
+<tr><td><code>c95</code></td><td>Config-loader + kort 7 ROI-formel</td></tr>
+<tr><td><code>c96</code></td><td>Innstillinger-tab UI opprettet</td></tr>
+<tr><td><code>c99</code></td><td>Config + Innstillinger utvidet med <code>prodKostUnder35k</code> (2250) og <code>prodKostOver35k</code> (2750)</td></tr>
+<tr><td><code>c100</code></td><td><strong>NYTT KORT 8: SNITT PROD KOST</strong> + ROI inkl prod kost. ROI 4.8x → 3.1x</td></tr>
+<tr><td><code>c101</code></td><td>Ukerapport ROI-formel oppdatert med B-formel inkl prod kost</td></tr>
+<tr><td><code>c102</code></td><td>90d-verdi-blokk fix bruker config returKost</td></tr>
+<tr><td><code>c103</code></td><td><strong>NYTT KORT 9: NETTO PER SOLGT (2 589 kr)</strong> + 90d vektet prod kost-split</td></tr>
+<tr><td><code>c104</code></td><td>Kort 1 CPL-tag (sum 292 · CPL 103 kr) + tone ned font-weight på 5 kort</td></tr>
+<tr><td><code>c105</code></td><td>Prosa bruker <code>window._netto30</code> (samme tall som kort 9) + alle 3000 byttet til config</td></tr>
+<tr><td><code>c106</code></td><td>Prosa bytt <code>ukeProdAvg</code> → <code>ukeProdAvgPersolgt</code> (snitt 3 583, ikke bracket 2 250)</td></tr>
+<tr><td><code>c107</code></td><td>5 hardkodet "3 000 kr" i No-cure tap, retur-tabell, KOSTNAD-kort byttet til config <code>returKost</code></td></tr>
+</table>
+
+<h3>peasy-auto v18.04.a (deployet 09:30)</h3>
+<ul>
+<li>Henter <code>car.description</code> i tillegg til <code>self_declaration.comment</code> fra ERP</li>
+<li>Dedupe-logikk: hvis identiske → vis kun én, ellers BILBESKRIVELSE som ekstra linje</li>
+<li>VERSION-konstant oppdatert <code>v18.03.dr4</code> → <code>v18.04.a</code></li>
+<li>Versjonert kopi lagret i OD som <code>peasy-auto-v18.04.a.js</code> (71 834 bytes)</li>
+<li>Deploy via <code>pkill -f "peasy-auto/peasy-auto.js"</code> (NY rutine)</li>
+</ul>
+
+<h3>peasy-track v3.9 (live)</h3>
+<ul>
+<li><strong>Bug fix:</strong> Array→object konvertering i <code>seen-emails.json</code> ved oppstart (linje 56)</li>
+<li>Løser duplikat-prosessering av 30+ mails etter restart</li>
+<li>Bootstrap log etter fix: "1178 allerede sett" (Inbox) + "86 allerede sett" (Sent)</li>
+<li>Kjent begrensning: <code>fetchIds</code> har <code>MaxEntriesReturned=50</code></li>
+</ul>
+
+<h3>Deploy-workflow oppdatert</h3>
+<div class="callout callout-warn">
+<strong>VIKTIG endring:</strong> Bruk <code>pkill -f "peasy-auto/peasy-auto.js"</code> i stedet for <code>killall node</code>. Den gamle kommandoen drepte BEGGE bots og forårsaket duplikat-mail-prosessering.
+</div>
+
+<h3>FAQ-status (verifisert i ERP)</h3>
+<p>3 endringer som var planlagt i tidligere økt er allerede live:</p>
+<ul>
+<li>Spm 12: "Hvis du leverer utenfor åpningstid eller bruker dropsafe..."</li>
+<li>Spm 13: "Transport håndteres av vår partner Gire..."</li>
+<li>Spm 22: "Budet er gyldig til neste arbeidsdag..."</li>
+</ul>
+
+<h3>Sysdok v11.10→v11.15</h3>
+<p>Ny sysdok-versjon med komplett dekning av dagens endringer (denne fila). Bygget i 5 deler (DEL1-DEL5) på Mini via ttyd, lagret direkte i OneDrive.</p>
+
+<h2 id="endringslogg-2026-04-28-kveld">Endringslogg &mdash; 28. april 2026 KVELD <span style="font-size:13px;font-weight:400;color:#64748b">Pulse v16.03.c78-c85</span></h2>
+
+<h3>Pulse Operasjonelt &mdash; ny nøkkeltall-rad</h3>
+<table>
+<tr><th>Versjon</th><th>Endring</th><th>Commit</th></tr>
+<tr><td><code>v16.03.c78</code></td><td>3 nye KPI-kort: Snitt bilverdi, Snitt Peasy inntekt, CPL kontrakt. CPL-formel: (dager siden 1.11.25 × 1000) / antall solgte. CPL brutto vises som fotnote.</td><td><code>4184cd3</code></td></tr>
+<tr><td><code>v16.03.c79</code></td><td>Snitt bilverdi og Snitt Peasy inntekt endret fra all-time til siste 30d.</td><td><code>3a09cff</code></td></tr>
+<tr><td><code>v16.03.c80</code></td><td>Rekkefølge: Leads i dag først, Evaluert sist (10 kort).</td><td><code>601d32c</code></td></tr>
+<tr><td><code>v16.03.c81</code></td><td>Alle 10 dialer på én linje (CSS .dials-grid: repeat(7,1fr) &rarr; repeat(10,1fr), gap 14 &rarr; 10).</td><td><code>482324c</code></td></tr>
+<tr><td><code>v16.03.c82</code></td><td>Fjern bue-grafikk (.arc-wrap{display:none}), fjern Total inntekt og Evaluert kort, grid 10 &rarr; 8 kolonner. Bytte til 30d-versjoner ble revertet (data.evaluated/mottatt struktur ga feil tall).</td><td><code>9a2348b</code></td></tr>
+<tr><td><code>v16.03.c83</code></td><td>Reverter Eval/Mott/Solgt/AvgBud til c81-logikk (all-time mR/sR/aGs).</td><td><code>a31903e</code></td></tr>
+<tr><td><code>v16.03.c84</code></td><td>Fjern Avg Bud vs Pris lav-kort, grid 8 &rarr; 7 kolonner, Mal &rarr; Mål.</td><td><code>4f92e46</code></td></tr>
+<tr><td><code>v16.03.c85</code></td><td>.dial-label white-space:nowrap + ellipsis &mdash; hindre line break i titler.</td><td><code>48722ba</code></td></tr>
+</table>
+
+<h4>Endelig nøkkeltall-rad (7 kort)</h4>
+<ol>
+<li><strong>Leads mottatt i dag / snitt</strong> &mdash; Live, snitt siden 1.11.25</li>
+<li><strong>Evaluert &rarr; Mottatt</strong> &mdash; All-time %, Mål 10%</li>
+<li><strong>Mottatt &rarr; Solgt</strong> &mdash; All-time %, Mål 70%</li>
+<li><strong>I produksjon nå</strong> &mdash; Live snapshot</li>
+<li><strong>Snitt bilverdi</strong> &mdash; Siste 30d, sum kolonne E / antall solgte 30d</li>
+<li><strong>Snitt Peasy inntekt</strong> &mdash; Siste 30d, sum kolonne U / antall solgte 30d</li>
+<li><strong>CPL kontrakt</strong> &mdash; All-time totalSpend / tS, brutto (per lead) som fotnote</li>
+</ol>
+
+<h4>Beregning: Snitt-feltene</h4>
+<pre><code>var d30ms=Date.now()-30*86400000;
+var sold30arr=data.sold.filter(c=&gt;parseDate(c.sDate)&gt;=d30ms);
+var eVals30=sold30arr.map(c=&gt;c.e).filter(e=&gt;e&amp;&amp;e&gt;500);
+var aE=eVals30.reduce((a,b)=&gt;a+b,0)/eVals30.length;
+var uVals30=sold30arr.map(c=&gt;c.u).filter(u=&gt;u&amp;&amp;u&gt;500);
+var aU30=uVals30.reduce((a,b)=&gt;a+b,0)/uVals30.length;
+var totalSpend=dSC*1000;  // dSC = dager siden 1.11.2025
+var cplBrutto=Math.round(totalSpend/tE);
+var cplKontrakt=Math.round(totalSpend/tS);
+</code></pre>
+
+<h3>Pulse Operasjonelt &mdash; Nylig solgt &amp; returnert</h3>
+<p>Flyttet til BUNNEN av Operasjonelt-fanen (etter alle 7 dags-tabellene). Implementert ved å splitte <code>opsHtml</code>-bygget i to: hoved-opsHtml + nyligHtml. linje 754: <code>+opsHtml+buildDagsTabell(...)+nyligHtml</code></p>
+
+<h3>Pulse Operasjonelt &mdash; Gameification grønn rad</h3>
+<p>Dagsfeske leads (regnr i 📋 Leads mottatt i dag) får grønn rad-bakgrunn <code>rgba(0,135,90,0.14)</code> i alle 7 dags-tabeller. Logikk: <code>leadsTodaySet=new Set(evalI.map(r=&gt;r[1]))</code> &mdash; sjekkes i <code>rowHtml()</code>.</p>
+
+<h3>FAQ &mdash; ny spm 10 (estimat-gyldighet)</h3>
+<p><strong>Tittel:</strong> Hvor lenge er estimatet gyldig, og kan jeg utsette?</p>
+<p><strong>Body:</strong> Estimatet er gyldig i 6 dager. Trenger du mer tid, kan du bestille henting frem i tid innenfor gyldighetsperioden &mdash; bilen blir hentet på avtalt dato. Har estimatet utløpt, kan du registrere bilen på nytt på peasy.no og få et oppdatert estimat.</p>
+<p>Lagt inn etter spm 9, alle påfølgende renumrert (10-26 &rarr; 11-27).</p>
+
+<h3>FAQ &mdash; spm 7 utvidet</h3>
+<p>Spm 7 "Hvor lang tid tar hele prosessen?" utvidet med <strong>Ankomst-linje</strong> + presisering "innvendig og utvendig" på vask:</p>
+<pre>Estimat: Innen 4 timer etter registrering (man-fre 08:00-16:00).
+Ankomst: Du får melding når bilen er mottatt på vårt anlegg.
+Klargjøring: Vask innvendig og utvendig, foto og NAF/Viking-taksering - vanligvis 2-3 virkedager.
+Auksjon: Rett etter klargjøring, ofte dagen etter takseringen.
+Bud: Høyeste bud presenteres samme dag som auksjon på Min Side.
+Oppgjør: Ved aksept signerer du digitalt, og pengene utbetales innen 2-3 virkedager (minus eventuell gjeld).
+
+Du får garantert bud innen 7 virkedager etter ankomst.</pre>
+
+<h3>Konsistens-bot kø 28.04 kveld</h3>
+<p><strong>AKSEPTERT 2 forslag</strong> fra bot:</p>
+<ul>
+<li>NYTT spm 10 (estimat-gyldighet) &mdash; lagret</li>
+<li>Spm 7 utvidet med Ankomst-linje + "innvendig og utvendig" &mdash; lagret</li>
+</ul>
+<p><strong>AVVIST 7 forslag</strong> (bot misforstod scope):</p>
+<ul>
+<li>Spm 1 "solgt &rarr; kjøpt" &mdash; Autoringen <em>solgte</em> er korrekt (auksjons-platform)</li>
+<li>Spm 25 + kontrakt-vedlegg &mdash; scope-feil, dekkes av spm 19/21</li>
+<li>Spm 14 + estimat-tider &mdash; dekket av spm 7/8</li>
+<li>Spm 9 + utbetaling-tidslinje &mdash; dekket av spm 7</li>
+<li>Spm 8 omskrevet &mdash; bot baserte seg på gammel versjon</li>
+<li>Spm 7 + Gire Mobility &mdash; tekniske detaljer hører ikke i FAQ</li>
+<li>Pixel-tracking/Schibsted + jobbsøker &mdash; utenfor scope</li>
+</ul>
+
+<h3>Endelig FAQ-rekkefølge (27 spm) per 28.04 kveld</h3>
+<table>
+<tr><th>Nr</th><th>Spørsmål</th></tr>
+<tr><td>1</td><td>Hvem er Peasy, og kan jeg stole på dere?</td></tr>
+<tr><td>2</td><td>Hva koster det å bruke Peasy?</td></tr>
+<tr><td>3</td><td>Hva slags biler kan jeg selge gjennom Peasy?</td></tr>
+<tr><td>4</td><td>Hvorfor får jeg bedre betalt for bilen gjennom Peasy?</td></tr>
+<tr><td>5</td><td>Hvorfor skal jeg velge Peasy fremfor å selge selv?</td></tr>
+<tr><td>6</td><td>Hvordan fungerer hele Peasy-konseptet?</td></tr>
+<tr><td>7</td><td>Hvor lang tid tar hele prosessen? <strong>(UTVIDET 28.04 kveld)</strong></td></tr>
+<tr><td>8</td><td>Hvordan beregner Peasy estimatet på bilen min?</td></tr>
+<tr><td>9</td><td>Hvordan vet jeg at estimatet er rettferdig?</td></tr>
+<tr><td>10</td><td>Hvor lenge er estimatet gyldig, og kan jeg utsette? <strong>(NY 28.04 kveld)</strong></td></tr>
+<tr><td>11</td><td>Jeg har fått estimat &mdash; hva skjer nå?</td></tr>
+<tr><td>12-27</td><td>Resterende spm (Levere/Henting/Før henting/NAF-Viking/Auksjon/Følge prosess/Lån/Lån større/Kontrakt/Salgsmelding/Forpliktende/Ombestemme/Avviser/Ingen byr/Ikke svarer/Reklamasjon)</td></tr>
+</table>
+
+<h3>Lærdommer 28.04 kveld</h3>
+<ul>
+<li><strong>data.sold-array</strong> har <code>c.e</code> (Pris lav, kolonne E) og <code>c.u</code> (Total inntekt, kolonne U)</li>
+<li><strong>data.evaluated/mottatt-arrays</strong> har ikke konsistent dato-struktur for 30d-filtrering &mdash; bruk all-time tE/tM/tS for ratios</li>
+<li><strong>CSS .dials-grid</strong> bestemmer antall kolonner &mdash; må oppdateres når dialer legges til/fjernes</li>
+<li><strong>.dial-label white-space:nowrap</strong> hindrer line break i kort-titler</li>
+<li><strong>CDN cache på GitHub Pages</strong> tar 30-60 sek &mdash; bruk <code>?cb=NN</code> query for å tvinge refresh</li>
+<li><strong>Beholde fungerende logikk:</strong> når ny variant feiler, reverter umiddelbart i stedet for å debugge</li>
+</ul>
+
+<h2 id="endringslogg-2026-04-28">Endringslogg &mdash; 28. april 2026 <span style="font-size:13px;font-weight:400;color:#64748b">dagens innsats</span></h2>
+
+<h3>Pulse (peasy-pulse.html)</h3>
+<table>
+<tr><th>Versjon</th><th>Endring</th><th>Commit</th></tr>
+<tr><td><code>v16.03.c74</code></td><td>"Leads mottatt i dag" konsistent label p&aring; 3 kort (dial #6, stat-card, ukerapport). Stat-card bruker <code>tdC</code> i stedet for <code>evalToday</code>.</td><td><code>3e46328</code></td></tr>
+<tr><td><code>v16.03.c75</code></td><td>leadsDailyChart: header "Daglige leads mottatt", forklaring "S&oslash;yler = leads mottatt per dag", pop-up label "Leads mottatt".</td><td><code>d9b5e9a</code></td></tr>
+<tr><td><code>v16.03.c76</code></td><td>"Nylig solgt &amp; returnert" flyttet til bunnen av Operasjonelt-fanen (etter alle dags-tabeller).</td><td><code>a6e3413</code></td></tr>
+<tr><td><code>v16.03.c77</code></td><td>Dagsfeske leads (regnr i 📋 Leads mottatt i dag) f&aring;r gr&oslash;nn rad-bakgrunn <code>rgba(0,135,90,0.14)</code> i alle 7 dags-tabeller. Gameification.</td><td><code>d6874a7</code></td></tr>
+</table>
+
+<h3>ERP FAQ (biladministrasjon.no/settings/peasy_faq)</h3>
+<ul>
+<li><strong>Slettet 2 sp&oslash;rsm&aring;l:</strong> Gammel spm 7 "Hva er de fire sp&oslash;rsm&aring;lene" (irrelevant svar) + gammel spm 24 "Hvor kan jeg f&oslash;lge status" (duplikat av nye 16).</li>
+<li><strong>Lagt til 4 nye sp&oslash;rsm&aring;l:</strong> 3 (Hva slags biler), 10 (Estimat &mdash; hva skjer n&aring;?), 18 (L&aring;n st&oslash;rre enn budet), 26 (Reklamasjon).</li>
+<li><strong>Body-rewrites:</strong> 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25 &mdash; alle bragt i tr&aring;d med tone-prinsippene.</li>
+<li><strong>Tittel-endringer:</strong> 5 ("hele Peasy-konseptet"), 8/9 ("estimatet"), 13 ("takseringen"), 16 ("f&oslash;lger jeg prosessen").</li>
+<li><strong>Renumrert</strong> alle 26 sp&oslash;rsm&aring;l 1-26 i logisk rekkef&oslash;lge.</li>
+</ul>
+
+<h3>peasy.no forside (WP post=5)</h3>
+<ul>
+<li><code>hp_block_7</code> utvidet fra 2 trinn til 3 trinn (added Row).</li>
+<li>Hovedtittel endret: "Det hele er gjort p&aring; 1-2 Easy Peasy" &rarr; "Slik selger du bilen din med Peasy &mdash; p&aring; 1, 2, 3".</li>
+<li>Alle 3 stegs-titler og -tekster omskrevet til pedagogisk, proff tone.</li>
+<li>Lagret via <code>#publish</code>-knapp (Oppdater) &mdash; "Side oppdatert"-bekreftet.</li>
+</ul>
+
+<h3>L&aelig;rdommer fra dagen</h3>
+<ul>
+<li><strong>Aldri gjette versjoner</strong> &mdash; alltid <code>ls</code> filsystemet f&oslash;rst. Memory er ikke live.</li>
+<li><strong>FAQ-data ligger i ERP via CKEditor</strong> &mdash; ikke WP. Endringer auto-lagres ved input-events.</li>
+<li><strong>FAQ Lagre-knappen</strong> renumrerer ikke automatisk &mdash; m&aring; gj&oslash;res manuelt med native input-setter.</li>
+<li><strong>WP ACF flexible content</strong> &mdash; "Add Row" via <code>.acf-repeater-add-row</code> klikk; nye row-id'er stabiliseres etter f&oslash;rste lagring.</li>
+<li><strong>Native input-setter</strong> kreves for React/Vue change-detection: <code>Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set</code></li>
+<li><strong>1 ting av gangen</strong> &mdash; bruker vil ha f&oslash;r/etter-format med klar diff, godkjenn deretter neste.</li>
+</ul>
+
+<h2 id="fil-locations">Fil-lokasjoner</h2>
+
+<div class="kv">
+<span class="k">Boter (kjørende)</span><span><code>/Users/bot/peasy-auto/</code> · <code>/Users/bot/peasy-track/</code></span>
+<span class="k">launchd plists</span><span><code>/Users/bot/Library/LaunchAgents/com.peasy.*.plist</code></span>
+<span class="k">OneDrive (Mini)</span><span><code>/Users/bot/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></span>
+<span class="k">OneDrive (MBP)</span><span><code>/Users/mikeljungberg-tvedt/Library/CloudStorage/OneDrive-Autoringenas/C2B/Peasy/Bot/Dokumentasjon/</code></span>
+<span class="k">Pulse repo</span><span><code>~/mikeljungbergtvedt.github.io/</code> (lokalt) · GitHub Pages live</span>
+<span class="k">Logger</span><span><code>~/peasy-auto/logs/out.log</code> · <code>~/peasy-track/nohup.out</code></span>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="kjente-bugs">Kjente bugs og fallgruver</h2>
+
+<div class="card">
+<h3>Operasjonelle</h3>
+<table>
+<tr><th>Bug</th><th>Status</th><th>Workaround</th></tr>
+<tr><td>peasy-auto km-band fallback til 999999 drar inn outliers</td><td><span class="chip chip-warn">Åpen</span></td><td>Erstatt med <code>kmBand*3</code> i linje 770</td></tr>
+<tr><td>FAQ-scraping av peasy.no returnerer 0 entries</td><td><span class="chip chip-warn">Åpen</span></td><td>Tilpass regex i <code>scrapeFaq()</code> til faktisk DOM-struktur</td></tr>
+<tr><td>Pulse SPM-fane viser ikke tråd-historikk (kun spørsmål)</td><td><span class="chip chip-warn">Åpen</span></td><td>Render <code>thread</code>-array i SPM-fanen</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Løste</h3>
+<table>
+<tr><th>Bug</th><th>Løst i</th></tr>
+<tr><td>EWS GetItem 500 (ugyldig SOAP)</td><td>track v3.4 (SOAP-fix)</td></tr>
+<tr><td>Telegram callback timeout (60s)</td><td>track v3.2.1 (umiddelbar callback-svar)</td></tr>
+<tr><td>Pulse SPM-fane skjult av inline display:none</td><td>pulse v16.03.c25 (style.display istedenfor class)</td></tr>
+<tr><td>Track pushet til feil GH-fil (questions-db vs peasy-questions)</td><td>track v3.2.1 (riktig fil-navn)</td></tr>
+<tr><td>EWS 401 Unauthorized — utdatert passord</td><td>oppdatert <code>.env</code> til <code>Born2025!</code></td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Generelle fallgruver</h3>
+<ul>
+  <li><strong>ttyd paste-korrupsjon</strong> for &gt;20-linje heredocs — bruk fil eller curl</li>
+  <li><strong>OneDrive sync-lag</strong> MBP→Mini opp til 3 min — tving med <code>osascript -e 'quit app "OneDrive"' && open -a OneDrive</code></li>
+  <li><strong>GitHub Pages cache</strong> — bruk <code>raw.githubusercontent.com?t=$(date +%s)</code> for fersk respons</li>
+  <li><strong>Norske tegn i Pulse HTML</strong> — bruk Python <code>latin-1</code>, ikke btoa()</li>
+  <li><strong>launchd KeepAlive</strong> — pkill alene fungerer ikke, må <code>unload</code> + <code>pkill -9</code></li>
+  <li><strong>Aldri patch en fil flere ganger</strong> — skriv ny komplett versjon</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="changelog">Changelog</h2>
+<p>Versjonshistorikk er flyttet til <code>sysdok-changelog.html</code> for å holde denne fila lesbar.</p>
+<p><strong>Siste oppføringer:</strong></p>
+<ul>
+  <li>v11.5 (21. apr) — La til "Hvordan oppdatere sysdok"-seksjon i AI-onboarding
+  <li>v11.0 (21. apr) — Komplett redesign: sticky TOC, AI-onboarding, modulær struktur</li>
+  <li>v10.36 (21. apr) — Patch som dokumenterte track v3.4 og pulse c25 endringer</li>
+  <li>v10.35 (15. apr) — Forrige stabile sysdok</li>
+</ul>
+
+<footer>
+Peasy Sysdok v11.5 · oppdater denne fila direkte når noe endres · ikke patch-akkumuler
+</footer>
+
+</main>
+</div>
+
+<script>
+// Active TOC highlighting
+const links = document.querySelectorAll('nav.toc a');
+const sections = [...document.querySelectorAll('h2[id]')].map(h => h.id);
+function setActive() {
+  let active = sections[0];
+  for (const id of sections) {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < 100) active = id;
+  }
+  links.forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#' + active);
+  });
+}
+window.addEventListener('scroll', setActive);
+setActive();
+</script>
+
+
+<h2 id="konsistens-rapport">Konsistens-rapport</h2>
+
+<p><strong>Form&aring;l:</strong> Konsistens-rapport-bot er et observatorium over alt Peasy kommuniserer ut til kunder. Den leser e-post-templates, SMS-templates, ERP FAQ, web-innhold, l&aelig;rte tr&aring;der og kunde-spm fra Pulse, og rapporterer ukentlig om tre ting: <strong>hull</strong> (sp&oslash;rsm&aring;l som ikke besvares noen steder), <strong>motsetninger</strong> (to kilder som sier ulike ting), og <strong>tone-avvik</strong> (formaliteter, hilsninger, "vi" vs "Peasy"). Sonnet 4 gj&oslash;r analysen; du f&aring;r konkrete forbedringsforslag rangert etter hvor ofte temaet dukker opp.</p>
+
+<div class="callout callout-tip">
+<strong>Hva den IKKE er</strong><br>
+Konsistens-rapport-bot endrer ingenting selv. Den leser, sammenligner, foresl&aring;r. Du best&aring;r &aring; vurdere og implementere. Det er den samme manuelt-i-loop-filosofien som FAQ-loopen.
+</div>
+
+<h3>360-loop diagram</h3>
+
+<svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" style="background:#fff;border:1px solid #D5DCD8;border-radius:8px;margin:14px 0;width:100%;max-width:800px">
+  <defs>
+    <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5C6F69"/></marker>
+    <marker id="arrKG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#004225"/></marker>
+  </defs>
+  <g font-family="IBM Plex Sans, sans-serif">
+
+    <!-- Sentrum: konsistens-bot -->
+    <rect x="320" y="190" width="160" height="80" fill="#004225" stroke="#003319" stroke-width="2" rx="8"/>
+    <text x="400" y="218" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">konsistens-bot</text>
+    <text x="400" y="238" text-anchor="middle" font-size="11" fill="#D5DCD8">peasy-track v3.6</text>
+    <text x="400" y="256" text-anchor="middle" font-size="10" fill="#D5DCD8">Sonnet 4 analyse</text>
+
+    <!-- Inputs (venstre side) -->
+    <rect x="20" y="30" width="180" height="55" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+    <text x="110" y="52" text-anchor="middle" font-size="12" font-weight="600">ERP Templates</text>
+    <text x="110" y="68" text-anchor="middle" font-size="10" fill="#5C6F69">54 email/SMS</text>
+    <text x="110" y="80" text-anchor="middle" font-size="9" fill="#5C6F69">/email_template</text>
+
+    <rect x="20" y="110" width="180" height="55" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+    <text x="110" y="132" text-anchor="middle" font-size="12" font-weight="600">ERP FAQ</text>
+    <text x="110" y="148" text-anchor="middle" font-size="10" fill="#5C6F69">23 Q+A</text>
+    <text x="110" y="160" text-anchor="middle" font-size="9" fill="#5C6F69">/c2b_module/faqs</text>
+
+    <rect x="20" y="190" width="180" height="55" fill="#FFF3E0" stroke="#E65100" stroke-width="1.5" rx="6"/>
+    <text x="110" y="212" text-anchor="middle" font-size="12" font-weight="600">peasy.no</text>
+    <text x="110" y="228" text-anchor="middle" font-size="10" fill="#5C6F69">/, /vilkar, /faq</text>
+    <text x="110" y="240" text-anchor="middle" font-size="9" fill="#5C6F69">scrape HTML</text>
+
+    <rect x="20" y="270" width="180" height="55" fill="#F0F4F2" stroke="#5C6F69" stroke-width="1.5" rx="6"/>
+    <text x="110" y="292" text-anchor="middle" font-size="12" font-weight="600">learned-faq.json</text>
+    <text x="110" y="308" text-anchor="middle" font-size="10" fill="#5C6F69">siste 30 tr&aring;der</text>
+    <text x="110" y="320" text-anchor="middle" font-size="9" fill="#5C6F69">Q + ditt svar</text>
+
+    <rect x="20" y="350" width="180" height="55" fill="#F0F4F2" stroke="#5C6F69" stroke-width="1.5" rx="6"/>
+    <text x="110" y="372" text-anchor="middle" font-size="12" font-weight="600">peasy-questions.json</text>
+    <text x="110" y="388" text-anchor="middle" font-size="10" fill="#5C6F69">siste 30 Pulse-spm</text>
+    <text x="110" y="400" text-anchor="middle" font-size="9" fill="#5C6F69">topic_key</text>
+
+    <!-- Outputs (h&oslash;yre side) -->
+    <rect x="600" y="30" width="180" height="80" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
+    <text x="690" y="56" text-anchor="middle" font-size="12" font-weight="600">Telegram</text>
+    <text x="690" y="74" text-anchor="middle" font-size="10" fill="#5C6F69">sammendrag (3500 tegn)</text>
+    <text x="690" y="90" text-anchor="middle" font-size="10" fill="#5C6F69">+ /konsistens kommando</text>
+
+    <rect x="600" y="140" width="180" height="80" fill="#FFEBE0" stroke="#E65100" stroke-width="1.5" rx="6"/>
+    <text x="690" y="166" text-anchor="middle" font-size="12" font-weight="600">OD MBP</text>
+    <text x="690" y="184" text-anchor="middle" font-size="10" fill="#5C6F69">konsistens-rapporter/</text>
+    <text x="690" y="200" text-anchor="middle" font-size="10" fill="#5C6F69">2026-WXX.md</text>
+
+    <rect x="600" y="250" width="180" height="80" fill="#fff" stroke="#004225" stroke-width="1.5" rx="6"/>
+    <text x="690" y="276" text-anchor="middle" font-size="12" font-weight="600">Du leser rapport</text>
+    <text x="690" y="294" text-anchor="middle" font-size="10" fill="#5C6F69">i Finder / Quick Look</text>
+    <text x="690" y="310" text-anchor="middle" font-size="10" fill="#5C6F69">eller Telegram</text>
+
+    <rect x="600" y="360" width="180" height="60" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+    <text x="690" y="384" text-anchor="middle" font-size="12" font-weight="600">Du implementerer</text>
+    <text x="690" y="400" text-anchor="middle" font-size="10" fill="#5C6F69">FAQ + templates + web</text>
+
+    <!-- Piler inn -->
+    <path d="M 200 57 Q 260 57 320 200" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+    <path d="M 200 137 Q 260 137 320 215" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+    <path d="M 200 217 L 320 230" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+    <path d="M 200 297 Q 260 297 320 245" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+    <path d="M 200 377 Q 260 377 320 260" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+
+    <!-- Piler ut -->
+    <path d="M 480 210 Q 540 70 600 70" stroke="#004225" stroke-width="2.2" fill="none" marker-end="url(#arrKG)"/>
+    <path d="M 480 230 L 600 180" stroke="#004225" stroke-width="2.2" fill="none" marker-end="url(#arrKG)"/>
+    <path d="M 480 250 Q 540 290 600 290" stroke="#5C6F69" stroke-width="1.5" fill="none" marker-end="url(#arrK)"/>
+    <path d="M 690 330 L 690 360" stroke="#5C6F69" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arrK)"/>
+
+    <!-- Loop tilbake -->
+    <path d="M 690 420 Q 690 445 110 445 Q 50 445 50 425 L 50 165" stroke="#004225" stroke-width="2.2" fill="none" stroke-dasharray="6,4" marker-end="url(#arrKG)"/>
+    <text x="380" y="442" text-anchor="middle" font-size="10" fill="#004225" font-weight="600">forbedringer pavirker neste rapport</text>
+
+  </g>
+</svg>
+
+<h3>Datakilder</h3>
+<table>
+<tr><th>Kilde</th><th>Endpoint / Sti</th><th>Antall</th><th>Hentes</th></tr>
+<tr><td>Email/SMS-templates</td><td><code>GET /email_template?per_page=100&amp;filter[active]=1</code> + <code>/email_template/{id}</code></td><td>54 aktive</td><td>Daglig 02:00</td></tr>
+<tr><td>ERP FAQ</td><td><code>GET /c2b_module/faqs?locale=no</code></td><td>23 Q+A</td><td>Daglig 03:00 (eksisterende scrapeFaq)</td></tr>
+<tr><td>peasy.no</td><td><code>https://peasy.no/</code>, <code>/vilkar</code>, <code>/faq</code></td><td>3 sider</td><td>Daglig 02:00</td></tr>
+<tr><td>L&aelig;rte tr&aring;der</td><td><code>~/peasy-track/learned-faq.json</code></td><td>siste 30</td><td>Live (oppdateres av Sentitems-poll)</td></tr>
+<tr><td>Pulse-spm</td><td><code>~/peasy-track/peasy-questions.json</code></td><td>siste 30</td><td>Live (godkjente kunde-spm)</td></tr>
+</table>
+
+<h3>Trigger-tider</h3>
+<ul>
+<li><strong>Daglig kl 02:00:</strong> hent templates fra ERP (54 GET-kall, ~5 sek) + scrape web (3 URLer). Oppdaterer <code>email-templates.json</code> og <code>web-content.json</code>. Ingen rapport kj&oslash;res her.</li>
+<li><strong>S&oslash;ndag kl 22:00:</strong> Sonnet 4 leser all data, genererer rapport. Lagres i OD + sammendrag til Telegram.</li>
+<li><strong>Manuell:</strong> <code>/konsistens</code> i Telegram &mdash; overskriver ukens rapport hvis kj&oslash;rt p&aring; nytt samme uke.</li>
+</ul>
+
+<h3>Output-format</h3>
+<p>Rapporten har 4 seksjoner som markdown:</p>
+<ol>
+<li><strong>HULL</strong> &mdash; Pulse-spm eller l&aelig;rte spm som ikke besvares noen steder. For hver: spm + topic + foresl&aring;tt ny FAQ-tekst.</li>
+<li><strong>MOTSETNINGER</strong> &mdash; Tilfeller der to kilder sier ulike ting om samme tema (pris, frister, henting, fees, prosess). Med direkte sitater fra begge kilder.</li>
+<li><strong>TONE-AVVIK</strong> &mdash; Templates eller FAQ-er som bryter med Peasy sin generelle tone (hilsninger, formalitet, jeg vs vi, etc).</li>
+<li><strong>PRIORITERTE FORBEDRINGER</strong> &mdash; Topp 5 ting Mike b&oslash;r fikse, rangert etter hvor ofte temaet dukker opp i kunde-spm.</li>
+</ol>
+
+<h3>Filer og lagring</h3>
+<table>
+<tr><th>Fil</th><th>Sti</th><th>Form&aring;l</th></tr>
+<tr><td><code>email-templates.json</code></td><td><code>~/peasy-track/</code></td><td>Snapshot av alle 54 templates med body</td></tr>
+<tr><td><code>web-content.json</code></td><td><code>~/peasy-track/</code></td><td>Snapshot av peasy.no-sider (plain text)</td></tr>
+<tr><td><code>2026-WXX.md</code></td><td><code>OD/Dokumentasjon/konsistens-rapporter/</code></td><td>Ukens rapport (synker til MBP)</td></tr>
+</table>
+
+<h3>Modeller og kostnad</h3>
+<table>
+<tr><th>Modell</th><th>Bruk</th><th>Frekvens</th><th>Estimert kostnad/mnd</th></tr>
+<tr><td>Sonnet 4</td><td>Konsistens-analyse (4000 tokens output)</td><td>~5 ganger/mnd (4 ukentlig + manuelle)</td><td>$2-4</td></tr>
+<tr><td>(Ingen Haiku)</td><td>Templates og web er rene API-kall, ingen AI</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h3>Kommandoer</h3>
+<table>
+<tr><th>Kommando</th><th>Effekt</th></tr>
+<tr><td><code>/konsistens</code></td><td>Trigger rapport manuelt. Tar 30-60 sek. Sender sammendrag til Telegram, lagrer full rapport i OD.</td></tr>
+</table>
+
+<h3>Feils&oslash;king</h3>
+<ul>
+<li><strong>Rapport kommer ikke:</strong> sjekk <code>tail -50 ~/peasy-track/nohup.out | grep konsistens</code></li>
+<li><strong>Templates tom:</strong> sjekk ERP-token er gyldig (<code>EasyPeasy26!</code>), test <code>curl</code> mot <code>/email_template</code></li>
+<li><strong>Web tom:</strong> peasy.no kan ha endret URL-struktur &mdash; oppdater <code>WEB_URLS</code> i <code>peasy-track.js</code></li>
+<li><strong>Sonnet timeout:</strong> reduser input-st&oslash;rrelse (slice grenser i <code>runKonsistensRapport</code>) eller &oslash;k <code>maxTokens</code></li>
+</ul>
+
+<div class="callout callout-tip">
+<strong>360-loopen lukker seg manuelt</strong><br>
+N&aring;r du leser rapporten og legger inn ny FAQ i ERP, oppdaterer template, eller skriver om en del av peasy.no &mdash; vil neste rapport (kommende s&oslash;ndag eller p&aring; <code>/konsistens</code>) automatisk gjenspeile endringene. Slik konvergerer Peasy mot fullstendig konsistens over tid.
+</div>
+
+
+
+<!-- ============================================================
+     VERSJONSHISTORIKK (22. april 2026)
+============================================================ -->
+<h2 id="versjonshistorikk">Versjonshistorikk</h2>
+
+<div class="card">
+<h3>peasy-auto.js</h3>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v18.03.dr</code></td><td>22.04.2026</td><td>🖼️ Bildeikon i eval-kort (henter <code>detail.car.files.length</code> fra ERP). Vises på bilinfo-linja som <code>🖼️ N</code>.</td></tr>
+<tr><td><code>v18.03.dq3</code></td><td>21.04.2026</td><td>Forrige stabile</td></tr>
+</table>
+
+<h3>peasy-track.js</h3>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v3.7</code></td><td>23.04.2026</td><td>Fix: Haiku bruker nå erp_id (ikke visningsnummer). Sonnet genererer ferdig HTML-FAQ-tekst basert på observasjon + eksisterende FAQ. Telegram-kort viser forslag før publisering. Cache-invalidering etter PUT.</td></tr>
+<tr><td><code>v3.6</code></td><td>22.04.2026</td><td>🛡️ Konsistens-sjekk. ALLE mails (inn, ut, intern) sjekkes mot FAQ + vilkår via Haiku. Telegram-varsel ved konflikt/suggestion. Live FAQ-oppdatering via erp-faqs.js ved Mikes godkjenning.</td></tr>
+<tr><td><code>v3.5</code></td><td>21.04.2026</td><td>Forrige stabile — pre-konsistens</td></tr>
+</table>
+
+<h3>peasy-pulse.html</h3>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v16.03.c29</code></td><td>22.04.2026</td><td>Kjøpere-fane med buyer-flow kart, distanseanalyse, fallback-koordinater, "vis alle igjen"-link</td></tr>
+<tr><td><code>v16.03.c25</code></td><td>20.04.2026</td><td>Forrige stabile</td></tr>
+</table>
+
+<h3>erp-faqs.js</h3>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td>Initial</td><td>22.04.2026</td><td>Ny modul i <code>~/peasy-track/</code>. CLI-kommandoer (list/get/update/restore) + programmatisk API (<code>publishFaqUpdate</code>). Automatisk backup. Default dry-run.</td></tr>
+</table>
+
+<h3>FAQ-innhold (ERP)</h3>
+<table>
+<tr><th>Dato</th><th>Endring</th></tr>
+<tr><td>23.04.2026 (morgen)</td><td>Rollback av FAQ erp_id=11 (Utestående lån). Ble feilaktig overskrevet av konsistens-bug kvelden før (v3.6 forvekslet visningsnummer med erp_id).</td></tr>
+<tr><td>22.04.2026 (kveld)</td><td>Alle 23 FAQ-titler nummerert 1-23 via <code>erp-faqs.js update</code></td></tr>
+<tr><td>22.04.2026</td><td>#9, #10, #18, #22, #23 oppdatert med detaljer for 5 anlegg (Skedsmokorset, Bergen, Ski, Trondheim, Stavanger) inkl. åpningstider og utenfor-åpningstid-rutiner</td></tr>
+</table>
+
+<h3>Sysdok</h3>
+<table>
+<tr><th>Versjon</th><th>Dato</th><th>Endring</th></tr>
+<tr><td><code>v11.19</code></td><td>06.05.2026</td><td><strong>Ny seksjon Markedsføring:</strong> dokumenterer datakilder (ERP XLSX, Meta Ads Manager, GA4, Pulse), standard kampanjeanalyse-mal med 8 seksjoner, kanon-kampanjer per mai 2026, læring fra spend-eksperimentet 15-29. mars (marginal CPL ~217 kr, +50% leads ved doblet spend). AI-instruks utvidet: Claude bygger Meta-kampanjer fremover (kreativ-tekst, audience-spec, budsjett, A/B-test-design, oppfølgings-rapport). Første kampanjeanalyse-rapport lagret i OD: peasy-kampanjeanalyse-2025-11-01_2026-05-05.html.</td></tr>
+<tr><td><code>v11.17</code></td><td>30.04.2026</td><td><strong>FAQ best-practice korreksjoner:</strong> Fix ckeditorInstance-API (på .ck-content, ikke .ck-editor). Off-by-one mellom input-array (søkefelt på idx 0) og ck-content-array. Ny FAQ via "Legge til" gir tom-input som filtreres ut \u2014 bruk ufiltrert. CKEditor 5 stripper inline-style på ul. Inkluderer alt fra v11.16: Komplett kjørbar JS-oppskrift for FAQ-oppdatering via Vue 3 + Quasar + CKEditor 5. Mål &lt; 60 sek per FAQ-endring (var ~30 min uten oppskrift). Helpers: setVal, setBody, setTitle, clickAddBtnUnder, clickSave. Ny seksjon i ERP-faqs-modul. Inkluderer alt fra v11.15: 9 nøkkelkort topprad (NETTO PER SOLGT som kort 9), peasy-config.json, Innstillinger-tab, GitHub PAT-flow, window._netto30 cross-scope. Eval-bot v18.04.a deployet (car.description + dedupe BILBESKRIVELSE). Track-bot v3.9 array→object fix. Deploy-workflow: pkill -f peasy-auto. Pulse c87→c107.</td></tr>
+<tr><td><code>v11.9</code></td><td>27.04.2026</td><td>Mini-recovery dag 4: Tailscale Funnel HTTPS-oppsett, mixed-content-fix i Pulse (c30→c34), pmset-persistence på Mini, Auto-login-krav for LaunchAgents. peasy-track v3.9 HTTP-server (port 8420). Pulse c34: 30d KPI-bokser i alle 3 grafer i Eval-fanen, daglig leads-graf, change_owner status-mapping. peasy-auto: fix sdComment via detail.car.self_declaration.comment (var detail.description). FAQ-oppdatering: dokumentert riktig metode via UI/CKEditor 5, ikke API.</td></tr>
+<tr><td><code>v11.8</code></td><td>23.04.2026</td><td>SSH passordfri oppsett (MBP ~/.ssh/config). Konsistens v3.7: Sonnet-generert FAQ-tekst, ERP-id fix, cache-invalidering. Lærte feil-tabell 23. april. Rollback-prosedyrer.</td></tr>
+<tr><td><code>v11.7</code></td><td>22.04.2026 kveld</td><td>Innholdsfortegnelse øverst. Nye seksjoner: Konsistens-sjekk (med diagram), erp-faqs.js modul, ERP API-endepunkter. Versjonshistorikk-seksjon.</td></tr>
+<tr><td><code>v11.6</code></td><td>22.04.2026</td><td>"Lærte feil bot-deploy" tabell. Optimal bot-endrings-flyt. Unntak-boks for peasy-auto.js-patching.</td></tr>
+<tr><td><code>v11.5</code></td><td>21.04.2026</td><td>Forrige — pre-konsistens</td></tr>
+</table>
+</div>
+
+
+</body>
+</html>
