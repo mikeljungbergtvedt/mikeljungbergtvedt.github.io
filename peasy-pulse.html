@@ -1096,17 +1096,19 @@ window.getEvalAksept=function(daysBack){
   function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
   function pdL(v){if(!v||v==='-')return null;var s=String(v).replace(/[\s\u00a0]/g,'');var n=parseInt(s.split('-')[0]);return isNaN(n)?null:n;}
   var start=new Date();start.setDate(start.getDate()-daysBack);
-  var kohort=rows.slice(1).filter(function(r){var d=pd(r[14]);return d&&d>=start&&pdL(r[3]);});
-  var aksept=kohort.filter(function(r){return pd(r[15])||pd(r[16]);});
+  // KP-02: Eval-aksept = (P/Q-dato i N dager) / (AF-dato i N dager). Separate kohorter.
+  var kohort=rows.slice(1).filter(function(r){var d=pd(r[31]);return d&&d>=start;});
+  var aksept=rows.slice(1).filter(function(r){var dp=pd(r[15]);var dq=pd(r[16]);return (dp&&dp>=start)||(dq&&dq>=start);});
   return{kohort:kohort.length,aksept:aksept.length,pct:kohort.length>0?Math.round(aksept.length/kohort.length*100):0};
 };
 window.getBudAksept=function(daysBack){
   var rows=window._lastRows;if(!rows)return{avsluttet:0,solgt:0,retur:0,pct:0};
   function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
   var start=new Date();start.setDate(start.getDate()-daysBack);
-  var avsluttet=rows.slice(1).filter(function(r){var dm=pd(r[17]);if(!dm||dm<start)return false;return pd(r[18])||pd(r[21]);});
-  var solgt=avsluttet.filter(function(r){return pd(r[18]);});
-  var retur=avsluttet.filter(function(r){return pd(r[21]);});
+  // KP-02: Bud-aksept-kohort = biler med dato i kolonne S (solgt) eller V (returnert) i N dager.
+  var solgt=rows.slice(1).filter(function(r){var d=pd(r[18]);return d&&d>=start;});
+  var retur=rows.slice(1).filter(function(r){var d=pd(r[21]);return d&&d>=start;});
+  var avsluttet={length:solgt.length+retur.length};
   return{avsluttet:avsluttet.length,solgt:solgt.length,retur:retur.length,pct:avsluttet.length>0?Math.round(solgt.length/avsluttet.length*100):0};
 };
 function processData(rows){
