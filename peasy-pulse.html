@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c13</title>
+<title>Peasy Pulse v16.04.c14</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c13 &middot; 9. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c14 &middot; 9. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -1095,19 +1095,19 @@ window.getEvalAksept=function(daysBack){
   var rows=window._lastRows;if(!rows)return{kohort:0,aksept:0,pct:0};
   function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
   function pdL(v){if(!v||v==='-')return null;var s=String(v).replace(/[\s\u00a0]/g,'');var n=parseInt(s.split('-')[0]);return isNaN(n)?null:n;}
-  var start=new Date();start.setDate(start.getDate()-daysBack);
+  var end=new Date();end.setDate(end.getDate()-1);end.setHours(23,59,59,999);var start=new Date(end);start.setDate(start.getDate()-(daysBack-1));start.setHours(0,0,0,0);
   // KP-02: Eval-aksept = (P/Q-dato i N dager) / (AF-dato i N dager). Separate kohorter.
-  var kohort=rows.slice(1).filter(function(r){var d=pd(r[31]);return d&&d>=start;});
-  var aksept=rows.slice(1).filter(function(r){var dp=pd(r[15]);var dq=pd(r[16]);return (dp&&dp>=start)||(dq&&dq>=start);});
+  var kohort=rows.slice(1).filter(function(r){var d=pd(r[31]);return d&&d>=start&&d<=end;});
+  var aksept=rows.slice(1).filter(function(r){var dp=pd(r[15]);var dq=pd(r[16]);return (dp&&dp>=start&&dp<=end)||(dq&&dq>=start&&dq<=end);});
   return{kohort:kohort.length,aksept:aksept.length,pct:kohort.length>0?Math.round(aksept.length/kohort.length*100):0};
 };
 window.getBudAksept=function(daysBack){
   var rows=window._lastRows;if(!rows)return{avsluttet:0,solgt:0,retur:0,pct:0};
   function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
-  var start=new Date();start.setDate(start.getDate()-daysBack);
+  var end=new Date();end.setDate(end.getDate()-1);end.setHours(23,59,59,999);var start=new Date(end);start.setDate(start.getDate()-(daysBack-1));start.setHours(0,0,0,0);
   // KP-02: Bud-aksept-kohort = biler med dato i kolonne S (solgt) eller V (returnert) i N dager.
-  var solgt=rows.slice(1).filter(function(r){var d=pd(r[18]);return d&&d>=start;});
-  var retur=rows.slice(1).filter(function(r){var d=pd(r[21]);return d&&d>=start;});
+  var solgt=rows.slice(1).filter(function(r){var d=pd(r[18]);return d&&d>=start&&d<=end;});
+  var retur=rows.slice(1).filter(function(r){var d=pd(r[21]);return d&&d>=start&&d<=end;});
   var avsluttet={length:solgt.length+retur.length};
   return{avsluttet:avsluttet.length,solgt:solgt.length,retur:retur.length,pct:avsluttet.length>0?Math.round(solgt.length/avsluttet.length*100):0};
 };
@@ -1219,7 +1219,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c13 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c14 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -2894,6 +2894,6 @@ window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstR
 function markRender(){try{if(window.MARK_V16_04 && window.MARK_V16_04.render){setTimeout(function(){window.MARK_V16_04.render();},50);}}catch(e){console.error("markRender redirect:",e);}}
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c13</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c14</div>
 </body>
 </html>
