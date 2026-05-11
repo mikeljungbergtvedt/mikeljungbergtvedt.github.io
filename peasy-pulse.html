@@ -1453,24 +1453,24 @@ function render(data,rows){
   var pD=(tE/dSC).toFixed(1);
   // Leads mottatt siste 30 dager (samme rad-logikk som funnel)
   var d30Lead=new Date();d30Lead.setDate(d30Lead.getDate()-30);d30Lead.setHours(0,0,0,0);
-  var leads30d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d30Lead;}).length;
+  var leads30d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!r[14])return false;var d=parseDate(r[14]);return d&&d>=d30Lead;}).length;
   var leads30avg=(leads30d/30).toFixed(1);
-  var d30ms=Date.now()-30*86400000;
+  var _d30ms_ref=new Date();_d30ms_ref.setDate(_d30ms_ref.getDate()-30);_d30ms_ref.setHours(0,0,0,0);var d30ms=_d30ms_ref.getTime();
   var sold30arr=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d.getTime()>=d30ms;});
   var eVals30=sold30arr.map(function(c){return c.e;}).filter(function(e){return e&&e>500;});
   var aE30=eVals30.length?Math.round(eVals30.reduce(function(a,b){return a+b;},0)/eVals30.length):0;
   var uVals30=sold30arr.map(function(c){return c.u;}).filter(function(u){return u&&u>500;});
-  var aU30=uVals30.length?Math.round(uVals30.reduce(function(a,b){return a+b;},0)/uVals30.length):0;
+  var aU30=uVals30.length?Math.round(uVals30.reduce(function(a,b){return a+b;},0)/uVals30.length):0;var sumU30=uVals30.reduce(function(a,b){return a+b;},0);
   var totalSpend=dSC*1000;
   var cplBrutto=tE>0?Math.round(totalSpend/tE):0;
   var cplKontrakt=tS>0?Math.round(totalSpend/tS):0;
   // 30d ROI-beregning fra config (ny universell formel)
-  var d30From=new Date();d30From.setDate(d30From.getDate()-30);d30From.setHours(0,0,0,0);
-  var d30To=new Date();
+  var d30To=new Date();d30To.setDate(d30To.getDate()-1);d30To.setHours(23,59,59,999);
+  var d30From=new Date(d30To);d30From.setDate(d30From.getDate()-29);d30From.setHours(0,0,0,0);
   var spend30=window.beregneSpend?window.beregneSpend(d30From,d30To):30000;
   var sold30c=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);return d&&d>=d30From;}).length;
   var mott30c=(rows||[]).slice(1).filter(function(r){if(!r[17])return false;var d=parseDate(r[17]);return d&&d>=d30From;}).length;
-  var retur30c=Math.max(0,mott30c-sold30c);
+  var retur30c=(rows||[]).slice(1).filter(function(r){if(!r[21])return false;var d=parseDate(r[21]);return d&&d>=d30From&&d<=d30To;}).length;
   var returKost=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
   var prodKostUnder=(window.peasyConfig&&window.peasyConfig.prodKostUnder35k)||2250;
   var prodKostOver=(window.peasyConfig&&window.peasyConfig.prodKostOver35k)||2750;
@@ -1479,7 +1479,7 @@ function render(data,rows){
   var sold30Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var pl=parseDLow(r[3]);return pl&&pl>35000;}).length;
   var sumProdKost30=sold30Under*prodKostUnder+sold30Over*prodKostOver+retur30c*returKost;
   var snittProdKost30=sold30c>0?Math.round(sumProdKost30/sold30c):0;
-  var nettoSum30=aU30*sold30c-sumProdKost30;
+  var nettoSum30=sumU30-sumProdKost30;
   var cplKontrakt30=sold30c>0?Math.round(spend30/sold30c):0;
   var roi30=cplKontrakt30>0?(nettoSum30/sold30c/cplKontrakt30):0;
   // Netto inntekt per solgt bil = snitt fee - snitt prod kost - lead-kost
