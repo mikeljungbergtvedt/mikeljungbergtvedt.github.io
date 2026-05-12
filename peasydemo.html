@@ -1210,5 +1210,45 @@ if(cnt){
   }catch(e){}
 })();
 </script>
+<script data-name="utm-forwarder-installed">
+(function(){
+  // Hvilke params skal videresendes til submit-URL
+  var FORWARD = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid','msclkid','ttclid','ref','referrer','source','campaign'];
+  function getParams(){
+    var p = new URLSearchParams(window.location.search);
+    var out = {};
+    FORWARD.forEach(function(k){
+      var v = p.get(k);
+      if(v) out[k] = v;
+    });
+    // Lagre i sessionStorage så de overlever videre navigering pa siden
+    try{
+      var stored = JSON.parse(sessionStorage.getItem('peasy_utm') || '{}');
+      Object.keys(stored).forEach(function(k){if(!out[k]) out[k] = stored[k]});
+      if(Object.keys(out).length) sessionStorage.setItem('peasy_utm', JSON.stringify(out));
+    }catch(e){}
+    return out;
+  }
+  function inject(form, params){
+    Object.keys(params).forEach(function(k){
+      if(form.querySelector('input[name="'+k+'"]')) return; // skip hvis allerede finnes
+      var inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = k;
+      inp.value = params[k];
+      form.appendChild(inp);
+    });
+  }
+  var params = getParams();
+  if(!Object.keys(params).length) return;
+  var forms = document.querySelectorAll('#hero-form, #peasy-form, #callme-form');
+  forms.forEach(function(f){inject(f, params)});
+  // Re-inject hvis form-en muteres (vi har reg-locked-klassen som endres dynamisk)
+  var mo = new MutationObserver(function(){
+    forms.forEach(function(f){inject(f, params)});
+  });
+  forms.forEach(function(f){mo.observe(f, {childList:true})});
+})();
+</script>
 </body>
 </html>
