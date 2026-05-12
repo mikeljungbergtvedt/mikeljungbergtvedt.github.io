@@ -1169,5 +1169,46 @@ if(cnt){
 })();
 </script>
 <script>var btt=document.getElementById('back-to-top');if(btt){btt.addEventListener('click',function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});history.replaceState(null,'',location.pathname);});window.addEventListener('scroll',function(){if(window.scrollY>600)btt.classList.add('visible');else btt.classList.remove('visible');});}document.querySelectorAll('a[href="#start"]').forEach(function(a){a.addEventListener('click',function(e){var el=document.getElementById('start');if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){history.replaceState(null,'',location.pathname);},800);}});});</script>
+<script data-name="reg-locked-guard-installed">
+(function(){
+  function hasConsent(){
+    try{
+      if(typeof window.klaro==='undefined') return false;
+      var m=window.klaro.getManager();
+      return !!(m && m.confirmed===true);
+    }catch(e){return false}
+  }
+  // Gate alle formene som sender data eksternt (hero-form, peasy-form, callme-form)
+  var forms = document.querySelectorAll('#hero-form, #peasy-form, #callme-form');
+  if(!forms.length) return;
+  var msgs = [];
+  forms.forEach(function(form){
+    form.classList.add('reg-locked');
+    var msg = document.createElement('div');
+    msg.className='reg-locked-msg show';
+    msg.textContent='Godta informasjonskapsler nederst for \u00e5 fortsette.';
+    form.parentNode.insertBefore(msg, form.nextSibling);
+    msgs.push(msg);
+  });
+  function unlock(){
+    forms.forEach(function(f){f.classList.remove('reg-locked')});
+    msgs.forEach(function(m){m.classList.remove('show')});
+  }
+  function check(){if(hasConsent()) unlock()}
+  check();
+  var tries=0;
+  var iv=setInterval(function(){
+    tries++;
+    check();
+    if(hasConsent() || tries>40){clearInterval(iv)}
+  }, 250);
+  try{
+    if(window.klaro && window.klaro.getManager){
+      var m=window.klaro.getManager();
+      if(m && m.watch){m.watch({update:function(){check()}})}
+    }
+  }catch(e){}
+})();
+</script>
 </body>
 </html>
