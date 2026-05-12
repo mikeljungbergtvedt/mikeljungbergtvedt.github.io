@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="cookie-domain" content=".peasy.norskbilauksjon.info">
 <script src="/dist/klaro-bundle.js"></script>
-<title>🚧 DEV v3.99 — Selg bilen raskt og trygt med Peasy</title>
+<title>🚧 DEV v3.99.1 — Selg bilen raskt og trygt med Peasy</title>
 <meta name="description" content="Få en rask vurdering og enkelt salg av bilen din med Peasy. Opplev en trygg prosess i dag!">
 <link rel="canonical" href="https://peasy.no/">
 
@@ -330,9 +330,9 @@ footer{background:#fff;padding:64px 24px 32px;border-top:1px solid rgba(0,66,37,
 .partners-copy h2 em::after{content:"";position:absolute;left:-2px;right:-2px;bottom:4px;height:10px;background:var(--yellow);z-index:-1;border-radius:2px;opacity:.7}
 .partners-lead{font-size:17px;line-height:1.6;color:var(--ink)}
 .partners-grid-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.partner-card{background:#fff;border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:180px;border:1px solid rgba(0,66,37,.08);transition:transform .15s,box-shadow .15s}
+.partner-card{background:#fff;border-radius:16px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:180px;border:1px solid rgba(0,66,37,.08);transition:transform .15s,box-shadow .15s}
 .partner-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,66,37,.08)}
-.partner-card img{max-height:72px;max-width:160px;width:auto;height:auto;object-fit:contain;margin-bottom:8px}
+.partner-card img{max-height:120px;max-width:200px;width:auto;height:auto;object-fit:contain;margin-bottom:8px}
 .partner-card .partner-name{font-size:14px;font-weight:700;color:var(--green)}
 .partner-card .partner-role{font-size:12px;color:var(--gray);text-align:center;letter-spacing:.01em}
 
@@ -633,7 +633,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- HERO -->
 <section class="hero">
 <div class="hero-eyebrow">2 000+ forhandlere klare nå</div>
-<h1 class="hero-title">Send <span class="hero-title-reg">registreringsnummer</span><br><em>Vi gjør resten.</em></h1>
+<h1 class="hero-title">Send<br><span class="hero-title-reg">registreringsnummer</span><br><em>Vi gjør resten.</em></h1>
 <p class="hero-sub">Send oss registreringsnummer. Vi henter, vasker, fotograferer og finner høyeste bud. Du bestemmer om du selger.</p>
 <form id="hero-form" class="hero-form estimate-form" action="https://account.peasy.norskbilauksjon.info/guest/car_add" method="GET">
 <input type="hidden" name="step" value="1">
@@ -1171,14 +1171,20 @@ if(cnt){
 <script>var btt=document.getElementById('back-to-top');if(btt){btt.addEventListener('click',function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});history.replaceState(null,'',location.pathname);});window.addEventListener('scroll',function(){if(window.scrollY>600)btt.classList.add('visible');else btt.classList.remove('visible');});}document.querySelectorAll('a[href="#start"]').forEach(function(a){a.addEventListener('click',function(e){var el=document.getElementById('start');if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){history.replaceState(null,'',location.pathname);},800);}});});</script>
 <script data-name="reg-locked-guard-installed">
 (function(){
+  // Sjekk Klaro-consent via to mekanismer (mer robust):
+  // 1. Cookie 'peasy' satt av Klaro nar brukeren har bekreftet
+  // 2. window.klaro.getManager().confirmed === true
   function hasConsent(){
+    try{
+      // Cookie-sjekk
+      if(document.cookie.split(';').some(function(c){return c.trim().indexOf('peasy=')===0})) return true;
+    }catch(e){}
     try{
       if(typeof window.klaro==='undefined') return false;
       var m=window.klaro.getManager();
       return !!(m && m.confirmed===true);
     }catch(e){return false}
   }
-  // Gate alle formene som sender data eksternt (hero-form, peasy-form, callme-form)
   var forms = document.querySelectorAll('#hero-form, #peasy-form, #callme-form');
   if(!forms.length) return;
   var msgs = [];
@@ -1190,24 +1196,34 @@ if(cnt){
     form.parentNode.insertBefore(msg, form.nextSibling);
     msgs.push(msg);
   });
+  var unlocked = false;
   function unlock(){
+    if(unlocked) return;
+    unlocked = true;
     forms.forEach(function(f){f.classList.remove('reg-locked')});
     msgs.forEach(function(m){m.classList.remove('show')});
   }
   function check(){if(hasConsent()) unlock()}
   check();
-  var tries=0;
+  // PERSISTENT polling - 4x/sek, aldri stoppe (kun et minutt lett belastning)
   var iv=setInterval(function(){
-    tries++;
     check();
-    if(hasConsent() || tries>40){clearInterval(iv)}
+    if(unlocked){clearInterval(iv)}
   }, 250);
-  try{
-    if(window.klaro && window.klaro.getManager){
-      var m=window.klaro.getManager();
-      if(m && m.watch){m.watch({update:function(){check()}})}
-    }
-  }catch(e){}
+  // Lytt ogsa pa Klaro events nar bundle er klar
+  function attachWatch(){
+    try{
+      if(window.klaro && window.klaro.getManager){
+        var m=window.klaro.getManager();
+        if(m && m.watch){m.watch({update:function(){check()}})}
+      }
+    }catch(e){}
+  }
+  attachWatch();
+  setTimeout(attachWatch, 500);
+  setTimeout(attachWatch, 2000);
+  // Globalt event-fallback: lytt pa storage og click (i case Klaro sender custom event vi missa)
+  window.addEventListener('click', function(){setTimeout(check, 50)}, {capture:true, passive:true});
 })();
 </script>
 <script data-name="utm-forwarder-installed">
