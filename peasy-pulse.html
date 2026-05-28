@@ -180,6 +180,7 @@ function authLogout(){
       <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Sp&#248;rsm&#229;l</button>
         <button class="mode-btn" id="btn-innst" onclick="setMode('innst')">Innstillinger</button>
         <button class="mode-btn" id="btn-mark" onclick="setMode('mark')">Markedsføring</button>
+        <button class="mode-btn" id="btn-v2bm" onclick="setMode('v2bm')">V2 Benchmark</button>
     </div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
@@ -963,6 +964,35 @@ window.MARK_V16_04 = (function(){
 </details>
 </div>
 </section>
+<section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
+  <div class="section-label">V2 SHADOW BENCHMARK</div>
+  <div class="dials-grid" style="grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:30px;">
+    <div class="dial-card"><div class="dial-label">Biler maalt</div><div class="dial-value" id="v2bm-count">-</div><div class="dial-sub">totalt</div></div>
+    <div class="dial-card"><div class="dial-label">Snitt diff anker</div><div class="dial-value" id="v2bm-avg-diff">-</div><div class="dial-sub" id="v2bm-avg-diff-pct">-</div></div>
+    <div class="dial-card"><div class="dial-label">v2 hoyere</div><div class="dial-value" id="v2bm-higher">-</div><div class="dial-sub" id="v2bm-higher-pct">-</div></div>
+    <div class="dial-card"><div class="dial-label">v2 lavere</div><div class="dial-value" id="v2bm-lower">-</div><div class="dial-sub" id="v2bm-lower-pct">-</div></div>
+    <div class="dial-card"><div class="dial-label">Snitt confidence</div><div class="dial-value" id="v2bm-conf">-</div><div class="dial-sub">av 100</div></div>
+  </div>
+  <div class="section-label">PER BRACKET</div>
+  <div id="v2bm-brackets" class="brackets-grid"></div>
+  <div class="section-label" style="margin-top:30px;">SISTE 50 BILER</div>
+  <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:0 4px 24px var(--shadow);">
+    <div style="overflow-x:auto;">
+      <table id="v2bm-table" style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead><tr style="background:var(--green); color:#fff; text-align:left;">
+          <th style="padding:10px 12px;">Regnr</th><th style="padding:10px 12px;">Variant</th>
+          <th style="padding:10px 12px; text-align:right;">Km</th><th style="padding:10px 12px; text-align:right;">Easy anker</th>
+          <th style="padding:10px 12px; text-align:right;">v2 anker</th><th style="padding:10px 12px; text-align:right;">Diff kr</th>
+          <th style="padding:10px 12px; text-align:right;">Diff %</th><th style="padding:10px 12px; text-align:right;">Easy dLav</th>
+          <th style="padding:10px 12px; text-align:right;">v2 dLav</th><th style="padding:10px 12px; text-align:center;">Conf</th>
+          <th style="padding:10px 12px;">Tid</th>
+        </tr></thead>
+        <tbody id="v2bm-tbody"><tr><td colspan="11" style="padding:30px; text-align:center; color:var(--muted);">Laster...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="margin-top:12px; font-size:11px; color:var(--muted); text-align:right;">Sist oppdatert: <span id="v2bm-updated">-</span> &middot; <a href="#" onclick="loadV2Benchmark(); return false;" style="color:var(--green); text-decoration:none;">Last paa nytt</a></div>
+</section>
 </main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -989,10 +1019,12 @@ function setMode(m){
   if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
   if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
   if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
+  if(document.getElementById('btn-v2bm'))document.getElementById('btn-v2bm').classList.toggle('active',m==='v2bm');
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
   if(m==='sporsmal'){loadQuestions();}
+  if(m==='v2bm'){loadV2Benchmark();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
@@ -2894,6 +2926,61 @@ function innstSaveToGitHub(){
 var _origSetMode=window.setMode;
 window.setMode=function(m){if(_origSetMode)_origSetMode(m);if(m==='innst')innstRender();if(m==='mark')markRender();};
 function markRender(){try{if(window.MARK_V16_04 && window.MARK_V16_04.render){setTimeout(function(){window.MARK_V16_04.render();},50);}}catch(e){console.error("markRender redirect:",e);}}
+
+
+function fmtKrV2(n){if(!Number.isFinite(Number(n)))return '-';return Math.round(Number(n)).toLocaleString('nb-NO');}
+function fmtPctV2(n){if(!Number.isFinite(Number(n)))return '-';return (n>=0?'+':'')+n.toFixed(1)+'%';}
+async function loadV2Benchmark(){
+  var url='https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t='+Date.now();
+  try{
+    var res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var text=await res.text();
+    var records=text.split('\n').filter(Boolean).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
+    renderV2Benchmark(records);
+  }catch(e){
+    document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: '+e.message+'</td></tr>';
+  }
+}
+function renderV2Benchmark(records){
+  var withDiff=records.filter(function(r){return r.diff&&Number.isFinite(r.diff.anker_kr);});
+  document.getElementById('v2bm-count').textContent=records.length;
+  if(!withDiff.length){
+    document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">Ingen records med v1/v2-diff enda.</td></tr>';
+    return;
+  }
+  var avgKr=withDiff.reduce(function(s,r){return s+r.diff.anker_kr;},0)/withDiff.length;
+  var avgPct=withDiff.reduce(function(s,r){return s+r.diff.anker_pct;},0)/withDiff.length;
+  var higher=withDiff.filter(function(r){return r.diff.anker_kr>0;}).length;
+  var lower=withDiff.filter(function(r){return r.diff.anker_kr<0;}).length;
+  var avgConf=withDiff.reduce(function(s,r){return s+((r.v2&&r.v2.confidence)||0);},0)/withDiff.length;
+  document.getElementById('v2bm-avg-diff').textContent=(avgKr>=0?'+':'')+fmtKrV2(avgKr);
+  document.getElementById('v2bm-avg-diff-pct').textContent=fmtPctV2(avgPct);
+  document.getElementById('v2bm-higher').textContent=higher;
+  document.getElementById('v2bm-higher-pct').textContent=Math.round(higher/withDiff.length*100)+'%';
+  document.getElementById('v2bm-lower').textContent=lower;
+  document.getElementById('v2bm-lower-pct').textContent=Math.round(lower/withDiff.length*100)+'%';
+  document.getElementById('v2bm-conf').textContent=Math.round(avgConf);
+  var brackets={};
+  withDiff.forEach(function(r){
+    var b=(r.v2&&r.v2.bracket)||(r.easy&&r.easy.bracket)||'?';
+    if(!brackets[b])brackets[b]={n:0,sumKr:0,sumPct:0};
+    brackets[b].n++;brackets[b].sumKr+=r.diff.anker_kr;brackets[b].sumPct+=r.diff.anker_pct;
+  });
+  var colors={'Lav':'#4CAF50','Mid':'#2196F3','Hoy':'#FF9800','Premium-Lav':'#9C27B0','Premium-Hoy':'#E91E63'};
+  document.getElementById('v2bm-brackets').innerHTML=Object.keys(brackets).sort().map(function(b){
+    var x=brackets[b],aKr=x.sumKr/x.n,aPct=x.sumPct/x.n,c=colors[b]||'#666';
+    return '<div class="bracket-card" style="--bc:'+c+';"><div class="bc-label">'+b+'<span class="bc-range">'+x.n+' biler</span></div><div class="bc-row"><span>Snitt diff</span><b>'+(aKr>=0?'+':'')+fmtKrV2(aKr)+' kr</b></div><div class="bc-row" style="border-bottom:none;"><span>I prosent</span><b>'+fmtPctV2(aPct)+'</b></div></div>';
+  }).join('');
+  var sorted=records.slice().sort(function(a,b){return (b.timestamp||'').localeCompare(a.timestamp||'');}).slice(0,50);
+  document.getElementById('v2bm-tbody').innerHTML=sorted.map(function(r){
+    var d=r.diff;var dc=d?(d.anker_kr>0?'color:#2E7D32;':d.anker_kr<0?'color:#C62828;':''):'';
+    var variant=((r.identifikasjon&&r.identifikasjon.variant)||'?').slice(0,35);
+    var tid=(r.timestamp||'').slice(5,16).replace('T',' ');
+    return '<tr style="border-top:1px solid var(--border);"><td style="padding:8px 12px;font-weight:600;">'+(r.regnr||'')+'</td><td style="padding:8px 12px;">'+variant+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.km)+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.easy&&r.easy.anker)+'</td><td style="padding:8px 12px;text-align:right;font-weight:600;">'+fmtKrV2(r.v2&&r.v2.anker)+'</td><td style="padding:8px 12px;text-align:right;'+dc+'">'+(d?(d.anker_kr>=0?'+':'')+fmtKrV2(d.anker_kr):'-')+'</td><td style="padding:8px 12px;text-align:right;'+dc+'">'+(d?fmtPctV2(d.anker_pct):'-')+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.easy&&r.easy.dLav)+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.v2&&r.v2.dLav)+'</td><td style="padding:8px 12px;text-align:center;">'+((r.v2&&r.v2.confidence)||'-')+'</td><td style="padding:8px 12px;color:var(--muted);font-size:11px;">'+tid+'</td></tr>';
+  }).join('');
+  document.getElementById('v2bm-updated').textContent=new Date().toLocaleString('nb-NO');
+}
 
 </script>
 <div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c16</div>
