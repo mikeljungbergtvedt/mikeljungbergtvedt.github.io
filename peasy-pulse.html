@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c16</title>
+<title>Peasy Pulse v16.04.c17</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c16 &middot; 9. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c17 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -412,20 +412,26 @@ window.MARK_V16_04 = (function(){
   // ----- Aggregering per kilde og periode -----
   function aggSource(rows, kilde, fromDate, toDate, zoneFilter){
     // zoneFilter: 'in', 'out', 'all'
+    // FIX c17: leads telles paa SD mottatt-dato, solgt+fee telles paa Solgt paa-dato
+    // (uavhengig) — sa salg utenfor lead-vinduet ikke faller bort pga modningstid.
     var leads=0, solgt=0, fee=0, prodKost=0, returnert=0;
     for(var i=0;i<rows.length;i++){
       var r = rows[i];
       if(rKilde(r) !== kilde) continue;
-      var sd = parseSD(rSD(r));
-      if(!sd) continue;
-      if(sd < fromDate || sd > toDate) continue;
+      // Sone-filter gjelder hele raden (uavhengig av dato-bucket)
       if(kilde==='driveno' && zoneFilter && zoneFilter!=='all'){
         var inZ = inZone(rPostnr(r));
         if(zoneFilter==='in' && !inZ) continue;
         if(zoneFilter==='out' && inZ) continue;
       }
-      leads++;
-      if(parseSold(rSolgt(r))){
+      // Leads: telles naar SD mottatt-dato er i perioden
+      var sdMottatt = parseSD(rSD(r));
+      if(sdMottatt && sdMottatt >= fromDate && sdMottatt <= toDate){
+        leads++;
+      }
+      // Solgt + fee: telles naar Solgt paa-dato er i perioden (uavhengig av lead-dato)
+      var sDato = parseSold(rSolgt(r));
+      if(sDato && sDato >= fromDate && sDato <= toDate){
         solgt++;
         if(rArVerdi(r)) fee += rArVerdi(r);
       }
@@ -1253,7 +1259,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c16 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c17 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -2984,6 +2990,6 @@ function renderV2Benchmark(records){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c16</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c17</div>
 </body>
 </html>
