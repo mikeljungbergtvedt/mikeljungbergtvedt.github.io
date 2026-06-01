@@ -982,6 +982,10 @@ window.MARK_V16_04 = (function(){
   <div class="section-label">PER BRACKET</div>
   <div id="v2bm-brackets" class="brackets-grid"></div>
   <div class="section-label" style="margin-top:30px;">SISTE 50 BILER</div>
+  <div style="margin-bottom:12px;">
+    <input id="v2bm-search" type="text" placeholder="Sok regnr eller variant..." oninput="filterV2()" style="width:100%; max-width:400px; padding:10px 14px; border:1px solid var(--border); border-radius:10px; font-size:14px; background:var(--card); color:var(--text); box-shadow:0 2px 8px var(--shadow);">
+    <span id="v2bm-search-count" style="margin-left:12px; font-size:12px; color:var(--muted);"></span>
+  </div>
   <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:0 4px 24px var(--shadow);">
     <div style="overflow-x:auto;">
       <table id="v2bm-table" style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -2949,6 +2953,7 @@ async function loadV2Benchmark(){
   }
 }
 function renderV2Benchmark(records){
+  window._v2bmRecords=records;
   var withDiff=records.filter(function(r){return r.diff&&Number.isFinite(r.diff.anker_kr);});
   document.getElementById('v2bm-count').textContent=records.length;
   if(!withDiff.length){
@@ -2987,6 +2992,22 @@ function renderV2Benchmark(records){
     return '<tr style="border-top:1px solid var(--border);"><td style="padding:8px 12px;font-weight:600;">'+(r.regnr||'')+'</td><td style="padding:8px 12px;">'+variant+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.km)+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.easy&&r.easy.anker)+'</td><td style="padding:8px 12px;text-align:right;font-weight:600;">'+fmtKrV2(r.v2&&r.v2.anker)+'</td><td style="padding:8px 12px;text-align:right;'+dc+'">'+(d?(d.anker_kr>=0?'+':'')+fmtKrV2(d.anker_kr):'-')+'</td><td style="padding:8px 12px;text-align:right;'+dc+'">'+(d?fmtPctV2(d.anker_pct):'-')+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.easy&&r.easy.dLav)+'</td><td style="padding:8px 12px;text-align:right;">'+fmtKrV2(r.v2&&r.v2.dLav)+'</td><td style="padding:8px 12px;text-align:center;">'+((r.v2&&r.v2.confidence)||'-')+'</td><td style="padding:8px 12px;color:var(--muted);font-size:11px;">'+tid+'</td></tr>';
   }).join('');
   document.getElementById('v2bm-updated').textContent=new Date().toLocaleString('nb-NO');
+  filterV2();
+}
+function filterV2(){
+  var q=(document.getElementById('v2bm-search')||{}).value||'';
+  q=q.trim().toLowerCase();
+  var rows=document.querySelectorAll('#v2bm-tbody tr');
+  var vis=0;
+  rows.forEach(function(tr){
+    if(!q){tr.style.display='';vis++;return;}
+    var txt=tr.textContent.toLowerCase();
+    var match=txt.indexOf(q)>=0;
+    tr.style.display=match?'':'none';
+    if(match)vis++;
+  });
+  var c=document.getElementById('v2bm-search-count');
+  if(c)c.textContent=q?(vis+' treff'):'';
 }
 
 </script>
