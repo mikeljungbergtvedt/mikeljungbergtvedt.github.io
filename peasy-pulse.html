@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c20</title>
+<title>Peasy Pulse v16.04.c21</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c20 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c21 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -984,12 +984,14 @@ window.MARK_V16_04 = (function(){
           <tr style="background:var(--green); text-align:left;">
             <th onclick="sortV2('regnr')" style="padding:10px 12px; color:#fff; cursor:pointer;">Reg nr <span id="v2s-regnr"></span></th>
             <th onclick="sortV2('variant')" style="padding:10px 12px; color:#fff; cursor:pointer;">Type bil <span id="v2s-variant"></span></th>
+            <th onclick="sortV2('priset')" style="padding:10px 12px; color:#fff; cursor:pointer;">Priset <span id="v2s-priset"></span></th>
+            <th onclick="sortV2('status')" style="padding:10px 12px; color:#fff; cursor:pointer;">Status <span id="v2s-status"></span></th>
             <th onclick="sortV2('easy')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Easy anker <span id="v2s-easy"></span></th>
             <th onclick="sortV2('v2')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">v2 anker <span id="v2s-v2"></span></th>
             <th onclick="sortV2('override')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Endret Easy-anker <span id="v2s-override"></span></th>
           </tr>
         </thead>
-        <tbody id="v2bm-tbody"><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
+        <tbody id="v2bm-tbody"><tr><td colspan="7" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1255,7 +1257,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c20 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c21 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -2934,11 +2936,63 @@ const V2BM_BENCHMARK_START = "2026-06-03";
 
 function fmtKrV2(n){if(!Number.isFinite(Number(n)))return '—';return Math.round(Number(n)).toLocaleString('nb-NO')+' kr';}
 
+function fmtPrisetV2(ts){
+  if(!ts) return '—';
+  var d = new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  try {
+    var s = d.toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // nb-NO returns "03.06.2026, 14:35" - strip the comma between date and time
+    return s.replace(', ', ' ');
+  } catch(e) {
+    return d.toISOString().slice(0,16).replace('T', ' ');
+  }
+}
+
+function buildStatusMaps(){
+  var byErpId = {}, byRegnr = {};
+  var rows = (window._lastRows && Array.isArray(window._lastRows)) ? window._lastRows.slice(1) : [];
+  rows.forEach(function(r){
+    if (!r || !r.length) return;
+    var erpId = r[0];
+    var regnr = r[1];
+    var status = r[12];
+    if (status === undefined || status === null || status === '') return;
+    if (erpId !== undefined && erpId !== null && erpId !== '') {
+      byErpId[String(erpId)] = String(status);
+    }
+    if (regnr) {
+      byRegnr[String(regnr).toUpperCase()] = String(status);
+    }
+  });
+  return { byErpId: byErpId, byRegnr: byRegnr };
+}
+
+function findStatusForRecord(r){
+  var maps = window._v2bmStatusMaps || { byErpId: {}, byRegnr: {} };
+  if (r.erpId !== undefined && r.erpId !== null) {
+    var hit = maps.byErpId[String(r.erpId)];
+    if (hit) return hit;
+  }
+  if (r.regnr) {
+    var hitR = maps.byRegnr[String(r.regnr).toUpperCase()];
+    if (hitR) return hitR;
+  }
+  return null;
+}
+
 async function loadV2Benchmark(){
   var t = Date.now();
-  var measurementsUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t='+t;
-  var overridesUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/easy-overrides.jsonl?t='+t;
+  var measurementsUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t=' + t;
+  var overridesUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/easy-overrides.jsonl?t=' + t;
   try {
+    // If XLSX data not loaded yet, kick off loadData (uses existing fetcher)
+    if ((!window._lastRows || !window._lastRows.length) && typeof loadData === 'function') {
+      try {
+        var xrows = await loadData();
+        if (xrows && xrows.length) window._lastRows = xrows;
+      } catch(e) { /* ignore - status column will show dash */ }
+    }
     var mRes = await fetch(measurementsUrl);
     var mText = mRes.ok ? await mRes.text() : '';
     var measurements = mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
@@ -2974,11 +3028,12 @@ async function loadV2Benchmark(){
     window._v2bmRecords = fresh;
     window._v2bmOverrideByErpId = byErpId;
     window._v2bmOverrideByRegnr = byRegnr;
-    if (!window._v2bmSort) window._v2bmSort = { col: 'ts', dir: 'desc' };
+    window._v2bmStatusMaps = buildStatusMaps();
+    if (!window._v2bmSort) window._v2bmSort = { col: 'priset', dir: 'desc' };
     document.getElementById('v2bm-updated').textContent = new Date().toLocaleString('nb-NO');
     applyV2FiltersAndRender();
   } catch (e) {
-    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: ' + e.message + '</td></tr>';
+    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: ' + e.message + '</td></tr>';
   }
 }
 
@@ -3012,6 +3067,7 @@ function applyV2FiltersAndRender(){
     var va, vb;
     if (sortCol === 'regnr') { va = a.regnr || ''; vb = b.regnr || ''; }
     else if (sortCol === 'variant') { va = (a.identifikasjon && a.identifikasjon.variant) || ''; vb = (b.identifikasjon && b.identifikasjon.variant) || ''; }
+    else if (sortCol === 'status') { va = findStatusForRecord(a) || ''; vb = findStatusForRecord(b) || ''; }
     else if (sortCol === 'easy') { va = (a.easy && Number.isFinite(a.easy.anker)) ? a.easy.anker : -Infinity; vb = (b.easy && Number.isFinite(b.easy.anker)) ? b.easy.anker : -Infinity; }
     else if (sortCol === 'v2') { va = (a.v2 && Number.isFinite(a.v2.anker)) ? a.v2.anker : -Infinity; vb = (b.v2 && Number.isFinite(b.v2.anker)) ? b.v2.anker : -Infinity; }
     else if (sortCol === 'override') {
@@ -3044,12 +3100,14 @@ function renderV2Summary(records){
 
 function renderV2Table(records){
   if (records.length === 0) {
-    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler enda fra ' + V2BM_BENCHMARK_START + '.</td></tr>';
+    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler enda fra ' + V2BM_BENCHMARK_START + '.</td></tr>';
     return;
   }
   var html = records.map(function(r){
     var regnr = r.regnr || '—';
     var variant = (r.identifikasjon && r.identifikasjon.variant) ? r.identifikasjon.variant.slice(0, 40) : '—';
+    var priset = fmtPrisetV2(r.timestamp);
+    var status = findStatusForRecord(r) || '—';
     var easy = (r.easy && Number.isFinite(r.easy.anker)) ? fmtKrV2(r.easy.anker) : '—';
     var v2 = (r.v2 && Number.isFinite(r.v2.anker)) ? fmtKrV2(r.v2.anker) : '—';
     var ovr = findOverrideForRecord(r);
@@ -3057,6 +3115,8 @@ function renderV2Table(records){
     return '<tr style="border-top:1px solid var(--border);">'
       + '<td style="padding:8px 12px;font-weight:600;">' + regnr + '</td>'
       + '<td style="padding:8px 12px;color:var(--muted);">' + variant + '</td>'
+      + '<td style="padding:8px 12px;color:var(--muted);font-size:11px;">' + priset + '</td>'
+      + '<td style="padding:8px 12px;">' + status + '</td>'
       + '<td style="padding:8px 12px;text-align:right;">' + easy + '</td>'
       + '<td style="padding:8px 12px;text-align:right;">' + v2 + '</td>'
       + '<td style="padding:8px 12px;text-align:right;font-weight:600;">' + ovrTxt + '</td>'
@@ -3066,7 +3126,7 @@ function renderV2Table(records){
 }
 
 function updateV2SortIndicators(){
-  var cols = ['regnr', 'variant', 'easy', 'v2', 'override'];
+  var cols = ['regnr', 'variant', 'priset', 'status', 'easy', 'v2', 'override'];
   var cur = window._v2bmSort.col;
   var dir = window._v2bmSort.dir;
   cols.forEach(function(c){
@@ -3076,12 +3136,12 @@ function updateV2SortIndicators(){
 }
 
 function sortV2(col){
-  if (!window._v2bmSort) window._v2bmSort = { col: 'ts', dir: 'desc' };
+  if (!window._v2bmSort) window._v2bmSort = { col: 'priset', dir: 'desc' };
   if (window._v2bmSort.col === col) {
     window._v2bmSort.dir = window._v2bmSort.dir === 'asc' ? 'desc' : 'asc';
   } else {
     window._v2bmSort.col = col;
-    window._v2bmSort.dir = (col === 'regnr' || col === 'variant') ? 'asc' : 'desc';
+    window._v2bmSort.dir = (col === 'regnr' || col === 'variant' || col === 'status') ? 'asc' : 'desc';
   }
   applyV2FiltersAndRender();
 }
@@ -3091,6 +3151,6 @@ function filterV2(){
 }
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c20</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c21</div>
 </body>
 </html>
