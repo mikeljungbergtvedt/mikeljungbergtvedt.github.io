@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c21</title>
+<title>Peasy Pulse v16.04.c22</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c21 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c22 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
@@ -971,12 +971,18 @@ window.MARK_V16_04 = (function(){
 </div>
 </section>
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
-  <div class="page-sub" style="margin-bottom:20px">V2 Benchmark — Easy vs v2 (fra <span id="v2bm-start">2026-06-03</span>)</div>
-  <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px">
-    <input id="v2bm-search" type="text" placeholder="Søk regnr..." oninput="filterV2()" style="flex:1; min-width:240px; max-width:400px; padding:10px 14px; border:1px solid var(--border); border-radius:10px; font-size:14px; background:var(--card); color:var(--text); box-shadow:0 2px 8px var(--shadow);">
+  <div class="page-sub" style="margin-bottom:14px">V2 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
+    <div style="display:inline-flex; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:4px;">
+      <button id="v2bm-period-today" onclick="setV2Period('today')" style="padding:6px 12px; border:none; background:transparent; border-radius:7px; cursor:pointer; font-size:12px; color:var(--muted); font-family:inherit;">I dag</button>
+      <button id="v2bm-period-7d" onclick="setV2Period('7d')" style="padding:6px 12px; border:none; background:transparent; border-radius:7px; cursor:pointer; font-size:12px; color:var(--muted); font-family:inherit;">7 dager</button>
+      <button id="v2bm-period-all" onclick="setV2Period('all')" style="padding:6px 12px; border:none; background:var(--green); color:#fff; border-radius:7px; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit;">Alt</button>
+    </div>
+    <input id="v2bm-search" type="text" placeholder="Søk regnr..." oninput="filterV2()" style="flex:1; min-width:200px; max-width:320px; padding:8px 12px; border:1px solid var(--border); border-radius:10px; font-size:13px; background:var(--card); color:var(--text);">
     <span id="v2bm-search-count" style="font-size:12px; color:var(--muted);"></span>
   </div>
-  <div id="v2bm-summary" class="dials-grid" style="margin-bottom:24px"></div>
+  <div id="v2bm-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:18px"></div>
+  <div id="v2bm-conclusion" style="background:#FBF8EE; border-left:4px solid #FFCC33; color:#004225; padding:14px 18px; border-radius:8px; font-size:13px; line-height:1.5; margin-bottom:24px; display:none;"></div>
   <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:0 4px 24px var(--shadow);">
     <div style="overflow-x:auto;">
       <table id="v2bm-table" style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -988,10 +994,11 @@ window.MARK_V16_04 = (function(){
             <th onclick="sortV2('status')" style="padding:10px 12px; color:#fff; cursor:pointer;">Status <span id="v2s-status"></span></th>
             <th onclick="sortV2('easy')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Easy anker <span id="v2s-easy"></span></th>
             <th onclick="sortV2('v2')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">v2 anker <span id="v2s-v2"></span></th>
+            <th onclick="sortV2('avvik')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Avvik % <span id="v2s-avvik"></span></th>
             <th onclick="sortV2('override')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Endret Easy-anker <span id="v2s-override"></span></th>
           </tr>
         </thead>
-        <tbody id="v2bm-tbody"><tr><td colspan="7" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
+        <tbody id="v2bm-tbody"><tr><td colspan="8" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1257,7 +1264,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c21 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c22 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -2933,224 +2940,336 @@ function markRender(){try{if(window.MARK_V16_04 && window.MARK_V16_04.render){se
 
 
 const V2BM_BENCHMARK_START = "2026-06-03";
+const KOST_PER_EVAL = 0;
 
-function fmtKrV2(n){if(!Number.isFinite(Number(n)))return '—';return Math.round(Number(n)).toLocaleString('nb-NO')+' kr';}
-
-function fmtPrisetV2(ts){
-  if(!ts) return '—';
-  var d = new Date(ts);
-  if (isNaN(d.getTime())) return '—';
-  try {
-    var s = d.toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    // nb-NO returns "03.06.2026, 14:35" - strip the comma between date and time
-    return s.replace(', ', ' ');
-  } catch(e) {
-    return d.toISOString().slice(0,16).replace('T', ' ');
-  }
+function fmtKrV2(n){
+  if(!Number.isFinite(Number(n)))return '—';
+  return Math.round(Number(n)).toLocaleString('nb-NO')+' kr';
 }
 
-function buildStatusMaps(){
-  var byErpId = {}, byRegnr = {};
-  var rows = (window._lastRows && Array.isArray(window._lastRows)) ? window._lastRows.slice(1) : [];
+function fmtPrisetV2(ts){
+  if(!ts)return '—';
+  var d=new Date(ts);
+  if(isNaN(d.getTime()))return '—';
+  try{
+    var s=d.toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return s.replace(', ',' ');
+  }catch(e){return d.toISOString().slice(0,16).replace('T',' ');}
+}
+
+function parseDDMMYYYY(s){
+  if(!s)return null;
+  s=String(s).trim();
+  var m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(!m)return null;
+  return new Date(parseInt(m[3],10),parseInt(m[2],10)-1,parseInt(m[1],10));
+}
+
+function hasDate(v){
+  return v!==undefined&&v!==null&&String(v).trim()!==''&&parseDDMMYYYY(v)!==null;
+}
+
+function buildErpRowMaps(){
+  var byErpId={},byRegnr={};
+  var rows=(window._lastRows&&Array.isArray(window._lastRows))?window._lastRows.slice(1):[];
   rows.forEach(function(r){
-    if (!r || !r.length) return;
-    var erpId = r[0];
-    var regnr = r[1];
-    var status = r[12];
-    if (status === undefined || status === null || status === '') return;
-    if (erpId !== undefined && erpId !== null && erpId !== '') {
-      byErpId[String(erpId)] = String(status);
-    }
-    if (regnr) {
-      byRegnr[String(regnr).toUpperCase()] = String(status);
-    }
+    if(!r||!r.length)return;
+    var erpId=r[0];var regnr=r[1];
+    if(erpId!==undefined&&erpId!==null&&erpId!=='')byErpId[String(erpId)]=r;
+    if(regnr)byRegnr[String(regnr).toUpperCase()]=r;
   });
-  return { byErpId: byErpId, byRegnr: byRegnr };
+  return {byErpId:byErpId,byRegnr:byRegnr};
+}
+
+function findErpRowForRecord(r){
+  var maps=window._v2bmErpMaps||{byErpId:{},byRegnr:{}};
+  if(r.erpId!==undefined&&r.erpId!==null){var hit=maps.byErpId[String(r.erpId)];if(hit)return hit;}
+  if(r.regnr){var hitR=maps.byRegnr[String(r.regnr).toUpperCase()];if(hitR)return hitR;}
+  return null;
 }
 
 function findStatusForRecord(r){
-  var maps = window._v2bmStatusMaps || { byErpId: {}, byRegnr: {} };
-  if (r.erpId !== undefined && r.erpId !== null) {
-    var hit = maps.byErpId[String(r.erpId)];
-    if (hit) return hit;
-  }
-  if (r.regnr) {
-    var hitR = maps.byRegnr[String(r.regnr).toUpperCase()];
-    if (hitR) return hitR;
-  }
+  var row=findErpRowForRecord(r);
+  if(row&&row[12])return String(row[12]);
   return null;
+}
+
+function classifyRecord(r){
+  var row=findErpRowForRecord(r);
+  var result={bucket:'ukjent',label:'Ukjent',evaluert:true,akseptert:false,avvist:false,solgt:false,returnert:false};
+  if(!row)return result;
+  var status=row[12]?String(row[12]).toLowerCase():'';
+  var isAvvist=status.indexOf('avvist')!==-1;
+  var hasSolgt=hasDate(row[18]);
+  var hasReturnert=hasDate(row[21]);
+  var hasMottatt=hasDate(row[17]);
+  var hasBestilt=hasDate(row[15])||hasDate(row[16]);
+  if(hasSolgt){result.akseptert=true;result.solgt=true;result.bucket='solgt';result.label=row[12]||'Solgt';}
+  else if(hasReturnert){result.akseptert=true;result.returnert=true;result.bucket='returnert';result.label=row[12]||'Returnert';}
+  else if(hasMottatt||hasBestilt){result.akseptert=true;result.bucket='akseptert';result.label=row[12]||(hasMottatt?'Mottatt':'Bestilt transport');}
+  else if(isAvvist){result.avvist=true;result.bucket='avvist';result.label=row[12]||'Avvist';}
+  else{result.bucket='venter';result.label=row[12]||'Venter';}
+  return result;
+}
+
+function computeFunnel(records){
+  var n=records.length;
+  var akseptert=0,avvist=0,venter=0,solgt=0,returnert=0;
+  var avvikSum=0,avvikN=0,innenfor5=0;
+  records.forEach(function(r){
+    var c=classifyRecord(r);
+    if(c.akseptert)akseptert++;
+    if(c.avvist)avvist++;
+    if(!c.akseptert&&!c.avvist)venter++;
+    if(c.solgt)solgt++;
+    if(c.returnert)returnert++;
+    if(r.easy&&Number.isFinite(r.easy.anker)&&r.easy.anker!==0&&r.v2&&Number.isFinite(r.v2.anker)){
+      var pct=(r.v2.anker-r.easy.anker)/r.easy.anker*100;
+      avvikSum+=Math.abs(pct);avvikN++;
+      if(Math.abs(pct)<=5)innenfor5++;
+    }
+  });
+  var avgjorte=akseptert+avvist;
+  var evalAksept=avgjorte>0?(akseptert/avgjorte*100):null;
+  var budAvgjort=solgt+returnert;
+  var budAksept=budAvgjort>0?(solgt/budAvgjort*100):null;
+  var avvikSnitt=avvikN>0?avvikSum/avvikN:null;
+  var andelInnenfor5=avvikN>0?(innenfor5/avvikN*100):null;
+  var kostPerSolgt=solgt>0?(KOST_PER_EVAL*n/solgt):null;
+  return {n:n,akseptert:akseptert,avvist:avvist,venter:venter,solgt:solgt,returnert:returnert,evalAksept:evalAksept,budAksept:budAksept,avvikSnitt:avvikSnitt,andelInnenfor5:andelInnenfor5,avvikN:avvikN,kostPerSolgt:kostPerSolgt};
+}
+
+function setV2Period(p){
+  window._v2bmPeriod=p;
+  ['today','7d','all'].forEach(function(pp){
+    var btn=document.getElementById('v2bm-period-'+pp);
+    if(!btn)return;
+    if(pp===p){btn.style.background='var(--green)';btn.style.color='#fff';btn.style.fontWeight='600';}
+    else{btn.style.background='transparent';btn.style.color='var(--muted)';btn.style.fontWeight='400';}
+  });
+  applyV2FiltersAndRender();
 }
 
 async function loadV2Benchmark(){
-  var t = Date.now();
-  var measurementsUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t=' + t;
-  var overridesUrl = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/easy-overrides.jsonl?t=' + t;
-  try {
-    // If XLSX data not loaded yet, kick off loadData (uses existing fetcher)
-    if ((!window._lastRows || !window._lastRows.length) && typeof loadData === 'function') {
-      try {
-        var xrows = await loadData();
-        if (xrows && xrows.length) window._lastRows = xrows;
-      } catch(e) { /* ignore - status column will show dash */ }
+  var t=Date.now();
+  var mUrl='https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t='+t;
+  var oUrl='https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/easy-overrides.jsonl?t='+t;
+  try{
+    if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
+      try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(e){}
     }
-    var mRes = await fetch(measurementsUrl);
-    var mText = mRes.ok ? await mRes.text() : '';
-    var measurements = mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
-    var overrides = [];
-    try {
-      var oRes = await fetch(overridesUrl);
-      if (oRes.ok) {
-        var oText = await oRes.text();
-        overrides = oText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
-      }
-    } catch(e) { /* 404 ok */ }
-    var startMs = new Date(V2BM_BENCHMARK_START + 'T00:00:00').getTime();
-    var fresh = measurements.filter(function(m){
-      var ts = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-      return ts >= startMs;
-    });
-    var byErpId = {}, byRegnr = {};
+    var mRes=await fetch(mUrl);
+    var mText=mRes.ok?await mRes.text():'';
+    var measurements=mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
+    var overrides=[];
+    try{var oRes=await fetch(oUrl);if(oRes.ok){var oText=await oRes.text();overrides=oText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);}}catch(e){}
+    var startMs=new Date(V2BM_BENCHMARK_START+'T00:00:00').getTime();
+    var fresh=measurements.filter(function(m){var ts=m.timestamp?new Date(m.timestamp).getTime():0;return ts>=startMs;});
+    var byErpId={},byRegnr={};
     overrides.forEach(function(o){
-      var ts = o.timestamp ? new Date(o.timestamp).getTime() : 0;
-      if (o.erpId !== undefined && o.erpId !== null) {
-        var k = String(o.erpId);
-        if (!byErpId[k] || ts > (byErpId[k]._ts || 0)) {
-          byErpId[k] = Object.assign({}, o, {_ts: ts});
-        }
-      }
-      if (o.regnr) {
-        var rk = String(o.regnr).toUpperCase();
-        if (!byRegnr[rk] || ts > (byRegnr[rk]._ts || 0)) {
-          byRegnr[rk] = Object.assign({}, o, {_ts: ts});
-        }
-      }
+      var ts=o.timestamp?new Date(o.timestamp).getTime():0;
+      if(o.erpId!==undefined&&o.erpId!==null){var k=String(o.erpId);if(!byErpId[k]||ts>(byErpId[k]._ts||0))byErpId[k]=Object.assign({},o,{_ts:ts});}
+      if(o.regnr){var rk=String(o.regnr).toUpperCase();if(!byRegnr[rk]||ts>(byRegnr[rk]._ts||0))byRegnr[rk]=Object.assign({},o,{_ts:ts});}
     });
-    window._v2bmRecords = fresh;
-    window._v2bmOverrideByErpId = byErpId;
-    window._v2bmOverrideByRegnr = byRegnr;
-    window._v2bmStatusMaps = buildStatusMaps();
-    if (!window._v2bmSort) window._v2bmSort = { col: 'priset', dir: 'desc' };
-    document.getElementById('v2bm-updated').textContent = new Date().toLocaleString('nb-NO');
+    window._v2bmRecords=fresh;
+    window._v2bmOverrideByErpId=byErpId;
+    window._v2bmOverrideByRegnr=byRegnr;
+    window._v2bmErpMaps=buildErpRowMaps();
+    if(!window._v2bmSort)window._v2bmSort={col:'priset',dir:'desc'};
+    if(!window._v2bmPeriod)window._v2bmPeriod='all';
+    document.getElementById('v2bm-updated').textContent=new Date().toLocaleString('nb-NO');
     applyV2FiltersAndRender();
-  } catch (e) {
-    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: ' + e.message + '</td></tr>';
-  }
+  }catch(e){document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: '+e.message+'</td></tr>';}
 }
 
 function findOverrideForRecord(r){
-  var byErp = window._v2bmOverrideByErpId || {};
-  var byReg = window._v2bmOverrideByRegnr || {};
-  if (r.erpId !== undefined && r.erpId !== null) {
-    var hit = byErp[String(r.erpId)];
-    if (hit) return hit;
-  }
-  if (r.regnr) {
-    var hitR = byReg[String(r.regnr).toUpperCase()];
-    if (hitR) return hitR;
-  }
+  var byErp=window._v2bmOverrideByErpId||{};
+  var byReg=window._v2bmOverrideByRegnr||{};
+  if(r.erpId!==undefined&&r.erpId!==null){var hit=byErp[String(r.erpId)];if(hit)return hit;}
+  if(r.regnr){var hitR=byReg[String(r.regnr).toUpperCase()];if(hitR)return hitR;}
   return null;
 }
 
+function applyPeriodFilter(records){
+  var period=window._v2bmPeriod||'all';
+  if(period==='all')return records.slice();
+  var now=Date.now();
+  var cutoff;
+  if(period==='today'){var d=new Date();d.setHours(0,0,0,0);cutoff=d.getTime();}
+  else if(period==='7d')cutoff=now-7*24*60*60*1000;
+  else return records.slice();
+  return records.filter(function(r){var ts=r.timestamp?new Date(r.timestamp).getTime():0;return ts>=cutoff;});
+}
+
 function getV2FilteredRecords(){
-  var records = window._v2bmRecords || [];
-  var q = (document.getElementById('v2bm-search') || {}).value || '';
-  q = q.trim().toLowerCase();
-  if (!q) return records.slice();
-  return records.filter(function(r){return (r.regnr || '').toLowerCase().indexOf(q) >= 0;});
+  var records=window._v2bmRecords||[];
+  records=applyPeriodFilter(records);
+  var q=(document.getElementById('v2bm-search')||{}).value||'';
+  q=q.trim().toLowerCase();
+  if(!q)return records;
+  return records.filter(function(r){return (r.regnr||'').toLowerCase().indexOf(q)>=0;});
+}
+
+function avvikPctV2(r){
+  if(!r.easy||!Number.isFinite(r.easy.anker)||r.easy.anker===0)return null;
+  if(!r.v2||!Number.isFinite(r.v2.anker))return null;
+  return (r.v2.anker-r.easy.anker)/r.easy.anker*100;
 }
 
 function applyV2FiltersAndRender(){
-  var filtered = getV2FilteredRecords();
-  var sortCol = window._v2bmSort.col;
-  var sortDir = window._v2bmSort.dir;
-  filtered.sort(function(a, b){
-    var va, vb;
-    if (sortCol === 'regnr') { va = a.regnr || ''; vb = b.regnr || ''; }
-    else if (sortCol === 'variant') { va = (a.identifikasjon && a.identifikasjon.variant) || ''; vb = (b.identifikasjon && b.identifikasjon.variant) || ''; }
-    else if (sortCol === 'status') { va = findStatusForRecord(a) || ''; vb = findStatusForRecord(b) || ''; }
-    else if (sortCol === 'easy') { va = (a.easy && Number.isFinite(a.easy.anker)) ? a.easy.anker : -Infinity; vb = (b.easy && Number.isFinite(b.easy.anker)) ? b.easy.anker : -Infinity; }
-    else if (sortCol === 'v2') { va = (a.v2 && Number.isFinite(a.v2.anker)) ? a.v2.anker : -Infinity; vb = (b.v2 && Number.isFinite(b.v2.anker)) ? b.v2.anker : -Infinity; }
-    else if (sortCol === 'override') {
-      var oa = findOverrideForRecord(a), ob = findOverrideForRecord(b);
-      va = (oa && Number.isFinite(Number(oa.anker))) ? Number(oa.anker) : -Infinity;
-      vb = (ob && Number.isFinite(Number(ob.anker))) ? Number(ob.anker) : -Infinity;
-    }
-    else { va = a.timestamp ? new Date(a.timestamp).getTime() : 0; vb = b.timestamp ? new Date(b.timestamp).getTime() : 0; }
-    if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortDir === 'asc' ? va - vb : vb - va;
+  var filtered=getV2FilteredRecords();
+  var sortCol=window._v2bmSort.col;
+  var sortDir=window._v2bmSort.dir;
+  filtered.sort(function(a,b){
+    var va,vb;
+    if(sortCol==='regnr'){va=a.regnr||'';vb=b.regnr||'';}
+    else if(sortCol==='variant'){va=(a.identifikasjon&&a.identifikasjon.variant)||'';vb=(b.identifikasjon&&b.identifikasjon.variant)||'';}
+    else if(sortCol==='status'){va=classifyRecord(a).label||'';vb=classifyRecord(b).label||'';}
+    else if(sortCol==='easy'){va=(a.easy&&Number.isFinite(a.easy.anker))?a.easy.anker:-Infinity;vb=(b.easy&&Number.isFinite(b.easy.anker))?b.easy.anker:-Infinity;}
+    else if(sortCol==='v2'){va=(a.v2&&Number.isFinite(a.v2.anker))?a.v2.anker:-Infinity;vb=(b.v2&&Number.isFinite(b.v2.anker))?b.v2.anker:-Infinity;}
+    else if(sortCol==='avvik'){var pa=avvikPctV2(a),pb=avvikPctV2(b);va=(pa===null)?-Infinity:pa;vb=(pb===null)?-Infinity:pb;}
+    else if(sortCol==='override'){var oa=findOverrideForRecord(a),ob=findOverrideForRecord(b);va=(oa&&Number.isFinite(Number(oa.anker)))?Number(oa.anker):-Infinity;vb=(ob&&Number.isFinite(Number(ob.anker)))?Number(ob.anker):-Infinity;}
+    else{va=a.timestamp?new Date(a.timestamp).getTime():0;vb=b.timestamp?new Date(b.timestamp).getTime():0;}
+    if(typeof va==='string')return sortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+    return sortDir==='asc'?va-vb:vb-va;
   });
   renderV2Summary(filtered);
+  renderV2Conclusion(filtered);
   renderV2Table(filtered);
   updateV2SortIndicators();
-  var c = document.getElementById('v2bm-search-count');
-  if (c) c.textContent = filtered.length + ' biler';
+  var c=document.getElementById('v2bm-search-count');
+  if(c)c.textContent=filtered.length+' biler';
+}
+
+function colorForEvalAksept(pct){
+  if(pct===null)return {color:'var(--muted)',bg:'transparent'};
+  if(pct>=20)return {color:'#11733B',bg:'#E5F4EC'};
+  if(pct>=15)return {color:'#8A6708',bg:'#FBF1D2'};
+  return {color:'#A8221C',bg:'#FBE5E2'};
+}
+
+function colorForBudAksept(pct){
+  if(pct===null)return {color:'var(--muted)',bg:'transparent'};
+  if(pct>=70)return {color:'#11733B',bg:'#E5F4EC'};
+  if(pct>=60)return {color:'#8A6708',bg:'#FBF1D2'};
+  return {color:'#A8221C',bg:'#FBE5E2'};
 }
 
 function renderV2Summary(records){
-  var n = records.length;
-  var withOverride = records.filter(function(r){return findOverrideForRecord(r) !== null;}).length;
-  var cards = [
-    { label: 'Biler i utvalget', value: n, sub: 'fra ' + V2BM_BENCHMARK_START },
-    { label: 'Med endret Easy-anker', value: withOverride, sub: n > 0 ? Math.round(withOverride / n * 100) + '% av ' + n : '' }
+  var f=computeFunnel(records);
+  var evCol=colorForEvalAksept(f.evalAksept);
+  var bdCol=colorForBudAksept(f.budAksept);
+  var avgjorte=f.akseptert+f.avvist;
+  var avvistPct=avgjorte>0?Math.round(f.avvist/avgjorte*100):null;
+  var fmtPct=function(p){return p===null?'—':(Math.round(p*10)/10)+'%';};
+  var kostTxt=(KOST_PER_EVAL===0)?'sett KOST_PER_EVAL':(f.kostPerSolgt===null?'—':Math.round(f.kostPerSolgt).toLocaleString('nb-NO')+' kr');
+  var cards=[
+    {label:'Evalueringer sendt',value:f.n,sub:'fra '+V2BM_BENCHMARK_START,color:'var(--text)',bg:'var(--card)'},
+    {label:'Eval-aksept (mål 15-20%)',value:fmtPct(f.evalAksept),sub:'venter: '+f.venter,color:evCol.color,bg:evCol.bg},
+    {label:'Bud-aksept (mål 70%)',value:fmtPct(f.budAksept),sub:f.solgt+' solgt / '+f.returnert+' retur',color:bdCol.color,bg:bdCol.bg},
+    {label:'Avvist',value:f.avvist,sub:avvistPct!==null?avvistPct+'% av avgjorte':'—',color:'var(--text)',bg:'var(--card)'},
+    {label:'Kost per solgt',value:kostTxt,sub:'KOST_PER_EVAL × evalueringer / solgt',color:'var(--text)',bg:'var(--card)'},
+    {label:'Bot-avvik snitt |Δ%|',value:f.avvikSnitt===null?'—':(Math.round(f.avvikSnitt*10)/10)+'%',sub:f.andelInnenfor5===null?'—':Math.round(f.andelInnenfor5)+'% innenfor ±5%',color:'var(--text)',bg:'var(--card)'}
   ];
-  document.getElementById('v2bm-summary').innerHTML = cards.map(function(c){
-    return '<div class="dial-card"><div class="dial-label">' + c.label + '</div><div class="dial-value">' + c.value + '</div><div class="dial-sub">' + c.sub + '</div></div>';
+  document.getElementById('v2bm-summary').innerHTML=cards.map(function(c){
+    return '<div style="background:'+c.bg+'; border:1px solid var(--border); border-radius:12px; padding:14px 16px; min-height:90px; box-shadow:0 2px 8px var(--shadow);">'+
+      '<div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">'+c.label+'</div>'+
+      '<div style="font-size:26px; font-weight:800; color:'+c.color+'; line-height:1.1; letter-spacing:-0.02em;">'+c.value+'</div>'+
+      '<div style="font-size:11px; color:var(--muted); margin-top:4px;">'+c.sub+'</div>'+
+      '</div>';
   }).join('');
+}
+
+function renderV2Conclusion(records){
+  var f=computeFunnel(records);
+  var box=document.getElementById('v2bm-conclusion');
+  if(f.n===0){box.style.display='none';return;}
+  var parts=[];
+  var evP=f.evalAksept;
+  if(evP!==null){
+    var evPct=Math.round(evP*10)/10;
+    if(evP<15)parts.push('Eval-aksept '+evPct+'% er under mål (15-20%) – ankrene kan ligge for lavt eller leads er svake.');
+    else if(evP<=20)parts.push('Eval-aksept '+evPct+'% er innenfor mål (15-20%).');
+    else parts.push('Eval-aksept '+evPct+'% er over mål – vurder om ankrene er for høye (gir lavere bud-aksept senere).');
+  }
+  if(f.venter>0&&f.n>0&&(f.venter/f.n)>0.40){parts.push(f.venter+' av '+f.n+' venter fortsatt – tallene er umodne.');}
+  var budP=f.budAksept;
+  if(budP!==null){
+    var budPct=Math.round(budP*10)/10;
+    if(budP<60)parts.push('Bud-aksept '+budPct+'% er under mål (70%) – for mange returneres.');
+    else if(budP<70)parts.push('Bud-aksept '+budPct+'% er like under mål (70%).');
+    else parts.push('Bud-aksept '+budPct+'% er innenfor/over mål (70%).');
+  }
+  var ovrCount=records.filter(function(r){return findOverrideForRecord(r)!==null;}).length;
+  if(ovrCount>0)parts.push(ovrCount+' bil'+(ovrCount===1?'':'er')+' har endret Easy-anker.');
+  if(parts.length===0){box.style.display='none';return;}
+  box.innerHTML=parts.join(' ');
+  box.style.display='block';
+}
+
+function statusBucketColor(bucket){
+  if(bucket==='solgt')return {bg:'#E5F4EC',color:'#11733B'};
+  if(bucket==='akseptert')return {bg:'#E0F2F1',color:'#0F6E66'};
+  if(bucket==='venter')return {bg:'#FBF1D2',color:'#8A6708'};
+  if(bucket==='avvist'||bucket==='returnert')return {bg:'#FBE5E2',color:'#A8221C'};
+  return {bg:'#EEE',color:'#666'};
+}
+
+function colorForAvvik(pct){
+  if(pct===null||!Number.isFinite(pct))return {color:'var(--muted)'};
+  var abs=Math.abs(pct);
+  if(abs<=5)return {color:'#11733B'};
+  if(abs<=15)return {color:'#8A6708'};
+  return {color:'#A8221C'};
 }
 
 function renderV2Table(records){
-  if (records.length === 0) {
-    document.getElementById('v2bm-tbody').innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler enda fra ' + V2BM_BENCHMARK_START + '.</td></tr>';
-    return;
-  }
-  var html = records.map(function(r){
-    var regnr = r.regnr || '—';
-    var variant = (r.identifikasjon && r.identifikasjon.variant) ? r.identifikasjon.variant.slice(0, 40) : '—';
-    var priset = fmtPrisetV2(r.timestamp);
-    var status = findStatusForRecord(r) || '—';
-    var easy = (r.easy && Number.isFinite(r.easy.anker)) ? fmtKrV2(r.easy.anker) : '—';
-    var v2 = (r.v2 && Number.isFinite(r.v2.anker)) ? fmtKrV2(r.v2.anker) : '—';
-    var ovr = findOverrideForRecord(r);
-    var ovrTxt = (ovr && Number.isFinite(Number(ovr.anker))) ? fmtKrV2(Number(ovr.anker)) : '—';
-    return '<tr style="border-top:1px solid var(--border);">'
-      + '<td style="padding:8px 12px;font-weight:600;">' + regnr + '</td>'
-      + '<td style="padding:8px 12px;color:var(--muted);">' + variant + '</td>'
-      + '<td style="padding:8px 12px;color:var(--muted);font-size:11px;">' + priset + '</td>'
-      + '<td style="padding:8px 12px;">' + status + '</td>'
-      + '<td style="padding:8px 12px;text-align:right;">' + easy + '</td>'
-      + '<td style="padding:8px 12px;text-align:right;">' + v2 + '</td>'
-      + '<td style="padding:8px 12px;text-align:right;font-weight:600;">' + ovrTxt + '</td>'
-      + '</tr>';
+  if(records.length===0){document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler i perioden.</td></tr>';return;}
+  var html=records.map(function(r){
+    var regnr=r.regnr||'—';
+    var variant=(r.identifikasjon&&r.identifikasjon.variant)?r.identifikasjon.variant.slice(0,40):'—';
+    var priset=fmtPrisetV2(r.timestamp);
+    var cls=classifyRecord(r);
+    var sc=statusBucketColor(cls.bucket);
+    var statusHtml='<span style="display:inline-block; padding:3px 10px; border-radius:999px; background:'+sc.bg+'; color:'+sc.color+'; font-size:11px; font-weight:600;">'+cls.label+'</span>';
+    var easy=(r.easy&&Number.isFinite(r.easy.anker))?fmtKrV2(r.easy.anker):'—';
+    var v2=(r.v2&&Number.isFinite(r.v2.anker))?fmtKrV2(r.v2.anker):'—';
+    var pct=avvikPctV2(r);
+    var avvikCol=colorForAvvik(pct);
+    var avvikTxt=pct===null?'—':((pct>=0?'+':'')+(Math.round(pct*10)/10)+'%');
+    var ovr=findOverrideForRecord(r);
+    var ovrTxt=(ovr&&Number.isFinite(Number(ovr.anker)))?fmtKrV2(Number(ovr.anker)):'—';
+    return '<tr style="border-top:1px solid var(--border);">'+
+      '<td style="padding:8px 12px;font-weight:600;">'+regnr+'</td>'+
+      '<td style="padding:8px 12px;color:var(--muted);">'+variant+'</td>'+
+      '<td style="padding:8px 12px;color:var(--muted);font-size:11px;">'+priset+'</td>'+
+      '<td style="padding:8px 12px;">'+statusHtml+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;">'+easy+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;">'+v2+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;color:'+avvikCol.color+';font-weight:600;">'+avvikTxt+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+
+      '</tr>';
   }).join('');
-  document.getElementById('v2bm-tbody').innerHTML = html;
+  document.getElementById('v2bm-tbody').innerHTML=html;
 }
 
 function updateV2SortIndicators(){
-  var cols = ['regnr', 'variant', 'priset', 'status', 'easy', 'v2', 'override'];
-  var cur = window._v2bmSort.col;
-  var dir = window._v2bmSort.dir;
-  cols.forEach(function(c){
-    var el = document.getElementById('v2s-' + c);
-    if (el) el.textContent = (c === cur) ? (dir === 'asc' ? '▲' : '▼') : '';
-  });
+  var cols=['regnr','variant','priset','status','easy','v2','avvik','override'];
+  var cur=window._v2bmSort.col;
+  var dir=window._v2bmSort.dir;
+  cols.forEach(function(c){var el=document.getElementById('v2s-'+c);if(el)el.textContent=(c===cur)?(dir==='asc'?'▲':'▼'):'';});
 }
 
 function sortV2(col){
-  if (!window._v2bmSort) window._v2bmSort = { col: 'priset', dir: 'desc' };
-  if (window._v2bmSort.col === col) {
-    window._v2bmSort.dir = window._v2bmSort.dir === 'asc' ? 'desc' : 'asc';
-  } else {
-    window._v2bmSort.col = col;
-    window._v2bmSort.dir = (col === 'regnr' || col === 'variant' || col === 'status') ? 'asc' : 'desc';
-  }
+  if(!window._v2bmSort)window._v2bmSort={col:'priset',dir:'desc'};
+  if(window._v2bmSort.col===col){window._v2bmSort.dir=window._v2bmSort.dir==='asc'?'desc':'asc';}
+  else{window._v2bmSort.col=col;window._v2bmSort.dir=(col==='regnr'||col==='variant'||col==='status')?'asc':'desc';}
   applyV2FiltersAndRender();
 }
 
-function filterV2(){
-  applyV2FiltersAndRender();
-}
+function filterV2(){applyV2FiltersAndRender();}
 
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c21</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c22</div>
 </body>
 </html>
