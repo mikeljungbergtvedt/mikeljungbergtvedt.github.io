@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c31</title>
+<title>Peasy Pulse v16.04.c32</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c31 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c32 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1297,7 +1297,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c31 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c32 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -3372,34 +3372,33 @@ function kjGetPeriodMs(p){
 
 function kjMetrics(rows, fromMs){
   var enriched = rows.map(kjEnrich);
-  var inPeriod = enriched.filter(function(r){return r.evalDate && r.evalDate.getTime() >= fromMs;});
-  var evaluert = inPeriod.length;
-  var akseptert=0, avvist=0, solgt=0, retur=0;
-  var sumBud=0, nBud=0;
-  var sumFee=0, nFee=0;
-  var sumProdSolgt=0, nProdSolgt=0;
-  var sumProdRetur=0;
   var cfg = window.peasyConfig || {prodKostUnder35k:2250, prodKostOver35k:2750, returKost:3000, marketingPerioder:[]};
   var PROD_RETUR_FLAT = 2500;
-  inPeriod.forEach(function(r){
+  var solgtInPeriod = enriched.filter(function(r){return r.solgtDate && r.solgtDate.getTime() >= fromMs;});
+  var returInPeriod = enriched.filter(function(r){return r.retDate && r.retDate.getTime() >= fromMs;});
+  var evalInPeriod  = enriched.filter(function(r){return r.evalDate && r.evalDate.getTime() >= fromMs;});
+  var solgt = solgtInPeriod.length;
+  var retur = returInPeriod.length;
+  var evaluert = evalInPeriod.length;
+  var akseptert=0, avvist=0;
+  evalInPeriod.forEach(function(r){
     var statusLower = r.status.toLowerCase();
     var isAvvist = statusLower.indexOf('avvist') !== -1;
     var isAcc = !!(r.solgtDate || r.retDate || r.mottatt || r.bestiltP || r.bestiltQ);
-    if(r.solgtDate){
-      solgt++; akseptert++;
-      var pk = (r.bud && r.bud >= 35000) ? cfg.prodKostOver35k : cfg.prodKostUnder35k;
-      sumProdSolgt += pk; nProdSolgt++;
-    } else if(r.retDate){
-      retur++; akseptert++;
-      sumProdRetur += PROD_RETUR_FLAT;
-    } else if(isAvvist){
-      avvist++;
-    } else if(isAcc){
-      akseptert++;
-    }
-    if(r.solgtDate && r.bud){sumBud += r.bud; nBud++;}
-    if(r.solgtDate && r.fee){sumFee += r.fee; nFee++;}
+    if(isAcc) akseptert++;
+    else if(isAvvist) avvist++;
   });
+  var sumProdSolgt=0, nProdSolgt=0;
+  var sumProdRetur=0;
+  var sumBud=0, nBud=0;
+  var sumFee=0, nFee=0;
+  solgtInPeriod.forEach(function(r){
+    var pk = (r.bud && r.bud >= 35000) ? cfg.prodKostOver35k : cfg.prodKostUnder35k;
+    sumProdSolgt += pk; nProdSolgt++;
+    if(r.bud){sumBud += r.bud; nBud++;}
+    if(r.fee){sumFee += r.fee; nFee++;}
+  });
+  returInPeriod.forEach(function(){sumProdRetur += PROD_RETUR_FLAT;});
   var decidedEval = akseptert + avvist;
   var evalAks = decidedEval > 0 ? akseptert / decidedEval : null;
   var decidedBid = solgt + retur;
@@ -3516,6 +3515,6 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c31</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c32</div>
 </body>
 </html>
