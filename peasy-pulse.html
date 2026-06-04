@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c25</title>
+<title>Peasy Pulse v16.04.c26</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,8 +171,9 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c25 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c26 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
+      <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" id="btn-tiltak" onclick="setMode('tiltak')">Tiltak</button>
       <button class="mode-btn" id="btn-uke" onclick="setMode('uke')">Ukesrapport</button>
@@ -970,6 +971,38 @@ window.MARK_V16_04 = (function(){
 </details>
 </div>
 </section>
+<section class="mode-section" data-mode="kjerne" id="kjerne-section" style="display:none;">
+  <div class="page-sub" style="margin-bottom:18px">Kjernen — motor, marginer og lifetime</div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:22px;">
+    <div style="display:inline-flex; gap:4px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:4px;">
+      <button id="kj-period-today" onclick="setKjPeriod('today')" style="padding:6px 12px;border:none;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;">I dag</button>
+      <button id="kj-period-7d" onclick="setKjPeriod('7d')" style="padding:6px 12px;border:none;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;">7 dager</button>
+      <button id="kj-period-30d" onclick="setKjPeriod('30d')" style="padding:6px 12px;border:none;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;">30 dager</button>
+      <button id="kj-period-ytd" onclick="setKjPeriod('ytd')" style="padding:6px 12px;border:none;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;">YTD 2026</button>
+      <button id="kj-period-start" onclick="setKjPeriod('start')" style="padding:6px 12px;border:none;background:var(--green);color:#fff;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">Siden 1.11.2025</button>
+    </div>
+    <span id="kj-period-label" style="font-size:12px;color:var(--muted);"></span>
+  </div>
+  <div style="background:linear-gradient(135deg,#004225 0%,#0a5a36 100%); color:#fff; border-radius:20px; padding:22px 26px; margin-bottom:18px; box-shadow:0 6px 28px rgba(0,66,37,0.18);">
+    <div style="font-size:11px; opacity:0.72; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">MOTOR — inntekt per evaluert lead</div>
+    <div id="kj-motor-value" style="font-size:42px; font-weight:800; letter-spacing:-0.02em; line-height:1.1; margin-bottom:4px;">—</div>
+    <div id="kj-motor-formula" style="font-size:13px; opacity:0.85; font-family:monospace;">eval-aksept × bud-aksept × snitt fee</div>
+    <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.18); display:flex; gap:32px; flex-wrap:wrap;">
+      <div><div style="font-size:10px; opacity:0.7; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">Margin per lead</div><div id="kj-margin" style="font-size:22px; font-weight:700;">—</div><div id="kj-margin-sub" style="font-size:10px; opacity:0.65; font-family:monospace;">etter prod + retur kost</div></div>
+      <div><div style="font-size:10px; opacity:0.7; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">Marketing CAC</div><div id="kj-cac" style="font-size:22px; font-weight:700;">—</div><div id="kj-cac-sub" style="font-size:10px; opacity:0.65; font-family:monospace;">per solgt bil</div></div>
+    </div>
+  </div>
+  <div id="kj-cards" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:14px;"></div>
+  <div id="kj-funnel" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:24px;"></div>
+  <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 22px;">
+    <div style="font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px;">Lifetime</div>
+    <div style="display:flex; gap:32px; flex-wrap:wrap;">
+      <div><div id="kj-lt-start" style="font-size:28px; font-weight:800; color:var(--green); line-height:1;">—</div><div style="font-size:11px; color:var(--muted); margin-top:4px;">solgt siden 1.11.2025</div></div>
+      <div><div id="kj-lt-ytd" style="font-size:28px; font-weight:800; color:var(--green); line-height:1;">—</div><div style="font-size:11px; color:var(--muted); margin-top:4px;">solgt YTD 2026</div></div>
+      <div><div id="kj-lt-pipe" style="font-size:28px; font-weight:800; color:var(--green); line-height:1;">—</div><div style="font-size:11px; color:var(--muted); margin-top:4px;">i pipeline nå</div></div>
+    </div>
+  </div>
+</section>
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
   <div class="page-sub" style="margin-bottom:14px">V2 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
@@ -1031,6 +1064,7 @@ function setMode(m){
   if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
   if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
   if(document.getElementById('btn-v2bm'))document.getElementById('btn-v2bm').classList.toggle('active',m==='v2bm');
+  if(document.getElementById('btn-kjerne'))document.getElementById('btn-kjerne').classList.toggle('active',m==='kjerne');
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
@@ -1039,6 +1073,7 @@ function setMode(m){
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
+  if(m==='kjerne')setTimeout(function(){renderKjerne();},100);
 }
 
 function parseDLow(val){if(!val||val==='-')return null;var s=String(val).replace(/\s|\u00a0/g,'');var n=parseInt(s.split('-')[0]);return isNaN(n)?null:n;}
@@ -1264,7 +1299,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c25 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c26 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -3273,7 +3308,180 @@ function sortV2(col){
 
 function filterV2(){applyV2FiltersAndRender();}
 
+window._kjPeriod = 'start';
+
+function setKjPeriod(p){
+  window._kjPeriod = p;
+  ['today','7d','30d','ytd','start'].forEach(function(k){
+    var b = document.getElementById('kj-period-' + k);
+    if(!b) return;
+    var active = (k === p);
+    b.style.background = active ? 'var(--green)' : 'transparent';
+    b.style.color = active ? '#fff' : 'var(--muted)';
+    b.style.fontWeight = active ? '700' : '500';
+  });
+  renderKjerne();
+}
+
+function kjFeeFromT(t){
+  if(!t) return null;
+  if(t < 75000) return 5900;
+  if(t < 125000) return 7900;
+  return 9900;
+}
+
+function kjParseIntNo(v){
+  if(v === null || v === undefined || v === '') return null;
+  var s = String(v).replace(/[\s\u00a0]/g,'');
+  var n = parseInt(s, 10);
+  return isNaN(n) ? null : n;
+}
+
+function kjParseDate(v){
+  if(!v) return null;
+  var s = String(v).trim().slice(0,10);
+  var p = s.split('.');
+  if(p.length !== 3) return null;
+  var d = new Date(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function kjEnrich(row){
+  var bud = kjParseIntNo(row[19]);
+  return {
+    regnr: row[1],
+    status: String(row[12]||''),
+    evalDate: kjParseDate(row[13]),
+    bestiltP: kjParseDate(row[15]),
+    bestiltQ: kjParseDate(row[16]),
+    mottatt: kjParseDate(row[17]),
+    solgtDate: kjParseDate(row[18]),
+    bud: bud,
+    fee: kjFeeFromT(bud),
+    retDate: kjParseDate(row[21])
+  };
+}
+
+function kjGetPeriodMs(p){
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(p === 'today') return today.getTime();
+  if(p === '7d'){var d=new Date(today);d.setDate(d.getDate()-6);return d.getTime();}
+  if(p === '30d'){var d=new Date(today);d.setDate(d.getDate()-29);return d.getTime();}
+  if(p === 'ytd') return new Date(now.getFullYear(), 0, 1).getTime();
+  return new Date(2025, 10, 1).getTime();
+}
+
+function kjMetrics(rows, fromMs){
+  var enriched = rows.map(kjEnrich);
+  var inPeriod = enriched.filter(function(r){
+    return r.evalDate && r.evalDate.getTime() >= fromMs;
+  });
+  var evaluert = inPeriod.length;
+  var akseptert=0, avvist=0, solgt=0, retur=0;
+  var sumBud=0, nBud=0;
+  var sumFee=0, nFee=0;
+  var sumProdKost=0, nProdKost=0;
+  var cfg = window.peasyConfig || {prodKostUnder35k:2250, prodKostOver35k:2750, returKost:3000, marketingPerioder:[]};
+  inPeriod.forEach(function(r){
+    var statusLower = r.status.toLowerCase();
+    var isAvvist = statusLower.indexOf('avvist') !== -1;
+    var isAcc = !!(r.solgtDate || r.retDate || r.mottatt || r.bestiltP || r.bestiltQ);
+    if(r.solgtDate){solgt++; akseptert++;}
+    else if(r.retDate){retur++; akseptert++;}
+    else if(isAvvist){avvist++;}
+    else if(isAcc){akseptert++;}
+    if(isAcc){
+      var pk = (r.bud && r.bud >= 35000) ? cfg.prodKostOver35k : cfg.prodKostUnder35k;
+      sumProdKost += pk; nProdKost++;
+    }
+    if(r.solgtDate && r.bud){sumBud += r.bud; nBud++;}
+    if(r.solgtDate && r.fee){sumFee += r.fee; nFee++;}
+  });
+  var decidedEval = akseptert + avvist;
+  var evalAks = decidedEval > 0 ? akseptert / decidedEval : null;
+  var decidedBid = solgt + retur;
+  var budAks = decidedBid > 0 ? solgt / decidedBid : null;
+  var snittFee = nFee > 0 ? sumFee / nFee : null;
+  var snittBud = nBud > 0 ? sumBud / nBud : null;
+  var snittProdKost = nProdKost > 0 ? sumProdKost / nProdKost : null;
+  var motor = (evalAks !== null && budAks !== null && snittFee !== null) ? evalAks * budAks * snittFee : null;
+  var prodKostPerLead = (evalAks !== null && snittProdKost !== null) ? evalAks * snittProdKost : null;
+  var returKostPerLead = (evalAks !== null && budAks !== null) ? evalAks * (1 - budAks) * cfg.returKost : null;
+  var margin = (motor !== null && prodKostPerLead !== null && returKostPerLead !== null) ? motor - prodKostPerLead - returKostPerLead : null;
+  var marketingSum = (cfg.marketingPerioder || []).reduce(function(s, mp){
+    var mpStart = new Date(mp.fra).getTime();
+    var mpEnd = mp.til ? new Date(mp.til).getTime() : Date.now();
+    var overlapStart = Math.max(fromMs, mpStart);
+    var overlapEnd = Math.min(Date.now(), mpEnd);
+    if(overlapEnd <= overlapStart) return s;
+    var days = Math.ceil((overlapEnd - overlapStart) / 86400000);
+    return s + days * (mp.krPerDag || 0);
+  }, 0);
+  var cac = solgt > 0 ? marketingSum / solgt : null;
+  return {evaluert:evaluert, akseptert:akseptert, avvist:avvist, solgt:solgt, retur:retur, snittFee:snittFee, snittBud:snittBud, snittProdKost:snittProdKost, snittRetur:cfg.returKost, evalAks:evalAks, budAks:budAks, motor:motor, margin:margin, cac:cac, marketingSum:marketingSum};
+}
+
+function kjFmtKr(n){if(n===null||!Number.isFinite(n))return '\u2014';return Math.round(n).toLocaleString('nb-NO')+' kr';}
+function kjFmtPct(p){if(p===null||!Number.isFinite(p))return '\u2014';return (Math.round(p*1000)/10).toLocaleString('nb-NO')+'%';}
+function kjFmtInt(n){if(n===null||!Number.isFinite(n))return '\u2014';return Math.round(n).toLocaleString('nb-NO');}
+
+function renderKjerne(){
+  var rows = (window._lastRows && Array.isArray(window._lastRows)) ? window._lastRows.slice(1) : [];
+  if(!rows.length){
+    document.getElementById('kj-motor-value').textContent = 'Laster data...';
+    return;
+  }
+  var period = window._kjPeriod || 'start';
+  var fromMs = kjGetPeriodMs(period);
+  var m = kjMetrics(rows, fromMs);
+  document.getElementById('kj-motor-value').textContent = kjFmtKr(m.motor);
+  document.getElementById('kj-motor-formula').textContent = kjFmtPct(m.evalAks) + ' \u00d7 ' + kjFmtPct(m.budAks) + ' \u00d7 ' + kjFmtKr(m.snittFee);
+  document.getElementById('kj-margin').textContent = kjFmtKr(m.margin);
+  document.getElementById('kj-cac').textContent = kjFmtKr(m.cac);
+  var marginColor = m.margin === null ? '#fff' : (m.margin >= 0 ? '#90EE90' : '#FFB6B6');
+  document.getElementById('kj-margin').style.color = marginColor;
+  var lbl = document.getElementById('kj-period-label');
+  if(lbl){
+    var labels = {today:'i dag', '7d':'siste 7 dager', '30d':'siste 30 dager', ytd:'YTD 2026', start:'siden 1.11.2025'};
+    lbl.textContent = '\u00b7 ' + (labels[period] || '');
+  }
+  var cards = [
+    {label:'Solgt', value:kjFmtInt(m.solgt), sub:m.evaluert+' evalueringer'},
+    {label:'Returnert', value:kjFmtInt(m.retur), sub:m.akseptert+' akseptert'},
+    {label:'Snitt Peasy fee', value:kjFmtKr(m.snittFee), sub:'av '+m.solgt+' solgte'},
+    {label:'Snitt prod kost', value:kjFmtKr(m.snittProdKost), sub:'per akseptert bil'},
+    {label:'Snitt retur kost', value:kjFmtKr(m.snittRetur), sub:'konstant per retur'},
+    {label:'Snitt h\u00f8yeste bud', value:kjFmtKr(m.snittBud), sub:'av solgte biler'}
+  ];
+  document.getElementById('kj-cards').innerHTML = cards.map(function(c){
+    return '<div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; min-height:88px;"><div style="font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">'+c.label+'</div><div style="font-size:22px; font-weight:800; color:var(--green); line-height:1.1; letter-spacing:-0.01em;">'+c.value+'</div><div style="font-size:11px; color:var(--muted); margin-top:4px;">'+c.sub+'</div></div>';
+  }).join('');
+  var funnelCards = [
+    {label:'Evalueringer sendt', value:kjFmtInt(m.evaluert), sub:'i perioden'},
+    {label:'Eval-aksept', value:kjFmtPct(m.evalAks), sub:m.akseptert+' av '+(m.akseptert+m.avvist)+' avgjort'},
+    {label:'Bud-aksept', value:kjFmtPct(m.budAks), sub:m.solgt+' av '+(m.solgt+m.retur)+' avgjort'}
+  ];
+  document.getElementById('kj-funnel').innerHTML = funnelCards.map(function(c){
+    return '<div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px;"><div style="font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">'+c.label+'</div><div style="font-size:24px; font-weight:800; color:var(--green); line-height:1.1;">'+c.value+'</div><div style="font-size:11px; color:var(--muted); margin-top:4px;">'+c.sub+'</div></div>';
+  }).join('');
+  var startMs = new Date(2025, 10, 1).getTime();
+  var ytdMs = new Date(new Date().getFullYear(), 0, 1).getTime();
+  var startM = kjMetrics(rows, startMs);
+  var ytdM = kjMetrics(rows, ytdMs);
+  var enriched = rows.map(kjEnrich);
+  var pipeline = enriched.filter(function(r){
+    if(!r.evalDate) return false;
+    if(r.solgtDate || r.retDate) return false;
+    var statusLower = r.status.toLowerCase();
+    if(statusLower.indexOf('avvist') !== -1) return false;
+    return !!(r.mottatt || r.bestiltP || r.bestiltQ);
+  }).length;
+  document.getElementById('kj-lt-start').textContent = kjFmtInt(startM.solgt);
+  document.getElementById('kj-lt-ytd').textContent = kjFmtInt(ytdM.solgt);
+  document.getElementById('kj-lt-pipe').textContent = kjFmtInt(pipeline);
+}
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c25</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c26</div>
 </body>
 </html>
