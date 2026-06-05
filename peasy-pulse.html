@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c38</title>
+<title>Peasy Pulse v16.04.c39</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c38 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c39 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1089,7 +1089,7 @@ function daysAgo(val){if(!val)return '-';var d=parseDate(val);if(!d||isNaN(d))re
 function buildVenterPaSvarHtml(rows){
   var h='<div style="margin-top:32px">';
   var evalRows=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var d=parseDate(r[13]);if(!d)return false;return String(r[12]||'').trim().toLowerCase()==='endelig estimat';}).sort(function(a,b){return(parseDate(a[13])||0)-(parseDate(b[13])||0);});
-  h+='<div class="section-label">Venter pa evaluering ('+(window._venterEval=evalRows.length)+' biler)</div>';
+  h+='<div class="section-label">Venter pa evaluering ('+(window._venterEval=evalRows.length,window._venterEvalTid=new Date(),setTimeout(function(){try{updatePulseStatus()}catch(e){}},0),window._venterEval)+' biler)</div>';
   h+='<div class="table-card" style="margin-bottom:24px"><table><thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav &ndash; hoy</th></tr></thead><tbody>';
   if(!evalRows.length)h+='<tr><td colspan="6" style="color:var(--muted);padding:16px">Ingen biler venter &#10003;</td></tr>';
   for(var i=0;i<evalRows.length;i++){
@@ -1305,7 +1305,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c38 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c39 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -3527,6 +3527,23 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c38</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c39</div>
+<script>
+function updatePulseStatus(){
+  var el=document.getElementById('pulse-status-badge');
+  if(!el)return;
+  if(typeof window._venterEval!=='number'){el.textContent='venter p\u00e5 evaluering: laster ...';return;}
+  var venter=window._venterEval;
+  var d=window._venterEvalTid||new Date();
+  var hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  var bg,fg;
+  if(venter===0){bg='rgba(76,175,80,0.25)';fg='#C8F7C5';}
+  else if(venter<=4){bg='rgba(255,204,51,0.30)';fg='#FFF3C4';}
+  else{bg='rgba(198,40,40,0.40)';fg='#FFCDD2';}
+  el.style.background=bg;el.style.color=fg;
+  el.textContent='\u23f3 '+venter+' venter p\u00e5 evaluering \u00b7 per '+hh;
+}
+setInterval(updatePulseStatus,30000);
+</script>
 </body>
 </html>
