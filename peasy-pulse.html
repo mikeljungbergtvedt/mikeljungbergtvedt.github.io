@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c34</title>
+<title>Peasy Pulse v16.04.c35</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c34 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c35 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1297,7 +1297,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c34 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c35 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1553,8 +1553,8 @@ function render(data,rows){
   var prodKostUnder=(window.peasyConfig&&window.peasyConfig.prodKostUnder35k)||2250;
   var prodKostOver=(window.peasyConfig&&window.peasyConfig.prodKostOver35k)||2750;
   // Split solgte 30d etter Pris lav (D=r[3])
-  var sold30Under=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var pl=parseDLow(r[3]);return pl&&pl<=35000;}).length;
-  var sold30Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var pl=parseDLow(r[3]);return pl&&pl>35000;}).length;
+  var sold30Under=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var bd=r[19]?parseInt(String(r[19]).replace(/[\s\u00a0]/g,''))||null:null;return bd&&bd<35000;}).length;
+  var sold30Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d30From)return false;var bd=r[19]?parseInt(String(r[19]).replace(/[\s\u00a0]/g,''))||null:null;return bd&&bd>=35000;}).length;
   var sumProdKost30=sold30Under*prodKostUnder+sold30Over*prodKostOver+retur30c*returKost;
   var snittProdKost30=sold30c>0?Math.round(sumProdKost30/sold30c):0;
   var nettoSum30=sumU30-sumProdKost30;
@@ -1576,8 +1576,8 @@ function render(data,rows){
   var sold90c=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);return d&&d>=d90From;}).length;
   var mott90c=(rows||[]).slice(1).filter(function(r){if(!r[17])return false;var d=parseDate(r[17]);return d&&d>=d90From;}).length;
   var retur90c=Math.max(0,mott90c-sold90c);
-  var sold90Under=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d90From)return false;var pl=parseDLow(r[3]);return pl&&pl<=35000;}).length;
-  var sold90Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d90From)return false;var pl=parseDLow(r[3]);return pl&&pl>35000;}).length;
+  var sold90Under=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d90From)return false;var bd=r[19]?parseInt(String(r[19]).replace(/[\s\u00a0]/g,''))||null:null;return bd&&bd<35000;}).length;
+  var sold90Over=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);if(!d||d<d90From)return false;var bd=r[19]?parseInt(String(r[19]).replace(/[\s\u00a0]/g,''))||null:null;return bd&&bd>=35000;}).length;
   var sumProdKost90=sold90Under*prodKostUnder+sold90Over*prodKostOver+retur90c*returKost;
   var snittProdKost90=sold90c>0?Math.round(sumProdKost90/sold90c):0;
   var cplKontrakt90=sold90c>0?Math.round(spend90/sold90c):0;
@@ -3519,6 +3519,6 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c34</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c35</div>
 </body>
 </html>
