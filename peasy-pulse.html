@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c33</title>
+<title>Peasy Pulse v16.04.c34</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c33 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c34 &middot; 28. mai 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1297,7 +1297,7 @@ function buildTiltakHtml(){
   h+='<strong>Steg 1 &mdash; Eval-aksept:</strong> Av biler evaluert <em>etter</em> tiltaksdato &mdash; aksepterer &gt;20% tilbudet og bestiller henting/levering?<br>';
   h+='<strong>Steg 2 &mdash; Bud-aksept:</strong> Av biler som bestilte henting/levering <em>etter</em> tiltaksdato &mdash; selges &gt;70% på auksjon?<br><br>';
   h+='<span style="color:#888;font-size:11px">Drømmen: Høyere anker &rarr; flere aksepterer tilbudet (eval-aksept &gt;20%) OG bud-aksept holder seg over 70%.</span>';
-  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c33 &middot; Data er live fra ERP ved refresh</div>';
+  h+='<div style="margin-top:10px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Peasy Pulse v16.04.c34 &middot; Data er live fra ERP ved refresh</div>';
   h+='</div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1537,7 +1537,7 @@ function render(data,rows){
   var sold30arr=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d.getTime()>=d30ms;});
   var eVals30=sold30arr.map(function(c){return c.e;}).filter(function(e){return e&&e>500;});
   var aE30=eVals30.length?Math.round(eVals30.reduce(function(a,b){return a+b;},0)/eVals30.length):0;
-  var uVals30=sold30arr.map(function(c){return c.u;}).filter(function(u){return u&&u>500;});
+  var uVals30=sold30arr.map(function(c){return feeFromE(c.e);}).filter(function(u){return u!==null;});
   var aU30=uVals30.length?Math.round(uVals30.reduce(function(a,b){return a+b;},0)/uVals30.length):0;var sumU30=uVals30.reduce(function(a,b){return a+b;},0);
   var totalSpend=dSC*1000;
   var cplBrutto=tE>0?Math.round(totalSpend/tE):0;
@@ -1569,7 +1569,7 @@ function render(data,rows){
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
   var sold90arr=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d.getTime()>=d90ms;});
-  var uVals90=sold90arr.map(function(c){return c.u;}).filter(function(u){return u&&u>500;});
+  var uVals90=sold90arr.map(function(c){return feeFromE(c.e);}).filter(function(u){return u!==null;});
   var aU90=uVals90.length?Math.round(uVals90.reduce(function(a,b){return a+b;},0)/uVals90.length):0;
   var d90From=new Date();d90From.setDate(d90From.getDate()-90);d90From.setHours(0,0,0,0);
   var spend90=window.beregneSpend?window.beregneSpend(d90From,new Date()):90000;
@@ -1770,6 +1770,7 @@ setInterval(function(){document.getElementById('clock').textContent=new Date().t
 
 // Load config først, deretter data
 var peasyConfig={returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,marketingPerioder:[{fra:'2025-11-01',til:null,krPerDag:1000}]};
+function feeFromE(e){if(!e)return null;var n=typeof e==='number'?e:parseInt(String(e).replace(/[\s\u00a0]/g,''));if(isNaN(n))return null;if(n<75000)return 5900;if(n<125000)return 7900;return 9900;}window.feeFromE=feeFromE;
 function loadConfig(){return fetch('peasy-config.json?cb='+Date.now()).then(function(r){return r.json();}).then(function(c){peasyConfig=c;window.peasyConfig=c;}).catch(function(){window.peasyConfig=peasyConfig;});}
 // Beregn marketing spend over en periode (fraDate, tilDate)
 function beregneSpend(fraDate,tilDate){var sum=0;(peasyConfig.marketingPerioder||[]).forEach(function(p){var pFra=new Date(p.fra);var pTil=p.til?new Date(p.til):new Date();var overlapFra=fraDate>pFra?fraDate:pFra;var overlapTil=tilDate<pTil?tilDate:pTil;if(overlapTil>overlapFra){var dager=Math.ceil((overlapTil-overlapFra)/86400000);sum+=dager*p.krPerDag;}});return sum;}
@@ -3347,6 +3348,7 @@ function kjParseDate(v){
 
 function kjEnrich(row){
   var bud = kjParseIntNo(row[19]);
+  var endeligE = kjParseIntNo(row[4]);
   return {
     regnr: row[1],
     status: String(row[12]||''),
@@ -3356,7 +3358,8 @@ function kjEnrich(row){
     mottatt: kjParseDate(row[17]),
     solgtDate: kjParseDate(row[18]),
     bud: bud,
-    fee: kjFeeFromT(bud),
+    e: endeligE,
+    fee: feeFromE(endeligE),
     retDate: kjParseDate(row[21])
   };
 }
@@ -3374,7 +3377,7 @@ function kjGetPeriodMs(p){
 function kjMetrics(rows, fromMs){
   var enriched = rows.map(kjEnrich);
   var cfg = window.peasyConfig || {prodKostUnder35k:2250, prodKostOver35k:2750, returKost:3000, marketingPerioder:[]};
-  var PROD_RETUR_FLAT = 2500;
+  var PROD_RETUR_FLAT = cfg.returKost;
   var solgtInPeriod = enriched.filter(function(r){return r.solgtDate && r.solgtDate.getTime() >= fromMs;});
   var returInPeriod = enriched.filter(function(r){return r.retDate && r.retDate.getTime() >= fromMs;});
   var evalInPeriod  = enriched.filter(function(r){return r.evalDate && r.evalDate.getTime() >= fromMs;});
@@ -3516,6 +3519,6 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c33</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c34</div>
 </body>
 </html>
