@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c70</title>
+<title>Peasy Pulse v16.04.c71</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -171,7 +171,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c70 &middot; 8. juni 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px">v16.04.c71 &middot; 8. juni 2026 &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -347,7 +347,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c70 — Peasy/Drive splitt
+// Markedsforing v16.04.c71 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -952,6 +952,9 @@ window.MARK_V16_04 = (function(){
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
 <input type="number" id="innst-prod-over" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per solgt bil med Pris lav (D) &gt; 35 000</span>
 </div>
+<h3>Tiltak-beskrivelse</h3>
+<p style="color:#666;font-size:13px">Teksten som vises &oslash;verst p&aring; Tiltak-fanen. Lagre til GitHub for &aring; dele p&aring; alle maskiner.</p>
+<textarea id="innst-tiltaktekst" style="width:100%;min-height:110px;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:24px"></textarea>
 
 <h3>Markedsførings-perioder</h3>
 <table id="innst-perioder-tbl" style="width:100%;border-collapse:collapse;margin-bottom:12px">
@@ -1323,8 +1326,8 @@ function buildTiltakHtml(){
   var saved=(window.peasyConfig&&window.peasyConfig.tiltakDesc)||'';
   var h='';
   h+='<div style="background:#fff;border-left:4px solid #1D9E75;border-radius:12px;padding:18px 22px;margin-bottom:20px">';
-  h+='<div style="font-size:14px;font-weight:700;color:#004225;margin-bottom:8px">Hva er tiltak-analysen? <span style="font-size:11px;font-weight:500;color:#aaa">(klikk og rediger \u2014 lagres i din nettleser)</span></div>';
-  h+='<textarea id="tiltak-desc" style="width:100%;min-height:90px;box-sizing:border-box;border:1px solid rgba(0,66,37,0.15);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;color:#444;font-family:inherit;resize:vertical">'+tkEsc(saved||defTxt)+'</textarea>';
+  h+='<div style="font-size:14px;font-weight:700;color:#004225;margin-bottom:8px">Hva er tiltak-analysen? <span style="font-size:11px;font-weight:500;color:#aaa">(rediger i Innstillinger)</span></div>';
+  h+='<div id="tiltak-desc" style="font-size:13px;line-height:1.7;color:#444;white-space:pre-wrap">'+tkEsc(saved||defTxt)+'</div>';
   h+='<div style="margin-top:8px;font-size:10px;color:rgba(0,66,37,0.4);font-family:monospace">Live fra ERP ved refresh</div></div>';
   h+='<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">';
   h+='<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Tiltaksdato</label>';
@@ -1355,7 +1358,7 @@ function renderTiltakCharts(){
   if(!dateEl.value){dateEl.value=TILTAK_DATO;}
   dateEl.removeEventListener('change',renderTiltakCharts);dateEl.addEventListener('change',renderTiltakCharts);
   var ta=document.getElementById('tiltak-desc');
-  if(ta&&!ta._wired){ta._wired=true;ta.addEventListener('input',function(){if(!window.peasyConfig)window.peasyConfig={};window.peasyConfig.tiltakDesc=ta.value;var ij=document.getElementById('innst-json');if(ij)ij.textContent=JSON.stringify(window.peasyConfig,null,2);});}
+  if(ta&&window.peasyConfig&&typeof window.peasyConfig.tiltakDesc==='string'&&window.peasyConfig.tiltakDesc)ta.textContent=window.peasyConfig.tiltakDesc;
   var rows=window._lastRows||[];
   var today=new Date();today.setHours(0,0,0,0);
   var picked=new Date(dateEl.value);picked.setHours(0,0,0,0);
@@ -1432,7 +1435,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c70: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c71: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -2735,7 +2738,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c70 — slett-funksjon
+// v16.04.c71 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2770,6 +2773,7 @@ function innstRender(){
     tr.innerHTML='<td style="padding:8px"><input type="date" value="'+(p.fra||'')+'" data-i="'+i+'" data-k="fra" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="date" value="'+(p.til||'')+'" data-i="'+i+'" data-k="til" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="number" value="'+p.krPerDag+'" data-i="'+i+'" data-k="krPerDag" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;width:100px" /></td><td style="padding:8px"><button onclick="innstDeletePeriode('+i+')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:4px;padding:4px 10px;cursor:pointer">X</button></td>';
     tbody.appendChild(tr);
   });
+  var _tt=document.getElementById('innst-tiltaktekst');if(_tt){_tt.value=c.tiltakDesc||'';_tt.oninput=function(){if(!window.peasyConfig)window.peasyConfig={};window.peasyConfig.tiltakDesc=_tt.value;document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);};}
   document.getElementById('innst-json').textContent=JSON.stringify(c,null,2);
   // Token preview
   var tok=localStorage.getItem('peasyGithubToken')||'';
@@ -3387,7 +3391,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c70</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c71</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
