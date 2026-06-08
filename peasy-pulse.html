@@ -1118,7 +1118,7 @@ function renderEvalCharts(rows,data){
   var recv30=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d30;}).length;
   var recv90=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d90;}).length;
   var ep30=window.getEvalAksept(30).pct;
-  var ep30col = ep30>=20?'#2E7D32':'#C62828';
+  var ep30col = ep30>=15?'#2E7D32':'#C62828';
   var ep90=window.getEvalAksept(90).pct;
   var epD=ep30-ep90;
   var mottAll=(data&&data.mottatt)||[];
@@ -1136,7 +1136,7 @@ function renderEvalCharts(rows,data){
     var el30=document.getElementById(prefix+'-30');var el90=document.getElementById(prefix+'-90');var elD=document.getElementById(prefix+'-d');
     if(el30){el30.textContent=v30+'%';el30.style.color=c30;}if(el90)el90.textContent=v90+'%';if(elD){elD.textContent=(delta>0?'+':'')+delta+'pp vs 90d';elD.style.color=cD;}
   }
-  setKpi('ep',ep30,ep90,epD,20);setKpi('bp',bp30,bp90,bpD,70);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
+  setKpi('ep',ep30,ep90,epD,15);setKpi('bp',bp30,bp90,bpD,70);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
   var days=[],evalPerDay=[],evalPerDayPeasy=[],evalPerDayDrive=[],recvPerDay=[],mottPerDay=[],soldPerDay=[];
   for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);evalPerDay.push(0);recvPerDay.push(0);mottPerDay.push(0);soldPerDay.push(0);}
   evalAll.forEach(function(r){var d=parseDate(r[13]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0){evalPerDay[idx]=(evalPerDay[idx]||0)+1;var src=String(r[11]||'').toLowerCase();if(src==='peasy')evalPerDayPeasy[idx]=(evalPerDayPeasy[idx]||0)+1;if(src==='driveno')evalPerDayDrive[idx]=(evalPerDayDrive[idx]||0)+1;}});
@@ -1150,7 +1150,7 @@ function renderEvalCharts(rows,data){
   var budRate=rolling14(soldPerDay,mottPerDay);
   var chartOpts=function(targetPct,lineColor){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){if(ctx.dataset.label==='Rate')return 'Akseptrate: '+(ctx.parsed.y!==null?ctx.parsed.y+'%':'-');if(ctx.dataset.label==='Mal')return 'Mal: '+targetPct+'%';return ctx.dataset.label+': '+ctx.parsed.y+' stk';}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:lineColor,font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}};};
   var c1=document.getElementById('evalTrendChart');
-  if(c1){var ex1=Chart.getChart(c1);if(ex1)ex1.destroy();new Chart(c1,{data:{labels:days,datasets:[{type:'bar',label:'Evaluert',data:evalPerDay,backgroundColor:'rgba(0,66,37,0.12)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:evalRate,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 20;}),borderColor:'rgba(198,40,40,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(20,'#C62828')});}
+  if(c1){var ex1=Chart.getChart(c1);if(ex1)ex1.destroy();new Chart(c1,{data:{labels:days,datasets:[{type:'bar',label:'Evaluert',data:evalPerDay,backgroundColor:'rgba(0,66,37,0.12)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:evalRate,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 15;}),borderColor:'rgba(198,40,40,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(15,'#C62828')});}
   var cL=document.getElementById('leadsDailyChart');
   if(cL){var exL=Chart.getChart(cL);if(exL)exL.destroy();
     var leadsSma30=days.map(function(_,i){var s=0,n=0;for(var j=Math.max(0,i-29);j<=i;j++){s+=leadsPerDay[j];n++;}return n>0?+(s/n).toFixed(1):null;});
