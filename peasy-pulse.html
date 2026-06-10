@@ -1100,8 +1100,8 @@ window.MARK_V16_04 = (function(){
             <th onclick="sortV2('variant')" style="padding:10px 12px; color:#fff; cursor:pointer;">Type bil <span id="v2s-variant"></span></th>
             <th onclick="sortV2('priset')" style="padding:10px 12px; color:#fff; cursor:pointer;">Priset <span id="v2s-priset"></span></th>
             <th onclick="sortV2('status')" style="display:none;padding:10px 12px; color:#fff; cursor:pointer;">Status <span id="v2s-status"></span></th>
-            <th onclick="sortV2('easy')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Easy anker <span id="v2s-easy"></span></th>
-            <th onclick="sortV2('v2')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">v2 anker <span id="v2s-v2"></span></th>
+            <th onclick="sortV2('easy')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Easy Eval lav <span id="v2s-easy"></span></th>
+            <th onclick="sortV2('v2')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">V2 Eval lav <span id="v2s-v2"></span></th>
             <th onclick="sortV2('avvik')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Avvik % <span id="v2s-avvik"></span></th>
             <th onclick="sortV2('override')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Endret Easy-anker <span id="v2s-override"></span></th>
           </tr>
@@ -3009,8 +3009,8 @@ function computeFunnel(records){
     if(!c.akseptert&&!c.avvist)venter++;
     if(c.solgt)solgt++;
     if(c.returnert)returnert++;
-    if(r.easy&&Number.isFinite(r.easy.anker)&&r.easy.anker!==0&&r.v2&&Number.isFinite(r.v2.anker)){
-      var pct=(r.v2.anker-r.easy.anker)/r.easy.anker*100;
+    if(r.easy&&Number.isFinite(r.easy.dLav)&&r.easy.dLav!==0&&r.v2&&Number.isFinite(r.v2.dLav)){
+      var pct=(r.v2.dLav-r.easy.dLav)/r.easy.dLav*100;
       avvikSum+=Math.abs(pct);avvikN++;
       if(Math.abs(pct)<=5)innenfor5++;
     }
@@ -3281,9 +3281,9 @@ function getV2FilteredRecords(){
 }
 
 function avvikPctV2(r){
-  if(!r.easy||!Number.isFinite(r.easy.anker)||r.easy.anker===0)return null;
-  if(!r.v2||!Number.isFinite(r.v2.anker))return null;
-  return (r.v2.anker-r.easy.anker)/r.easy.anker*100;
+  if(!r.easy||!Number.isFinite(r.easy.dLav)||r.easy.dLav===0)return null;
+  if(!r.v2||!Number.isFinite(r.v2.dLav))return null;
+  return (r.v2.dLav-r.easy.dLav)/r.easy.dLav*100;
 }
 
 function applyV2FiltersAndRender(){
@@ -3295,8 +3295,8 @@ function applyV2FiltersAndRender(){
     if(sortCol==='regnr'){va=a.regnr||'';vb=b.regnr||'';}
     else if(sortCol==='variant'){va=(a.identifikasjon&&a.identifikasjon.variant)||'';vb=(b.identifikasjon&&b.identifikasjon.variant)||'';}
     else if(sortCol==='status'){va=classifyRecord(a).label||'';vb=classifyRecord(b).label||'';}
-    else if(sortCol==='easy'){va=(a.easy&&Number.isFinite(a.easy.anker))?a.easy.anker:-Infinity;vb=(b.easy&&Number.isFinite(b.easy.anker))?b.easy.anker:-Infinity;}
-    else if(sortCol==='v2'){va=(a.v2&&Number.isFinite(a.v2.anker))?a.v2.anker:-Infinity;vb=(b.v2&&Number.isFinite(b.v2.anker))?b.v2.anker:-Infinity;}
+    else if(sortCol==='easy'){va=(a.easy&&Number.isFinite(a.easy.dLav))?a.easy.dLav:-Infinity;vb=(b.easy&&Number.isFinite(b.easy.dLav))?b.easy.dLav:-Infinity;}
+    else if(sortCol==='v2'){va=(a.v2&&Number.isFinite(a.v2.dLav))?a.v2.dLav:-Infinity;vb=(b.v2&&Number.isFinite(b.v2.dLav))?b.v2.dLav:-Infinity;}
     else if(sortCol==='avvik'){var pa=avvikPctV2(a),pb=avvikPctV2(b);va=(pa===null)?-Infinity:pa;vb=(pb===null)?-Infinity:pb;}
     else if(sortCol==='override'){var oa=findOverrideForRecord(a),ob=findOverrideForRecord(b);va=(oa&&Number.isFinite(Number(oa.anker)))?Number(oa.anker):-Infinity;vb=(ob&&Number.isFinite(Number(ob.anker)))?Number(ob.anker):-Infinity;}
     else{va=a.timestamp?new Date(a.timestamp).getTime():0;vb=b.timestamp?new Date(b.timestamp).getTime():0;}
@@ -3332,13 +3332,13 @@ function renderV2Summary(records){
   var avgjorte=f.akseptert+f.avvist;
   var avvistPct=avgjorte>0?Math.round(f.avvist/avgjorte*100):null;
   var fmtPct=function(p){return p===null?'—':(Math.round(p*10)/10)+'%';};
-  var easyAnkers=records.map(function(r){return (r.easy&&Number.isFinite(r.easy.anker))?r.easy.anker:null;}).filter(function(v){return v!==null;});var avgEasy=easyAnkers.length>0?easyAnkers.reduce(function(s,v){return s+v;},0)/easyAnkers.length:null;var avgEasyTxt=avgEasy===null?'—':Math.round(avgEasy).toLocaleString('nb-NO')+' kr';
+  var easyAnkers=records.map(function(r){return (r.easy&&Number.isFinite(r.easy.dLav))?r.easy.dLav:null;}).filter(function(v){return v!==null;});var avgEasy=easyAnkers.length>0?easyAnkers.reduce(function(s,v){return s+v;},0)/easyAnkers.length:null;var avgEasyTxt=avgEasy===null?'—':Math.round(avgEasy).toLocaleString('nb-NO')+' kr';
   var cards=[
     {label:'Evalueringer sendt',value:f.n,sub:'fra '+V2BM_BENCHMARK_START,color:'var(--text)',bg:'var(--card)'},
     {label:'Eval-aksept (mål 15-20%)',value:fmtPct(f.evalAksept),sub:'venter: '+f.venter,color:evCol.color,bg:evCol.bg},
     {label:'Bud-aksept (mål 70%)',value:fmtPct(f.budAksept),sub:f.solgt+' solgt / '+f.returnert+' retur',color:bdCol.color,bg:bdCol.bg},
     {label:'Avvist',value:f.avvist,sub:avvistPct!==null?avvistPct+'% av avgjorte':'—',color:'var(--text)',bg:'var(--card)'},
-    {label:'Snitt Easy-anker',value:avgEasyTxt,sub:easyAnkers.length+' av '+f.n+' har Easy-anker',color:'var(--text)',bg:'var(--card)'},
+    {label:'Snitt Easy Eval lav',value:avgEasyTxt,sub:easyAnkers.length+' av '+f.n+' har Eval lav',color:'var(--text)',bg:'var(--card)'},
     {label:'Bot-avvik snitt |Δ%|',value:f.avvikSnitt===null?'—':(Math.round(f.avvikSnitt*10)/10)+'%',sub:f.andelInnenfor5===null?'—':Math.round(f.andelInnenfor5)+'% innenfor ±5%',color:'var(--text)',bg:'var(--card)'}
   ];
   document.getElementById('v2bm-summary').innerHTML=cards.map(function(c){
@@ -3376,8 +3376,8 @@ function renderV2Table(records){
     var cls=classifyRecord(r);
     var sc=statusBucketColor(cls.bucket);
     var statusHtml='<span style="display:inline-block; padding:3px 10px; border-radius:999px; background:'+sc.bg+'; color:'+sc.color+'; font-size:11px; font-weight:600;">'+cls.label+'</span>';
-    var easy=(r.easy&&Number.isFinite(r.easy.anker))?fmtKrV2(r.easy.anker):'—';
-    var v2=(r.v2&&Number.isFinite(r.v2.anker))?fmtKrV2(r.v2.anker):'—';
+    var easy=(r.easy&&Number.isFinite(r.easy.dLav))?fmtKrV2(r.easy.dLav):'—';
+    var v2=(r.v2&&Number.isFinite(r.v2.dLav))?fmtKrV2(r.v2.dLav):'—';
     var pct=avvikPctV2(r);
     var avvikCol=colorForAvvik(pct);
     var avvikTxt=pct===null?'—':((pct>=0?'+':'')+(Math.round(pct*10)/10)+'%');
