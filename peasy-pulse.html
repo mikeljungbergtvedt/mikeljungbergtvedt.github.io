@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c85</title>
+<title>Peasy Pulse v16.04.c86</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -172,7 +172,7 @@ function authLogout(){
     <a href="https://mikeljungbergtvedt.github.io/peasyportal.html" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;padding:4px 8px;border-radius:99px;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">&larr; portal</a>
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c85 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c86 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -182,6 +182,7 @@ function authLogout(){
       <button class="mode-btn" id="btn-sporsmal" onclick="setMode('sporsmal')">Spm</button>
         <button class="mode-btn" id="btn-innst" onclick="setMode('innst')">Innstillinger</button>
         <button class="mode-btn" id="btn-mark" onclick="setMode('mark')">Marked</button>
+        <button class="mode-btn" id="btn-score" onclick="setMode('score')">Scoreboard</button>
         <button class="mode-btn" id="btn-v2bm" onclick="setMode('v2bm')">V2 BM</button>
     </div>
     <div id="pulse-status-badge" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;margin-right:8px;">liste 3-status: ...</div><div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
@@ -348,7 +349,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c85 — Peasy/Drive splitt
+// Markedsforing v16.04.c86 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1013,6 +1014,33 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+<section class="mode-section" data-mode="score" id="score-section" style="display:none;">
+  <h1 class="page" style="margin-bottom:4px">Scoreboard</h1>
+  <div class="page-sub" style="margin-bottom:14px">Easy vs V2 — anker mot realisert høyeste bud (30d glidende, fra 2026-06-01)</div>
+  <div id="score-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px"></div>
+  <div style="margin-bottom:12px;font-size:11px;color:var(--muted);text-align:right">Sist oppdatert: <span id="score-updated">—</span> &middot; <a href="#" onclick="loadScoreboard();return false" style="color:var(--green);text-decoration:none">Last på nytt</a></div>
+  <div class="table-card">
+    <div style="overflow-x:auto">
+      <table id="score-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--green);text-align:left">
+            <th style="padding:10px 12px;color:#fff">Reg nr</th>
+            <th style="padding:10px 12px;color:#fff">Internnr</th>
+            <th style="padding:10px 12px;color:#fff">Bil</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff">Easy anker</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff">V2 anker</th>
+            <th style="padding:10px 12px;text-align:center;color:#fff">Eval status</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff">Høyeste bud</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff">Easy gap %</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff">V2 gap %</th>
+            <th style="padding:10px 12px;text-align:center;color:#fff">Vinner</th>
+          </tr>
+        </thead>
+        <tbody id="score-tbody"><tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
   <div class="page-sub" style="margin-bottom:14px">V2 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
@@ -1075,12 +1103,14 @@ function setMode(m){
   if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
   if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
   if(document.getElementById('btn-v2bm'))document.getElementById('btn-v2bm').classList.toggle('active',m==='v2bm');
+  if(document.getElementById('btn-score'))document.getElementById('btn-score').classList.toggle('active',m==='score');
   if(document.getElementById('btn-kjerne'))document.getElementById('btn-kjerne').classList.toggle('active',m==='kjerne');
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
   if(m==='sporsmal'){loadQuestions();}
-  if(m==='v2bm'){loadV2Benchmark();}
+  if(m==='score'){try{loadScoreboard();}catch(e){}}
+      if(m==='v2bm'){loadV2Benchmark();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
@@ -1437,7 +1467,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c85: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c86: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -2740,7 +2770,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c85 — slett-funksjon
+// v16.04.c86 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -2963,6 +2993,103 @@ function setV2Period(p){
   applyV2FiltersAndRender();
 }
 
+async function loadScoreboard(){
+  var tbody=document.getElementById('score-tbody');
+  var summ=document.getElementById('score-summary');
+  if(!tbody)return;
+  tbody.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">Henter data ...</td></tr>';
+  try{
+    var t=Date.now();
+    var mUrl='https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t='+t;
+    if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
+      try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(e){}
+    }
+    var mRes=await fetch(mUrl);
+    var mText=mRes.ok?await mRes.text():'';
+    var measurements=mText.split('
+').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
+    var START=new Date('2026-06-01');
+    var thirtyAgo=new Date();thirtyAgo.setDate(thirtyAgo.getDate()-30);
+    var since=thirtyAgo>START?thirtyAgo:START;
+    var recs=measurements.filter(function(r){if(!r.timestamp)return false;var d=new Date(r.timestamp);return d>=since;});
+    // Latest per regnr+erpId
+    var byKey={};
+    recs.forEach(function(r){var k=r.regnr+'|'+(r.erpId||'');var ex=byKey[k];if(!ex||new Date(r.timestamp)>new Date(ex.timestamp))byKey[k]=r;});
+    var rows=Object.keys(byKey).map(function(k){return byKey[k];});
+    // Join ERP
+    var lr=window._lastRows||[];var hdr=lr[0]||[];
+    var idCol=-1,statusCol=-1,budCol=-1,esCol=-1;
+    for(var i=0;i<hdr.length;i++){var h=String(hdr[i]||'').toLowerCase();if(h==='internnr.'||h==='internnr')idCol=i;if(h==='status')statusCol=i;if(h==='hoyeste bud'||h==='høyeste bud')budCol=i;if(h==='estimering')esCol=i;}
+    var erpById={};
+    if(idCol>=0)for(var j=1;j<lr.length;j++){var id=lr[j][idCol];if(id!=null)erpById[String(id)]=lr[j];}
+    // Build rows
+    var stats={n:0,accepted:0,rejected:0,pending:0,withBud:0,easyAbs:[],v2Abs:[],winsV2:0,winsEasy:0};
+    var html=rows.sort(function(a,b){return new Date(b.timestamp)-new Date(a.timestamp);}).map(function(r){
+      stats.n++;
+      var easy=r.easy&&r.easy.anker||0;
+      var v2=r.v2&&r.v2.anker||0;
+      var erpRow=erpById[String(r.erpId||'')]||null;
+      var status=erpRow&&statusCol>=0?String(erpRow[statusCol]||''):'';
+      var bud=erpRow&&budCol>=0?Number(erpRow[budCol]||0):0;
+      var sLow=status.toLowerCase();
+      var statusLbl='venter eval',statusCol2='#667';
+      if(/avvist|declined|rejected/.test(sLow)){statusLbl='avvist';statusCol2='#C62828';stats.rejected++;}
+      else if(/sold|solgt|return|auksjon|auction|mottatt|trans/i.test(sLow)){statusLbl='akseptert';statusCol2='#2E7D32';stats.accepted++;}
+      else{stats.pending++;}
+      var easyGap=null,v2Gap=null,winner='—',winnerCol='#667';
+      if(bud>0&&easy>0&&v2>0){
+        stats.withBud++;
+        easyGap=(bud-easy)/easy*100;
+        v2Gap=(bud-v2)/v2*100;
+        stats.easyAbs.push(Math.abs(easyGap));
+        stats.v2Abs.push(Math.abs(v2Gap));
+        if(Math.abs(v2Gap)<Math.abs(easyGap)){winner='V2';winnerCol='#1565C0';stats.winsV2++;}
+        else if(Math.abs(easyGap)<Math.abs(v2Gap)){winner='Easy';winnerCol='#7B1FA2';stats.winsEasy++;}
+        else{winner='likt';}
+      }
+      var variant=(r.identifikasjon&&r.identifikasjon.variant?r.identifikasjon.variant.slice(0,30):'—');
+      function fmtKr(n){return n?Math.round(n).toLocaleString('nb-NO')+' kr':'—';}
+      function fmtPct(n){return n===null?'—':((n>=0?'+':'')+(Math.round(n*10)/10)+' %');}
+      var gapCol=function(n){if(n===null)return 'var(--muted)';return Math.abs(n)<5?'#2E7D32':(Math.abs(n)<10?'#E65100':'#C62828');};
+      return '<tr style="border-top:1px solid var(--border)">'+
+        '<td style="padding:8px 12px;font-weight:600">'+r.regnr+'</td>'+
+        '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace">'+(r.erpId||'—')+'</td>'+
+        '<td style="padding:8px 12px;color:var(--muted)">'+variant+'</td>'+
+        '<td style="padding:8px 12px;text-align:right">'+fmtKr(easy)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right">'+fmtKr(v2)+'</td>'+
+        '<td style="padding:8px 12px;text-align:center"><span style="background:'+statusCol2+'22;color:'+statusCol2+';padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600">'+statusLbl+'</span></td>'+
+        '<td style="padding:8px 12px;text-align:right;font-weight:'+(bud?'600':'400')+'">'+fmtKr(bud)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(easyGap)+';font-weight:600">'+fmtPct(easyGap)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v2Gap)+';font-weight:600">'+fmtPct(v2Gap)+'</td>'+
+        '<td style="padding:8px 12px;text-align:center;color:'+winnerCol+';font-weight:700">'+winner+'</td>'+
+        '</tr>';
+    }).join('');
+    if(!html)html='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">Ingen biler i perioden.</td></tr>';
+    tbody.innerHTML=html;
+    // Summary cards
+    function chip(lbl,val,sub,col){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:10px;padding:10px 14px"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#667">'+lbl+'</div><div style="font-size:22px;font-weight:800;color:'+(col||'#004225')+'">'+val+'</div><div style="font-size:10px;color:#667">'+(sub||'')+'</div></div>';}
+    function median(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y});return b[Math.floor(b.length/2)];}
+    function avg(a){if(!a.length)return null;return a.reduce(function(s,x){return s+x;},0)/a.length;}
+    var easyMed=median(stats.easyAbs),v2Med=median(stats.v2Abs);
+    var easyAvg=avg(stats.easyAbs),v2Avg=avg(stats.v2Abs);
+    var acceptRate=stats.n?(stats.accepted/stats.n*100):0;
+    var sh='';
+    sh+=chip('Biler i scoreboard',stats.n,'siden 01.06 / 30d glidende');
+    sh+=chip('Eval akseptert',stats.accepted+' / '+stats.n,Math.round(acceptRate*10)/10+' %');
+    sh+=chip('Avvist',stats.rejected,'',stats.rejected?'#C62828':'#667');
+    sh+=chip('Venter eval',stats.pending,'ikke avgjort');
+    sh+=chip('Med høyeste bud',stats.withBud,'klar for sammenligning');
+    if(stats.withBud>0){
+      sh+=chip('Easy abs gap',(easyMed!=null?Math.round(easyMed*10)/10+' %':'—'),'median - snitt '+(easyAvg!=null?Math.round(easyAvg*10)/10+' %':'—'),'#7B1FA2');
+      sh+=chip('V2 abs gap',(v2Med!=null?Math.round(v2Med*10)/10+' %':'—'),'median - snitt '+(v2Avg!=null?Math.round(v2Avg*10)/10+' %':'—'),'#1565C0');
+      sh+=chip('Vinner',stats.winsV2>stats.winsEasy?'V2':(stats.winsEasy>stats.winsV2?'Easy':'Likt'),'V2: '+stats.winsV2+' - Easy: '+stats.winsEasy,stats.winsV2>stats.winsEasy?'#1565C0':'#7B1FA2');
+    }
+    summ.innerHTML=sh;
+    var upd=document.getElementById('score-updated');if(upd)upd.textContent=new Date().toLocaleString('nb-NO');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--red)">Kunne ikke laste: '+e.message+'</td></tr>';
+  }
+}
 async function loadV2Benchmark(){
   var t=Date.now();
   var mUrl='https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t='+t;
@@ -3368,7 +3495,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c85</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c86</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
