@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c123</title>
+<title>Peasy Pulse v16.04.c124</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c123 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c124 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c123 — Peasy/Drive splitt
+// Markedsforing v16.04.c124 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1586,7 +1586,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c123: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c124: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -2893,7 +2893,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c123 — slett-funksjon
+// v16.04.c124 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -3705,7 +3705,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c123</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c124</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -3815,51 +3815,64 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+
 <script>
-/* c121: Pipe-avklart over uavklart - samme layout */
+/* c124: Klon uavklart-seksjon, fyll med liste 5a */
 (function(){
-  function getThead(){
-    var existing = document.getElementById('pipe-tbody');
-    if (!existing) return null;
-    var tbl = existing.closest('table');
-    return tbl ? tbl.querySelector('thead') : null;
-  }
-  function fmtKr(n){ if(n===null||n===undefined||n==='')return '-'; var x=Number(String(n).replace(/[^0-9.-]/g,'')); return isNaN(x)?'-':x.toLocaleString('nb-NO')+' kr'; }
-  function fmtKr2(s){ if(!s)return '-'; var p=String(s).split('-').map(function(x){return Number(x.replace(/[^0-9.-]/g,''));}); if(p.length===2&&!isNaN(p[0])&&!isNaN(p[1]))return p[0].toLocaleString('nb-NO')+' - '+p[1].toLocaleString('nb-NO')+' kr'; return s; }
+  var FILTER = function(r){ return r && (r[12]==='waiting_for_transport' || r[12]==='ar_car_created'); };
   function build(){
-    var sec = document.getElementById('pipe-section');
-    if (!sec) return;
-    var old = document.getElementById('pipe-avklart-wrap'); if (old) old.remove();
-    var rows = (window._lastRows||[]).slice(1);
-    var f = rows.filter(function(r){ return r && (r[12]==='waiting_for_transport' || r[12]==='ar_car_created'); });
-    f.sort(function(a,b){ return String(b[14]||'').localeCompare(String(a[14]||'')); });
-    var theadSrc = getThead();
-    var theadHtml = theadSrc ? theadSrc.outerHTML : '<thead><tr><th>Regnr</th></tr></thead>';
-    var trs = f.map(function(r){
-      var bil = [r[6]||'', r[7]||'', r[8]||''].filter(Boolean).join(' ');
-      return '<tr style="border-top:1px solid var(--border)">' +
-        '<td style="padding:8px 12px"><strong>'+(r[1]||'')+'</strong></td>' +
-        '<td style="padding:8px 12px">'+bil+'</td>' +
-        '<td style="padding:8px 12px;font-family:monospace;font-size:12px">'+(r[14]||'-')+'</td>' +
-        '<td style="padding:8px 12px;text-align:right">'+fmtKr2(r[3])+'</td>' +
-        '<td style="padding:8px 12px;font-family:monospace;font-size:12px">'+(r[15]||'-')+'</td>' +
-        '<td style="padding:8px 12px;font-family:monospace;font-size:12px">'+(r[31]||'-')+'</td>' +
-        '</tr>';
-    }).join('');
-    var html = '<div id="pipe-avklart-wrap">' +
-      '<h1 class="page" style="margin-bottom:4px">Pipe - avklart</h1>' +
-      '<div class="page-sub" style="margin-bottom:14px">Avtalt henting/levering - liste 5a Pa vei ('+f.length+' biler)</div>' +
-      '<div class="table-card" style="margin-bottom:32px"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">' +
-      '<thead><tr style="background:#1B5E20;color:#fff">' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Regnr</th>' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Bil</th>' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">SD mottatt</th>' +
-      '<th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Endelig AR</th>' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Transport bestilt</th>' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Estimert</th>' +
-      '</tr></thead><tbody>' + (trs || '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted)">Ingen biler</td></tr>') +
-      '</tbody></table></div></div></div>';
-    sec.insertAdjacentHTML('afterbegin', html);
+    var uav = document.getElementById('pipe-section');
+    if (!uav) return;
+    var old = document.getElementById('pipe-avklart-section');
+    if (old) old.remove();
+    if (!window._lastRows) return;
+    var allRows = window._lastRows;
+    var filteredData = allRows.slice(1).filter(FILTER);
+    // Set window override for renderPipe-call
+    var origRows = window._lastRows;
+    var fakeRows = [allRows[0]].concat(filteredData);
+    // Clone uavklart section
+    var clone = uav.cloneNode(true);
+    clone.id = 'pipe-avklart-section';
+    // Prefix all inner IDs to avoid collision
+    clone.querySelectorAll('[id]').forEach(function(el){ el.id = 'a-' + el.id; });
+    // Update title
+    var h1 = clone.querySelector('h1.page'); if (h1) h1.textContent = 'Pipe - avklart';
+    var sub = clone.querySelector('.page-sub'); if (sub) sub.textContent = 'Avtalt henting/levering - liste 5a Pa vei';
+    // Make visible same as uavklart
+    clone.style.display = uav.style.display;
+    // Insert before uavklart
+    uav.parentNode.insertBefore(clone, uav);
+    // Re-render with filtered data by temporarily swapping _lastRows and calling render
+    try {
+      window._lastRows = fakeRows;
+      // Find render-funksjon for Pipe-fanen and call it scoped to clone
+      // Most likely it queries getElementById('pipe-tbody') etc, which is now 'a-pipe-tbody' in clone
+      // So we need to TEMPORARILY rename clone IDs back to original to let render populate, then rename back
+      var idMap = [];
+      clone.querySelectorAll('[id]').forEach(function(el){
+        var orig = el.id.slice(2);
+        idMap.push([el, el.id, orig]);
+        el.id = orig;
+      });
+      // Hide uavklart temporarily so render targets clone
+      var uavIds = [];
+      uav.querySelectorAll('[id]').forEach(function(el){
+        uavIds.push([el, el.id]);
+        el.id = 'u-' + el.id;
+      });
+      // Try to invoke render function
+      if (typeof renderPipe === 'function') renderPipe();
+      else if (typeof window.renderPipe === 'function') window.renderPipe();
+      // Restore IDs
+      idMap.forEach(function(t){ t[0].id = t[1]; });
+      uavIds.forEach(function(t){ t[0].id = t[1]; });
+    } catch(e){ console.error('avklart render err', e); }
+    finally {
+      window._lastRows = origRows;
+      // Re-render uavklart with original data
+      try { if (typeof renderPipe === 'function') renderPipe(); else if (typeof window.renderPipe === 'function') window.renderPipe(); } catch(e2){}
+    }
   }
   function tick(){
     if (window._lastRows && document.getElementById('pipe-section')) build();
@@ -3868,7 +3881,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tick);
   else tick();
   var _o = window.setMode;
-  window.setMode = function(m){ if(_o) _o(m); if(m==='pipe') setTimeout(build, 100); };
+  window.setMode = function(m){ if(_o) _o(m); if(m==='pipe') setTimeout(build, 150); };
 })();
 </script>
 </body>
