@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c139</title>
+<title>Peasy Pulse v16.04.c140</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c139 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c140 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c139 — Peasy/Drive splitt
+// Markedsforing v16.04.c140 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1098,6 +1098,9 @@ window.MARK_V16_04 = (function(){
 <section class="mode-section" data-mode="pipe" id="pipe-avklart-section">
   <h1 class="page" style="margin-bottom:4px">Pipe - avklart <span id="pa-h1-total" style="color:var(--muted);font-weight:400;font-size:0.7em"></span></h1>
   <div class="page-sub" style="margin-bottom:14px">Biler i produksjon: pa vei, pa anlegg, auksjon, signering. <span id="pipe-avklart-total" style="color:var(--green);font-weight:600"></span> &middot; <a href="#" id="pa-reload-link" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px" id="pa-stats-row"></div>
+  <div style="text-align:right;color:var(--muted);font-size:12px;margin-bottom:18px">Sist oppdatert: <span id="pa-stats-time">—</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px" id="pa-breakdown-row"></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px" id="pipe-avklart-tiles"></div>
   <div id="pipe-avklart-sections"></div>
 </section>
@@ -1247,26 +1250,96 @@ window.MARK_V16_04 = (function(){
         if (!j.ok) throw new Error(j.err || "fetch feilet");
         var biler = j.biler || [];
         paRender(p, biler);
-        return biler.length;
+        return {count: biler.length, biler: biler, listId: p.id};
       })
       .catch(function(e){
         var tb = document.getElementById("pa-" + p.id + "-tbody");
         if (tb) { tb.innerHTML = ""; tb.appendChild(el("tr", null, [el("td", {colspan:"5", style:"padding:14px;text-align:center;color:var(--red)"}, [txt("Feil: " + (e.message || e))])])); }
         var tile = document.querySelector("[data-count=\"" + p.id + "\"]");
         if (tile) tile.textContent = "?";
-        return 0;
+        return {count: 0, biler: [], listId: p.id};
       });
+  }
+
+    function statTile(label, value, sub){
+    var lab = el("div", {style:"color:var(--muted);font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase"}, [txt(label)]);
+    var val = el("div", {style:"font-size:24px;font-weight:700;color:var(--green);margin-top:6px"}, [txt(value)]);
+    var s = el("div", {style:"color:var(--muted);font-size:11px;margin-top:4px"}, [txt(sub||"")]);
+    return el("div", {"class":"table-card", style:"padding:14px 16px"}, [lab, val, s]);
+  }
+  function statCard(title, rows){
+    var th = el("div", {"class":"th"}, [el("div", {"class":"th-title"}, [txt(title)])]);
+    var body = el("div", {style:"padding:8px 0"}, []);
+    rows.forEach(function(r){
+      var ln = el("div", {style:"display:flex;justify-content:space-between;padding:6px 16px;border-bottom:1px solid var(--border)"}, [
+        el("div", {style:"font-weight:600"}, [txt(r.label)]),
+        el("div", {style:"color:var(--muted)"}, [txt(r.value)])
+      ]);
+      body.appendChild(ln);
+    });
+    return el("div", {"class":"table-card"}, [th, body]);
+  }
+  function topN(arr, n){
+    var counts = {};
+    arr.forEach(function(v){ if (v) counts[v] = (counts[v]||0) + 1; });
+    var sorted = Object.keys(counts).map(function(k){return {k:k, v:counts[k]};}).sort(function(a,b){return b.v - a.v;});
+    return sorted.slice(0, n);
+  }
+  function paBuildStats(biler){
+    var sr = document.getElementById("pa-stats-row");
+    var br = document.getElementById("pa-breakdown-row");
+    var tm = document.getElementById("pa-stats-time");
+    if (!sr || !br) return;
+    sr.innerHTML = ""; br.innerHTML = "";
+    var n = biler.length;
+    var sumLav = 0, ksLav = 0, sumKm = 0, ksKm = 0, sumAlder = 0, ksAlder = 0;
+    var yearNow = new Date().getFullYear();
+    biler.forEach(function(b){
+      if (b.price_final_min) { sumLav += b.price_final_min; ksLav++; }
+      var km = findKmInLastRows(b.registration_number);
+      if (km) { sumKm += Number(km); ksKm++; }
+      var y = b.drive_no_car_data && b.drive_no_car_data.model_year;
+      if (y) { sumAlder += (yearNow - Number(y)); ksAlder++; }
+    });
+    sr.appendChild(statTile("Antall avklart", String(n), "biler i produksjon"));
+    sr.appendChild(statTile("Snitt eval lav", ksLav ? Math.round(sumLav/ksLav).toLocaleString("nb-NO") + " kr" : "—", "per bil"));
+    sr.appendChild(statTile("Snitt km", ksKm ? Math.round(sumKm/ksKm).toLocaleString("nb-NO") + " km" : "—", "flate-snitt"));
+    sr.appendChild(statTile("Snitt alder", ksAlder ? (sumAlder/ksAlder).toFixed(1) + " ar" : "—", "flate-snitt"));
+    tm.textContent = new Date().toLocaleTimeString("nb-NO");
+
+    // Per status (liste)
+    var perListe = topN(biler.map(function(b){
+      var L = PA_LISTER.filter(function(x){return x.id === b._listId;})[0];
+      return L ? L.tittel : b._listId;
+    }), 99).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+    br.appendChild(statCard("Per status", perListe));
+
+    // Per drivlinje (basert pa fuel-type, men ERP gir vi ikke - bruk manufacturer som proxy)
+    var drivlinje = topN(biler.map(function(b){
+      var ds = (b.drive_no_car_data && b.drive_no_car_data.drive_no_car_id) ? "Drivlinje ukjent" : "Drivlinje ukjent";
+      return "Drivlinje ukjent";
+    }), 5).map(function(x){ return {label:x.k, value:x.v + " biler"}; });
+    br.appendChild(statCard("Per drivlinje", [{label:"Drivlinje", value: "Mangler felt i ERP-respons"}]));
+
+    var merker = topN(biler.map(function(b){ return (b.drive_no_car_data && b.drive_no_car_data.manufacturer_name) || b.manufacturer; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+    br.appendChild(statCard("Topp merker", merker));
+
+    var steder = topN(biler.map(function(b){ return b.location_id ? "Lok " + b.location_id : null; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+    br.appendChild(statCard("Topp lokasjoner", steder));
   }
 
   window.loadPipeAvklart = function(){
     paBuildTiles();
     paBuildSections();
-    return Promise.all(PA_LISTER.map(paFetch)).then(function(counts){
-      var total = counts.reduce(function(a,b){ return a + (b||0); }, 0);
+    return Promise.all(PA_LISTER.map(paFetch)).then(function(results){
+      var total = results.reduce(function(a,b){ return a + (b.count||0); }, 0);
+      var allBiler = [];
+      results.forEach(function(r){ (r.biler||[]).forEach(function(b){ b._listId = r.listId; allBiler.push(b); }); });
       var t = document.getElementById("pipe-avklart-total");
       if (t) t.textContent = total + " biler totalt";
       var h = document.getElementById("pa-h1-total");
       if (h) h.textContent = "(" + total + ")";
+      paBuildStats(allBiler);
       return total;
     });
   };
@@ -1786,7 +1859,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c139: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c140: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -3093,7 +3166,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c139 — slett-funksjon
+// v16.04.c140 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -3905,7 +3978,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c139</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c140</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
