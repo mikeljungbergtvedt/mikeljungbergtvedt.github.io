@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c130</title>
+<title>Peasy Pulse v16.04.c131</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c130 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c131 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c130 — Peasy/Drive splitt
+// Markedsforing v16.04.c131 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1586,7 +1586,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c130: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c131: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -2893,7 +2893,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c130 — slett-funksjon
+// v16.04.c131 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -3705,7 +3705,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c130</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c131</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -3861,6 +3861,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }).then(function(j){
       btn.style.cssText = BTN_OK;
       btn.textContent = j.queued ? 'Kø-lagt' : (j.ok ? 'OK' : 'Feil');
+      window._sentEvalCells = window._sentEvalCells || {};
+      window._sentEvalCells[rg + '__' + inn] = new Date();
     }).catch(function(e){
       btn.style.cssText = BTN_ERR;
       btn.textContent = 'Feil';
@@ -3881,10 +3883,22 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var c = r.cells[colIdx];
       if (c.querySelector && c.querySelector('button.send-eval-btn')) continue;
       var txt = (c.textContent||'').trim();
-      // Hvis dato (har siffer) — la stå. Hvis "—" → knapp.
-      if (txt && /\d/.test(txt)) continue;
       var rg = (r.cells[0] && r.cells[0].textContent || '').trim().split(/\s+/)[0].toUpperCase();
       var inn = (r.cells[1] && r.cells[1].textContent || '').trim();
+      // c131: lokal sendt-state for umiddelbar dato-visning
+      var localKey = rg + '__' + inn;
+      window._sentEvalCells = window._sentEvalCells || {};
+      if (window._sentEvalCells[localKey] && !(/\d/.test(txt))) {
+        var t = window._sentEvalCells[localKey];
+        var pad = function(n){return (n<10?'0':'')+n;};
+        var stamp = pad(t.getDate())+'.'+pad(t.getMonth()+1)+'.'+t.getFullYear()+' '+pad(t.getHours())+':'+pad(t.getMinutes());
+        c.innerHTML = '<span style="color:#A5D6A7;font-size:11px" title="Sendt fra Pulse - venter pa ERP-refresh">'+stamp+' OK</span>';
+        continue;
+      }
+      if (txt && /\d/.test(txt)) {
+        if (window._sentEvalCells[localKey]) delete window._sentEvalCells[localKey];
+        continue;
+      }
       // Km fra augmenterte kolonner — kolonnen FØR "Eval sendt"
       var kmTxt = (r.cells[colIdx-1] && r.cells[colIdx-1].textContent || '').trim();
       var km = parseInt(kmTxt.replace(/[^\d]/g,''),10) || 0;
