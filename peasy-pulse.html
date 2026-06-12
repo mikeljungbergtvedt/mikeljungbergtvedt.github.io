@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c143</title>
+<title>Peasy Pulse v16.04.c144</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c143 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c144 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c143 — Peasy/Drive splitt
+// Markedsforing v16.04.c144 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1095,40 +1095,47 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+
 <section class="mode-section" data-mode="pipe" id="pipe-avklart-section">
   <h1 class="page" style="margin-bottom:4px">Pipe - avklart <span id="pa-h1-total" style="color:var(--muted);font-weight:400;font-size:0.7em"></span></h1>
-  <div class="page-sub" style="margin-bottom:14px">Biler i produksjon: pa vei, pa anlegg, auksjon, signering. <span id="pipe-avklart-total" style="color:var(--green);font-weight:600"></span> &middot; <a href="#" id="pa-reload-link" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
+  <div class="page-sub" style="margin-bottom:14px">Biler i produksjon: pa vei, pa anlegg, auksjon, signering. Data fra ERP-eksport. <span id="pipe-avklart-total" style="color:var(--green);font-weight:600"></span> &middot; <a href="#" id="pa-reload-link" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px" id="pa-stats-row"></div>
   <div style="text-align:right;color:var(--muted);font-size:12px;margin-bottom:18px">Sist oppdatert: <span id="pa-stats-time">—</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px" id="pa-breakdown-row"></div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px" id="pipe-avklart-tiles"></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px" id="pipe-avklart-tiles"></div>
   <div id="pipe-avklart-sections"></div>
 </section>
 <script>
 (function(){
+  // Mapping ERP-eksport status -> avklart-liste
   var PA_LISTER = [
-    {id:"5a", tittel:"5a Pa vei",               endpoint:"on_the_way"},
-    {id:"5b", tittel:"5b Mottatt",              endpoint:"car_received"},
-    {id:"5c", tittel:"5c Forberedelse",         endpoint:"waiting_for_preparation"},
-    {id:"6",  tittel:"6 Ready for auction",     endpoint:"ready_for_auction"},
-    {id:"7",  tittel:"7 Pa auksjonen",          endpoint:"on_auction"},
-    {id:"8",  tittel:"8 Auksjon avsluttet",     endpoint:"auction_finished"},
-    {id:"9",  tittel:"9 Vent. pa budaksept",    endpoint:"wait_for_bid_accept"},
-    {id:"10", tittel:"10 Vent. salgsmelding",   endpoint:"wait_for_sales_note"},
-    {id:"11", tittel:"11 Uferdige kontrakter",  endpoint:"incomplete_contract"},
-    {id:"12", tittel:"12 Vent. pa signering",   endpoint:"wait_for_signing"},
-    {id:"13", tittel:"13 Kontrakt signert",     endpoint:"contract_signed"}
+    {id:"5a", tittel:"5a Pa vei",              statuses:["waiting_for_transport","ar_car_created"]},
+    {id:"5b", tittel:"5b Mottatt",             statuses:["car_received"]},
+    {id:"5c", tittel:"5c Forberedelse",        statuses:["waiting_for_preparation"]},
+    {id:"6",  tittel:"6 Ready for auction",    statuses:["ready_for_auction"]},
+    {id:"7",  tittel:"7 Pa auksjonen",         statuses:["on_auction"]},
+    {id:"8",  tittel:"8 Auksjon avsluttet",    statuses:["auction_finished","clarification"]},
+    {id:"9",  tittel:"9 Vent. pa budaksept",   statuses:["waiting_for_sale_reaction","wait_for_bid_accept"]},
+    {id:"10", tittel:"10 Vent. salgsmelding",  statuses:["wait_for_sales_note"]},
+    {id:"11", tittel:"11 Uferdige kontrakter", statuses:["incomplete_contract"]},
+    {id:"12", tittel:"12 Vent. pa signering",  statuses:["wait_for_signing"]},
+    {id:"13", tittel:"13 Kontrakt signert",    statuses:["contract_signed"]}
   ];
-  var PA_TOKEN = "da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257";
-  var PA_PROXY = "http://100.121.97.112:7780/list/";
   var DASH = "—";
+
+  // Kolonne-indekser i _lastRows (header: Internnr, RegNr, Drive verdi, Endelig AR verdi, Hoyeste bud, Finans, Merke, Modell, Ar, Postnr, Sted, Kilde, Status, ...)
+  var COL = {
+    INTERNNR:0, REGNR:1, DRIVE_VERDI:2, AR_VERDI:3, HOYESTE_BUD:4, FINANS:5,
+    MERKE:6, MODELL:7, AAR:8, POSTNR:9, STED:10, KILDE:11, STATUS:12,
+    REGISTRERT:13, SD_MOTTATT:14, GIRE_BESTILT:15, LEVERE_SELV:16, MOTTATT:17,
+    SOLGT:18, BUD:19, AVGIFT:20, RETURNERT:21, KM:22, ESTIMERING:31
+  };
 
   function el(tag, attrs, children){
     var e = document.createElement(tag);
     if (attrs) for (var k in attrs) {
       if (k === "style") e.style.cssText = attrs[k];
       else if (k === "onclick") e.onclick = attrs[k];
-      else if (k === "html") e.innerHTML = attrs[k];
       else e.setAttribute(k, attrs[k]);
     }
     if (children) children.forEach(function(c){ if (c) e.appendChild(c); });
@@ -1137,25 +1144,25 @@ window.MARK_V16_04 = (function(){
   function txt(s){ return document.createTextNode(s == null ? "" : String(s)); }
   function fmt(n){ if (n == null || n === "") return DASH; var v = Number(n); if (isNaN(v) || v === 0) return DASH; return v.toLocaleString("nb-NO"); }
   function fmtKr(n){ if (!n) return DASH; return Number(n).toLocaleString("nb-NO") + " kr"; }
+  function parseDate(s){ if (!s) return null; var d = new Date(s); return isNaN(d.getTime()) ? null : d; }
+  function daysSince(s){ var d = parseDate(s); if (!d) return null; return Math.floor((Date.now() - d.getTime()) / 86400000); }
 
-  function findKmInLastRows(regnr){
+  function rowsForListe(p){
     var rows = window._lastRows || [];
-    if (!rows.length) return null;
+    var out = [];
     for (var i = 1; i < rows.length; i++) {
       var r = rows[i]; if (!r) continue;
-      var rg = String(r[1] || "").trim().split(/\s+/)[0].toUpperCase();
-      if (rg === regnr) return r[22] || null;
+      var st = String(r[COL.STATUS] || "").trim();
+      if (p.statuses.indexOf(st) >= 0) out.push(r);
     }
-    return null;
+    return out;
   }
 
   function paBuildTiles(){
     var host = document.getElementById("pipe-avklart-tiles");
     if (!host || host.dataset._built) return;
     PA_LISTER.forEach(function(p){
-      var th = el("div", {"class":"th"}, [
-        el("div", {"class":"th-title", style:"font-size:11px"}, [txt(p.tittel)])
-      ]);
+      var th = el("div", {"class":"th"}, [el("div", {"class":"th-title", style:"font-size:11px"}, [txt(p.tittel)])]);
       var val = el("div", {style:"padding:8px 12px;font-size:22px;font-weight:600", "data-count":p.id}, [txt(DASH)]);
       var card = el("div", {"class":"table-card", style:"cursor:pointer", onclick:(function(pid){
         return function(){ var t = document.getElementById("pa-" + pid + "-card"); if (t) t.scrollIntoView({behavior:"smooth", block:"start"}); };
@@ -1172,17 +1179,15 @@ window.MARK_V16_04 = (function(){
       var count = el("span", {id:"pa-" + p.id + "-count", style:"color:var(--muted);font-weight:400;margin-left:8px"}, []);
       var thTitle = el("div", {"class":"th-title"}, [txt(p.tittel + " "), count]);
       var th = el("div", {"class":"th"}, [thTitle]);
-      var col5 = p.id === "5a" ? "ETA" : "Eval lav";
-      var col6 = p.id === "5a" ? "Leveringsmate" : "Bilens stasted";
       var thS = "text-align:left;";
       var thead = el("thead", null, [
         el("tr", null, [
           el("th", {style:thS+"width:11%"}, [txt("Regnr")]),
-          el("th", {style:thS+"width:26%"}, [txt("Bil")]),
+          el("th", {style:thS+"width:30%"}, [txt("Bil")]),
           el("th", {style:thS+"width:11%"}, [txt("Km")]),
           el("th", {style:thS+"width:14%"}, [txt("Dager i status")]),
-          el("th", {style:thS+"width:17%"}, [txt(col5)]),
-          el("th", {style:thS+"width:21%"}, [txt(col6)])
+          el("th", {style:thS+"width:17%"}, [txt("Eval lav")]),
+          el("th", {style:thS+"width:17%"}, [txt("Sted")])
         ])
       ]);
       var loading = el("tr", null, [el("td", {colspan:"6", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Laster ...")])]);
@@ -1195,75 +1200,44 @@ window.MARK_V16_04 = (function(){
     host.dataset._built = "1";
   }
 
-  function paRender(p, biler){
+  function paRender(p, rows){
     var tb = document.getElementById("pa-" + p.id + "-tbody");
     var cnt = document.getElementById("pa-" + p.id + "-count");
-    var tile = document.querySelector("[data-count=\"" + p.id + "\"]");
-    if (tile) tile.textContent = biler.length;
-    if (cnt) cnt.textContent = biler.length + " biler";
-    if (p.id === "5a") {
-      var sumLav = biler.reduce(function(a,b){ return a + (b.price_final_min||0); }, 0);
-      var subId = "pa-5a-sub";
-      var old = document.getElementById(subId);
-      if (old) old.remove();
-      if (tile && tile.parentNode && sumLav) {
-        var sub = document.createElement("div");
-        sub.id = subId;
-        sub.style.cssText = "padding:0 12px 8px;font-size:11px;color:var(--muted)";
-        var snittLav = Math.round(sumLav / biler.length);
-        sub.textContent = "Snitt eval lav: " + snittLav.toLocaleString("nb-NO") + " kr";
-        tile.parentNode.appendChild(sub);
-      }
-    }
+    var tile = document.querySelector('[data-count="' + p.id + '"]');
+    if (tile) tile.textContent = rows.length;
+    if (cnt) cnt.textContent = rows.length + " biler";
     if (!tb) return;
     tb.innerHTML = "";
-    if (!biler.length) {
+    if (!rows.length) {
       tb.appendChild(el("tr", null, [el("td", {colspan:"6", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Ingen biler")])]));
       return;
     }
-    biler.forEach(function(b){
-      var reg = b.registration_number || DASH;
-      var manu = (b.drive_no_car_data && b.drive_no_car_data.manufacturer_name) || b.manufacturer || "";
-      var model = (b.drive_no_car_data && b.drive_no_car_data.model_series) || "";
-      var aar = (b.drive_no_car_data && b.drive_no_car_data.model_year) || "";
-      var bil = (manu + " " + model + (aar ? " " + aar : "")).trim() || DASH;
-      var dager = (b.days != null) ? b.days : DASH;
-      var km = findKmInLastRows(reg);
-      var eta = b.estimated_time_arrival;
-      var etaStr = "—";
-      if (eta) { var d = new Date(eta); if (!isNaN(d.getTime())) { etaStr = String(d.getDate()).padStart(2,"0") + "." + String(d.getMonth()+1).padStart(2,"0") + "." + d.getFullYear(); } }
-      var pmin = b.price_final_min;
-      var pmax = b.price_final_max;
+    rows.forEach(function(r){
+      var reg = String(r[COL.REGNR] || "").trim().split(/\s+/)[0] || DASH;
+      var merke = r[COL.MERKE] || "";
+      var modell = r[COL.MODELL] || "";
+      var aar = r[COL.AAR] || "";
+      var bil = (merke + " " + modell + (aar ? " " + aar : "")).trim() || DASH;
+      var km = r[COL.KM];
+      // Dager i status: bruk siste relevante dato (Mottatt > Gire bestilt > SD mottatt > Registrert)
+      var statusDate = r[COL.MOTTATT] || r[COL.GIRE_BESTILT] || r[COL.SD_MOTTATT] || r[COL.REGISTRERT];
+      var dager = daysSince(statusDate);
+      var evalLav = r[COL.DRIVE_VERDI];
+      // Hvis DRIVE_VERDI er "-", bruk AR_VERDI
+      var evalNum = (evalLav === "-" || evalLav == null) ? r[COL.AR_VERDI] : evalLav;
+      var sted = r[COL.STED] || DASH;
       tb.appendChild(el("tr", null, [
         el("td", null, [el("strong", null, [txt(reg)])]),
         el("td", null, [txt(bil)]),
         el("td", null, [txt(fmt(km))]),
-        el("td", null, [txt(dager)]),
-        el("td", null, [txt(p.id === "5a" ? etaStr : fmtKr(pmin))]),
-        el("td", null, [txt(p.id === "5a" ? (b.self_delivery ? "Selvlevering" : "Transport") : ("Lok " + (b.location_id || "?")))])
+        el("td", null, [txt(dager != null ? dager : DASH)]),
+        el("td", null, [txt(fmtKr(evalNum))]),
+        el("td", null, [txt(sted)])
       ]));
     });
   }
 
-  function paFetch(p){
-    return fetch(PA_PROXY + p.endpoint, {headers:{"Authorization":"Bearer " + PA_TOKEN}})
-      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function(j){
-        if (!j.ok) throw new Error(j.err || "fetch feilet");
-        var biler = j.biler || [];
-        paRender(p, biler);
-        return {count: biler.length, biler: biler, listId: p.id};
-      })
-      .catch(function(e){
-        var tb = document.getElementById("pa-" + p.id + "-tbody");
-        if (tb) { tb.innerHTML = ""; tb.appendChild(el("tr", null, [el("td", {colspan:"6", style:"padding:14px;text-align:center;color:var(--red)"}, [txt("Feil: " + (e.message || e))])])); }
-        var tile = document.querySelector("[data-count=\"" + p.id + "\"]");
-        if (tile) tile.textContent = "?";
-        return {count: 0, biler: [], listId: p.id};
-      });
-  }
-
-    function statTile(label, value, sub){
+  function statTile(label, value, sub){
     var lab = el("div", {style:"color:var(--muted);font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase"}, [txt(label)]);
     var val = el("div", {style:"font-size:24px;font-weight:700;color:var(--green);margin-top:6px"}, [txt(value)]);
     var s = el("div", {style:"color:var(--muted);font-size:11px;margin-top:4px"}, [txt(sub||"")]);
@@ -1287,120 +1261,105 @@ window.MARK_V16_04 = (function(){
     var sorted = Object.keys(counts).map(function(k){return {k:k, v:counts[k]};}).sort(function(a,b){return b.v - a.v;});
     return sorted.slice(0, n);
   }
-  function paBuildStats(biler){
+  // Bruk Pulse's fuelType-funksjon hvis tilgjengelig (ekstrakter runtime)
+  function getFuelFn(){
+    try {
+      var html = document.documentElement.outerHTML;
+      var idx = html.indexOf("function fuelType");
+      if (idx < 0) return null;
+      var brace = 0, started = false, j = idx;
+      while (j < html.length) {
+        var ch = html[j];
+        if (ch === "{") { brace++; started = true; }
+        else if (ch === "}") { brace--; if (started && brace === 0) { j++; break; } }
+        j++;
+      }
+      return new Function("return " + html.slice(idx, j) + "; ")();
+    } catch(e) { return null; }
+  }
+
+  function paBuildStats(allRows){
     var sr = document.getElementById("pa-stats-row");
     var br = document.getElementById("pa-breakdown-row");
     var tm = document.getElementById("pa-stats-time");
     if (!sr || !br) return;
     sr.innerHTML = ""; br.innerHTML = "";
-    var n = biler.length;
+    var n = allRows.length;
     var sumLav = 0, ksLav = 0, sumKm = 0, ksKm = 0, sumAlder = 0, ksAlder = 0;
+    var finJa = 0;
     var yearNow = new Date().getFullYear();
-    biler.forEach(function(b){
-      if (b.price_final_min) { sumLav += b.price_final_min; ksLav++; }
-      var km = findKmInLastRows(b.registration_number);
-      if (km) { sumKm += Number(km); ksKm++; }
-      var y = b.drive_no_car_data && b.drive_no_car_data.model_year;
-      if (y) { sumAlder += (yearNow - Number(y)); ksAlder++; }
+    allRows.forEach(function(r){
+      var lav = (r[COL.DRIVE_VERDI] === "-" || r[COL.DRIVE_VERDI] == null) ? r[COL.AR_VERDI] : r[COL.DRIVE_VERDI];
+      var lavNum = Number(lav);
+      if (!isNaN(lavNum) && lavNum > 0) { sumLav += lavNum; ksLav++; }
+      var km = Number(r[COL.KM]);
+      if (!isNaN(km) && km > 0) { sumKm += km; ksKm++; }
+      var y = Number(r[COL.AAR]);
+      if (!isNaN(y) && y > 0) { sumAlder += (yearNow - y); ksAlder++; }
+      if (r[COL.FINANS] === true || r[COL.FINANS] === "TRUE" || r[COL.FINANS] === 1) finJa++;
     });
-    // Finans-andel via _lastRows[5]
-    var rows = window._lastRows || [];
-    var finN = 0, finJa = 0;
-    biler.forEach(function(b){
-      for (var i = 1; i < rows.length; i++) {
-        var r = rows[i]; if (!r) continue;
-        var rg = String(r[1]||"").trim().split(/\s+/)[0].toUpperCase();
-        if (rg === b.registration_number) { finN++; if (r[5] === true || r[5] === "TRUE" || r[5] === 1) finJa++; break; }
-      }
-    });
-    var finPct = finN ? Math.round(finJa/finN*100) : 0;
+    var finPct = n ? Math.round(finJa/n*100) : 0;
 
     sr.appendChild(statTile("ANTALL AVKLART", String(n), "biler i produksjon"));
-    sr.appendChild(statTile("SNITT EVAL LAV", ksLav ? Math.round(sumLav/ksLav).toLocaleString("nb-NO") + " kr" : "—", "per bil"));
-    sr.appendChild(statTile("SNITT KM", ksKm ? Math.round(sumKm/ksKm).toLocaleString("nb-NO") + " km" : "—", "flate-snitt"));
-    sr.appendChild(statTile("SNITT ALDER", ksAlder ? (sumAlder/ksAlder).toFixed(1) + " ar" : "—", "flate-snitt"));
-    sr.appendChild(statTile("FINANS-ANDEL", finN ? finPct + " %" : "—", "har finans"));
+    sr.appendChild(statTile("SNITT EVAL LAV", ksLav ? Math.round(sumLav/ksLav).toLocaleString("nb-NO") + " kr" : DASH, "per bil"));
+    sr.appendChild(statTile("SNITT KM", ksKm ? Math.round(sumKm/ksKm).toLocaleString("nb-NO") + " km" : DASH, "flate-snitt"));
+    sr.appendChild(statTile("SNITT ALDER", ksAlder ? (sumAlder/ksAlder).toFixed(1) + " ar" : DASH, "flate-snitt"));
+    sr.appendChild(statTile("FINANS-ANDEL", n ? finPct + " %" : DASH, "har finans"));
     tm.textContent = new Date().toLocaleTimeString("nb-NO");
 
     // Per status (liste)
-    var perListe = topN(biler.map(function(b){
-      var L = PA_LISTER.filter(function(x){return x.id === b._listId;})[0];
-      return L ? L.tittel : b._listId;
-    }), 99).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+    var perListe = PA_LISTER.map(function(p){
+      var c = rowsForListe(p).length;
+      return {label: p.tittel, value: c + " biler" + (n ? " (" + Math.round(c/n*100) + "%)" : "")};
+    });
     br.appendChild(statCard("Per status", perListe));
 
-    // Per drivlinje (basert pa fuel-type, men ERP gir vi ikke - bruk manufacturer som proxy)
-    var drivlinje = topN(biler.map(function(b){
-      var ds = (b.drive_no_car_data && b.drive_no_car_data.drive_no_car_id) ? "Drivlinje ukjent" : "Drivlinje ukjent";
-      return "Drivlinje ukjent";
-    }), 5).map(function(x){ return {label:x.k, value:x.v + " biler"}; });
-    var fuelFn = null;
-    try {
-      var html = document.documentElement.outerHTML;
-      var idx = html.indexOf("function fuelType");
-      if (idx >= 0) {
-        var brace = 0, started = false, j = idx;
-        while (j < html.length) {
-          var ch = html[j];
-          if (ch === "{") { brace++; started = true; }
-          else if (ch === "}") { brace--; if (started && brace === 0) { j++; break; } }
-          j++;
-        }
-        var src = html.slice(idx, j);
-        fuelFn = new Function("return " + src + "; ").call(null);
-      }
-    } catch(err) { fuelFn = null; }
+    // Per drivlinje
+    var fuelFn = getFuelFn();
     var drivlinje = [];
     if (fuelFn) {
-      drivlinje = topN(biler.map(function(b){
-        var model = (b.drive_no_car_data && b.drive_no_car_data.model_series) || "";
-        var merke = (b.drive_no_car_data && b.drive_no_car_data.manufacturer_name) || b.manufacturer || "";
-        try { return fuelFn(model, merke); } catch(_) { return "?"; }
-      }), 6).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+      drivlinje = topN(allRows.map(function(r){ try { return fuelFn(r[COL.MODELL], r[COL.MERKE]); } catch(_){ return "?"; }}), 6).map(function(x){ return {label:x.k, value:x.v + " biler" + (n ? " (" + Math.round(x.v/n*100) + "%)" : "")}; });
     }
     if (!drivlinje.length) drivlinje = [{label:"Drivlinje", value:"Kunne ikke hente"}];
     br.appendChild(statCard("Per drivlinje", drivlinje));
 
-    var merker = topN(biler.map(function(b){ return (b.drive_no_car_data && b.drive_no_car_data.manufacturer_name) || b.manufacturer; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
+    var merker = topN(allRows.map(function(r){ return r[COL.MERKE]; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler" + (n ? " (" + Math.round(x.v/n*100) + "%)" : "")}; });
     br.appendChild(statCard("Topp merker", merker));
 
-    var steder = topN(biler.map(function(b){ return b.location_id ? "Lok " + b.location_id : null; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler (" + Math.round(x.v/n*100) + "%)"}; });
-    br.appendChild(statCard("Topp lokasjoner", steder));
+    var steder = topN(allRows.map(function(r){ return r[COL.STED]; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler" + (n ? " (" + Math.round(x.v/n*100) + "%)" : "")}; });
+    br.appendChild(statCard("Topp steder", steder));
   }
 
   window.loadPipeAvklart = function(){
     paBuildTiles();
     paBuildSections();
-    return Promise.all(PA_LISTER.map(paFetch)).then(function(results){
-      var total = results.reduce(function(a,b){ return a + (b.count||0); }, 0);
-      var allBiler = [];
-      results.forEach(function(r){ (r.biler||[]).forEach(function(b){ b._listId = r.listId; allBiler.push(b); }); });
-      var t = document.getElementById("pipe-avklart-total");
-      if (t) t.textContent = total + " biler totalt";
-      var h = document.getElementById("pa-h1-total");
-      if (h) h.textContent = "(" + total + ")";
-      paBuildStats(allBiler);
-      return total;
+    var allRows = [];
+    PA_LISTER.forEach(function(p){
+      var rs = rowsForListe(p);
+      paRender(p, rs);
+      rs.forEach(function(r){ allRows.push(r); });
     });
+    paBuildStats(allRows);
+    var t = document.getElementById("pipe-avklart-total");
+    if (t) t.textContent = allRows.length + " biler totalt";
+    var h = document.getElementById("pa-h1-total");
+    if (h) h.textContent = "(" + allRows.length + ")";
   };
 
   function tryFirst(){
-    var s = document.getElementById("pipe-avklart-section");
-    if (s) window.loadPipeAvklart();
+    if (window._lastRows && window._lastRows.length) window.loadPipeAvklart();
+    else setTimeout(tryFirst, 500);
   }
-
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function(){ paBuildTiles(); paBuildSections(); setTimeout(tryFirst, 500); });
+    document.addEventListener("DOMContentLoaded", function(){ paBuildTiles(); paBuildSections(); setTimeout(tryFirst, 800); });
   } else {
-    paBuildTiles(); paBuildSections(); setTimeout(tryFirst, 500);
+    paBuildTiles(); paBuildSections(); setTimeout(tryFirst, 800);
   }
 
-  // Reload-knapp
   document.addEventListener("click", function(ev){
     if (ev.target && ev.target.id === "pa-reload-link") { ev.preventDefault(); window.loadPipeAvklart(); }
   });
 
-  // Re-last ved fane-switch til Pipe
   var origLoad = window.loadPipe;
   if (typeof origLoad === "function") {
     window.loadPipe = function(){ try { window.loadPipeAvklart(); } catch(e) {} return origLoad.apply(this, arguments); };
@@ -1899,7 +1858,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c143: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c144: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -3206,7 +3165,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c143 — slett-funksjon
+// v16.04.c144 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -4018,7 +3977,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c143</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c144</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
