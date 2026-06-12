@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c132</title>
+<title>Peasy Pulse v16.04.c133</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c132 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c133 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c132 — Peasy/Drive splitt
+// Markedsforing v16.04.c133 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1095,6 +1095,126 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+<section class="mode-section" data-mode="pipe" id="pipe-avklart-section" style="display:none;">
+  <h1 class="page" style="margin-bottom:4px">Pipe - avklart</h1>
+  <div class="page-sub" style="margin-bottom:14px">Biler i produksjon: pa vei, pa anlegg, auksjon, signering. <span id="pipe-avklart-total" style="color:var(--green);font-weight:600"></span> &middot; <a href="#" onclick="loadPipeAvklart();return false" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px" id="pipe-avklart-tiles"></div>
+  <div id="pipe-avklart-sections"></div>
+</section>
+<script>
+(function(){
+  var PA_LISTER = [
+    {id:'5a', tittel:'5a Pa vei',                endpoint:'on_the_way'},
+    {id:'5b', tittel:'5b Mottatt',               endpoint:'car_received'},
+    {id:'5c', tittel:'5c Forberedelse',          endpoint:'waiting_for_preparation'},
+    {id:'6',  tittel:'6 Ready for auction',      endpoint:'ready_for_auction'},
+    {id:'7',  tittel:'7 Pa auksjonen',           endpoint:'on_auction'},
+    {id:'8',  tittel:'8 Auksjon avsluttet',      endpoint:'auction_finished'},
+    {id:'9',  tittel:'9 Vent. pa budaksept',     endpoint:'wait_for_bid_accept'},
+    {id:'10', tittel:'10 Vent. salgsmelding',    endpoint:'wait_for_sales_note'},
+    {id:'11', tittel:'11 Uferdige kontrakter',   endpoint:'incomplete_contract'},
+    {id:'12', tittel:'12 Vent. pa signering',    endpoint:'wait_for_signing'},
+    {id:'13', tittel:'13 Kontrakt signert',      endpoint:'contract_signed'}
+  ];
+  var PA_TOKEN = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
+  var PA_PROXY = 'http://100.121.97.112:7780/list/';
+
+  function fmt(n){if(n==null||n==='')return '—';var v=Number(n);if(isNaN(v)||v===0)return '—';return v.toLocaleString('nb-NO');}
+  function fmtKr(n){if(!n)return '—';return Number(n).toLocaleString('nb-NO')+' kr';}
+
+  function findKmInLastRows(regnr){
+    var rows = window._lastRows || [];
+    if (!rows.length) return null;
+    for (var i=1; i<rows.length; i++) {
+      var r = rows[i];
+      if (!r) continue;
+      var rg = String(r[1]||'').trim().split(/[ ]+/)[0].toUpperCase();
+      if (rg === regnr) return r[6] || null;
+    }
+    return null;
+  }
+
+  function paBuildTiles(){
+    var el = document.getElementById('pipe-avklart-tiles');
+    if (!el || el.dataset._built) return;
+    el.innerHTML = PA_LISTER.map(function(p){
+      return '<div class="table-card" style="cursor:pointer" onclick="document.getElementById('pa-'+p.id+'-card').scrollIntoView({behavior:'smooth',block:'start'})"><div class="th"><div class="th-title" style="font-size:11px">'+p.tittel+'</div></div><div style="padding:8px 12px;font-size:22px;font-weight:600" data-count="'+p.id+'">—</div></div>';
+    }).join('');
+    el.dataset._built = '1';
+  }
+
+  function paBuildSections(){
+    var el = document.getElementById('pipe-avklart-sections');
+    if (!el || el.dataset._built) return;
+    el.innerHTML = PA_LISTER.map(function(p){
+      return '<div class="table-card" id="pa-'+p.id+'-card" style="margin-bottom:14px"><div class="th"><div class="th-title">'+p.tittel+' <span id="pa-'+p.id+'-count" style="color:var(--muted);font-weight:400;margin-left:8px"></span></div></div><div style="overflow-x:auto"><table><thead><tr><th>Regnr</th><th>Bil</th><th>Dager</th><th>Km</th><th>Pris lav</th><th>Pris hoy</th></tr></thead><tbody id="pa-'+p.id+'-tbody"><tr><td colspan="6" style="padding:14px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody></table></div></div>';
+    }).join('');
+    el.dataset._built = '1';
+  }
+
+  function paRender(p, biler){
+    var tb = document.getElementById('pa-'+p.id+'-tbody');
+    var cnt = document.getElementById('pa-'+p.id+'-count');
+    var tile = document.querySelector('[data-count="'+p.id+'"]');
+    if (tile) tile.textContent = biler.length;
+    if (cnt) cnt.textContent = biler.length + ' biler';
+    if (!tb) return;
+    if (!biler.length){ tb.innerHTML = '<tr><td colspan="6" style="padding:14px;text-align:center;color:var(--muted)">Ingen biler</td></tr>'; return; }
+    tb.innerHTML = biler.map(function(b){
+      var reg = b.registration_number || '—';
+      var manu = (b.drive_no_car_data && b.drive_no_car_data.manufacturer_name) || b.manufacturer || '';
+      var model = (b.drive_no_car_data && b.drive_no_car_data.model_series) || '';
+      var aar = (b.drive_no_car_data && b.drive_no_car_data.model_year) || '';
+      var bil = (manu + ' ' + model + (aar ? ' ' + aar : '')).trim() || '—';
+      var dager = (b.days != null) ? b.days : '—';
+      var km = findKmInLastRows(reg);
+      var pmin = b.price_final_min;
+      var pmax = b.price_final_max;
+      return '<tr><td><strong>'+reg+'</strong></td><td>'+bil+'</td><td style="text-align:right">'+dager+'</td><td style="text-align:right">'+fmt(km)+'</td><td style="text-align:right">'+fmtKr(pmin)+'</td><td style="text-align:right">'+fmtKr(pmax)+'</td></tr>';
+    }).join('');
+  }
+
+  async function paFetch(p){
+    try {
+      var r = await fetch(PA_PROXY+p.endpoint, {headers:{'Authorization':'Bearer '+PA_TOKEN}});
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      var j = await r.json();
+      if (!j.ok) throw new Error(j.err||'fetch feilet');
+      var biler = j.biler || [];
+      paRender(p, biler);
+      return biler.length;
+    } catch(e) {
+      var tb = document.getElementById('pa-'+p.id+'-tbody');
+      if (tb) tb.innerHTML = '<tr><td colspan="6" style="padding:14px;text-align:center;color:var(--red)">Feil: '+(e.message||e)+'</td></tr>';
+      var tile = document.querySelector('[data-count="'+p.id+'"]');
+      if (tile) tile.textContent = '?';
+      return 0;
+    }
+  }
+
+  window.loadPipeAvklart = async function(){
+    paBuildTiles();
+    paBuildSections();
+    var counts = await Promise.all(PA_LISTER.map(paFetch));
+    var total = counts.reduce(function(a,b){return a+(b||0);}, 0);
+    var t = document.getElementById('pipe-avklart-total');
+    if (t) t.textContent = total+' biler totalt';
+  };
+
+  var origLoad = window.loadPipe;
+  if (typeof origLoad === 'function') {
+    window.loadPipe = function(){ try { window.loadPipeAvklart(); } catch(e) {} return origLoad.apply(this, arguments); };
+  }
+  document.addEventListener('click', function(ev){
+    var t = ev.target; if (!t) return;
+    var txt = (t.textContent||'').trim().toLowerCase();
+    if (txt === 'pipe' || txt.indexOf('pipe') === 0) setTimeout(function(){ try { window.loadPipeAvklart(); } catch(e) {} }, 200);
+  }, true);
+  function tryFirst(){ var s = document.getElementById('pipe-avklart-section'); if (s && s.offsetParent !== null) window.loadPipeAvklart(); }
+  if (document.readyState === 'complete') setTimeout(tryFirst, 1000);
+  else window.addEventListener('load', function(){ setTimeout(tryFirst, 1000); });
+})();
+</script>
 <section class="mode-section" data-mode="pipe" id="pipe-section" style="display:none;">
   <h1 class="page" style="margin-bottom:4px">Pipe - uavklart</h1>
   <div class="page-sub" style="margin-bottom:14px">Eval er sendt, venter pa at kunden bestiller transport. Konverteringsbottleneck - aktuell rate <span id="pipe-aksept-rate" style="font-weight:700;color:#004225">-</span> gar videre til Gire bestilt (siste 30d). Live ERP-status.</div>
@@ -1586,7 +1706,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c132: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c133: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -2893,7 +3013,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c132 — slett-funksjon
+// v16.04.c133 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -3705,7 +3825,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c132</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c133</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -3939,133 +4059,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
-<section class="mode-section" data-mode="pipe" id="pipe-avklart-section" style="display:none;">
-  <h1 class="page" style="margin-bottom:4px">Pipe - avklart</h1>
-  <div class="page-sub" style="margin-bottom:14px">Biler i produksjon: på vei, på anlegg, auksjon, signering. <span id="pipe-avklart-total" style="color:var(--green);font-weight:600"></span> · <a href="#" onclick="loadPipeAvklart();return false" style="color:var(--green);text-decoration:none">Last på nytt</a></div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px" id="pipe-avklart-tiles"></div>
-  <div id="pipe-avklart-sections"></div>
-</section>
-<script>
-(function(){
-  var PA_LISTER = [
-    {id:'5a', tittel:'5a På vei',              endpoint:'on_the_way'},
-    {id:'5b', tittel:'5b Mottatt',             endpoint:'car_received'},
-    {id:'5c', tittel:'5c Forberedelse',        endpoint:'waiting_for_preparation'},
-    {id:'6',  tittel:'6 Ready for auction',    endpoint:'ready_for_auction'},
-    {id:'7',  tittel:'7 På auksjonen',         endpoint:'on_auction'},
-    {id:'8',  tittel:'8 Auksjon avsluttet',    endpoint:'auction_finished'},
-    {id:'9',  tittel:'9 Vent. på budaksept',   endpoint:'wait_for_bid_accept'},
-    {id:'10', tittel:'10 Vent. salgsmelding',  endpoint:'wait_for_sales_note'},
-    {id:'11', tittel:'11 Uferdige kontrakter', endpoint:'incomplete_contract'},
-    {id:'12', tittel:'12 Vent. på signering',  endpoint:'wait_for_signing'},
-    {id:'13', tittel:'13 Kontrakt signert',    endpoint:'contract_signed'}
-  ];
-  var PA_TOKEN = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
-  var PA_PROXY = 'http://100.121.97.112:7780/list/';
-
-  function paBuildTiles() {
-    var el = document.getElementById('pipe-avklart-tiles');
-    if (!el || el.dataset._built) return;
-    el.innerHTML = PA_LISTER.map(function(p){
-      return '<div class="table-card" style="cursor:pointer" onclick="document.getElementById(\'pa-'+p.id+'-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">' +
-        '<div class="th"><div class="th-title" style="font-size:11px">'+p.tittel+'</div></div>' +
-        '<div style="padding:8px 12px;font-size:22px;font-weight:600" data-count="'+p.id+'">—</div></div>';
-    }).join('');
-    el.dataset._built = '1';
-  }
-
-  function paBuildSections() {
-    var el = document.getElementById('pipe-avklart-sections');
-    if (!el || el.dataset._built) return;
-    el.innerHTML = PA_LISTER.map(function(p){
-      return '<div class="table-card" id="pa-'+p.id+'-card" style="margin-bottom:14px">' +
-        '<div class="th"><div class="th-title">'+p.tittel+' <span id="pa-'+p.id+'-count" style="color:var(--muted);font-weight:400;margin-left:8px"></span></div></div>' +
-        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">' +
-          '<thead><tr>' +
-            '<th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border)">Regnr</th>' +
-            '<th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border)">Internnr</th>' +
-            '<th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border)">Bil</th>' +
-            '<th style="text-align:right;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border)">Km</th>' +
-            '<th style="text-align:right;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border)">År</th>' +
-          '</tr></thead>' +
-          '<tbody id="pa-'+p.id+'-tbody"><tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>' +
-        '</table></div></div>';
-    }).join('');
-    el.dataset._built = '1';
-  }
-
-  function paFmt(n){if(n==null||n==='')return '—';var v=Number(n);if(isNaN(v)||v===0)return '—';return v.toLocaleString('nb-NO');}
-
-  function paRender(p, biler){
-    var tb=document.getElementById('pa-'+p.id+'-tbody');
-    var cnt=document.getElementById('pa-'+p.id+'-count');
-    var tile=document.querySelector('[data-count="'+p.id+'"]');
-    if (tile) tile.textContent = biler.length;
-    if (cnt) cnt.textContent = biler.length + ' biler';
-    if (!tb) return;
-    if (!biler.length){ tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--muted)">Ingen biler</td></tr>'; return; }
-    tb.innerHTML = biler.map(function(b){
-      var reg=b.registration_number||'—';
-      var inn=b.inner_number||b.internal_number||b.stock_number||'—';
-      var brand=(b.drive_no_car_data && b.drive_no_car_data.brand)||'';
-      var model=(b.drive_no_car_data && b.drive_no_car_data.model)||'';
-      var bil=(brand+' '+model).trim()||'—';
-      var km=b.mileage||0;
-      var aar=(b.drive_no_car_data && b.drive_no_car_data.model_year)||'—';
-      return '<tr style="border-bottom:1px solid var(--border)">' +
-        '<td style="padding:8px 12px"><strong>'+reg+'</strong></td>' +
-        '<td style="padding:8px 12px;color:var(--muted)">'+inn+'</td>' +
-        '<td style="padding:8px 12px">'+bil+'</td>' +
-        '<td style="padding:8px 12px;text-align:right">'+paFmt(km)+'</td>' +
-        '<td style="padding:8px 12px;text-align:right">'+aar+'</td></tr>';
-    }).join('');
-  }
-
-  async function paFetch(p){
-    try{
-      var r=await fetch(PA_PROXY+p.endpoint,{headers:{'Authorization':'Bearer '+PA_TOKEN}});
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      var j=await r.json();
-      if(!j.ok)throw new Error(j.err||'fetch feilet');
-      var biler=j.biler||[];
-      paRender(p,biler);
-      return biler.length;
-    }catch(e){
-      var tb=document.getElementById('pa-'+p.id+'-tbody');
-      if(tb)tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--red)">Feil: '+(e.message||e)+'</td></tr>';
-      var tile=document.querySelector('[data-count="'+p.id+'"]');
-      if(tile)tile.textContent='?';
-      return 0;
-    }
-  }
-
-  window.loadPipeAvklart=async function(){
-    paBuildTiles();
-    paBuildSections();
-    var counts=await Promise.all(PA_LISTER.map(paFetch));
-    var total=counts.reduce(function(a,b){return a+(b||0);},0);
-    var t=document.getElementById('pipe-avklart-total');
-    if(t)t.textContent=total+' biler totalt';
-  };
-
-  // Hook inn i loadPipe + tab-switch
-  var origLoad=window.loadPipe;
-  if(typeof origLoad==='function'){
-    window.loadPipe=function(){try{window.loadPipeAvklart();}catch(e){}return origLoad.apply(this,arguments);};
-  }
-  document.addEventListener('click',function(ev){
-    var t=ev.target;if(!t)return;
-    var txt=(t.textContent||'').trim().toLowerCase();
-    if(txt==='pipe'||txt.indexOf('pipe')===0){setTimeout(function(){try{window.loadPipeAvklart();}catch(e){}},200);}
-  },true);
-  function tryFirstLoad(){
-    var s=document.getElementById('pipe-avklart-section');
-    if(s&&s.offsetParent!==null)window.loadPipeAvklart();
-  }
-  if(document.readyState==='complete')setTimeout(tryFirstLoad,1000);
-  else window.addEventListener('load',function(){setTimeout(tryFirstLoad,1000);});
-})();
-</script>
 
 </body>
 </html>
