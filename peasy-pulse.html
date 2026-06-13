@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c149</title>
+<title>Peasy Pulse v16.04.c150</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c149 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c150 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c149 — Peasy/Drive splitt
+// Markedsforing v16.04.c150 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1121,6 +1121,29 @@ window.MARK_V16_04 = (function(){
     {id:"12", tittel:"12 Vent. pa signering",  statuses:["wait_for_signing"]},
     {id:"13", tittel:"13 Kontrakt signert",    statuses:["contract_signed"]}
   ];
+  var PA_LOCATIONS = {0:"Direktebil",7:"Oslo Nord, Berger (Skedsmokorset)",8:"Rogaland, Sandnes",11:"Trondheim (Lade)",12:"Bergen, Blomsterdalen",13:"Oslo Nord, Hvam (CarNext)",14:"Oslo Syd/Follo (Ski)"};
+  var PA_TOKEN_ERP = "da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257";
+  var PA_PROXY_ERP = "http://100.121.97.112:7780/list/";
+  var PA_ERP_LIST_TO_ENDPOINT = {"5a":"on_the_way","5b":"car_received","5c":"waiting_for_preparation","6":"ready_for_auction","7":"on_auction","8":"auction_finished","9":"wait_for_bid_accept","10":"wait_for_sales_note","11":"incomplete_contract","12":"wait_for_signing","13":"contract_signed"};
+  window._paErpLocs = window._paErpLocs || {}; // regnr -> location_id
+  async function paFetchAllErpLocs() {
+    var results = await Promise.all(Object.keys(PA_ERP_LIST_TO_ENDPOINT).map(function(lid){
+      var endpoint = PA_ERP_LIST_TO_ENDPOINT[lid];
+      return fetch(PA_PROXY_ERP + endpoint, {headers:{"Authorization":"Bearer " + PA_TOKEN_ERP}})
+        .then(function(r){ return r.ok ? r.json() : {biler:[]}; })
+        .then(function(j){ return j.biler || []; })
+        .catch(function(){ return []; });
+    }));
+    var map = {};
+    results.forEach(function(biler){
+      biler.forEach(function(b){
+        var reg = String(b.registration_number||"").trim().toUpperCase();
+        if (reg) map[reg] = b.location_id != null ? b.location_id : null;
+      });
+    });
+    window._paErpLocs = map;
+    return map;
+  }
   var DASH = "—";
 
   // Kolonne-indekser i _lastRows (header: Internnr, RegNr, Drive verdi, Endelig AR verdi, Hoyeste bud, Finans, Merke, Modell, Ar, Postnr, Sted, Kilde, Status, ...)
@@ -1214,14 +1237,15 @@ window.MARK_V16_04 = (function(){
       var thead = el("thead", null, [
         el("tr", null, [
           el("th", {style:thS+"width:11%"}, [txt("Regnr")]),
-          el("th", {style:thS+"width:30%"}, [txt("Bil")]),
+          el("th", {style:thS+"width:22%"}, [txt("Bil")]),
           el("th", {style:thS+"width:11%"}, [txt("Km")]),
           el("th", {style:thS+"width:14%"}, [txt("Dager i status")]),
           el("th", {style:thS+"width:17%"}, [txt("Eval lav")]),
-          el("th", {style:thS+"width:17%"}, [txt("Sted")])
+          el("th", {style:thS+"width:13%"}, [txt("Sted")]),
+          el("th", {style:thS+"width:18%"}, [txt("Bilens stasted")])
         ])
       ]);
-      var loading = el("tr", null, [el("td", {colspan:"6", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Laster ...")])]);
+      var loading = el("tr", null, [el("td", {colspan:"7", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Laster ...")])]);
       var tbody = el("tbody", {id:"pa-" + p.id + "-tbody"}, [loading]);
       var table = el("table", {style:"width:100%;table-layout:fixed"}, [thead, tbody]);
       var scroll = el("div", {style:"overflow-x:auto"}, [table]);
@@ -1240,7 +1264,7 @@ window.MARK_V16_04 = (function(){
     if (!tb) return;
     tb.innerHTML = "";
     if (!rows.length) {
-      tb.appendChild(el("tr", null, [el("td", {colspan:"6", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Ingen biler")])]));
+      tb.appendChild(el("tr", null, [el("td", {colspan:"7", style:"padding:14px;text-align:center;color:var(--muted)"}, [txt("Ingen biler")])]));
       return;
     }
     rows.forEach(function(r){
@@ -1267,7 +1291,8 @@ window.MARK_V16_04 = (function(){
         el("td", null, [txt(fmt(km))]),
         el("td", null, [txt(dager != null ? dager : DASH)]),
         el("td", null, [txt(fmtKr(evalNum))]),
-        el("td", null, [txt(sted)])
+        el("td", null, [txt(sted)]),
+        el("td", null, [txt((window._paErpLocs && PA_LOCATIONS[window._paErpLocs[reg.toUpperCase()]]) || DASH)])
       ]));
     });
   }
@@ -1367,6 +1392,16 @@ window.MARK_V16_04 = (function(){
   window.loadPipeAvklart = function(){
     paBuildTiles();
     paBuildSections();
+    // Fetcher locations fra ERP parallelt
+    paFetchAllErpLocs().then(function(){
+      // Re-render etter locations er hentet
+      var allRows2 = [];
+      PA_LISTER.forEach(function(p){
+        var rs = rowsForListe(p);
+        paRender(p, rs);
+        rs.forEach(function(r){ allRows2.push(r); });
+      });
+    });
     var allRows = [];
     PA_LISTER.forEach(function(p){
       var rs = rowsForListe(p);
@@ -1892,7 +1927,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c149: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c150: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -3199,7 +3234,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c149 — slett-funksjon
+// v16.04.c150 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -4011,7 +4046,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c149</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c150</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
