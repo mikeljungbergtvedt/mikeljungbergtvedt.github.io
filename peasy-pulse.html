@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c159</title>
+<title>Peasy Pulse v16.04.c160</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c159 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c160 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -430,7 +430,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c159 — Peasy/Drive splitt
+// Markedsforing v16.04.c160 — Peasy/Drive splitt
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -2039,7 +2039,7 @@ function render(data,rows){
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
   var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
-  // === v16.04.c159: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
+  // === v16.04.c160: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
   var leads90d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var d=parseDate(r[13]);return d&&d>=d90Lead;}).length;
   var d90ms=Date.now()-90*86400000;
@@ -3346,7 +3346,7 @@ async function loadQuestions(){
 }
 
 
-// v16.04.c159 — slett-funksjon
+// v16.04.c160 — slett-funksjon
 async function hideQ(qid, btn) {
   if (!qid) { alert('Ingen ID — kan ikke slette gammel entry uten id. Refresh siden først.'); return; }
   if (!confirm('Er du sikker på at du vil skjule dette spørsmålet fra Pulse?')) return;
@@ -4158,7 +4158,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c159</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c160</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -4393,6 +4393,131 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+
+
+<script>
+// c160: V2 BM Hoyeste bud + Status kolonner (DOM-augment, ingen bot-endring)
+(function(){
+  if (window._v2bmHoyesteBud_v1) return;
+  window._v2bmHoyesteBud_v1 = true;
+
+  function fmt(n){ var v = Number(n); if (!v || isNaN(v)) return ''; return v.toLocaleString('nb-NO'); }
+
+  function findTable(){
+    var tables = document.querySelectorAll('table');
+    for (var i = 0; i < tables.length; i++){
+      var th = tables[i].querySelector('thead');
+      if (!th) continue;
+      var txt = th.textContent || '';
+      if (txt.indexOf('V2 Eval lav') >= 0 && txt.indexOf('Hoyeste bud') < 0) return tables[i];
+    }
+    return null;
+  }
+
+  function buildIndex(){
+    var rows = window._lastRows || [];
+    var map = {};
+    for (var i = 1; i < rows.length; i++){
+      var r = rows[i]; if (!r) continue;
+      map[String(r[0]).trim()] = r;
+    }
+    return map;
+  }
+
+  function augment(){
+    var tb = findTable();
+    if (!tb) return;
+    var headRow = tb.querySelector('thead tr');
+    if (!headRow) return;
+    // Add TH if missing
+    if (headRow.children.length < 13) {
+      var labels = ['Hoyeste bud','Status'];
+      for (var i = 0; i < labels.length; i++){
+        var th = document.createElement('th');
+        th.textContent = labels[i];
+        th.style.padding = '6px 10px';
+        th.style.textAlign = i === 0 ? 'right' : 'center';
+        th.style.borderLeft = i === 0 ? '1px dashed #ccc' : '';
+        headRow.appendChild(th);
+      }
+    }
+    var idx = buildIndex();
+    var bodyRows = tb.querySelectorAll('tbody tr');
+    for (var k = 0; k < bodyRows.length; k++){
+      var tr = bodyRows[k];
+      var tds = tr.querySelectorAll('td');
+      if (tds.length < 2 || tds.length >= 13) continue;
+      var internnr = tds[1].textContent.trim();
+      var r = idx[internnr];
+      var hb = '—', st = '<span style="color:#999;font-size:11px">venter</span>';
+      if (r){
+        var bud = r[4], solgt = r[18], ret = r[21];
+        if (bud && Number(bud) > 0) hb = fmt(bud) + ' kr';
+        if (ret && String(ret).trim()) st = '<span style="color:#C62828;font-weight:600;font-size:16px">✗</span>';
+        else if (solgt && String(solgt).trim()) st = '<span style="color:#3B6D11;font-weight:600;font-size:16px">✓</span>';
+      }
+      var td1 = document.createElement('td');
+      td1.style.cssText = 'text-align:right;padding:6px 10px;border-left:1px dashed #ccc';
+      td1.innerHTML = hb;
+      var td2 = document.createElement('td');
+      td2.style.cssText = 'text-align:center;padding:6px 10px';
+      td2.innerHTML = st;
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+    }
+    addExportButton(tb);
+  }
+
+  function addExportButton(tb){
+    if (document.getElementById('v2bm-export-btn')) return;
+    var card = tb.closest('.table-card') || tb.parentElement;
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:8px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border)';
+    bar.innerHTML = '<button id="v2bm-export-btn" style="padding:6px 12px;font-size:13px;cursor:pointer;background:var(--green);color:#fff;border:none;border-radius:6px">⬇ Eksport CSV</button>'
+      + '<button id="v2bm-claude-btn" style="padding:6px 12px;font-size:13px;cursor:pointer;background:#7F77DD;color:#fff;border:none;border-radius:6px">📤 Send til Claude</button>';
+    if (card && card.firstChild) card.insertBefore(bar, card.firstChild);
+    document.getElementById('v2bm-export-btn').onclick = function(){ exportCsv(tb, false); };
+    document.getElementById('v2bm-claude-btn').onclick = function(){ exportCsv(tb, true); };
+  }
+
+  function exportCsv(tb, forClaude){
+    var headers = Array.from(tb.querySelectorAll('thead th')).map(function(t){ return t.textContent.trim(); });
+    var rows = [headers];
+    tb.querySelectorAll('tbody tr').forEach(function(tr){
+      var cells = Array.from(tr.querySelectorAll('td')).map(function(t){ return t.textContent.trim().replace(/[
+]/g,' '); });
+      rows.push(cells);
+    });
+    var csv = rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('
+');
+    var name = 'v2bm-' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-') + '.csv';
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    if (forClaude) {
+      alert('CSV lastet ned: ' + name + '
+
+Dra filen inn i Cowork-chat for at Claude skal analysere.');
+    }
+  }
+
+  // Run augment when V2 BM-tab activated
+  document.addEventListener('click', function(ev){
+    var t = ev.target;
+    if (t && (t.textContent || '').trim() === 'Evaluert') {
+      setTimeout(augment, 1500);
+      setTimeout(augment, 3500);
+    }
+  });
+  // Also on initial load
+  setTimeout(augment, 2000);
+  setTimeout(augment, 5000);
+})();
+</script>
 
 </body>
 </html>
