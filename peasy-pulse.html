@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c173</title>
+<title>Peasy Pulse v16.04.c174</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -252,7 +252,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c173 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c174 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -3682,8 +3682,8 @@ async function loadScoreboard(){
     var totalMeasurements=allRows.length;
     // Join ERP and filter by Høyeste bud > 0
     var lr=window._lastRows||[];var hdr=lr[0]||[];
-    var idCol=-1,budCol=-1;
-    var esCol=-1,sCol=-1,rCol=-1;for(var i=0;i<hdr.length;i++){var h=String(hdr[i]||'').toLowerCase();if(h==='internnr.'||h==='internnr')idCol=i;if(h==='hoyeste bud'||h==='høyeste bud')budCol=i;if(h==='estimering')esCol=i;if(h==='solgt på')sCol=i;if(h==='returnert på')rCol=i;}
+    var idCol=-1,budCol=-1,arCol=-1;
+    var esCol=-1,sCol=-1,rCol=-1;for(var i=0;i<hdr.length;i++){var h=String(hdr[i]||'').toLowerCase();if(h==='internnr.'||h==='internnr')idCol=i;if(h==='hoyeste bud'||h==='høyeste bud')budCol=i;if(h==='estimering')esCol=i;if(h==='solgt på')sCol=i;if(h==='returnert på')rCol=i;if(h==='endelig ar verdi')arCol=i;}
     var erpById={};
     if(idCol>=0)for(var j=1;j<lr.length;j++){var id=lr[j][idCol];if(id!=null)erpById[String(id)]=lr[j];}
     var withBud=allRows.filter(function(r){var er=erpById[String(r.erpId||'')];if(!er||budCol<0)return false;var b=Number(er[budCol]||0);return b>0;});
@@ -3691,7 +3691,7 @@ async function loadScoreboard(){
     var html=withBud.sort(function(a,b){return new Date(b.timestamp)-new Date(a.timestamp);}).map(function(r){
       var easy=r.easy&&r.easy.dLav||0;
       var v2=r.v2&&r.v2.dLav||0;
-      var erpRow=erpById[String(r.erpId||'')];
+      var erpRow=erpById[String(r.erpId||'')];if(!easy&&erpRow&&arCol>=0){var _arm=String(erpRow[arCol]||'').match(/(\d{3,})/);if(_arm)easy=Number(_arm[1]);}
       var bud=Number(erpRow[budCol]||0);
       var easyGap=easy>0?(bud-easy)/easy*100:null;
       var v2Gap=v2>0?(bud-v2)/v2*100:null;
@@ -4159,7 +4159,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c173</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c174</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
