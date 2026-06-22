@@ -1642,7 +1642,7 @@ window.MARK_V16_04 = (function(){
             <th onclick="sortV2('easy')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Easy Eval lav <span id="v2s-easy"></span></th>
             <th onclick="sortV2('v2')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">V2 Eval lav <span id="v2s-v2"></span></th>
             <th onclick="sortV2('avvik')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Avvik % <span id="v2s-avvik"></span></th>
-            <th onclick="sortV2('override')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Endret Easy lav <span id="v2s-override"></span></th>
+            <th onclick="sortV2('override')" style="padding:10px 12px; text-align:right; color:#fff; cursor:pointer;">Endret Easy lav <span id="v2s-override"></span></th><th style="padding:10px 12px; text-align:center; color:#fff;">Finn</th>
           </tr>
         </thead>
         <tbody id="v2bm-tbody"><tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
@@ -3783,7 +3783,7 @@ async function loadV2Benchmark(){
       if(o.erpId!==undefined&&o.erpId!==null){var k=String(o.erpId);if(!byErpId[k]||ts>(byErpId[k]._ts||0))byErpId[k]=Object.assign({},o,{_ts:ts});}
       if(o.regnr){var rk=String(o.regnr).toUpperCase();if(!byRegnr[rk]||ts>(byRegnr[rk]._ts||0))byRegnr[rk]=Object.assign({},o,{_ts:ts});}
     });
-    window._v2bmRecords=fresh;
+    window._v2bmRecords=fresh; try{var _fr=await fetch(window.PA_PROXY_ERP.replace('/list/','/finn-links'),{headers:{Authorization:'Bearer '+window.PA_TOKEN_ERP}});if(_fr.ok){var _fj=await _fr.json();window._finnLinks=(_fj&&_fj.finn)||{};}}catch(e){window._finnLinks=window._finnLinks||{};}
     window._v2bmOverrideByErpId=byErpId;
     window._v2bmOverrideByRegnr=byRegnr;
     window._v2bmErpMaps=buildErpRowMaps();
@@ -3934,7 +3934,7 @@ function renderV2Table(records){
       '<td style="padding:8px 12px;text-align:right;">'+easy+'</td>'+
       '<td style="padding:8px 12px;text-align:right;">'+v2+_v22badge(r)+'</td>'+
       '<td style="padding:8px 12px;text-align:right;color:'+avvikCol.color+';font-weight:600;">'+avvikTxt+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+(window._finnLinks&&window._finnLinks[String(r.erpId)]?'<td style="padding:8px 12px;text-align:center;"><a href="'+window._finnLinks[String(r.erpId)]+'" target="_blank" rel="noopener" title="Aktiv paa Finn" style="text-decoration:none;font-weight:700;color:#0063fb;">FINN</a></td>':'<td style="padding:8px 12px;text-align:center;color:#888;">-</td>')+
       '</tr>';
   }).join('');
   document.getElementById('v2bm-tbody').innerHTML=html;
