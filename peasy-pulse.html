@@ -3911,7 +3911,10 @@ function colorForAvvik(pct){
 
 function renderV2Table(records){
   if(records.length===0){document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler i perioden.</td></tr>';return;}
-  var html=records.map(function(r){
+  var processed=[]; var lastEval=null;
+  records.forEach(function(r){var e=r.evaluator==='v3'?'v3':'v2';if(lastEval==='v3'&&e==='v2')processed.push({_divider:true});processed.push(r);lastEval=e;});
+  var html=processed.map(function(r){
+    if(r._divider)return '<tr style="background:#FFF8E1;"><td colspan="9" style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#8A6708;letter-spacing:0.05em;text-transform:uppercase;border-top:2px solid #FFCC33;border-bottom:2px solid #FFCC33;">\u2500\u2500 V3 tok over evaluering (10.8.2026) \u2500\u2500</td></tr>';
     var regnr=r.regnr||'—';
     var variant=(r.identifikasjon&&r.identifikasjon.variant)?r.identifikasjon.variant.slice(0,40):'—';
     var priset=fmtPrisetV2(r.timestamp);
@@ -3925,7 +3928,7 @@ function renderV2Table(records){
     var avvikTxt=pct===null?'—':((pct>=0?'+':'')+(Math.round(pct*10)/10)+'%');
     var ovr=findOverrideForRecord(r);
     var ovrTxt=(ovr&&Number.isFinite(Number(ovr.dLav)))?fmtKrV2(Number(ovr.dLav)):'—';
-    return '<tr style="border-top:1px solid var(--border);">'+
+    return '<tr style="border-top:1px solid var(--border);background:'+((r.evaluator==='v3')?'transparent':'#F8F8F5')+';">'+
       '<td style="padding:8px 12px;font-weight:600;">'+regnr+(r.km_override?' <span title="Km endret '+(r.km_override.from||0).toLocaleString('nb-NO')+' \u2192 '+(r.km_override.to||0).toLocaleString('nb-NO')+' (EU-kontroll)" style="cursor:help;">\ud83d\udd04</span>':'')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace;">'+(r.erpId||'—')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);">'+variant+'</td>'+
