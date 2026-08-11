@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c189</title>
+<title>Peasy Pulse v16.04.c190</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c189 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c190 &middot; <span id="hdr-date">9. juni 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -4181,7 +4181,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c189</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c190</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -4470,6 +4470,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const diff = (easyMid && v3Mid) ? Math.round(((v3Mid/easyMid)-1)*100) : null;
     const bp = v3.bulletproof_score ? Math.round(v3.bulletproof_score*100) : null;
     const conf = v3.confidence;
+    // Nylig biler (< 30 min siden state-change) og uten V3 vises som 'V3 kjorer' istedet for INGEN V3
+    const isRecent = e.created_at && ((Date.now() - new Date(e.created_at).getTime()) < 30*60*1000);
     let label='SEND', color='#0F6E66', icon='✅';
     const absD = diff==null ? 0 : Math.abs(diff);
     if (absD > 30 || (bp!=null && bp<75) || (conf!=null && conf<70)){ label='QA'; color='#A8221C'; icon='🔴'; }
@@ -4591,8 +4593,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const bpConfLine = [bp!=null?'BP '+bp:'', conf!=null?'Conf '+conf:''].filter(Boolean).join(' · ');
     const variant = id.variant || (e.manufacturer ? (e.manufacturer.charAt(0) + e.manufacturer.slice(1).toLowerCase()) : '?');
     const modelYear = id.model_year || '?';
-    // Berekn om V3 nettopp har blitt lagt til (< 5 min siden) - da vises 'V3 kjorer'
-    const isRecent = e.created_at && ((Date.now() - new Date(e.created_at).getTime()) < 5*60*1000);
     return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         <div>
