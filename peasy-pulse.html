@@ -269,7 +269,8 @@ function authLogout(){
         <button class="mode-btn" id="btn-mark" onclick="setMode('mark')">Marked</button>
         <button class="mode-btn" id="btn-pipe" onclick="setMode('pipe')">Pipe</button>
         <button class="mode-btn" id="btn-score" onclick="setMode('score')">Scoreboard</button>
-        <button class="mode-btn" id="btn-v2bm" onclick="setMode('v2bm')">V3 BM</button>
+        <button class="mode-btn" id="btn-qa" onclick="setMode('qa')">QA / Send</button>
+          <button class="mode-btn" id="btn-v2bm" onclick="setMode('v2bm')">V3 BM</button>
     </div>
     <div id="pulse-status-badge" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;margin-right:8px;">liste 3-status: ...</div><div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
@@ -1615,6 +1616,14 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+  <!-- QA / Send fane -->
+  <section class="mode-section" data-mode="qa" style="display:none;">
+    <h1 class="page" style="margin-bottom:4px">QA / Send</h1>
+    <div style="margin-bottom:12px;font-size:11px;color:var(--muted);text-align:right;">Sist oppdatert: <span id="qa-updated"></span> &middot; <a href="#" onclick="loadQA(); return false;" style="color:var(--green);text-decoration:none;">Last på nytt</a></div>
+    <div id="qa-summary" style="margin-bottom:14px;font-size:12px;color:var(--muted);"></div>
+    <div id="qa-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;"></div>
+  </section>
+
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
   <div class="page-sub" style="margin-bottom:14px">V3 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
@@ -1678,6 +1687,7 @@ function setMode(m){
   if(document.getElementById('btn-kart'))document.getElementById('btn-kart').classList.toggle('active',m==='kart');
   if(document.getElementById('btn-uke'))document.getElementById('btn-uke').classList.toggle('active',m==='uke');
   if(document.getElementById('btn-sporsmal'))document.getElementById('btn-sporsmal').classList.toggle('active',m==='sporsmal');
+  if(document.getElementById('btn-qa'))document.getElementById('btn-qa').classList.toggle('active',m==='qa');
   if(document.getElementById('btn-v2bm'))document.getElementById('btn-v2bm').classList.toggle('active',m==='v2bm');
   if(document.getElementById('btn-score'))document.getElementById('btn-score').classList.toggle('active',m==='score');
   if(document.getElementById('btn-pipe'))document.getElementById('btn-pipe').classList.toggle('active',m==='pipe');
@@ -1688,6 +1698,7 @@ function setMode(m){
   if(m==='sporsmal'){loadQuestions();}
   if(m==='pipe'){try{loadPipe();}catch(e){}}
       if(m==='score'){try{loadScoreboard();}catch(e){}}
+      if(m==='qa'){loadQA();}
       if(m==='v2bm'){loadV2Benchmark();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
@@ -4408,6 +4419,119 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
 
 <!-- c168: V2 BM augment DISABLED, ruller tilbake til c159-base -->
+
+
+<!-- QA / Send fane -->
+<script>
+(function(){
+  const WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
+  const TOKEN = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
+
+  function loadSent(){ try{ const raw = localStorage.getItem('qa_sent') || '{}'; return JSON.parse(raw); } catch(e){ return {}; } }
+  function saveSent(o){ try{ localStorage.setItem('qa_sent', JSON.stringify(o)); }catch(e){} }
+  window._sentEvalCells = loadSent();
+
+  function fmt(n){ return n == null ? '–' : Math.round(n).toLocaleString('nb-NO'); }
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function statusFor(r){
+    const easy = r.easy || {}, v3 = r.v2 || {};
+    const easyMid = (easy.dLav && easy.dHoy) ? (easy.dLav + easy.dHoy)/2 : null;
+    const v3Mid = (v3.dLav && v3.dHoy) ? (v3.dLav + v3.dHoy)/2 : null;
+    const diff = (easyMid && v3Mid) ? Math.round(((v3Mid/easyMid)-1)*100) : null;
+    const bp = v3.bulletproof_score ? Math.round(v3.bulletproof_score*100) : null;
+    const conf = v3.confidence;
+    let label='SEND', color='#0F6E66', icon='✅';
+    const absD = diff==null ? 0 : Math.abs(diff);
+    if (absD > 30 || (bp!=null && bp<75) || (conf!=null && conf<70)){ label='QA'; color='#A8221C'; icon='🔴'; }
+    else if (absD > 15 || (conf!=null && conf<85)){ label='VURDER'; color='#8A6708'; icon='🟡'; }
+    return {label,color,icon,diff,bp,conf};
+  }
+
+  function renderCard(r){
+    const easy = r.easy || {}, v3 = r.v2 || {}, id = r.identifikasjon || {};
+    const st = statusFor(r);
+    const key = (r.regnr||'') + '__' + (r.erpId||'');
+    const km = r.km ? Math.round(r.km/1000)+'k' : '?';
+    const bpConfLine = [st.bp!=null?'BP '+st.bp:'', st.conf!=null?'Conf '+st.conf:''].filter(Boolean).join(' · ');
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
+        <div>
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(r.regnr||'?')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(id.variant||'?').slice(0,40)}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(id.model_year||'?')} · ${km} km</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;color:#fff;background:${st.color};white-space:nowrap;">${st.icon} ${st.label}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:60px 1fr 1fr;gap:4px 12px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
+        <div style="color:var(--muted);font-size:10px;"></div><div style="color:var(--muted);font-size:10px;text-align:right;">D-lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">D-høy</div>
+        <div style="color:var(--muted);">Easy</div><div style="text-align:right;">${fmt(easy.dLav)}</div><div style="text-align:right;">${fmt(easy.dHoy)}</div>
+        <div style="color:var(--muted);">V3</div><div style="text-align:right;font-weight:600;">${fmt(v3.dLav)}</div><div style="text-align:right;font-weight:600;">${fmt(v3.dHoy)}</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+        ${st.diff!=null?'<b style="color:'+(Math.abs(st.diff)>15?'#A8221C':'var(--text)')+'">Diff '+(st.diff>=0?'+':'')+st.diff+'%</b>':''}
+        ${bpConfLine?' · '+esc(bpConfLine):''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button data-key="${key}" data-regnr="${esc(r.regnr||'')}" data-erpid="${esc(String(r.erpId||''))}" data-km="${r.km||0}" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:#2E7D32;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND</button>
+        <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️</button>
+      </div>
+      <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
+        <div><b>Kunde-comment:</b> <i>${esc(r.kundeComment||'(tom)')}</i></div>
+        ${v3.begrunnelse_kort?'<div style="margin-top:6px;"><b>V3 begrunnelse:</b> '+esc(v3.begrunnelse_kort)+'</div>':''}
+        ${v3.risiko_flagg && v3.risiko_flagg.length ? '<div style="margin-top:6px;"><b>Flagg:</b> ' + v3.risiko_flagg.map(esc).join(', ') + '</div>' : ''}
+      </div>
+    </div>`;
+  }
+
+  window.loadQA = async function(){
+    const upd = document.getElementById('qa-updated'); if (upd) upd.textContent = 'Laster …';
+    try{
+      const url = 'https://raw.githubusercontent.com/mikeljungbergtvedt/mikeljungbergtvedt.github.io/main/v2-measurements.jsonl?t=' + Date.now();
+      const r = await fetch(url); const text = await r.text();
+      const recs = text.split('\n').filter(Boolean).map(l => { try{ return JSON.parse(l); } catch(e){ return null; } }).filter(Boolean);
+      const sent = loadSent();
+      const v3recs = recs.filter(x => x.evaluator === 'v3');
+      const usendte = v3recs.filter(x => !sent[(x.regnr||'')+'__'+(x.erpId||'')])
+        .sort((a,b) => new Date(a.timestamp||0) - new Date(b.timestamp||0));
+      if (upd) upd.textContent = new Date().toLocaleString('nb-NO');
+      const sumEl = document.getElementById('qa-summary'); if (sumEl) sumEl.textContent = usendte.length + ' usendte V3-evalueringer (eldste øverst) · ' + (v3recs.length - usendte.length) + ' sendt';
+      const container = document.getElementById('qa-cards');
+      if (!container) return;
+      container.innerHTML = usendte.length ? usendte.map(renderCard).join('') : '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Ingen usendte V3-evalueringer</div>';
+      container.querySelectorAll('.qa-detail-btn').forEach(b => b.onclick = () => { const el = document.getElementById('qa-detail-' + b.dataset.key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
+      container.querySelectorAll('.qa-send-btn').forEach(b => b.onclick = () => qaSend(b));
+    }catch(e){
+      const c = document.getElementById('qa-cards'); if (c) c.innerHTML = '<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">Feil ved lasting: ' + esc(e.message) + '</div>';
+    }
+  };
+
+  async function qaSend(btn){
+    const regnr = btn.dataset.regnr, erpId = btn.dataset.erpid, km = Number(btn.dataset.km);
+    const key = btn.dataset.key;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Sender …';
+    try{
+      const r = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        body: JSON.stringify({regnr, internnr: erpId, km})
+      });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      btn.textContent = j.queued ? 'Kø-lagt ✓' : (j.ok ? 'OK ✓' : 'Feil');
+      btn.style.background = '#0F6E66';
+      const sent = loadSent();
+      sent[key] = new Date().toISOString();
+      saveSent(sent);
+      window._sentEvalCells = sent;
+      setTimeout(window.loadQA, 800);
+    }catch(e){
+      btn.textContent = 'Feil'; btn.style.background = '#A8221C'; btn.title = e.message; btn.disabled = false;
+      setTimeout(() => { btn.textContent = orig; btn.style.background = '#2E7D32'; }, 3000);
+    }
+  }
+})();
+</script>
 
 </body>
 </html>
