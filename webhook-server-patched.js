@@ -163,7 +163,7 @@ function start(log) {
     return;
   }
 
-  if (req.method !== 'POST' || req.url !== '/trigger-eval') {
+  if (req.method !== 'POST' || !req.url.startsWith('/trigger-eval')) {
       res.writeHead(404); res.end('not found'); return;
     }
 
