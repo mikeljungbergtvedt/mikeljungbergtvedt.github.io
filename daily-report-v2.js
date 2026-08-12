@@ -98,10 +98,10 @@ function computeMetrics(rows, target, v3ByReg) {
     const v3m = v3ByReg[rg];
     const dLavSendt = v3m?.easy?.dLav ?? null;
     const dHoySendt = v3m?.easy?.dHoy ?? null;
-    // Salgspris = Bud oppnådd på auksjon (fallback: Høyeste bud). Endelig AR verdi = evaluering, ikke salgspris.
-    const bud = Number(r[I['Bud']]) || null;
+    // Salgspris = Høyeste bud (kolonne E i ERP) = faktisk oppnådd auksjonspris
     const hoyeste = Number(r[I['Høyeste bud']]) || null;
-    const salgspris = bud || hoyeste;
+    const bud = Number(r[I['Bud']]) || null;
+    const salgspris = hoyeste;
     const pctOverDlav = (dLavSendt && salgspris) ? Math.round(((salgspris / dLavSendt) - 1) * 100) : null;
     const krDiff = (dLavSendt && salgspris) ? salgspris - dLavSendt : null;
     return {
