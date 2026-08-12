@@ -241,23 +241,19 @@ async function sendReport(subject, html, dryRun) {
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const force = args.includes('--force');
   const monthArg = args.find(a => /^\d{4}-\d{2}$/.test(a));
 
   let monthStart, monthEnd;
   if (monthArg) {
+    // Eksplisitt måned: rapport for den måneden
     const [y, mo] = monthArg.split('-').map(Number);
     monthStart = new Date(y, mo - 1, 1);
     monthEnd = new Date(y, mo, 0, 23, 59, 59, 999);
   } else {
+    // Default: sist FERDIGE måned = forrige måned (siden dagens måned pågår)
     const now = new Date();
-    // Sjekk om det er siste dag i måneden (med mindre --force)
-    if (!force && !isLastDayOfMonth(now)) {
-      console.log('Ikke siste dag i måneden — hopper over (bruk --force for å tvinge).');
-      process.exit(0);
-    }
-    monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    monthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
   }
 
   console.log('Peasy månedsanalyse for', fmtDate(monthStart), '–', fmtDate(monthEnd), dryRun ? '(DRY RUN)' : '');

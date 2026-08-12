@@ -230,19 +230,21 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const dateArg = args.find(a => /^\d{4}-\d{2}-\d{2}$/.test(a));
-  let sundayEnd;
+  let ref;
   if (dateArg) {
     const [y, mo, d] = dateArg.split('-').map(Number);
-    sundayEnd = new Date(y, mo - 1, d);
+    ref = new Date(y, mo - 1, d);
   } else {
-    sundayEnd = new Date();
+    ref = new Date();
   }
+  // Finn SIST FERDIGE søndag (inkludert i dag hvis i dag er søndag)
+  const sundayEnd = new Date(ref);
+  const dow = sundayEnd.getDay(); // 0=søn ... 6=lør
+  if (dow !== 0) sundayEnd.setDate(sundayEnd.getDate() - dow);
   sundayEnd.setHours(23, 59, 59, 999);
-  // Finn mandag den samme uken
-  const dayOfWeek = sundayEnd.getDay(); // 0=søndag, 1=mandag, ..., 6=lørdag
-  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  // Mandag = søndag - 6 dager
   const mondayStart = new Date(sundayEnd);
-  mondayStart.setDate(sundayEnd.getDate() - daysToMonday);
+  mondayStart.setDate(sundayEnd.getDate() - 6);
   mondayStart.setHours(0, 0, 0, 0);
 
   console.log('Peasy ukesanalyse for', fmtDate(mondayStart), '–', fmtDate(sundayEnd), dryRun ? '(DRY RUN)' : '');
