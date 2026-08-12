@@ -98,10 +98,12 @@ function computeMetrics(rows, target, v3ByReg) {
     const v3m = v3ByReg[rg];
     const dLavSendt = v3m?.easy?.dLav ?? null;
     const dHoySendt = v3m?.easy?.dHoy ?? null;
-    // Salgspris: prøv Bud (kol 19), fallback til Høyeste bud (kol 4)
+    // Salgspris: Endelig AR verdi (Autoringen kjøpspris, format "kr 274 000")
+    const parsePrice = s => { const m = String(s || '').replace(/\s|kr|,/gi, '').match(/(\d+)/); return m ? Number(m[1]) : null; };
+    const arVerdi = parsePrice(r[I['Endelig AR verdi']]);
     const bud = Number(r[I['Bud']]) || null;
     const hoyeste = Number(r[I['Høyeste bud']]) || null;
-    const salgspris = bud || hoyeste;
+    const salgspris = arVerdi || bud || hoyeste;
     const pctOverDlav = (dLavSendt && salgspris) ? Math.round(((salgspris / dLavSendt) - 1) * 100) : null;
     const krDiff = (dLavSendt && salgspris) ? salgspris - dLavSendt : null;
     return {
