@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c191</title>
+<title>Peasy Pulse v16.04.c193</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c191 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c193 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -3679,11 +3679,14 @@ async function loadScoreboard(){
   tbody.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">Henter data ...</td></tr>';
   try{
     var t=Date.now();
-    var mUrl='https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl?t='+t;
+    // c192: primær kilde = Mac Mini /measurements (live), fallback jsdelivr (stale)
+    var mUrl=(window.PA_PROXY_ERP||'').replace('/list/','/measurements')+'?t='+t;
+    var mFallback='https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl?t='+t;
     if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
       try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(e){}
     }
-    var mRes=await fetch(mUrl);
+    var mRes=await fetch(mUrl).catch(function(){return{ok:false};});
+    if(!mRes.ok){mRes=await fetch(mFallback);}
     var mText=mRes.ok?await mRes.text():'';
     var measurements=mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
   window._v2RecordsByReg={};measurements.forEach(function(x){if(x&&x.regnr){if(!window._v2RecordsByReg[x.regnr])window._v2RecordsByReg[x.regnr]=[];window._v2RecordsByReg[x.regnr].push(x);}});
@@ -3772,13 +3775,16 @@ async function loadScoreboard(){
 }
 async function loadV2Benchmark(){
   var t=Date.now();
-  var mUrl='https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl?t='+t;
+  // c192: primær kilde = Mac Mini /measurements (live), fallback jsdelivr (stale)
+  var mUrl=(window.PA_PROXY_ERP||'').replace('/list/','/measurements')+'?t='+t;
+  var mFallback='https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl?t='+t;
   var oUrl='https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/easy-overrides.jsonl?t='+t;
   try{
     if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
       try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(e){}
     }
-    var mRes=await fetch(mUrl);
+    var mRes=await fetch(mUrl).catch(function(){return{ok:false};});
+    if(!mRes.ok){mRes=await fetch(mFallback);}
     var mText=mRes.ok?await mRes.text():'';
     var measurements=mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
     var overrides=[];
@@ -4181,7 +4187,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c191</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c193</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -4294,8 +4300,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
 
 <!-- c127: Send eval-knapp i V2 BM når Eval sendt-cellen er "—" -->
+<!-- c193: DEAKTIVERT — QA/Send-fanen sender ut evalueringer nå -->
 <script>
 (function(){
+  if (true) return; // c193: send-knapper på v3 bm slått av
+
   var WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
   var TOKEN = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
   var BTN_CSS = 'background:#2E7D32;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600';
@@ -4523,9 +4532,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const listJ = await listR.json();
       const liste3 = listJ.biler || [];
 
-      // 2) Fetch V3-measurements for oppslag av variant/BP/Conf/kunde-comment
-      const measUrl = 'https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl';
-      const measR = await fetch(measUrl);
+      // 2) Fetch V3-measurements. c192: primær = Mac Mini /measurements (live), fallback jsdelivr (stale)
+      const measUrl = PA_PROXY_ERP.replace('/list/','/measurements') + '?t=' + Date.now();
+      const measFallback = 'https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/v2-measurements.jsonl';
+      let measR = await fetch(measUrl).catch(() => ({ok:false}));
+      if (!measR.ok) { measR = await fetch(measFallback); }
       const measText = await measR.text();
       const measRecs = measText.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e) { return null; } }).filter(Boolean);
       // Bygg map: regnr -> nyeste V3-measurement
@@ -4593,6 +4604,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const bpConfLine = [bp!=null?'BP '+bp:'', conf!=null?'Conf '+conf:''].filter(Boolean).join(' · ');
     const variant = id.variant || (e.manufacturer ? (e.manufacturer.charAt(0) + e.manufacturer.slice(1).toLowerCase()) : '?');
     const modelYear = id.model_year || '?';
+    // c193: timestamps
+    function fmtTime(dt){ if(!dt) return null; try{ const d = new Date(dt); if(isNaN(d)) return null; const p=n=>(n<10?'0':'')+n; const sameDay = d.toDateString()===new Date().toDateString(); return sameDay ? p(d.getHours())+':'+p(d.getMinutes()) : p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){return null;} }
+    const komInn = fmtTime(e.created_at);
+    // c193: leser sent-state fra localStorage (samme kilde som v3 bm bruker)
+    const sentState = (window._sentEvalCells||{})[key] || (window._sentEvalCells||{})[e.regnr + '__' + e.erpId];
+    const sentTime = sentState ? fmtTime(sentState instanceof Date ? sentState.toISOString() : sentState) : null;
+    const timelineHtml = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">'+
+      (komInn?'Kom inn '+komInn:'') +
+      (sentTime?' · <span style="color:#0F6E66;font-weight:600;">Sendt '+sentTime+' ✓</span>':(komInn?' · <span style="color:var(--muted);">Ikke sendt</span>':''))+
+    '</div>';
+    // c193: erstatt SEND-knapp med "Sendt HH:MM ✓"-status når vi allerede har sendt
+    const actionHtml = sentTime
+      ? '<div style="flex:1;min-width:100px;padding:10px 12px;background:#E8F5E9;color:#0F6E66;border:1px solid #A5D6A7;border-radius:6px;font-weight:600;font-size:13px;text-align:center;">✅ Sendt '+sentTime+'</div>'
+      : '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:#2E7D32;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND</button>';
     return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         <div>
@@ -4602,6 +4627,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         </div>
         <div style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;color:#fff;background:${color};white-space:nowrap;">${icon} ${label}</div>
       </div>
+      ${timelineHtml}
       <div style="display:grid;grid-template-columns:60px 1fr 1fr;gap:4px 12px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
         <div style="color:var(--muted);font-size:10px;"></div><div style="color:var(--muted);font-size:10px;text-align:right;">D-lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">D-høy</div>
         <div style="color:var(--muted);">Easy</div><div style="text-align:right;">${fmt(easy.dLav)}</div><div style="text-align:right;">${fmt(easy.dHoy)}</div>
@@ -4612,7 +4638,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${bpConfLine?' · '+esc(bpConfLine):''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-km="${e.km||0}" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:#2E7D32;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND</button>
+        ${actionHtml}
         <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️</button>
       </div>
       <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
