@@ -1,0 +1,52 @@
+async function checkFinnListing(regnr, bil, page) {
+  try {
+    await page.goto(
+      `https://www.finn.no/mobility/search/car?q=${regnr}&registration_class=1&sales_form=1`,
+      { waitUntil: 'networkidle', timeout: 15000 }
+    );
+    await page.waitForTimeout(1500);
+    const make = (bil.manufacturer || '').toLowerCase().split(' ')[0];
+    const result = await page.evaluate((make) => {
+      const a = document.querySelector('article');
+      if (!a) return null;
+      const text = a.innerText || '';
+      if (make && !text.toLowerCase().includes(make)) return null;
+      const price = parseInt((text.match(/(\d[\d\s]+)\s*kr/) || [])[1]?.replace(/\s/g, '')) || 0;
+      const link = a.querySelector('a')?.href || '';
+      var soldM = text.match(/solgt/i); var status = soldM ? 'Solgt' : 'Til salgs'; return link ? { price: price || 0, link, status } : null;
+    }, make);
+    if (result) log(`Finn: ${regnr} funnet til ${result.price} kr`);
+    else log(`Finn: ${regnr} ingen matchende annonse`);
+    return result;
+  } catch (e) { logErr(`checkFinnListing ${regnr}`, e); return null; }
+}
+
+// ── Brreg ─────────────────────────────────────────────────────
+async function checkBrreg(regnr, page) {
+  try {
+    await page.goto(
+      `https://rettsstiftelser.brreg.no/nb/oppslag/motorvogn/${regnr.replace(/\s/g, '')}`,
+      { waitUntil: 'networkidle', timeout: 15000 }
+    );
+    await page.waitForTimeout(1500);
+    const text = await page.evaluate(() => document.body.innerText);
+    if (text.toLowerCase().includes('ingen oppf'))
+      return { anyDebts: false, text: 'Ingen heftelser' };
+    if (text.includes('heftelse') || text.includes('pant') || text.includes('registrert'))
+      return { anyDebts: true, text: 'Heftelser registrert - sjekk manuelt' };
+    return { anyDebts: false, text: 'Ingen heftelser' };
+  } catch (e) {
+    logErr(`checkBrreg ${regnr}`, e);
+    return { anyDebts: false, text: 'Kunne ikke sjekke heftelser' };
+  }
+}
+
+// ── Anker-valg (ny ak-logikk — ingen Haiku) ──────────────────
+// Anker = snitt av 5 billigste i poolen (eller snitt av alle hvis < 5).
+// Ingen outlier-fjerning — Finn-filteret er godt nok.
+// Begge designvalg gjenspeiler at selger ser hoy-til-lav, dealer ser gulvet.
+// Ankeret er mellom gulv og midtpunkt i markedet.
+// CA-02: snitt av 3 billigste (ikke 5), take returnert i objekt
+
+// v19.30: AI velger 5 best-matchede komper basert paa origin
+async function getAnchorAi(pool, seg, bil, vegData) {
