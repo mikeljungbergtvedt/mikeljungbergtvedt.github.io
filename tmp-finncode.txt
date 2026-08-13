@@ -1,0 +1,201 @@
+      } finally {
+        try { await pgBil.close(); } catch (e) {}
+      }
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  } catch (err) {
+    logErr('runOnce', err);
+    await sendTelegram(`❌ peasy-auto fatal feil: ${err.message}`);
+  } finally {
+    if (browser) { try { await browser.close(); } catch (e) {} }
+  }
+
+  // Stuck-watch: sjekk biler som har staat for lenge fra Mottatt -> ready_for_auction
+  try { const rest = await getListe3(); await pushPulseStatus(rest, cache); } catch (eP2) { logErr('pushPulseStatus slutt', eP2); }
+  try { await checkStuckCars(); } catch (e) { logErr('checkStuckCars in runOnce', e); }
+
+  log('=== Kjoring ferdig ===');
+}
+
+// ── Telegram polling ──────────────────────────────────────────
+let _lastUpdateId = 0;
+
+async function pollTelegramCommands(cache) {
+  setInterval(async () => {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${CONFIG.telegram.token}/getUpdates?offset=${_lastUpdateId + 1}&timeout=0`
+      );
+      const data = await res.json();
+      for (const update of data.result || []) {
+        _lastUpdateId = update.update_id;
+
+        // v18.04.b: callback_query for inline-button "Send eval"
+        if (update.callback_query) {
+          const cb = update.callback_query;
+          const cbData = cb.data || '';
+          const cbChatId = cb.message?.chat?.id;
+          if (String(cbChatId) !== String(CONFIG.telegram.chatId)) {
+            await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/answerCallbackQuery`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cb.id, text: 'Ikke autorisert', show_alert: true }),
+            });
+            continue;
+          }
+          // v20.54: Slett fra cache -> bilen prises paa nytt
+        if (cbData.startsWith('delcache:')) {
+          const idC = cbData.split(':')[1];
+          const cacheD = loadJSON(CACHE_FILE);
+          const had = String(idC) in cacheD;
+          const regnrForV3 = _evalRegnrMap[idC] || (cacheD[String(idC)] && cacheD[String(idC)].regnr) || null;
+          delete cacheD[String(idC)]; delete cache[String(idC)];
+          saveJSON(CACHE_FILE, cacheD);
+          log(`Cache: ${idC} slettet via knapp (hadde=${had})`);
+          if (regnrForV3) {
+            fetch('http://localhost:7780/trigger-eval?force=true', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + (process.env.EASY_WEBHOOK_TOKEN||''), 'Content-Type': 'application/json' },
+              body: JSON.stringify({ regnr: regnrForV3, internnr: idC })
+            }).then(r => log(`V3 reprice: ${regnrForV3} HTTP ${r.status}`))
+              .catch(e => logErr('v3-reprice', e));
+          }
+          await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/answerCallbackQuery`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: cb.id, text: had ? ('🗑 Slettet fra cache: ' + idC + ' - prises paa nytt') : ('Ikke i cache: ' + idC), show_alert: true }),
+          });
+          continue;
+        }
+        if (cbData.startsWith('confirm:')) {
+            const erpIdCb = cbData.split(':')[1];
+            log(`callback confirm: ${erpIdCb}`);
+            await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/answerCallbackQuery`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cb.id, text: 'Sender...' }),
+            });
+            const tok = await getErpToken();
+            let result = await confirmFinalEstimate(erpIdCb, tok);
+            if (!result.ok) {
+              log('confirm feilet for ' + erpIdCb + ' - retry om 3s');
+              await new Promise(r => setTimeout(r, 3000));
+              result = await confirmFinalEstimate(erpIdCb, tok);
+            }
+            if (result.ok) {
+              const r = _evalRegnrMap[erpIdCb] || `ERP-ID ${erpIdCb}`;
+              const now = new Date();
+              const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+              const ddmm = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`;
+              await sendTelegram(`✅ Eval sendt for ${r} ${hhmm} ${ddmm}`);
+            } else {
+              let diagC = '';
+              try {
+                const vC = await verifyErpStatus(erpIdCb, tok);
+                diagC = '\nERP-status: D lav/hoy=' + (vC.dLavHoy ? 'OK' : 'MANGLER') + ' | auctionType=' + (vC.auctionType ? 'OK' : 'MANGLER') + ' | heftelser=' + (vC.encumbrances ? 'OK' : 'MANGLER') + ' | eiere=' + (vC.owners ? 'OK' : 'MANGLER');
+              } catch (eVc) {}
+              await sendTelegram('\u274c Confirm feilet for ' + erpIdCb + ' (2 forsok): ' + JSON.stringify(result.errors).slice(0, 200) + diagC);
+            }
+          }
+          if (cbData.startsWith('editanchor:')) {
+            const erpIdCb = cbData.split(':')[1];
+            const r = _evalRegnrMap[erpIdCb] || `ERP-ID ${erpIdCb}`;
+            _awaitingAnchor = { erpId: erpIdCb, regnr: r };
+            await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/answerCallbackQuery`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cb.id, text: 'Skriv ny anker' }),
+            });
+            await sendTelegram(`✏️ Skriv ny anker for ${r} (kun tall, f.eks. 220000):`);
+          }
+          continue;
+        }
+
+        const text = (update.message?.text || '').trim();
+        const msgTime = update.message?.date || 0;
+        if (Date.now() / 1000 - msgTime > 60) continue;
+        // Endre anker: venter vi paa et tall?
+        if (_awaitingAnchor && /^\d{4,8}$/.test(text.replace(/\s/g, ''))) {
+          const { erpId: aId, regnr: aRegnr } = _awaitingAnchor;
+          const nyAnker = parseInt(text.replace(/\s/g, ''), 10);
+          _awaitingAnchor = null;
+          const d = _evalDataMap[aId];
+          if (!d) { await sendTelegram(`❌ Mangler kalkyle-data for ${aRegnr}, kjor eval paa nytt.`); continue; }
+          try {
+            // Ingen comp-cap ved manuell overstyring — tom pool gir ren spread fra ditt anker
+            const nyVal = calcValuation(nyAnker, d.segment, []);
+            const tok = await getErpToken();
+            await writeToERP(aId, nyVal.dLav, nyVal.dHoy, nyVal.auctionTypeId, d.anyDebts, d.brreg, tok);
+            try { await pushEasyOverride(aRegnr, aId, nyAnker, nyVal); } catch (eOv) { logErr('pushEasyOverride', eOv); }
+            const kalkyle = formatKalkyleBlock(nyVal, nyAnker);
+            const nowStr = new Date().toLocaleString('nb-NO', { timeZone: 'Europe/Oslo' });
+            const fullKortTekst = `🔄 ENDRE ANKER ${aRegnr} — ${nowStr}\n\n${kalkyle}`;
+            try {
+              await maybePostToChat(d.bil, aId, fullKortTekst, tok);
+              log(`Endre anker ${aRegnr}: ERP-kommentar skrevet`);
+            } catch(eC) { logErr('editanchor postToChat', eC); }
+            await sendTelegram(
+              `${fullKortTekst}\n\n✅ ERP oppdatert + dokumentert. Klar til sending.`,
+              { inline_keyboard: [[
+                { text: '✅ Send eval', callback_data: `confirm:${aId}` },
+                { text: '✏️ Endre anker', callback_data: `editanchor:${aId}` }, { text: '🗑 Slett cache', callback_data: `delcache:${aId}` }
+              ]] }
+            );
+            log(`Endre anker ${aRegnr}: ${nyAnker} -> dLav ${nyVal.dLav} dHoy ${nyVal.dHoy}`);
+          } catch (e) {
+            logErr('editanchor', e);
+            await sendTelegram(`❌ Feil ved ny kalkyle for ${aRegnr}: ${e.message}`);
+          }
+          continue;
+        }
+
+        if (text === '/run') {
+          log('/run mottatt');
+          await sendTelegram(`▶️ Kjoring startet... (${VERSION})`);
+          runOnce(cache, true);
+        }
+
+        // /stuck [N] — sett threshold (arbeidsdager) eller vis status
+        if (text.startsWith('/liste8')) {
+            try {
+              _liste8Varslet.clear();
+              await sendTelegram('🔍 Sjekker liste 8 nå...');
+              await checkListeWatch();
+              await sendTelegram('✅ Liste 8-sjekk ferdig');
+            } catch(e) { await sendTelegram('❌ Feil: '+e.message); }
+            continue;
+          }
+          if (text.startsWith('/stuck')) {
+          const parts = text.split(/\s+/);
+          if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
+            const newT = parseInt(parts[1], 10);
+            setStuckThreshold(newT);
+            await sendTelegram(`✅ Stuck-watch threshold satt til ${newT} arbeidsdager.\nVarsel sendes ved neste kjoring.`);
+            log(`/stuck threshold satt til ${newT}`);
+          } else {
+            // /stuck uten arg - vis status og kjor sjekk na
+            const t = getStuckThreshold();
+            await sendTelegram(`📋 Stuck-watch threshold: ${t} arbeidsdager.\nKjorer sjekk na...`);
+            log('/stuck status mottatt');
+            const result = await checkStuckCars(true);
+            if (result) {
+              await sendTelegram(
+                `✅ Stuck-sjekk ferdig:\n` +
+                `• ${result.newStuck} nye stuck\n` +
+                `• ${result.reminders} pamninnelser\n` +
+                `• ${result.cleared} biler ferdige (fjernet fra liste)`
+              );
+            } else {
+              await sendTelegram(`❌ Stuck-sjekk feilet — sjekk loggene.`);
+            }
+          }
+        }
+
+        if (text === '/status') {
+          await sendTelegram(
+            `✅ Peasy Auto ${VERSION}\n` +
+            `Brackets: ${_brackets ? 'dynamisk fra Pulse' : 'PDEC1 fallback'}\n` +
+            `Cache: ${Object.keys(cache).length} biler\n` +
+            `Tidspunkt: ${new Date().toLocaleTimeString('nb-NO')}`
+          );
+        }
+
+        // PEASY: /REGNR - manuelt eval uten ERP-skriving
+      const regnrMatch = text.match(/^[/]([A-Z]{2}[0-9]{4,5})(?:[ ]+([0-9]+))?$/i);
+      if (regnrMatch) {
