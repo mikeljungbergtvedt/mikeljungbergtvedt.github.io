@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c217</title>
+<title>Peasy Pulse v16.04.c218</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c217 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c218 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -272,7 +272,7 @@ function authLogout(){
         <button class="mode-btn" id="btn-qa" onclick="setMode('qa')">QA / Send</button>
           <button class="mode-btn" id="btn-v2bm" onclick="setMode('v2bm')">V3 BM</button>
     </div>
-    <div id="pulse-status-badge" role="button" tabindex="0" title="Åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;margin-right:8px;cursor:pointer;">liste 3-status: ...</div><div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
+    <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;margin-right:6px;cursor:pointer;">⏳ …</div><div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;margin-right:8px;cursor:pointer;">⏳ …</div><div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
   </div>
 </header>
 <main><div id="app"><div class="loading"><div class="spinner"></div><br>Henter data fra Autoringen&hellip;</div></div>
@@ -4226,53 +4226,69 @@ function renderKjerne(){
   document.getElementById('kj-lt-pipe').textContent = kjFmtInt(pipeline);
 }
 
-// === Liste 3-status badge (c30) ===
-async function updatePulseStatus(){
-  var el=document.getElementById('pulse-status-badge');
+// === Liste 3: to timeglass (c218) — priset/ikke sendt + venter på prising ===
+function paintListe3Badge(el, n, kind){
   if(!el) return;
+  var v=Number(n)||0;
+  var bg, color;
+  if(kind==='ready'){
+    if(v===0){bg='#2E7D32';color='#fff';}
+    else if(v<=4){bg='#F9A825';color='#1a1a1a';}
+    else{bg='#C62828';color='#fff';}
+    el.textContent='⏳ '+v+' send';
+    el.title='Priset, ikke sendt ('+v+') — åpne QA / Send';
+  }else{
+    if(v===0){bg='#2E7D32';color='#fff';}
+    else if(v<=4){bg='#F9A825';color='#1a1a1a';}
+    else{bg='#C62828';color='#fff';}
+    el.textContent='⏳ '+v+' pris';
+    el.title='Venter på prising ('+v+') — åpne QA / Send';
+  }
+  el.style.background=bg;
+  el.style.color=color;
+}
+function applyListe3Split(ready, wait, total){
+  window._liste3Split={ready:ready, wait:wait, total:total, ts:new Date()};
+  paintListe3Badge(document.getElementById('pulse-status-ready'), ready, 'ready');
+  paintListe3Badge(document.getElementById('pulse-status-wait'), wait, 'wait');
+}
+function countListe3Split(biler){
+  var list=biler||[];
+  var wait=0;
+  for(var i=0;i<list.length;i++){
+    var b=list[i]||{};
+    var p=Number(b.price_final_min);
+    if(!(p>0)) wait++;
+  }
+  return {total:list.length, wait:wait, ready:list.length-wait};
+}
+async function updatePulseStatus(){
+  var readyEl=document.getElementById('pulse-status-ready');
+  var waitEl=document.getElementById('pulse-status-wait');
+  if(!readyEl&&!waitEl) return;
+  if(window._liste3Split && window._liste3Split.ts && (Date.now()-window._liste3Split.ts.getTime())<5*60*1000){
+    applyListe3Split(window._liste3Split.ready, window._liste3Split.wait, window._liste3Split.total);
+    return;
+  }
   try{
     var r=await fetch('https://mikeljungbergtvedt.github.io/pulse-status.json?t='+Date.now(),{cache:'no-store'});
     if(!r.ok) throw new Error('http '+r.status);
     var j=await r.json();
-    var venter=Number(j.venter)||0; if(typeof window._venterEval==='number'){venter=window._venterEval;}
-    var ts=new Date(j.timestamp);
-    var ageMs=Date.now()-ts.getTime();
-    var stale=ageMs>3*3600*1000;
-    var timeStr=ts.toLocaleTimeString('nb-NO',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit'});
-    var bg,color;
-    if(stale){bg='#9e9e9e';color='#fff';}
-    else if(venter===0){bg='#2E7D32';color='#fff';}
-    else if(venter<=4){bg='#F9A825';color='#1a1a1a';}
-    else{bg='#C62828';color='#fff';}
-    el.style.background=bg;
-    el.style.color=color;
-    el.textContent='⏳ '+venter;
+    var total=Number(j.liste3)||0;
+    var wait=Number(j.venter)||0;
+    if(wait>total) wait=total;
+    applyListe3Split(Math.max(0,total-wait), wait, total);
   }catch(e){
-    el.style.background='rgba(255,255,255,0.15)';
-    el.style.color='rgba(255,255,255,0.65)';
-    el.textContent='liste 3-status: ukjent';
+    if(readyEl){readyEl.style.background='rgba(255,255,255,0.15)';readyEl.style.color='rgba(255,255,255,0.65)';readyEl.textContent='⏳ ? send';}
+    if(waitEl){waitEl.style.background='rgba(255,255,255,0.15)';waitEl.style.color='rgba(255,255,255,0.65)';waitEl.textContent='⏳ ? pris';}
   }
 }
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c217</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c218</div>
 <script>
-function updatePulseStatus(){
-  var el=document.getElementById('pulse-status-badge');
-  if(!el)return;
-  if(typeof window._venterEval!=='number'){el.textContent='venter p\u00e5 evaluering: laster ...';return;}
-  var venter=window._venterEval;
-  var d=window._venterEvalTid||new Date();
-  var hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-  var bg,fg;
-  if(venter===0){bg='rgba(76,175,80,0.25)';fg='#C8F7C5';}
-  else if(venter<=4){bg='rgba(255,204,51,0.30)';fg='#FFF3C4';}
-  else{bg='rgba(198,40,40,0.40)';fg='#FFCDD2';}
-  el.style.background=bg;el.style.color=fg;
-  el.textContent='\u23f3 '+venter;
-}
-setInterval(updatePulseStatus,30000);
+setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
 <script>
 (function(){
@@ -4495,6 +4511,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       for (const b of biler) { const rg = String(b.registration_number||'').toUpperCase().replace(/\s/g,''); if (rg) set.add(rg); }
       window._liste3Regnrs = set;
       window._liste3Loaded = true;
+      try {
+        var sp = countListe3Split(biler);
+        applyListe3Split(sp.ready, sp.wait, sp.total);
+      } catch (eSplit) {}
       scheduleInject();
     }catch(e){ /* mute */ }
   }
@@ -4600,6 +4620,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const listR = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
       const listJ = await listR.json();
       const liste3 = listJ.biler || [];
+      try {
+        var qaSp = countListe3Split(liste3);
+        applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
+      } catch (eQaSp) {}
 
       // 2) Fetch V3-measurements. c192: primær = Mac Mini /measurements (live), fallback jsdelivr (stale)
       const measUrl = PA_PROXY_ERP.replace('/list/','/measurements') + '?t=' + Date.now();
