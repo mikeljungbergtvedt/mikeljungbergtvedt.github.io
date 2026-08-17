@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c221</title>
+<title>Peasy Pulse v16.04.c222</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c221 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c222 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1047,7 +1047,7 @@ window.MARK_V16_04 = (function(){
 
 <h3>Markedsførings-perioder</h3>
 <table id="innst-perioder-tbl" style="width:100%;border-collapse:collapse;margin-bottom:12px">
-<thead><tr style="background:#f5f5f5;text-align:left"><th style="padding:8px">Fra</th><th style="padding:8px">Til (tom = løpende)</th><th style="padding:8px">Kr/dag</th><th style="padding:8px">Slett</th></tr></thead>
+<thead><tr style="background:#f5f5f5;text-align:left"><th style="padding:8px">Fra</th><th style="padding:8px">Til (tom = løpende)</th><th style="padding:8px">Kr/dag</th><th style="padding:8px">Linje</th><th style="padding:8px">Slett</th></tr></thead>
 <tbody></tbody>
 </table>
 <button onclick="innstAddPeriode()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer;margin-bottom:24px">+ Legg til periode</button>
@@ -3423,8 +3423,20 @@ function innstRender(){
   (c.marketingPerioder||[]).forEach(function(p,i){
     var tr=document.createElement('tr');
     tr.style.borderBottom='1px solid #eee';
-    tr.innerHTML='<td style="padding:8px"><input type="date" value="'+(p.fra||'')+'" data-i="'+i+'" data-k="fra" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="date" value="'+(p.til||'')+'" data-i="'+i+'" data-k="til" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px" /></td><td style="padding:8px"><input type="number" value="'+p.krPerDag+'" data-i="'+i+'" data-k="krPerDag" onchange="innstUpdate(this)" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;width:100px" /></td><td style="padding:8px"><button onclick="innstDeletePeriode('+i+')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:4px;padding:4px 10px;cursor:pointer">X</button></td>';
+    var fra=p.fra||'';
+    var til=(p.til==null||p.til==='null')?'':p.til;
+    var kr=p.krPerDag==null?'':p.krPerDag;
+    var inp='padding:6px 8px;border:1px solid #ccc;border-radius:4px;min-width:148px;font-size:14px;color:#111;background:#fff';
+    tr.innerHTML='<td style="padding:8px"><input type="date" data-i="'+i+'" data-k="fra" onchange="innstUpdate(this)" style="'+inp+'" /></td>'
+      +'<td style="padding:8px"><input type="date" data-i="'+i+'" data-k="til" onchange="innstUpdate(this)" style="'+inp+'" /></td>'
+      +'<td style="padding:8px"><input type="number" data-i="'+i+'" data-k="krPerDag" onchange="innstUpdate(this)" style="'+inp+';width:110px;min-width:110px" /></td>'
+      +'<td style="padding:8px;font-size:12px;color:#555;white-space:nowrap">'+(fra||'—')+' → '+(til||'løpende')+' · <b>'+kr+' kr/d</b></td>'
+      +'<td style="padding:8px"><button onclick="innstDeletePeriode('+i+')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:4px;padding:4px 10px;cursor:pointer">X</button></td>';
     tbody.appendChild(tr);
+    var inputs=tr.querySelectorAll('input');
+    inputs[0].value=fra;
+    inputs[1].value=til;
+    inputs[2].value=kr;
   });
   var _tt=document.getElementById('innst-tiltaktekst');if(_tt){_tt.value=c.tiltakDesc||'';_tt.oninput=function(){if(!window.peasyConfig)window.peasyConfig={};window.peasyConfig.tiltakDesc=_tt.value;document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);};}
   document.getElementById('innst-json').textContent=JSON.stringify(c,null,2);
@@ -3487,6 +3499,7 @@ function innstSaveToGitHub(){
       if(res.commit){
         status.textContent='Lagret! Pulse rekalkulerer ved neste reload.';
         status.style.color='#2E7D32';
+        innstRender();
       }else{
         status.textContent='Feil: '+(res.message||'ukjent');
         status.style.color='#C62828';
@@ -4309,7 +4322,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c221</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c222</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
