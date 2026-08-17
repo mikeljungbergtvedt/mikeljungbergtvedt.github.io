@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c219</title>
+<title>Peasy Pulse v16.04.c220</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c219 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c220 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -3037,8 +3037,9 @@ function renderUkesrapport(){
       return true;
     }).length;
     var inntekt90=cur.peasyFee||0;
-    var rk1618=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
-    var kostnad90=cur.ret*rk1618;
+    var rk1618=(window.peasyConfig&&window.peasyConfig.returKost)||2500;
+    var spendUke=window.beregneSpend?window.beregneSpend(range.monday,range.sunday):0;
+    var kostnad90=spendUke+(cur.ret*rk1618);
     var arSalaer90=Math.round((cur.bruttoOms||0)*0.027);
     var netto90=inntekt90-kostnad90;
     var snittPris90=cur.solgt>0?Math.round((cur.bruttoOms||0)/cur.solgt):0;
@@ -3067,7 +3068,7 @@ function renderUkesrapport(){
     var solgtNode={x:880,y:60,label:'SOLGT',val:cur.solgt,sub:solgtPct+'% / '+solgtBudK+'k snitt bud',col:'#2E7D32'};
     var retNode={x:880,y:220,label:'RETURNERT',val:cur.ret,sub:returPct+'% / '+retBudK+'k snitt bud',col:'#C62828'};
     var inntektNode={x:1100,y:60,label:'INNTEKT',val:fmtKr1(inntekt90),sub:'Peasy fee',col:'#2E7D32',isText:true};
-    var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:cur.ret+' x '+((window.peasyConfig&&window.peasyConfig.returKost)||3000).toLocaleString('nb-NO')+' kr',col:'#C62828',isText:true};
+    var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:'marked '+spendUke.toLocaleString('nb-NO')+' + retur '+cur.ret+'×'+rk1618.toLocaleString('nb-NO'),col:'#C62828',isText:true};
     var nettoCol=netto90>=0?'#2E7D32':'#C62828';
     var svg='<svg viewBox="0 0 '+w+' '+hgt+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">';
     svg+='<defs><marker id="arr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#B0BAB5"/></marker><marker id="arrG" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#2E7D32"/></marker><marker id="arrR" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#C62828"/></marker></defs>';
@@ -3183,26 +3184,36 @@ function renderUkesrapport(){
   }
   var sumEl=document.getElementById('uke-trio-summary');
   if(sumEl){
-    var bottleneck='';
-    var ukeBudsjett30=30000;
-    // Ny B-formel: trekk fra prod kost på solgte + retur-kost
-    var netto30=roll90T.fee-(roll90T.sg*ukeProdAvg)-(roll90T.rt*ukeReturKost);
-    var roi=ukeBudsjett30>0?Math.round(netto30/ukeBudsjett30*10)/10:0;
-    var epUkeSum=cur.ep;
+    var fmtKrUke=function(n){return (n<0?'-':'')+Math.abs(n).toLocaleString('nb-NO')+' kr';};
+    var rkUke=(window.peasyConfig&&window.peasyConfig.returKost)||2500;
+    var spendUkeSum=window.beregneSpend?window.beregneSpend(range.monday,range.sunday):0;
+    var avgiftUke=cur.peasyFee||0;
+    var returKostUke=cur.ret*rkUke;
+    var nettoUke=avgiftUke-spendUkeSum-returKostUke;
+    var snittAvgift=cur.solgt>0?Math.round(avgiftUke/cur.solgt):0;
+    var leadPerSolgt=cur.solgt>0?Math.round(spendUkeSum/cur.solgt):0;
+    var returPerSolgt=cur.solgt>0?Math.round(returKostUke/cur.solgt):0;
+    var nettoPerSolgtUke=cur.solgt>0?Math.round(nettoUke/cur.solgt):0;
+    var evalAksUke=cur.registrert>0?Math.round(cur.mottatt/cur.registrert*100):0;
     var bpUkeSum=(cur.solgt+cur.ret)>0?Math.round(cur.solgt/(cur.solgt+cur.ret)*100):0;
-    if(epUkeSum<15&&bpUkeSum<70)bottleneck='<strong style="color:#C62828">&#9888; Begge under mål (valgt uke):</strong> Eval-aksept ('+epUkeSum+'%) og Bud-aksept ('+bpUkeSum+'%) trenger forbedring.';
-    else if(epUkeSum<15)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Eval-aksept</strong> ('+epUkeSum+'% valgt uke, mål 15%) &mdash; for få selgere aksepterer estimatet.';
-    else if(bpUkeSum<70)bottleneck='<strong style="color:#C62828">&#9888; Flaskehals: Bud-aksept</strong> ('+bpUkeSum+'% valgt uke, mål 70%) &mdash; for mange returnerer etter bud.';
-    else bottleneck='<strong style="color:#2E7D32">&#10003; Begge over mål (valgt uke)</strong> &mdash; full pipeline-helse.';
-    // Per solgt bil: snitt fee - prod kost - lead-kost per solgt
-      // Bruk samme tall som kort 9 (Operasjonelt) - rolling 30d, vektet snitt prod kost inkl retur
-      var n30=window._netto30||{fee:0,prodKost:0,leadKost:0,netto:0,sold30:0,roi30:0};
-      var snittFeeUke=n30.fee;
-      var ukeProdAvgPersolgt=n30.prodKost;
-      var leadKostPerSolgt=n30.leadKost;
-      var nettoPerSolgtUke=n30.netto;
-    var cplLine=nettoPerSolgtUke>0?'<strong style="color:#2E7D32">Vi tjener '+nettoPerSolgtUke.toLocaleString('nb-NO')+' kr per solgt bil</strong> (snitt fee '+snittFeeUke.toLocaleString('nb-NO')+' kr &minus; prod kost '+ukeProdAvgPersolgt.toLocaleString('nb-NO')+' kr &minus; lead-kost '+leadKostPerSolgt.toLocaleString('nb-NO')+' kr).':'<strong style="color:#C62828">Vi taper '+Math.abs(nettoPerSolgtUke).toLocaleString('nb-NO')+' kr per solgt bil</strong> (snitt fee '+snittFeeUke.toLocaleString('nb-NO')+' kr &lt; prod kost+lead-kost).';
-    var margForkl='<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">'+snittFeeUke.toLocaleString('nb-NO')+' kr fee &minus; '+ukeProdAvgPersolgt.toLocaleString('nb-NO')+' kr prod kost &minus; '+leadKostPerSolgt.toLocaleString('nb-NO')+' kr lead-kost per solgt = '+nettoPerSolgtUke.toLocaleString('nb-NO')+' kr netto per solgt bil</div>';sumEl.innerHTML='<div style="margin-bottom:8px">'+bottleneck+'</div><div style="margin-bottom:4px;color:#5C6F69">'+cplLine+'</div>'+margForkl+'<div style="font-size:12px;color:#5C6F69;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;margin-top:10px">Peasy netto valgt uke: <strong>'+fmtKr1(cur.peasyFee-cur.noCureTap)+'</strong>.</div>';
+    var bottleneck='Eval-aksept <strong>'+evalAksUke+'%</strong> (mottatt / leads)'
+      +' &nbsp;&middot;&nbsp; Bud-aksept <strong>'+bpUkeSum+'%</strong> (solgt / ferdig).';
+    var cplLine=cur.solgt<=0
+      ? '<strong>Ingen solgt denne uka</strong> — kan ikke dele på solgt. Uke-netto: '+fmtKrUke(nettoUke)+'.'
+      : (nettoPerSolgtUke>=0
+        ? '<strong style="color:#2E7D32">Vi tjener '+nettoPerSolgtUke.toLocaleString('nb-NO')+' kr per solgt</strong>'
+        : '<strong style="color:#C62828">Vi taper '+Math.abs(nettoPerSolgtUke).toLocaleString('nb-NO')+' kr per solgt</strong>')
+        +' (snitt avgift '+snittAvgift.toLocaleString('nb-NO')
+        +' &minus; marked '+leadPerSolgt.toLocaleString('nb-NO')
+        +' &minus; retur '+returPerSolgt.toLocaleString('nb-NO')+').';
+    var margForkl='<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">'
+      +'Uke: kol U '+avgiftUke.toLocaleString('nb-NO')
+      +' &minus; marked '+spendUkeSum.toLocaleString('nb-NO')
+      +' ('+Math.round((range.sunday-range.monday)/86400000+0.001)+'d &times; innstillinger)'
+      +' &minus; retur '+cur.ret+'&times;'+rkUke.toLocaleString('nb-NO')
+      +' = '+nettoUke.toLocaleString('nb-NO')+' kr netto'
+      +(cur.solgt>0?' / '+cur.solgt+' solgt':'')+'.</div>';
+    sumEl.innerHTML='<div style="margin-bottom:8px">'+bottleneck+'</div><div style="margin-bottom:4px;color:#5C6F69">'+cplLine+'</div>'+margForkl;
   }
   var grid=document.getElementById('uke-kpi-grid');
   if(grid){
@@ -4298,7 +4309,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c219</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c220</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
