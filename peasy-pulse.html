@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c218</title>
+<title>Peasy Pulse v16.04.c219</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c218 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c219 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -3026,8 +3026,16 @@ function renderUkesrapport(){
     var r30start=new Date(r30end);r30start.setDate(r30start.getDate()-29);r30start.setHours(0,0,0,0);
     var rrm30=metrics({monday:r30start,sunday:r30end});
     var roll90T={rg:rrm30.registrert,bs:rrm30.bestilt,mt:rrm30.mottatt,sg:rrm30.solgt,rt:rrm30.ret,fee:rrm30.peasyFee,bruttoE:rrm30.bruttoOms};
-    // Pipeline = bestilt 90d - solgt 90d - retur 90d (biler i prosess)
-    var pipeline=Math.max(0,(cur.bestilt||0)-cur.solgt-cur.ret);
+    // Åpen pipe nå: bestilt, ikke solgt, ikke returnert, ikke avvist.
+    // (Uke-residual bestilt-solgt-retur i samme uke er ikke lager.)
+    var pipeline=evalAll.filter(function(row){
+      if(!(pdOps(row[15])||pdOps(row[16]))) return false;
+      if(pdOps(row[18])) return false;
+      if(pdOps(row[21])) return false;
+      var st=String(row[12]||'').toLowerCase();
+      if(st.indexOf('returned')!==-1||st.indexOf('avvist')!==-1) return false;
+      return true;
+    }).length;
     var inntekt90=cur.peasyFee||0;
     var rk1618=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
     var kostnad90=cur.ret*rk1618;
@@ -3038,46 +3046,50 @@ function renderUkesrapport(){
     var inntekt=cur.peasyFee,kostnad=cur.noCureTap,netto=inntekt-kostnad;
     var fmtKr1=function(n){return (n<0?'-':'')+Math.abs(n).toLocaleString('nb-NO')+' kr';};
     var cplUke=cur.registrert>0?Math.round(7000/cur.registrert):0;
-    var epUke=cur.ep;
     var afTot=cur.solgt+cur.ret;
     var solgtPct=afTot>0?Math.round(cur.solgt/afTot*100):0;
     var returPct=afTot>0?Math.round(cur.ret/afTot*100):0;
     var mottattPct=cur.registrert>0?Math.round(cur.mottatt/cur.registrert*100):0;
-    var epOk=epUke>=15;
-    var bpOk=solgtPct>=70;
+    var epUke=mottattPct;
+    var snittBudK=function(biler){
+      var n=0,s=0;
+      (biler||[]).forEach(function(c){var b=c.e||c.t||0;if(b>0){s+=b;n++;}});
+      return n>0?Math.round(s/n/1000):0;
+    };
+    var solgtBudK=snittBudK(cur.solgtBiler);
+    var retBudK=snittBudK(cur.retBiler);
     var retOk=returPct<30;
     var stages=[
       {x:80,y:140,label:'LEADS',val:cur.registrert,sub:'CPL '+cplUke.toLocaleString('nb-NO')+' kr',col:'#5C6F69'},
       {x:340,y:140,label:'MOTTATT',val:cur.mottatt,sub:'kol R',col:'#5C6F69'},
       {x:600,y:140,label:'AUKSJON FERDIG',val:afTot,sub:'solgt+retur',col:'#5C6F69'}
     ];
-    var solgtNode={x:880,y:60,label:'SOLGT',val:cur.solgt,sub:solgtPct+'% av ferdig  '+(cur.solgt>0?Math.round(cur.bruttoOms/cur.solgt/1000):0)+'k kr/bil',col:'#2E7D32'};
-    var retNode={x:880,y:220,label:'RETURNERT',val:cur.ret,sub:returPct+'% av ferdig',col:'#C62828'};
+    var solgtNode={x:880,y:60,label:'SOLGT',val:cur.solgt,sub:solgtPct+'% / '+solgtBudK+'k snitt bud',col:'#2E7D32'};
+    var retNode={x:880,y:220,label:'RETURNERT',val:cur.ret,sub:returPct+'% / '+retBudK+'k snitt bud',col:'#C62828'};
     var inntektNode={x:1100,y:60,label:'INNTEKT',val:fmtKr1(inntekt90),sub:'Peasy fee',col:'#2E7D32',isText:true};
     var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:cur.ret+' x '+((window.peasyConfig&&window.peasyConfig.returKost)||3000).toLocaleString('nb-NO')+' kr',col:'#C62828',isText:true};
     var nettoCol=netto90>=0?'#2E7D32':'#C62828';
     var svg='<svg viewBox="0 0 '+w+' '+hgt+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">';
     svg+='<defs><marker id="arr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#B0BAB5"/></marker><marker id="arrG" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#2E7D32"/></marker><marker id="arrR" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#C62828"/></marker></defs>';
-    svg+='<line x1="130" y1="140" x2="290" y2="140" stroke="'+(epOk?'#2E7D32':'#C62828')+'" stroke-width="3" marker-end="url(#'+(epOk?'arrG':'arrR')+')"/>';
+    svg+='<line x1="130" y1="140" x2="290" y2="140" stroke="#5C6F69" stroke-width="3" marker-end="url(#arr)"/>';
     svg+='<line x1="390" y1="140" x2="550" y2="140" stroke="#B0BAB5" stroke-width="2" marker-end="url(#arr)"/>';
-    svg+='<path d="M 650 140 Q 750 140 750 60 L 830 60" stroke="'+(bpOk?'#2E7D32':'#C62828')+'" stroke-width="3" fill="none" marker-end="url(#'+(bpOk?'arrG':'arrR')+')"/>';
+    svg+='<path d="M 650 140 Q 750 140 750 60 L 830 60" stroke="#2E7D32" stroke-width="3" fill="none" marker-end="url(#arrG)"/>';
     svg+='<path d="M 650 140 Q 750 140 750 220 L 830 220" stroke="'+(retOk?'#2E7D32':'#C62828')+'" stroke-width="2" fill="none" marker-end="url(#'+(retOk?'arrG':'arrR')+')"/>';
     svg+='<line x1="930" y1="60" x2="1040" y2="60" stroke="#2E7D32" stroke-width="2" marker-end="url(#arrG)"/>';
     svg+='<line x1="930" y1="220" x2="1040" y2="220" stroke="#C62828" stroke-width="2" marker-end="url(#arrR)"/>';
     var allNodes=stages.concat([solgtNode,retNode,inntektNode,kostnadNode]);
     for(var i=0;i<allNodes.length;i++){var s=allNodes[i];var fontSize=s.isText?22:36;svg+='<text x="'+s.x+'" y="'+(s.y-50)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" font-weight="700" letter-spacing="1.2" fill="#667A72">'+s.label+'</text><text x="'+s.x+'" y="'+(s.y+5)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="'+fontSize+'" font-weight="900" fill="'+s.col+'">'+s.val+'</text><text x="'+s.x+'" y="'+(s.y+30)+'" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="#888">'+s.sub+'</text>';}
     svg+='<text x="210" y="95" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">EVAL-AKSEPT</text>';
-    svg+='<text x="210" y="122" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="22" font-weight="900" fill="'+(epOk?'#2E7D32':'#C62828')+'">'+epUke+'%</text>';
-    svg+='<text x="210" y="180" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" fill="'+(epOk?'#2E7D32':'#C62828')+'">Mål 15%'+(epOk?' ✓':'')+'</text>';
+    svg+='<text x="210" y="122" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="22" font-weight="900" fill="#004225">'+epUke+'%</text>';
     svg+='<text x="740" y="30" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">BUD-AKSEPT</text>';
-    svg+='<text x="740" y="50" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="'+(bpOk?'#2E7D32':'#C62828')+'">'+solgtPct+'%</text>';
+    svg+='<text x="740" y="50" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="#2E7D32">'+solgtPct+'%</text>';
     svg+='<text x="740" y="260" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">RETUR-RATE</text>';
     svg+='<text x="740" y="282" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="18" font-weight="900" fill="'+(retOk?'#2E7D32':'#C62828')+'">'+returPct+'%</text>';
     svg+='<rect x="1040" y="125" width="140" height="50" rx="8" fill="#fff" stroke="'+nettoCol+'" stroke-width="2"/>';
     svg+='<text x="1110" y="143" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">PEASY NETTO</text>';
     svg+='<text x="1110" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="16" font-weight="900" fill="'+nettoCol+'">'+fmtKr1(netto90)+'</text>';
     svg+='</svg>';
-    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Alle tall i flyten = valgt uke. Pipeline ('+pipeline+' biler) = bestilt minus solgt og returnert i uka.</div>';
+    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Alle tall i flyten = valgt uke. Pipeline ('+pipeline+' biler) = bestilt og ikke ferdig (ikke solgt/returnert/avvist) — åpen pipe nå, ikke uke-residual.</div>';
     flowEl.innerHTML=svg+footnote;
   }
   var ep90flow=roll90T.rg>0?Math.round(roll90T.bs/roll90T.rg*100):0;
@@ -4286,7 +4298,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c218</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c219</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
