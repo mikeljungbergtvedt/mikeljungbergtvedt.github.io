@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c210</title>
+<title>Peasy Pulse v16.04.c211</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c210 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c211 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -2909,7 +2909,7 @@ function buildUkeHtml(){
   }
   h+='</select></div>';
   h+='<div id="uke-periode-info" style="padding-bottom:6px;font-size:12px;color:#667A72"></div></div>';
-  h+='<div class="section-label" style="margin-top:18px">Pulsen &mdash; siste 30 dager <span style="font-size:11px;color:#888;font-weight:400">(rullerende &mdash; ikke pavirket av uke-velger)</span></div>';
+  h+='<div class="section-label" style="margin-top:18px">Ukens flyt <span style="font-size:11px;color:#888;font-weight:400">(valgt uke fra gardin)</span></div>';
   h+='<div id="uke-flow" style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:14px;padding:24px 18px 18px;margin-bottom:14px;width:100%;grid-column:1/-1;box-shadow:0 4px 16px rgba(0,66,37,0.06)"></div>';
   h+='<div id="uke-trio-summary" style="background:#fff;border-left:4px solid #004225;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#0E1F1A;width:100%;grid-column:1/-1"></div>';
   h+='<div class="section-label" style="margin-top:24px">Denne uka &mdash; aktivitet</div>';
@@ -3033,17 +3033,17 @@ function renderUkesrapport(){
     var fmtKr1=function(n){return (n<0?'-':'')+Math.abs(n).toLocaleString('nb-NO')+' kr';};
     var cpl90=cur.registrert>0?Math.round(7000/cur.registrert):0;
     var stages=[
-      {x:80,y:140,label:'LEADS',val:roll90T.rg,sub:'CPL '+cpl90.toLocaleString('nb-NO')+' kr',col:'#5C6F69'},
-      {x:340,y:140,label:'MOTTATT',val:roll90T.mt,sub:'kol R (30d)',col:'#5C6F69'},
-      {x:600,y:140,label:'AUKSJON FERDIG',val:(roll90T.sg+roll90T.rt),sub:'solgt+retur',col:'#5C6F69'}
+      {x:80,y:140,label:'LEADS',val:cur.registrert,sub:'CPL '+cpl90.toLocaleString('nb-NO')+' kr',col:'#5C6F69'},
+      {x:340,y:140,label:'MOTTATT',val:cur.mottatt,sub:'kol R (30d)',col:'#5C6F69'},
+      {x:600,y:140,label:'AUKSJON FERDIG',val:(cur.solgt+cur.ret),sub:'solgt+retur',col:'#5C6F69'}
     ];
-    var afTot=roll90T.sg+roll90T.rt;var solgtPct=afTot>0?Math.round(roll90T.sg/afTot*100):0;var solgtNode={x:880,y:60,label:'SOLGT',val:roll90T.sg,sub:solgtPct+'% av ferdig  '+(roll90T.sg>0?Math.round(roll90T.bruttoE/roll90T.sg/1000):0)+'k kr/bil',col:'#2E7D32'};
-    var returPct=afTot>0?Math.round(roll90T.rt/afTot*100):0;var retNode={x:880,y:220,label:'RETURNERT',val:roll90T.rt,sub:returPct+'% av ferdig',col:'#C62828'};
+    var afTot=cur.solgt+cur.ret;var solgtPct=afTot>0?Math.round(cur.solgt/afTot*100):0;var solgtNode={x:880,y:60,label:'SOLGT',val:cur.solgt,sub:solgtPct+'% av ferdig  '+(cur.solgt>0?Math.round(cur.bruttoOms/cur.solgt/1000):0)+'k kr/bil',col:'#2E7D32'};
+    var returPct=afTot>0?Math.round(cur.ret/afTot*100):0;var retNode={x:880,y:220,label:'RETURNERT',val:cur.ret,sub:returPct+'% av ferdig',col:'#C62828'};
     var inntektNode={x:1100,y:60,label:'INNTEKT',val:fmtKr1(inntekt90),sub:'Peasy fee',col:'#2E7D32',isText:true};
-    var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:roll90T.rt+' x '+((window.peasyConfig&&window.peasyConfig.returKost)||3000).toLocaleString('nb-NO')+' kr',col:retOk?'#5C6F69':'#C62828',isText:true};
+    var kostnadNode={x:1100,y:220,label:'KOSTNAD',val:fmtKr1(-kostnad90),sub:cur.ret+' x '+((window.peasyConfig&&window.peasyConfig.returKost)||3000).toLocaleString('nb-NO')+' kr',col:retOk?'#5C6F69':'#C62828',isText:true};
     var nettoCol=netto90>=0?'#2E7D32':'#C62828';
     var conv=[
-      {x1:80,x2:340,y:140,label:'MOTTATT-RATE 30d',pct:(roll90T.rg>0?Math.round(roll90T.mt/roll90T.rg*100):0)+'%',target:'estimert (lag)',col:'#5C6F69',delta:'',arrow:'',arrowCol:'#888',met:true},
+      {x1:80,x2:340,y:140,label:'MOTTATT-RATE 30d',pct:(cur.registrert>0?Math.round(cur.mottatt/cur.registrert*100):0)+'%',target:'estimert (lag)',col:'#5C6F69',delta:'',arrow:'',arrowCol:'#888',met:true},
       {x1:600,x2:880,y:60,label:'BUD-AKSEPT 30d',pct:bp30+'%',target:'Mål 70%',col:bp30>=70?'#2E7D32':'#C62828',delta:(bpDelta>=0?'+':'')+bpDelta+'pp vs 90d',arrow:bpDelta>=0?'▲':'▼',arrowCol:bpDelta>=0?'#2E7D32':'#C62828',met:bp30>=70,split:true},
       {x1:600,x2:880,y:220,label:'RETUR-RATE 30d',pct:(100-bp30)+'%',target:'Mål <30%',col:(100-bp30)<30?'#2E7D32':'#C62828',delta:'',arrow:'',arrowCol:'#888',met:(100-bp30)<30,split:true,nopct:false}
     ];
@@ -4198,7 +4198,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c210</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c211</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
