@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c206</title>
+<title>Peasy Pulse v16.04.c207</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c206 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c207 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -4198,7 +4198,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c206</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c207</div>
 <script>
 function updatePulseStatus(){
   var el=document.getElementById('pulse-status-badge');
@@ -4559,6 +4559,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
         if (!v3ByRegnr[rg] || (r.timestamp || '') > (v3ByRegnr[rg].timestamp || '')) v3ByRegnr[rg] = r;
       }
 
+      // [v3g] Fetch V3G-measurements (Grok) - defensiv, feiler stille
+      const v3gByRegnr = {};
+      try {
+        const v3gUrl = PA_PROXY_ERP.replace('/list/','/v3g-measurements') + '?t=' + Date.now();
+        const v3gFallback = 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl';
+        let v3gR = await fetch(v3gUrl).catch(() => ({ok:false}));
+        if (!v3gR || !v3gR.ok) { v3gR = await fetch(v3gFallback).catch(() => ({ok:false})); }
+        if (v3gR && v3gR.ok) {
+          const v3gText = await v3gR.text();
+          const v3gRecs = v3gText.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e) { return null; } }).filter(Boolean);
+          for (const r of v3gRecs) {
+            const rg = String(r.regnr || '').toUpperCase();
+            if (!rg) continue;
+            if (!v3gByRegnr[rg] || (r.timestamp || '') > (v3gByRegnr[rg].timestamp || '')) v3gByRegnr[rg] = r;
+          }
+        }
+      } catch(e) { console.warn('[v3g] fetch failed:', e); }
+
       // [qa-hist] Fetch master-XLSX for ERP-historikk per regnr
       var histByReg = {};
       try {
@@ -4602,6 +4620,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           manufacturer: b.manufacturer || null,
           finn_link: b.finn_link || null,
           rawErp: b,
+          v3g: v3gByRegnr[rg] || null,
           hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
         };
       }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
@@ -4681,7 +4700,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;color:#fff;background:${color};white-space:nowrap;">${icon} ${label}</div>
       </div>
       ${timelineHtml}
-      <div style="display:grid;grid-template-columns:44px 1fr 1fr 1fr;gap:4px 10px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
+      <div style="display:grid;grid-template-columns:44px 1fr 1fr 1fr 42px;gap:4px 10px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
         <div style="color:var(--muted);font-size:10px;"></div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">D-lav</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">Anker</div>
@@ -4694,6 +4713,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="text-align:right;">${fmt(v3.dLav)}</div>
         <div style="text-align:right;font-weight:600;color:${(v3.confidence===0||v3.anker===0)?'#A8221C':'inherit'}">${(v3.confidence===0||v3.anker===0)?'nektet':fmt(v3.anker)}</div>
         <div style="text-align:right;">${fmt(v3.dHoy)}</div>
+        <div style="text-align:right;color:var(--muted);">${v3.confidence!=null ? v3.confidence : '-'}</div>
+        <div style="color:var(--muted);">V3G</div>
+        <div style="text-align:right;">${fmt(e.v3g?.dLav || e.v3g?.v2?.dLav || null)}</div>
+        <div style="text-align:right;font-weight:600;">${fmt(e.v3g?.anker || e.v3g?.v2?.anker || null)}</div>
+        <div style="text-align:right;">${fmt(e.v3g?.dHoy || e.v3g?.v2?.dHoy || null)}</div>
+        <div style="text-align:right;color:var(--muted);">${e.v3g ? (e.v3g.score ?? e.v3g.confidence ?? e.v3g.bulletproof_score ?? '-') : '-'}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
         ${diff!=null?'<b style="color:'+(Math.abs(diff)>15?'#A8221C':'var(--text)')+'">Diff '+(diff>=0?'+':'')+diff+'%</b>':''}
