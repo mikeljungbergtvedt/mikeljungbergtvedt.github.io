@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c230</title>
+<title>Peasy Pulse v16.04.c231</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c230 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c231 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1716,7 +1716,7 @@ function setMode(m){
       if(m==='v2bm'){loadV2Benchmark();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
-  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);},100);
+  if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);if(typeof renderFinMoney==='function')renderFinMoney();},100);
   if(m==='kjerne')setTimeout(function(){renderKjerne();},100);
 }
 
@@ -2219,7 +2219,22 @@ function render(data,rows){
   nyligHtml+='</tbody></table></div><div class="table-card"><div class="th"><div class="th-title">&#8617; Nylig returnert</div><div class="th-badge">'+tR+' totalt</div></div><table><thead><tr><th>Regnr</th><th>Bil</th><th>Pris lav</th><th>Høyeste bud</th><th>Returnert</th></tr></thead><tbody>';
   for(var l=0;l<rR.length;l++){var cr=rR[l];nyligHtml+='<tr><td><span class="regnr">'+cr.regnr+'</span></td><td><span style="font-size:11px">'+(cr.label||'-')+'</span></td><td>'+(cr.dLow?cr.dLow.toLocaleString('nb-NO')+' kr':'-')+'</td><td style="color:var(--red);font-weight:700">'+(cr.e?cr.e.toLocaleString('nb-NO')+' kr':'-')+' <span style="font-size:10px">('+fmtPct(cr.gap)+')</span></td><td style="color:var(--muted);font-size:11px">'+(cr.vDate?cr.vDate.slice(0,10).split('-').reverse().join('.'):'–')+'</td></tr>';}
   nyligHtml+='</tbody></table></div></div>';
-  var finHtml='<div class="section-label">Prisbrakett-analyse &mdash; Pris lav vs Bud</div><div class="brackets-grid">';
+  var finHtml=''
+    +'<div class="section-label">Inntekt og retur</div>'
+    +'<div class="plot-card" style="margin-bottom:24px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<div><div class="plot-title" style="margin:0">Solgt-avgift vs returkost</div>'
+    +'<div class="plot-explain" style="margin-top:4px">Inntekt = avgift på solgte biler. Retur = fast no-cure-kost per returnert bil.</div></div>'
+    +'<div id="fin-period" style="display:flex;background:#F0F4F2;border-radius:99px;padding:3px;gap:2px">'
+    +'<button type="button" id="fin-p-ytd" onclick="setFinPeriod(\'ytd\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">YTD</button>'
+    +'<button type="button" id="fin-p-30d" onclick="setFinPeriod(\'30d\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">30d</button>'
+    +'<button type="button" id="fin-p-90d" onclick="setFinPeriod(\'90d\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">90d</button>'
+    +'<button type="button" id="fin-p-all" onclick="setFinPeriod(\'all\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">Alt</button>'
+    +'</div></div>'
+    +'<div id="fin-money-kpis" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px"></div>'
+    +'<div style="position:relative;height:280px"><canvas id="fin-money-chart"></canvas></div>'
+    +'</div>'
+    +'<div class="section-label">Prisbrakett-analyse &mdash; Pris lav vs Bud</div><div class="brackets-grid">';
   for(var m=0;m<bs.length;m++){var b=bs[m];var xC=b.recX>3?'#2E7D32':b.recX<0?'#C62828':'#1565C0';finHtml+='<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div><div class="bc-row"><span class="bc-key">Evaluert</span><span class="bc-val">'+b.evalCount+'</span></div><div class="bc-row"><span class="bc-key">Avvist av kunde</span><span class="bc-val '+(b.rejCount>0&&(b.rejCount/b.evalCount)>0.28?'neg':b.rejCount>0&&(b.rejCount/b.evalCount)<0.22?'pos':'warn')+'">'+b.rejCount+' <span style="color:var(--muted);font-weight:400">('+( b.evalCount>0?Math.round(b.rejCount/b.evalCount*100):0)+'%)</span></span></div><div class="bc-row"><span class="bc-key">Mottatt</span><span class="bc-val">'+b.motCount+' <span style="color:var(--muted);font-weight:400">('+b.convRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.soldCount+' <span style="color:var(--muted);font-weight:400">('+b.soldRate+'%)</span></span></div><div class="bc-row"><span class="bc-key">Returnert</span><span class="bc-val '+(b.retCount>0?'neg':'')+'">'+b.retCount+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (solgt)</span><span class="bc-val '+(b.avgGapSolgt>=0?'pos':'warn')+'">'+fmtPct(b.avgGapSolgt)+'</span></div><div class="bc-row"><span class="bc-key">Avg Bud/Pris (ret.)</span><span class="bc-val neg">'+fmtPct(b.avgGapRet)+'</span></div><div class="x-rec"><div class="x-rec-label">Median: bud vs Pris lav</div><div class="x-rec-val" style="color:'+xC+'">'+(b.recX>0?'+':'')+b.recX+'%</div></div></div>';}
   finHtml+='</div><div class="section-label">Pris lav vs Bud &mdash; Alle biler</div><div class="plot-card"><div class="plot-title">Prisnoyaktighet: Pris lav vs Høyeste bud</div><div class="plot-explain">Hver prikk er en bil. X = Pris lav. Y = Høyeste bud. Stiplet = perfekt treff. Grønne prikker over linjen = bud hoyere enn Pris lav. Røde prikker = returneringsrisiko.</div><canvas id="scatter" height="300"></canvas></div>'
     +'<div class="section-label">Kostbare returneringer &amp; beste pristreff</div><div class="two-col"><div class="table-card"><div class="th"><div class="th-title">&#10060; Verste returneringer</div><div class="th-badge">'+tR+' totalt</div></div><div class="th-note">No-cure ~'+((window.peasyConfig&&window.peasyConfig.returKost)||3000).toLocaleString('nb-NO')+' kr er grovt estimat.</div><table><thead><tr><th>Regnr / Bil</th><th>Pris lav</th><th>Høyeste bud</th><th>Gap</th><th>Est. kost.</th></tr></thead><tbody>';
@@ -2255,6 +2270,7 @@ function render(data,rows){
     if(currentMode==='eval')renderEvalCharts(rows,data);
     if(currentMode==='uke')setTimeout(function(){renderUkesrapport();},50);
     drawScatter(window._lastData.sold,window._lastData.returned);
+    if(typeof renderFinMoney==='function')renderFinMoney();
   });
 }
 
@@ -2274,6 +2290,134 @@ function drawScatter(sold,returned){
   ctx.strokeStyle='rgba(0,66,37,0.2)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx(0),sy(0));ctx.lineTo(sx(maxV),sy(maxV));ctx.stroke();ctx.setLineDash([]);
   for(var j=0;j<all.length;j++){var c=all[j];ctx.beginPath();ctx.arc(sx(c.dLow),sy(c.e||0),5,0,Math.PI*2);ctx.fillStyle=c.type==='sold'?'rgba(0,135,90,0.7)':'rgba(198,40,40,0.75)';ctx.fill();ctx.strokeStyle=c.type==='sold'?'#00875A':'#C62828';ctx.lineWidth=1;ctx.stroke();}
   ctx.fillStyle='#999';ctx.font='10px Inter';ctx.textAlign='center';ctx.fillText('Pris lav (tilbud til selger)',pad.l+pw/2,H-4);ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Høyeste bud (på auksjon)',0,0);ctx.restore();
+}
+
+window._finPeriod = window._finPeriod || 'ytd';
+
+function finParseNum(v){
+  if(v==null||v==='') return 0;
+  if(typeof v==='number' && isFinite(v)) return v;
+  var n=parseInt(String(v).replace(/[\s\u00a0]/g,''),10);
+  return isFinite(n)?n:0;
+}
+function finSoldFee(c){
+  var u=finParseNum(c && c.u);
+  if(u>500) return u;
+  var f=typeof feeFromE==='function'?feeFromE(c && c.e):null;
+  return f||0;
+}
+function finPeriodRange(p){
+  var now=new Date();
+  now.setHours(23,59,59,999);
+  var from=new Date(now.getFullYear(),0,1);
+  from.setHours(0,0,0,0);
+  if(p==='30d'){ from=new Date(now); from.setDate(from.getDate()-29); from.setHours(0,0,0,0); }
+  else if(p==='90d'){ from=new Date(now); from.setDate(from.getDate()-89); from.setHours(0,0,0,0); }
+  else if(p==='all'){ from=new Date(2020,0,1); }
+  return {from:from,to:now};
+}
+function finMonthKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function finMonthLabel(key){
+  var p=key.split('-');
+  var names=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  var m=parseInt(p[1],10)-1;
+  var y=p[0].slice(2);
+  return names[m]+' '+y;
+}
+function setFinPeriod(p){
+  window._finPeriod=p||'ytd';
+  renderFinMoney();
+}
+window.setFinPeriod=setFinPeriod;
+
+function renderFinMoney(){
+  var box=document.getElementById('fin-money-kpis');
+  var canvas=document.getElementById('fin-money-chart');
+  if(!box||!canvas) return;
+  var data=window._lastData||{};
+  var sold=data.sold||[];
+  var returned=data.returned||[];
+  var period=window._finPeriod||'ytd';
+  var range=finPeriodRange(period);
+  var rk=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
+  ['ytd','30d','90d','all'].forEach(function(k){
+    var b=document.getElementById('fin-p-'+k);
+    if(!b) return;
+    var on=k===period;
+    b.style.background=on?'var(--green)':'transparent';
+    b.style.color=on?'#fff':'var(--muted)';
+    b.style.fontWeight=on?'700':'500';
+  });
+  var months=[];
+  var cursor=new Date(range.from.getFullYear(), range.from.getMonth(), 1);
+  var endM=new Date(range.to.getFullYear(), range.to.getMonth(), 1);
+  while(cursor<=endM){
+    months.push(finMonthKey(cursor));
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+  if(!months.length) months=[finMonthKey(range.to)];
+  var inntekt=months.map(function(){return 0;});
+  var retur=months.map(function(){return 0;});
+  var nSold=0, nRet=0;
+  sold.forEach(function(c){
+    var d=parseDate(c.sDate);
+    if(!d||d<range.from||d>range.to) return;
+    var i=months.indexOf(finMonthKey(d));
+    if(i<0) return;
+    inntekt[i]+=finSoldFee(c);
+    nSold++;
+  });
+  returned.forEach(function(c){
+    var d=parseDate(c.vDate)||parseDate(c.rDate);
+    if(!d||d<range.from||d>range.to) return;
+    var i=months.indexOf(finMonthKey(d));
+    if(i<0) return;
+    retur[i]+=rk;
+    nRet++;
+  });
+  var sumI=inntekt.reduce(function(a,b){return a+b;},0);
+  var sumR=retur.reduce(function(a,b){return a+b;},0);
+  var netto=sumI-sumR;
+  function kpi(label, val, sub, color){
+    return '<div style="background:#F8F8F5;border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:10px;letter-spacing:0.6px;text-transform:uppercase;color:#667;margin-bottom:4px">'+label+'</div>'
+      +'<div style="font-size:22px;font-weight:800;color:'+color+';letter-spacing:-0.5px">'+Math.round(val).toLocaleString('nb-NO')+' kr</div>'
+      +'<div style="font-size:11px;color:#888;margin-top:3px">'+sub+'</div></div>';
+  }
+  box.innerHTML=kpi('Inntekt solgt', sumI, nSold+' biler · avgift','#0F6E66')
+    +kpi('Kost retur', sumR, nRet+' biler · '+rk.toLocaleString('nb-NO')+' kr/stk','#A8221C')
+    +kpi('Netto', netto, 'inntekt minus retur', netto>=0?'#004225':'#A8221C');
+  if(typeof Chart==='undefined') return;
+  var ex=Chart.getChart(canvas);
+  if(ex) ex.destroy();
+  new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels:months.map(finMonthLabel),
+      datasets:[
+        {label:'Inntekt solgt', data:inntekt, backgroundColor:'rgba(15,110,102,0.75)', borderRadius:4},
+        {label:'Kost retur', data:retur, backgroundColor:'rgba(168,34,28,0.7)', borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, labels:{font:{size:11}, boxWidth:12}},
+        tooltip:{
+          callbacks:{
+            label:function(ctx){ return ctx.dataset.label+': '+Math.round(ctx.parsed.y||0).toLocaleString('nb-NO')+' kr'; }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{color:'#888', font:{size:10}}},
+        y:{grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#888', font:{size:10}, callback:function(v){return Math.round(v/1000)+'k';}}}
+      }
+    }
+  });
 }
 
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
@@ -4297,7 +4441,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c230</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c231</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
