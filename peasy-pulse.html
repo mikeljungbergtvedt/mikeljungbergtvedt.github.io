@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c236</title>
+<title>Peasy Pulse v16.04.c237</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c236 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c237 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1598,6 +1598,7 @@ window.MARK_V16_04 = (function(){
           <tr style="background:var(--green);text-align:left">
             <th style="padding:10px 12px;color:#fff">Reg nr</th>
             <th style="padding:10px 12px;color:#fff">Internnr</th>
+            <th style="padding:10px 12px;color:#fff">Arm</th>
             <th style="padding:10px 12px;color:#fff">Bil</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">Easy eval lav</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">V3 eval lav</th>
@@ -1613,7 +1614,7 @@ window.MARK_V16_04 = (function(){
             <th style="padding:10px 12px;text-align:center;color:#fff">Vinner</th>
           </tr>
         </thead>
-        <tbody id="score-tbody"><tr><td colspan="15" style="padding:30px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>
+        <tbody id="score-tbody"><tr><td colspan="16" style="padding:30px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -3631,6 +3632,17 @@ function markRender(){try{if(window.MARK_V16_04 && window.MARK_V16_04.render){se
 const V2BM_BENCHMARK_START = "2026-06-03";
 const KOST_PER_EVAL = 0;
 
+function abArm(erpId){
+  var n=Number(erpId);
+  if(!Number.isFinite(n)||n<=0)return 'A';
+  return n%2===0?'A':'B';
+}
+function abBadge(erpId){
+  var a=abArm(erpId);
+  if(a==='B')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:800;letter-spacing:0.04em;">B V3G</span>';
+  return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#F3E5F5;color:#6A1B9A;font-size:10px;font-weight:800;letter-spacing:0.04em;">A Easy</span>';
+}
+window.abArm=abArm;window.abBadge=abBadge;
 function pickV3gBand(rec){
   if(!rec)return {dLav:null,anker:null,dHoy:null,score:null,begrunnelse:null};
   var inner=rec.v3g||{};
@@ -3943,13 +3955,17 @@ async function loadScoreboard(){
       function fmtKr(n){return n?Math.round(n).toLocaleString('nb-NO')+' kr':'—';}
       function fmtPct(n){return n===null?'—':((n>=0?'+':'')+(Math.round(n*10)/10)+' %');}
       var gapCol=function(n){if(n===null)return 'var(--muted)';return Math.abs(n)<5?'#2E7D32':(Math.abs(n)<10?'#E65100':'#C62828');};
+      var armLive=(typeof abArm==='function')?abArm(r.erpId):'A';
+      var easyBg=armLive==='A'?'background:#F3E5F5;font-weight:800;':'';
+      var v3gBg=armLive==='B'?'background:#E8F5E9;font-weight:800;':'';
       return '<tr style="border-top:1px solid var(--border)">'+
         '<td style="padding:8px 12px;font-weight:600">'+r.regnr+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace">'+(r.erpId||'—')+'</td>'+
+        '<td style="padding:8px 12px;">'+(typeof abBadge==='function'?abBadge(r.erpId):'—')+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted)">'+variant+'</td>'+
-        '<td style="padding:8px 12px;text-align:right">'+fmtKr(easy)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;'+easyBg+'">'+fmtKr(easy)+'</td>'+
         '<td style="padding:8px 12px;text-align:right">'+fmtKr(v2)+_v22badge(r)+'</td>'+
-        '<td style="padding:8px 12px;text-align:right">'+fmtKr(v3g)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;'+v3gBg+'">'+fmtKr(v3g)+'</td>'+
         '<td style="padding:8px 12px;text-align:right;font-weight:600">'+fmtKr(bud)+'</td>'+
         '<td style="padding:8px 12px;text-align:right;color:'+gapCol(easyGap)+';font-weight:600">'+fmtPct(easyGap)+'</td>'+
         '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v2Gap)+';font-weight:600">'+fmtPct(v2Gap)+'</td>'+
@@ -4163,14 +4179,14 @@ function renderV2Table(records){
     var ovr=findOverrideForRecord(r);
     var ovrTxt=(ovr&&Number.isFinite(Number(ovr.dLav)))?fmtKrV2(Number(ovr.dLav)):'—';
     return '<tr style="border-top:1px solid var(--border);background:'+((r.evaluator==='v3')?'transparent':'#F8F8F5')+';">'+
-      '<td style="padding:8px 12px;font-weight:600;">'+regnr+(r.km_override?' <span title="Km endret '+(r.km_override.from||0).toLocaleString('nb-NO')+' \u2192 '+(r.km_override.to||0).toLocaleString('nb-NO')+' (EU-kontroll)" style="cursor:help;">\ud83d\udd04</span>':'')+'</td>'+
+      '<td style="padding:8px 12px;font-weight:600;">'+regnr+' '+(typeof abBadge==='function'?abBadge(r.erpId):'')+(r.km_override?' <span title="Km endret '+(r.km_override.from||0).toLocaleString('nb-NO')+' \u2192 '+(r.km_override.to||0).toLocaleString('nb-NO')+' (EU-kontroll)" style="cursor:help;">\ud83d\udd04</span>':'')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace;">'+(r.erpId||'—')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);">'+variant+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);font-size:11px;">'+priset+'</td>'+
       '<td style="padding:8px 12px;">'+statusHtml+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;">'+easy+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;'+(typeof abArm==='function'&&abArm(r.erpId)==='A'?'background:#F3E5F5;font-weight:800;':'')+'">'+easy+'</td>'+
       '<td style="padding:8px 12px;text-align:right;">'+v2+_v22badge(r)+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;">'+v3gTxt+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;'+(typeof abArm==='function'&&abArm(r.erpId)==='B'?'background:#E8F5E9;font-weight:800;':'')+'">'+v3gTxt+'</td>'+
       '<td style="padding:8px 12px;text-align:right;color:'+avvikCol.color+';font-weight:600;">'+avvikTxt+'</td>'+
       '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+((function(){
         var fl=(window._finnLinks&&(window._finnLinks[String(r.erpId)]||window._finnLinks[r.regnr]))
@@ -4441,7 +4457,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c236</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c237</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -4956,12 +4972,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else if (!allPriced) {
       actionHtml = '<button disabled class="qa-send-btn" title="Venter på '+missing.join(', ')+'" style="flex:1;min-width:100px;padding:10px 12px;background:#BDBDBD;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:not-allowed;">Venter: '+esc(missing.join(', '))+'</button>';
     } else {
-      actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:#2E7D32;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND</button>';
+      const arm = (typeof abArm==='function') ? abArm(e.erpId) : 'A';
+      const sendWho = arm==='B' ? 'V3G' : 'Easy';
+      const sendBg = arm==='B' ? '#1B5E20' : '#6A1B9A';
+      actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND '+sendWho+'</button>';
     }
     return `<div class="qa-card ${scope||!allPriced?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         <div>
-          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)}</div>
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId):''}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(variant).slice(0,40)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km</div>
         </div>
@@ -5007,7 +5026,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="text-align:right;color:var(--muted);">${vg.score!=null ? vg.score : '-'}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
-        <div>Easy D-lav <b style="color:var(--text);">${fmt(easy.dLav)}</b> sendes hvis du ikke endrer.</div>
+        <div>${(typeof abArm==='function' && abArm(e.erpId)==='B')?'<b style="color:#1B5E20;">B V3G</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden.':'<b style="color:#6A1B9A;">A Easy</b> D-lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.'}</div>
         <div>V3 ${fmt(v3.dLav)}${dV3!=null?' <b style="color:'+(Math.abs(dV3)>15?'#A8221C':'var(--text)')+'">('+(dV3>=0?'+':'')+dV3+'%)</b>':''}
          · V3G ${fmt(vg.dLav)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}</div>
         ${bpConfLine?'<div>'+esc(bpConfLine)+'</div>':''}
