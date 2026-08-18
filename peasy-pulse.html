@@ -289,7 +289,7 @@ function authLogout(){
   <div id="mark-leaderboard" style="background:linear-gradient(135deg,#F8FAF9 0%,#FFF 100%);border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:20px 24px;margin-bottom:24px;box-shadow:0 2px 6px rgba(0,66,37,0.08)">
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
       <div style="font-size:14px;font-weight:800;color:#004225;letter-spacing:0.3px">KILDE-LEDERTAVLE</div>
-      <div style="font-size:11px;color:#667;letter-spacing:0.5px;text-transform:uppercase">Siste 30 dager &middot; sortert pa netto per solgt</div>
+      <div style="font-size:11px;color:#667;letter-spacing:0.5px;text-transform:uppercase">Siste 30 dager &middot; konvertering mottatt → priset → solgt</div>
     </div>
     <div id="mark-leaderboard-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
   </div>
@@ -536,7 +536,7 @@ window.MARK_V16_04 = (function(){
     // zoneFilter: 'in', 'out', 'all'
     // FIX c17: leads telles paa SD mottatt-dato, solgt+fee telles paa Solgt paa-dato
     // (uavhengig) — sa salg utenfor lead-vinduet ikke faller bort pga modningstid.
-    var leads=0, solgt=0, fee=0, prodKost=0, returnert=0;
+    var leads=0, priset=0, solgt=0, fee=0, prodKost=0, returnert=0;
     for(var i=0;i<rows.length;i++){
       var r = rows[i];
       if(rKilde(r) !== kilde) continue;
@@ -550,6 +550,10 @@ window.MARK_V16_04 = (function(){
       var sdMottatt = parseSD(rSD(r));
       if(sdMottatt && sdMottatt >= fromDate && sdMottatt <= toDate){
         leads++;
+      }
+      var evDato = parseSD(rPriset(r));
+      if(evDato && evDato >= fromDate && evDato <= toDate){
+        priset++;
       }
       // Solgt + fee: telles naar Solgt paa-dato er i perioden (uavhengig av lead-dato)
       var sDato = parseSold(rSolgt(r));
@@ -567,7 +571,7 @@ window.MARK_V16_04 = (function(){
         prodKost += ((cfg()||{}).returKost||2500);
       }
     }
-    return {leads:leads, solgt:solgt, fee:fee, prodKost:prodKost, returnert:returnert};
+    return {leads:leads, priset:priset, solgt:solgt, fee:fee, prodKost:prodKost, returnert:returnert};
   }
 
   // ----- Datakilde-mapper (window._lastRows = array av arrays, ikke objekter) -----
@@ -581,6 +585,7 @@ window.MARK_V16_04 = (function(){
   function rKilde(r){ return String(r[11]||'').toLowerCase(); }
   function rPostnr(r){ return r[9]; }
   function rSD(r){ return r[14]; }
+  function rPriset(r){ return r[31] || r[13]; }
   function rSolgt(r){ return r[18]; }
   function rReturnert(r){ return r[21]; }
   function rArVerdi(r){ var v=r[20]; if(v===null||v===undefined||v==="") return 0; var n=Number(String(v).replace(/[^\d.-]/g,"")); return isNaN(n)?0:n; }
@@ -1058,44 +1063,31 @@ window.MARK_V16_04 = (function(){
     var rows = getRows();
     var now = new Date();
     var d30 = new Date(); d30.setDate(d30.getDate()-30); d30.setHours(0,0,0,0);
-    var krLead = getDriveKr();
-    var spend30 = spendForRange(d30, now);
 
-    // Peasy 30d
-    var p = aggSource(rows, 'peasy', d30, now);
-    var pCost = p.prodKost + spend30;
-    var pCostPerSolgt = p.solgt ? pCost/p.solgt : 0;
-    var pFeePerSolgt = p.solgt ? p.fee/p.solgt : 0;
-    var pNettoPerSolgt = pFeePerSolgt - pCostPerSolgt;
-
-    // Drive 30d
-    var d = aggSource(rows, 'driveno', d30, now, 'all');
-    var dCost = d.prodKost + (d.leads * krLead);
-    var dCostPerSolgt = d.solgt ? dCost/d.solgt : 0;
-    var dFeePerSolgt = d.solgt ? d.fee/d.solgt : 0;
-    var dNettoPerSolgt = dFeePerSolgt - dCostPerSolgt;
-
-    // Ordna 30d — ingen betalt lead, bare prod + retur
-    var o = aggSource(rows, 'ordna', d30, now);
-    var oCost = o.prodKost;
-    var oCostPerSolgt = o.solgt ? oCost/o.solgt : 0;
-    var oFeePerSolgt = o.solgt ? o.fee/o.solgt : 0;
-    var oNettoPerSolgt = oFeePerSolgt - oCostPerSolgt;
-
+    function pack(key, label, sub, color, a){
+      var mottatt = a.leads||0;
+      var priset = a.priset||0;
+      var solgt = a.solgt||0;
+      return {
+        key:key, label:label, sub:sub, color:color, active:true,
+        mottatt:mottatt, priset:priset, solgt:solgt,
+        prisetAvMottatt: mottatt ? priset/mottatt : 0,
+        solgtAvMottatt: mottatt ? solgt/mottatt : 0,
+        solgtAvPriset: priset ? solgt/priset : 0
+      };
+    }
     var sources = [
-      {key:'peasy', label:'Peasy', sub:'Meta + Google', color:'#2E7D32', leads:p.leads, solgt:p.solgt, returnert:p.returnert, cost:pCost, fee:p.fee, costPerSolgt:pCostPerSolgt, feePerSolgt:pFeePerSolgt, nettoPerSolgt:pNettoPerSolgt, konv:p.leads?p.solgt/p.leads:0, active:true},
-      {key:'driveno', label:'Drive', sub:'Gire', color:'#1565C0', leads:d.leads, solgt:d.solgt, returnert:d.returnert, cost:dCost, fee:d.fee, costPerSolgt:dCostPerSolgt, feePerSolgt:dFeePerSolgt, nettoPerSolgt:dNettoPerSolgt, konv:d.leads?d.solgt/d.leads:0, active:true},
-      {key:'ordna', label:'Ordna', sub:'Partner · egen kalkyle', color:'#E65100', leads:o.leads, solgt:o.solgt, returnert:o.returnert, cost:oCost, fee:o.fee, costPerSolgt:oCostPerSolgt, feePerSolgt:oFeePerSolgt, nettoPerSolgt:oNettoPerSolgt, konv:o.leads?o.solgt/o.leads:0, active:true},
+      pack('peasy','Peasy','Meta + Google','#2E7D32', aggSource(rows,'peasy',d30,now)),
+      pack('driveno','Drive','Gire','#1565C0', aggSource(rows,'driveno',d30,now,'all')),
+      pack('ordna','Ordna','Partner · egen kalkyle','#E65100', aggSource(rows,'ordna',d30,now)),
       {key:'partner2', label:'Partner 2', sub:'Kommer Q3 2026', color:'#999', active:false}
     ];
 
-    // Sorter aktive paa nettoPerSolgt synkende
     var active = sources.filter(function(s){return s.active;});
-    active.sort(function(a,b){return b.nettoPerSolgt - a.nettoPerSolgt;});
+    active.sort(function(a,b){return b.solgtAvPriset - a.solgtAvPriset;});
     var medals = ['🥇','🥈','🥉'];
     active.forEach(function(s,i){ s.medal = medals[i] || ''; s.rank = i+1; });
 
-    // Bygg kort i opprinnelig rekkefoelge (Peasy, Drive, PARTNER1, Partner 2)
     var html = sources.map(function(s){
       if(!s.active){
         return '<div style="background:rgba(248,249,250,0.95);border:1px dashed rgba(0,66,37,0.15);border-radius:10px;padding:14px 16px;border-top:3px solid #C5CCD0">' +
@@ -1104,22 +1096,22 @@ window.MARK_V16_04 = (function(){
           '<div style="font-size:11px;color:#999">'+s.sub+'</div>' +
           '</div>';
       }
-      var nettoCol = s.nettoPerSolgt >= 0 ? '#2E7D32' : '#C62828';
-      var nettoSign = s.nettoPerSolgt >= 0 ? '+' : '';
       var medalHtml = s.medal ? '<span style="font-size:18px;margin-right:6px">'+s.medal+'</span>' : '';
+      var heroCol = s.solgtAvPriset >= 0.15 ? '#2E7D32' : (s.solgtAvPriset >= 0.08 ? '#E65100' : '#C62828');
       return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:10px;padding:14px 16px;border-top:3px solid '+s.color+'">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
           '<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#667">'+s.label+'</div>' +
           '<div>'+medalHtml+'</div>' +
         '</div>' +
-        '<div style="font-size:11px;color:#667;margin-bottom:8px">Netto per solgt</div>' +
-        '<div style="font-size:22px;font-weight:800;color:'+nettoCol+';margin-bottom:8px;font-variant-numeric:tabular-nums">'+nettoSign+fmtKr(s.nettoPerSolgt)+'</div>' +
+        '<div style="font-size:11px;color:#667;margin-bottom:4px">Solgt av priset</div>' +
+        '<div style="font-size:22px;font-weight:800;color:'+heroCol+';margin-bottom:2px;font-variant-numeric:tabular-nums">'+(s.priset?fmtPct(s.solgtAvPriset):'—')+'</div>' +
+        '<div style="font-size:11px;color:#667;margin-bottom:8px">'+s.solgt+' solgt av '+s.priset+' priset</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:#667;border-top:1px solid rgba(0,66,37,0.06);padding-top:8px">' +
-          '<div>Fee/solgt</div><div style="text-align:right;font-variant-numeric:tabular-nums;color:#2E7D32">+ '+fmtKr(s.feePerSolgt)+'</div>' +
-          '<div>Cost/solgt</div><div style="text-align:right;font-variant-numeric:tabular-nums;color:#C62828">- '+fmtKr(s.costPerSolgt)+'</div>' +
-          '<div>Konvertering</div><div style="text-align:right;font-variant-numeric:tabular-nums">'+fmtPct(s.konv)+'</div>' +
-          '<div>Solgt</div><div style="text-align:right;font-variant-numeric:tabular-nums">'+s.solgt+' av '+s.leads+'</div>' +
-          '<div>Retur</div><div style="text-align:right;font-variant-numeric:tabular-nums">'+(s.returnert||0)+((s.solgt||s.returnert)?' ('+fmtPct((s.returnert||0)/((s.solgt||0)+(s.returnert||0)))+')':'')+'</div>' +
+          '<div>Mottatt</div><div style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#004225">'+s.mottatt+'</div>' +
+          '<div>Priset</div><div style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#004225">'+s.priset+'</div>' +
+          '<div>Priset / mottatt</div><div style="text-align:right;font-variant-numeric:tabular-nums">'+(s.mottatt?fmtPct(s.prisetAvMottatt):'—')+'</div>' +
+          '<div>Solgt / mottatt</div><div style="text-align:right;font-variant-numeric:tabular-nums">'+(s.mottatt?fmtPct(s.solgtAvMottatt):'—')+'</div>' +
+          '<div>Solgt / priset</div><div style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">'+(s.priset?fmtPct(s.solgtAvPriset):'—')+'</div>' +
         '</div>' +
         '</div>';
     }).join('');
@@ -4661,7 +4653,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c240</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c241</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
