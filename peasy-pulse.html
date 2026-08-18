@@ -1590,6 +1590,7 @@ window.MARK_V16_04 = (function(){
   <h1 class="page" style="margin-bottom:4px">Scoreboard</h1>
   <div class="page-sub" style="margin-bottom:14px">Easy vs V3 vs V3G — D-lav mot realisert høyeste bud (30d glidende, fra 2026-06-01)</div>
   <div id="score-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px"></div>
+  <div id="score-ordna" style="margin:0 0 18px;"></div>
   <div style="margin-bottom:12px;font-size:11px;color:var(--muted);text-align:right">Sist oppdatert: <span id="score-updated">—</span> &middot; <a href="#" onclick="loadScoreboard();return false" style="color:var(--green);text-decoration:none">Last på nytt</a></div>
   <div class="table-card">
     <div style="overflow-x:auto">
@@ -3632,17 +3633,37 @@ function markRender(){try{if(window.MARK_V16_04 && window.MARK_V16_04.render){se
 const V2BM_BENCHMARK_START = "2026-06-03";
 const KOST_PER_EVAL = 0;
 
-function abArm(erpId){
+function isOrdnaSource(s){
+  return String(s||'').trim().toLowerCase()==='ordna';
+}
+function sourceForErp(erpId, rec){
+  if(rec){
+    if(isOrdnaSource(rec.source)) return rec.source;
+    if(rec.rawErp && isOrdnaSource(rec.rawErp.source)) return rec.rawErp.source;
+    if(rec._v3g && isOrdnaSource(rec._v3g.source)) return rec._v3g.source;
+    if(rec.v3g && isOrdnaSource(rec.v3g.source)) return rec.v3g.source;
+  }
+  var lr=window._lastRows||[];
+  var id=String(erpId==null?'':erpId);
+  if(!id) return rec && rec.source || '';
+  for(var i=1;i<lr.length;i++){
+    if(String(lr[i][0]||'')===id) return lr[i][11]||'';
+  }
+  return rec && rec.source || '';
+}
+function abArm(erpId, source){
+  if(isOrdnaSource(source)) return 'O';
   var n=Number(erpId);
   if(!Number.isFinite(n)||n<=0)return 'A';
   return n%2===0?'A':'B';
 }
-function abBadge(erpId){
-  var a=abArm(erpId);
+function abBadge(erpId, source){
+  var a=abArm(erpId, source);
+  if(a==='O')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#FFF3E0;color:#E65100;font-size:10px;font-weight:800;letter-spacing:0.04em;">ORDNA</span>';
   if(a==='B')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:800;letter-spacing:0.04em;">B V3G</span>';
   return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#F3E5F5;color:#6A1B9A;font-size:10px;font-weight:800;letter-spacing:0.04em;">A Easy</span>';
 }
-window.abArm=abArm;window.abBadge=abBadge;
+window.isOrdnaSource=isOrdnaSource;window.sourceForErp=sourceForErp;window.abArm=abArm;window.abBadge=abBadge;
 function pickV3gBand(rec){
   if(!rec)return {dLav:null,anker:null,dHoy:null,score:null,begrunnelse:null};
   var inner=rec.v3g||{};
@@ -3655,7 +3676,9 @@ function pickV3gBand(rec){
     dHoy:num(inner.dHoy,rec.dHoy,pr.dHoy),
     score:score,
     begrunnelse:inner.begrunnelse||rec.begrunnelse||null,
-    sister:rec.sister||inner.sister||null
+    sister:rec.sister||inner.sister||null,
+    kalkyle:inner.kalkyle||(pr.ordna_kalkyle?'ordna':null),
+    original_dLav:num(inner.original_dLav,pr.original_dLav)
   };
 }
 function v3gDLav(rec){return pickV3gBand(rec).dLav;}
@@ -3955,13 +3978,15 @@ async function loadScoreboard(){
       function fmtKr(n){return n?Math.round(n).toLocaleString('nb-NO')+' kr':'—';}
       function fmtPct(n){return n===null?'—':((n>=0?'+':'')+(Math.round(n*10)/10)+' %');}
       var gapCol=function(n){if(n===null)return 'var(--muted)';return Math.abs(n)<5?'#2E7D32':(Math.abs(n)<10?'#E65100':'#C62828');};
-      var armLive=(typeof abArm==='function')?abArm(r.erpId):'A';
+      var srcLive=(typeof sourceForErp==='function')?sourceForErp(r.erpId,r):(erpRow&&erpRow[11])||'';
+      var armLive=(typeof abArm==='function')?abArm(r.erpId,srcLive):'A';
       var easyBg=armLive==='A'?'background:#F3E5F5;font-weight:800;':'';
-      var v3gBg=armLive==='B'?'background:#E8F5E9;font-weight:800;':'';
+      var v3gBg=(armLive==='B'||armLive==='O')?'background:#E8F5E9;font-weight:800;':'';
+      if(armLive==='O') v3gBg='background:#FFF3E0;font-weight:800;';
       return '<tr style="border-top:1px solid var(--border)">'+
         '<td style="padding:8px 12px;font-weight:600">'+r.regnr+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace">'+(r.erpId||'—')+'</td>'+
-        '<td style="padding:8px 12px;">'+(typeof abBadge==='function'?abBadge(r.erpId):'—')+'</td>'+
+        '<td style="padding:8px 12px;">'+(typeof abBadge==='function'?abBadge(r.erpId,srcLive):'—')+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted)">'+variant+'</td>'+
         '<td style="padding:8px 12px;text-align:right;'+easyBg+'">'+fmtKr(easy)+'</td>'+
         '<td style="padding:8px 12px;text-align:right">'+fmtKr(v2)+_v22badge(r)+'</td>'+
@@ -3995,10 +4020,40 @@ async function loadScoreboard(){
       sh+=chip('Vinnere',stats.winsEasy+' / '+stats.winsV3+' / '+stats.winsV3G,'Easy / V3 / V3G','#004225');
     }
     summ.innerHTML=sh;
+    try{renderOrdnaCohort();}catch(eOrd){}
     var upd=document.getElementById('score-updated');if(upd)upd.textContent=new Date().toLocaleString('nb-NO');
   }catch(e){
     tbody.innerHTML='<tr><td colspan="15" style="padding:30px;text-align:center;color:var(--red)">Kunne ikke laste: '+e.message+'</td></tr>';
   }
+}
+function renderOrdnaCohort(){
+  var el=document.getElementById('score-ordna');
+  if(!el)return;
+  var rows=window._lastRows||[];
+  if(rows.length<2){el.innerHTML='';return;}
+  function pd(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(+p[2],+p[1]-1,+p[0]);return null;}
+  var all=rows.slice(1).filter(function(r){return String(r[11]||'').toLowerCase()==='ordna';});
+  var n=all.length;
+  var evald=all.filter(function(r){return !!pd(r[31]);}).length;
+  var aks=all.filter(function(r){return !!pd(r[15])||!!pd(r[16]);}).length;
+  var sold=all.filter(function(r){return !!pd(r[18]);}).length;
+  var ret=all.filter(function(r){return !!pd(r[21]);}).length;
+  var closed=sold+ret;
+  var retPct=closed?Math.round(ret/closed*100):null;
+  var aksPct=evald?Math.round(aks/evald*100):null;
+  var retCol=retPct==null?'#667':(retPct<10?'#2E7D32':(retPct<25?'#E65100':'#C62828'));
+  var h='<div style="background:#FFF8F1;border:1px solid #FFCC80;border-radius:12px;padding:14px 16px;">';
+  h+='<div style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#E65100;margin-bottom:4px">Ordna-kohort</div>';
+  h+='<div style="font-size:11px;color:#8D6E63;margin-bottom:10px">Utenfor A/B. V3G eier skriv. Kalkyle etter anker ×0.75 (strengere enn kommende bearish ×0.82). Mål retur &lt;10 %.</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Biler</div><div style="font-size:20px;font-weight:800;color:#E65100">'+n+'</div></div>';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Evaluert</div><div style="font-size:20px;font-weight:800;color:#004225">'+evald+'</div></div>';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Eval-aksept</div><div style="font-size:20px;font-weight:800;color:#004225">'+(aksPct!=null?aksPct+' %':'—')+'</div><div style="font-size:10px;color:#8D6E63">'+aks+' av '+evald+'</div></div>';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Solgt</div><div style="font-size:20px;font-weight:800;color:#2E7D32">'+sold+'</div></div>';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Retur</div><div style="font-size:20px;font-weight:800;color:#C62828">'+ret+'</div></div>';
+  h+='<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;min-width:88px"><div style="font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:#8D6E63">Returandel</div><div style="font-size:20px;font-weight:800;color:'+retCol+'">'+(retPct!=null?retPct+' %':'—')+'</div><div style="font-size:10px;color:#8D6E63">'+closed+' avsluttet · mål &lt;10 %</div></div>';
+  h+='</div></div>';
+  el.innerHTML=h;
 }
 async function loadV2Benchmark(){
   var t=Date.now();
@@ -4179,14 +4234,14 @@ function renderV2Table(records){
     var ovr=findOverrideForRecord(r);
     var ovrTxt=(ovr&&Number.isFinite(Number(ovr.dLav)))?fmtKrV2(Number(ovr.dLav)):'—';
     return '<tr style="border-top:1px solid var(--border);background:'+((r.evaluator==='v3')?'transparent':'#F8F8F5')+';">'+
-      '<td style="padding:8px 12px;font-weight:600;">'+regnr+' '+(typeof abBadge==='function'?abBadge(r.erpId):'')+(r.km_override?' <span title="Km endret '+(r.km_override.from||0).toLocaleString('nb-NO')+' \u2192 '+(r.km_override.to||0).toLocaleString('nb-NO')+' (EU-kontroll)" style="cursor:help;">\ud83d\udd04</span>':'')+'</td>'+
+      '<td style="padding:8px 12px;font-weight:600;">'+regnr+' '+(typeof abBadge==='function'?abBadge(r.erpId,(typeof sourceForErp==='function'?sourceForErp(r.erpId,r):'')):'')+(r.km_override?' <span title="Km endret '+(r.km_override.from||0).toLocaleString('nb-NO')+' \u2192 '+(r.km_override.to||0).toLocaleString('nb-NO')+' (EU-kontroll)" style="cursor:help;">\ud83d\udd04</span>':'')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace;">'+(r.erpId||'—')+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);">'+variant+'</td>'+
       '<td style="padding:8px 12px;color:var(--muted);font-size:11px;">'+priset+'</td>'+
       '<td style="padding:8px 12px;">'+statusHtml+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;'+(typeof abArm==='function'&&abArm(r.erpId)==='A'?'background:#F3E5F5;font-weight:800;':'')+'">'+easy+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;'+((typeof abArm==='function'&&abArm(r.erpId,(typeof sourceForErp==='function'?sourceForErp(r.erpId,r):''))==='A')?'background:#F3E5F5;font-weight:800;':'')+'">'+easy+'</td>'+
       '<td style="padding:8px 12px;text-align:right;">'+v2+_v22badge(r)+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;'+(typeof abArm==='function'&&abArm(r.erpId)==='B'?'background:#E8F5E9;font-weight:800;':'')+'">'+v3gTxt+'</td>'+
+      '<td style="padding:8px 12px;text-align:right;'+((function(){var a=(typeof abArm==='function')?abArm(r.erpId,(typeof sourceForErp==='function'?sourceForErp(r.erpId,r):'')):'A';return a==='O'?'background:#FFF3E0;font-weight:800;':(a==='B'?'background:#E8F5E9;font-weight:800;':'');})())+'">'+v3gTxt+'</td>'+
       '<td style="padding:8px 12px;text-align:right;color:'+avvikCol.color+';font-weight:600;">'+avvikTxt+'</td>'+
       '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+((function(){
         var fl=(window._finnLinks&&(window._finnLinks[String(r.erpId)]||window._finnLinks[r.regnr]))
@@ -4457,7 +4512,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c237</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c238</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -4879,6 +4934,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           v3: v3m,
           manufacturer: b.manufacturer || null,
           finn_link: b.finn_link || null,
+          source: b.source || (v3gByRegnr[rg] && v3gByRegnr[rg].source) || null,
           rawErp: b,
           v3g: v3gByRegnr[rg] || null,
           hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
@@ -4972,15 +5028,16 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else if (!allPriced) {
       actionHtml = '<button disabled class="qa-send-btn" title="Venter på '+missing.join(', ')+'" style="flex:1;min-width:100px;padding:10px 12px;background:#BDBDBD;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:not-allowed;">Venter: '+esc(missing.join(', '))+'</button>';
     } else {
-      const arm = (typeof abArm==='function') ? abArm(e.erpId) : 'A';
-      const sendWho = arm==='B' ? 'V3G' : 'Easy';
-      const sendBg = arm==='B' ? '#1B5E20' : '#6A1B9A';
+      const src = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
+      const arm = (typeof abArm==='function') ? abArm(e.erpId, src) : 'A';
+      const sendWho = arm==='O' ? 'V3G ORDNA' : (arm==='B' ? 'V3G' : 'Easy');
+      const sendBg = arm==='O' ? '#E65100' : (arm==='B' ? '#1B5E20' : '#6A1B9A');
       actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND '+sendWho+'</button>';
     }
     return `<div class="qa-card ${scope||!allPriced?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         <div>
-          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId):''}</div>
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId,(typeof sourceForErp==='function'?sourceForErp(e.erpId,e):e.source)) : ''}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(variant).slice(0,40)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km</div>
         </div>
@@ -5026,10 +5083,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="text-align:right;color:var(--muted);">${vg.score!=null ? vg.score : '-'}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
-        <div>${(typeof abArm==='function' && abArm(e.erpId)==='B')?'<b style="color:#1B5E20;">B V3G</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden.':'<b style="color:#6A1B9A;">A Easy</b> D-lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.'}</div>
+        <div>${(function(){var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O')return '<b style="color:#E65100;">V3G Ordna</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter anker).';if(a==='B')return '<b style="color:#1B5E20;">B V3G</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden.';return '<b style="color:#6A1B9A;">A Easy</b> D-lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
         <div>V3 ${fmt(v3.dLav)}${dV3!=null?' <b style="color:'+(Math.abs(dV3)>15?'#A8221C':'var(--text)')+'">('+(dV3>=0?'+':'')+dV3+'%)</b>':''}
          · V3G ${fmt(vg.dLav)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}</div>
         ${bpConfLine?'<div>'+esc(bpConfLine)+'</div>':''}
+        ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${actionHtml}
