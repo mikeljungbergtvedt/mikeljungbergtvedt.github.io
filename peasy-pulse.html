@@ -5120,6 +5120,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       container.innerHTML = enriched.length ? enriched.map(renderCardListe3).join('') : '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Ingen biler på liste 3</div>';
       container.querySelectorAll('.qa-detail-btn').forEach(b => b.onclick = () => { const el = document.getElementById('qa-detail-' + b.dataset.key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
       container.querySelectorAll('.qa-send-btn').forEach(b => b.onclick = () => qaSend(b));
+      container.querySelectorAll('.qa-anker-btn').forEach(b => b.onclick = () => qaSetAnker(b));
     } catch(e) {
       const c = document.getElementById('qa-cards'); if (c) c.innerHTML = '<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">Feil ved lasting: ' + esc(e.message) + '</div>';
     }
@@ -5160,6 +5161,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
       label='VURDER'; color='#8A6708'; icon='🟡';
     }
     const key = e.regnr + '__' + e.erpId;
+    const srcLive = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
+    const armLive = (typeof abArm==='function') ? abArm(e.erpId, srcLive) : 'A';
+    const ankerWho = armLive==='O' ? 'V3G Ordna' : (armLive==='B' ? 'V3G' : 'Easy');
     const km = e.km ? Math.round(e.km/1000)+'k' : '?';
     const bpConfLine = [bp!=null?'BP '+bp:'', conf!=null?'Conf '+conf:''].filter(Boolean).join(' · ');
     const variant = id.variant || (e.manufacturer ? (e.manufacturer.charAt(0) + e.manufacturer.slice(1).toLowerCase()) : '?');
@@ -5249,12 +5253,41 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${actionHtml}
         <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️${((v3m.kundeComment||'').trim() || (e.hist && e.hist.length))?' <span style="color:#A8221C;font-weight:700;">●</span>':''}</button>
       </div>
+      ${(!sentTime && !scope) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
+        <input class="qa-anker-input" type="number" step="1000" min="5000" placeholder="Nytt anker (${ankerWho})" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-source="${esc(srcLive)}" data-km="${e.km||0}" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <button type="button" class="qa-anker-btn" data-key="${key}" style="padding:8px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;">Sett anker</button>
+      </div>` : ''}
       <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
         <div><b>Kunde-comment:</b> <i>${esc((v3m.kundeComment) || '(tom)')}</i></div>
         ${v3.begrunnelse_kort?'<div style="margin-top:6px;"><b>V3 begrunnelse:</b> '+esc(v3.begrunnelse_kort)+'</div>':''}
         ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}${e.hist && e.hist.length ? '<div style="margin-top:10px;"><b>ERP-historikk (' + e.hist.length + ' tidligere):</b><table style="width:100%;font-size:11px;margin-top:4px;border-collapse:collapse;"><tr style="background:#eef;"><th style="text-align:left;padding:3px 4px;">Internnr</th><th style="text-align:left;padding:3px 4px;">Reg.dato</th><th style="text-align:left;padding:3px 4px;">Status</th><th style="text-align:right;padding:3px 4px;">Bud</th><th style="text-align:right;padding:3px 4px;">Hbud</th><th style="text-align:left;padding:3px 4px;">Ret/Solgt</th></tr>' + e.hist.map(function(h){return '<tr style="border-top:1px solid #ddd;"><td style="padding:3px 4px;">' + esc(h.internnr) + '</td><td style="padding:3px 4px;">' + esc(String(h.reg_dato||'')) + '</td><td style="padding:3px 4px;">' + esc(String(h.status||'')) + '</td><td style="padding:3px 4px;text-align:right;">' + (h.bud?fmt(h.bud):'—') + '</td><td style="padding:3px 4px;text-align:right;">' + (h.hbud?fmt(h.hbud):'—') + '</td><td style="padding:3px 4px;">' + esc(String(h.ret||h.solgt||'—')) + '</td></tr>';}).join('') + '</table></div>' : ''}
       </div>
     </div>`;
+  }
+
+  async function qaSetAnker(btn){
+    const card = btn.closest('.qa-card');
+    const input = card && card.querySelector('.qa-anker-input');
+    if (!input) return;
+    const anker = parseInt(String(input.value||'').replace(/\s/g,''), 10);
+    const regnr = input.dataset.regnr, erpId = input.dataset.erpid, km = Number(input.dataset.km||0);
+    if (!Number.isFinite(anker) || anker < 5000) { input.focus(); return; }
+    if (!window.confirm('Sett anker '+anker.toLocaleString('nb-NO')+' kr på '+regnr+'? Skriver D lav/D høy til ERP. Sender ikke til kunden.')) return;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Skriver …';
+    try{
+      const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        body: JSON.stringify({regnr, internnr: erpId, anker, km, source: input.dataset.source||''})
+      });
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || !j.ok) throw new Error(j.err || j.error || ('HTTP '+r.status));
+      btn.textContent = 'OK '+Number(j.dLav).toLocaleString('nb-NO')+'–'+Number(j.dHoy).toLocaleString('nb-NO');
+      setTimeout(window.loadQA, 600);
+    }catch(e){
+      btn.textContent = 'Feil'; btn.title = e.message; btn.disabled = false;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3500);
+    }
   }
 
   async function qaSend(btn){
