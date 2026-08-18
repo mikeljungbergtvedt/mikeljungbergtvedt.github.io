@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c227</title>
+<title>Peasy Pulse v16.04.c228</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c227 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c228 &middot; <span id="hdr-date">11. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -4028,7 +4028,12 @@ function renderV2Table(records){
       '<td style="padding:8px 12px;text-align:right;">'+v2+_v22badge(r)+'</td>'+
       '<td style="padding:8px 12px;text-align:right;">'+v3gTxt+'</td>'+
       '<td style="padding:8px 12px;text-align:right;color:'+avvikCol.color+';font-weight:600;">'+avvikTxt+'</td>'+
-      '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+(window._finnLinks&&window._finnLinks[String(r.erpId)]?'<td style="padding:8px 12px;text-align:center;"><a href="'+window._finnLinks[String(r.erpId)]+'" target="_blank" rel="noopener" title="Aktiv paa Finn" style="text-decoration:none;font-weight:700;color:#0063fb;">FINN</a></td>':'<td style="padding:8px 12px;text-align:center;color:#888;">-</td>')+
+      '<td style="padding:8px 12px;text-align:right;font-weight:600;">'+ovrTxt+'</td>'+((function(){
+        var fl=(window._finnLinks&&(window._finnLinks[String(r.erpId)]||window._finnLinks[r.regnr]))
+          ||(r.origin&&r.origin.link)||(r.easy&&r.easy.finn_link)||null;
+        if(!fl)return '<td style="padding:8px 12px;text-align:center;color:#888;">-</td>';
+        return '<td style="padding:8px 12px;text-align:center;"><a href="'+fl+'" target="_blank" rel="noopener" title="Origin på Finn" style="text-decoration:none;font-weight:700;color:#0063fb;">FINN</a></td>';
+      })())+
       '</tr>';
   }).join('');
   document.getElementById('v2bm-tbody').innerHTML=html;
@@ -4291,7 +4296,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c227</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c228</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -4626,6 +4631,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const listJ = await listR.json();
       const liste3 = listJ.biler || [];
       try {
+        const flR = await fetch(PA_PROXY_ERP.replace('/list/','/finn-links'), {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
+        if (flR.ok) {
+          const flJ = await flR.json();
+          window._finnLinks = (flJ && flJ.finn) || window._finnLinks || {};
+        }
+      } catch (eFl) {}
+      try {
         var qaSp = countListe3Split(liste3);
         applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
       } catch (eQaSp) {}
@@ -4813,7 +4825,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       ${timelineHtml}
       ${(function(){
         const orig = v3m.origin || (e.v3g && e.v3g.origin) || null;
-        const ol = e.finn_link || (v3m.easy && v3m.easy.finn_link) || (orig && orig.link) || null;
+        const ol = e.finn_link
+          || (window._finnLinks && (window._finnLinks[String(e.erpId)] || window._finnLinks[e.regnr]))
+          || (v3m.easy && v3m.easy.finn_link)
+          || (orig && orig.link) || null;
         const op = (orig && orig.price) || (v3m.easy && v3m.easy.finn_price) || null;
         const via = orig && orig.queriedBy === 'vin' ? 'VIN' : (orig && orig.queriedBy === 'regnr' ? 'regnr' : null);
         if (!ol) return '<div style="font-size:11px;color:#888;margin-bottom:8px;">Origin ikke funnet på Finn (søkt regnr + VIN)</div>';
