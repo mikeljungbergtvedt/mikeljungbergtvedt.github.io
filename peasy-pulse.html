@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c265</title>
+<title>Peasy Pulse v16.04.c266</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c265 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c266 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c265 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c266 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1686,7 +1686,7 @@ window.MARK_V16_04 = (function(){
   <h1 class="page" style="margin-bottom:4px">Pipe - uavklart</h1>
   <div class="page-sub" style="margin-bottom:14px">Eval er sendt, venter pa at kunden bestiller transport. Konverteringsbottleneck - aktuell rate <span id="pipe-aksept-rate" style="font-weight:700;color:#004225">-</span> gar videre til Gire bestilt (siste 30d). Live ERP-status.</div>
   <div id="pipe-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px"></div>
-  <div style="margin-bottom:18px;font-size:11px;color:var(--muted);text-align:right">Sist oppdatert: <span id="pipe-updated">-</span> &middot; <a href="#" onclick="loadPipe();return false" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
+  <div style="margin-bottom:18px;font-size:11px;color:var(--muted);text-align:right">Sist oppdatert: <span id="pipe-updated">-</span> &middot; XLSX + live ERP-events &middot; <a href="#" onclick="loadPipe();return false" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px">
     <div class="table-card"><div class="th"><div class="th-title">Per bracket</div></div><div id="pipe-seg-bracket" style="padding:8px 0"></div></div>
     <div class="table-card"><div class="th"><div class="th-title">Per drivlinje</div></div><div id="pipe-seg-fuel" style="padding:8px 0"></div></div>
@@ -1966,7 +1966,46 @@ function fmtDate(val){if(!val)return '-';var d=parseDate(val);if(!d||isNaN(d))re
 function pct(n,of){return of?Math.round(n/of*100):0;}
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:null;}
 
-async function loadData(){var res=await fetch(API);var buf=await res.arrayBuffer();var wb=XLSX.read(buf,{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];return XLSX.utils.sheet_to_json(ws,{header:1});}
+function overlayErpEvents(rows){
+  if(!rows||!rows.length) return Promise.resolve(rows);
+  var base=(window.PA_PROXY_ERP||'').replace(/\/list\/$/,'');
+  if(!base) return Promise.resolve(rows);
+  return fetch(base+'/erp-events?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(j){
+      if(!j||!j.ok||!j.byRegnr) return rows;
+      window._erpEvents=j;
+      var n=0;
+      for(var i=1;i<rows.length;i++){
+        var r=rows[i]; if(!r) continue;
+        var reg=String(r[1]||'').trim().split(/\s+/)[0].toUpperCase();
+        var live=j.byRegnr[reg];
+        if(!live) continue;
+        n++;
+        if(live.pulseStatus) r[12]=live.pulseStatus;
+        var xlsxBud=parseInt(String(r[4]||'').replace(/\D/g,''),10)||0;
+        if(live.maxBid&&!xlsxBud){ r[4]=live.maxBid; if(!r[19]) r[19]=live.maxBid; }
+        var d=live.dateNO;
+        if(d){
+          var st=String(live.status||'').toUpperCase();
+          if((st==='SOLD'||st==='SOLD_AND_PAID')&&!(r[18]&&String(r[18]).trim())) r[18]=d;
+          if(st==='RETURNED'&&!(r[21]&&String(r[21]).trim())) r[21]=d;
+        }
+      }
+      window._erpLiveN=n;
+      return rows;
+    })
+    .catch(function(){return rows;});
+}
+async function loadData(){
+  var res=await fetch(API);
+  var buf=await res.arrayBuffer();
+  var wb=XLSX.read(buf,{type:'array'});
+  var ws=wb.Sheets[wb.SheetNames[0]];
+  var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+  try{rows=await overlayErpEvents(rows);}catch(e){}
+  return rows;
+}
 
 window.getEvalAksept=function(daysBack){
   var rows=window._lastRows;if(!rows)return{kohort:0,aksept:0,pct:0};
@@ -4709,7 +4748,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c265</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c266</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
