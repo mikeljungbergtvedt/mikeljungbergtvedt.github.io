@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c264</title>
+<title>Peasy Pulse v16.04.c265</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c264 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c265 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c264 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c265 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -643,8 +643,8 @@ window.MARK_V16_04 = (function(){
     // KPI cards
     var kpi = document.getElementById('mark-peasy-kpi');
     kpi.innerHTML = '' +
-      kpiCard('CPL nå (siste 30d)', fmtKr(cpl30), p30.leads + ' leads · ' + fmtKr(spend30) + ' spend', '#2E7D32') +
-      kpiCard('Cost per solgt (30d)', fmtKr(cps30), p30.solgt + ' solgt · konv ' + fmtPct(konv30), '#004225') +
+      kpiCard('CPL nå (siste 30d)', fmtKr(cpl30), p30.leads + ' Peasy-leads · ' + fmtKr(spend30) + ' spend', '#2E7D32') +
+      kpiCard('CAC (30d)', fmtKr(cps30), p30.solgt + ' Peasy-solgt · konv ' + fmtPct(konv30), '#004225') +
       kpiCard('Marginal CPL (mars-test)', '~217 kr', '+50% leads ved doblet spend (15-29.mars)', '#1565C0');
 
     // Tabell
@@ -2195,8 +2195,11 @@ function render(data,rows){
   // 30d ROI-beregning fra config (ny universell formel)
   var d30To=new Date();d30To.setDate(d30To.getDate()-1);d30To.setHours(23,59,59,999);
   var d30From=new Date(d30To);d30From.setDate(d30From.getDate()-29);d30From.setHours(0,0,0,0);
-  var spend30=window.beregneSpend?window.beregneSpend(d30From,d30To):30000;
+  var spend30=window.beregneSpend?window.beregneSpend(d30From,d30To):60000;
   var sold30c=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;var d=parseDate(r[18]);return d&&d>=d30From;}).length;
+  var sold30peasy=(rows||[]).slice(1).filter(function(r){if(!r[18])return false;if(String(r[11]||'').toLowerCase()!=='peasy')return false;var d=parseDate(r[18]);return d&&d>=d30From;}).length;
+  var leads30peasy=(rows||[]).slice(1).filter(function(r){if(!r[1]||!r[14])return false;if(String(r[11]||'').toLowerCase()!=='peasy')return false;var d=parseDate(r[14]);return d&&d>=d30From;}).length;
+  var cplPeasy30=leads30peasy>0?Math.round(spend30/leads30peasy):0;
   var mott30c=(rows||[]).slice(1).filter(function(r){if(!r[17])return false;var d=parseDate(r[17]);return d&&d>=d30From;}).length;
   var retur30c=(rows||[]).slice(1).filter(function(r){if(!r[21])return false;var d=parseDate(r[21]);return d&&d>=d30From&&d<=d30To;}).length;
   var returKost=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
@@ -2208,7 +2211,7 @@ function render(data,rows){
   var sumProdKost30=sold30Under*prodKostUnder+sold30Over*prodKostOver+retur30c*returKost;
   var snittProdKost30=sold30c>0?Math.round(sumProdKost30/sold30c):0;
   var nettoSum30=sumU30-sumProdKost30;
-  var cplKontrakt30=sold30c>0?Math.round(spend30/sold30c):0;
+  var cplKontrakt30=sold30peasy>0?Math.round(spend30/sold30peasy):0;
   var roi30=cplKontrakt30>0?(nettoSum30/sold30c/cplKontrakt30):0;
   // Netto inntekt per solgt bil = snitt fee - snitt prod kost - lead-kost
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
@@ -2240,23 +2243,21 @@ function render(data,rows){
   var mR30=pct(tM30,tE30), sR30=pct(tS30,tM30);
   var gaps30=sold30arr.map(function(c){return c.gap;}).filter(function(g){return g!==null&&g!==undefined;});
   var aGs30=(function(g){if(!g.length)return null;var s=g.slice().sort(function(a,b){return a-b;});var m=Math.floor(s.length/2);return+(s.length%2?s[m]:(s[m-1]+s[m])/2).toFixed(1);})(gaps30);
-  var spend30days=30*1000;
-  var cplKontrakt30=tS30>0?Math.round(spend30days/tS30):0;
   var ea30=window.getEvalAksept(30);var ba30=window.getBudAksept(30);
   var pipeCount=0,pipeSum=0,pipeN=0;
   (rows||[]).slice(1).forEach(function(r){if(/trans\.?\s*best/i.test(String(r[12]||''))){pipeCount++;var v=String(r[3]||'');var m=v.match(/(\d+)\D+(\d+)/);if(m){pipeSum+=parseInt(m[1],10);pipeN++;}}});
   var pipeSnitt=pipeN?Math.round(pipeSum/pipeN/1000):0;
   var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (siste 30 dager)</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral" onclick="setMode(\'pipe\')" style="cursor:pointer"><div class="dial-label">Pipe - uavklart</div><div class="dial-value" style="color:#E65100">'+pipeCount+'</div><div class="dial-unit">Snitt verdi '+pipeSnitt+'k</div><div class="dial-sub">Eval sendt, kunden har ikke bestilt transport</div><div class="target-tag">Live</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">Biler i dag</div><div class="dial-sub">Snitt <strong>'+leads30avg+'</strong> pr dag siste 30 dager (sum '+leads30d+' &middot; CPL '+(leads30d>0?Math.round(spend30/leads30d):0)+' kr)</div><div class="target-tag">Live</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">Biler i dag</div><div class="dial-sub">Snitt <strong>'+leads30avg+'</strong> pr dag siste 30 dager (sum '+leads30d+' &middot; CPL Peasy '+(cplPeasy30||0)+' kr)</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Eval-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Selger aksepterer evaluering</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Bud-aksept</div><div class="dial-value" style="color:#004225">'+ba30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ba30.solgt+' av '+ba30.avsluttet+'</div><div class="dial-sub">Høyeste bud akseptert</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon nå</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">Biler på anlegg</div><div class="dial-sub">I produksjon</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt bilverdi</div><div class="arc-wrap"><svg id="arc7"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+aE30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum omsetning kr '+(aE30*sold30arr.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+sold30arr.length+' solgte</div><div class="target-tag">30 dager</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt Peasy inntekt</div><div class="arc-wrap"><svg id="arc8"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+aU30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum inntekt kr '+(aU30*uVals30.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+uVals30.length+' solgte</div><div class="target-tag">30 dager</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt prod kost</div><div class="arc-wrap"><svg id="arc10"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+snittProdKost30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">Sum kr '+sumProdKost30.toLocaleString('nb-NO')+' &middot; '+retur30c+' retur</div><div class="target-tag">Siste 30d</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Kost pr lead</div><div class="arc-wrap"><svg id="arc9"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">ROI <strong>'+roi30.toFixed(1)+'x</strong> <span style="color:#888;font-weight:400">(inkl returbiler)</span></div><div class="target-tag">Siste 30d</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Netto per solgt</div><div class="arc-wrap"><svg id="arc11"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500;color:'+(nettoPerSolgt30>0?'#2E7D32':'#C62828')+'">Kr. '+Math.round(nettoPerSolgt30).toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgt bil</div><div class="dial-sub">Fee '+aU30.toLocaleString('nb-NO')+' &minus; prod '+snittProdKost30.toLocaleString('nb-NO')+' &minus; lead '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="target-tag">Siste 30d</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">CAC</div><div class="arc-wrap"><svg id="arc9"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Kost per solgt Peasy</div><div class="dial-sub">ROI <strong>'+roi30.toFixed(1)+'x</strong> <span style="color:#888;font-weight:400">(inkl returbiler)</span></div><div class="target-tag">Siste 30d</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Netto per solgt</div><div class="arc-wrap"><svg id="arc11"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500;color:'+(nettoPerSolgt30>0?'#2E7D32':'#C62828')+'">Kr. '+Math.round(nettoPerSolgt30).toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgt bil</div><div class="dial-sub">Fee '+aU30.toLocaleString('nb-NO')+' &minus; prod '+snittProdKost30.toLocaleString('nb-NO')+' &minus; CAC '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Lead → Solgt</div><div class="arc-wrap"><svg id="arc12"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">'+lead2sold30.toFixed(1)+'%</div><div class="dial-unit">'+sold30c+' av '+leads30d+' leads</div><div class="dial-sub">Total konvertering</div><div class="target-tag">Siste 30d</div></div>'
     +'</div></div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
@@ -3298,9 +3299,11 @@ function renderUkesrapport(){
   var ep90=window.getEvalAksept(90).pct;
   var bp90=window.getBudAksept(90).pct;
   var epDelta=ep30-ep90,bpDelta=bp30-bp90;
-  var ukeBudsjett=7000;
-  var cpl=cur.registrert>0?Math.round(ukeBudsjett/cur.registrert):0;
-  var cpl30=base30.registrert>0?Math.round(ukeBudsjett/base30.registrert):0;
+  var ukeBudsjett=spendUke;
+  var peasyLeadsUke=(rows||[]).slice(1).filter(function(row){return String(row[11]||'').toLowerCase()==='peasy'&&inRange(pdOps(row[14])||pdOps(row[13]),range);}).length;
+  var peasyLeads30=0;for(var _pw=1;_pw<=4;_pw++){var _pr=getCompletedWeekRange(weeksAgo+_pw);peasyLeads30+=(rows||[]).slice(1).filter(function(row){return String(row[11]||'').toLowerCase()==='peasy'&&inRange(pdOps(row[14])||pdOps(row[13]),_pr);}).length;}peasyLeads30=Math.round(peasyLeads30/4);
+  var cpl=peasyLeadsUke>0?Math.round(ukeBudsjett/peasyLeadsUke):0;
+  var cpl30=peasyLeads30>0?Math.round(ukeBudsjett/peasyLeads30):0;
   var cplDelta=cpl30>0?Math.round((cpl-cpl30)/cpl30*100):0;
   var ukeReturKost=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
   var ukeProdUnder=(window.peasyConfig&&window.peasyConfig.prodKostUnder35k)||2250;
@@ -3385,7 +3388,7 @@ function renderUkesrapport(){
   var ep90flow=roll90T.pr>0?Math.round(roll90T.bs/roll90T.pr*100):0;
   var bp90flow=(roll90T.sg+roll90T.rt)>0?Math.round(roll90T.sg/(roll90T.sg+roll90T.rt)*100):0;
   var snittFee90=roll90T.sg>0?Math.round(roll90T.fee/roll90T.sg):7900;
-  var cpl90=cur.registrert>0?Math.round(spendUke/cur.registrert):0;
+  var cpl90=peasyLeadsUke>0?Math.round(spendUke/peasyLeadsUke):0;
   var verdiPerLead=Math.round(ep90flow/100*(snittFee90*bp90flow/100-ukeProdAvg*bp90flow/100-ukeReturKost*(1-bp90flow/100)));
   var margPerLead=verdiPerLead-cpl90;
   var roi90=cpl90>0?(verdiPerLead/cpl90).toFixed(1).replace('.',','):'0';
@@ -3431,7 +3434,7 @@ function renderUkesrapport(){
   var markEl=document.getElementById('uke-marketing-grid');
   if(markEl){
     var mark=[
-      {label:'CPL',val:cpl90.toLocaleString('nb-NO')+' kr',sub:'7 000 kr / '+cur.registrert+' leads (uka)',col:'#004225'},
+      {label:'CPL',val:cpl90.toLocaleString('nb-NO')+' kr',sub:fmtKr(spendUke)+' / '+peasyLeadsUke+' Peasy-leads (uka)',col:'#004225'},
       {label:'Verdi / lead',val:verdiPerLead.toLocaleString('nb-NO')+' kr',sub:'Marg '+(margPerLead>=0?'+':'')+margPerLead.toLocaleString('nb-NO')+' kr',col:margPerLead>=0?'#2E7D32':'#C62828'},
       {label:'ROI marketing',val:roi90+'x',sub:'Per krone i marketing',col:'#004225'},
       {label:'Eval-aksept',val:ep90flow+'%',sub:'bestilt / priset',col:'#004225'},
@@ -4510,6 +4513,7 @@ function kjEnrich(row){
     regnr: row[1],
     status: String(row[12]||''),
     evalDate: kjParseDate(row[13]),
+    source: String(row[11]||'').toLowerCase(),
     prisetDate: kjParseDate(row[31]),
     bestiltP: kjParseDate(row[15]),
     bestiltQ: kjParseDate(row[16]),
@@ -4577,7 +4581,8 @@ function kjMetrics(rows, fromMs){
     var days = Math.ceil((overlapEnd - overlapStart) / 86400000);
     return s + days * (mp.krPerDag || 0);
   }, 0);
-  var cac = solgt > 0 ? marketingSum / solgt : null;
+  var peasySolgt = solgtInPeriod.filter(function(r){return r.source==='peasy';}).length;
+  var cac = peasySolgt > 0 ? marketingSum / peasySolgt : null;
   var totalKostPerSolgt = (effektivProdPerSolgt !== null && cac !== null) ? effektivProdPerSolgt + cac : null;
   var nettoPerSolgt = (snittFee !== null && totalKostPerSolgt !== null) ? snittFee - totalKostPerSolgt : null;
   var motorPerEval = (evalAks !== null && budAks !== null && snittFee !== null) ? evalAks * budAks * snittFee : null;
@@ -4608,7 +4613,7 @@ function renderKjerne(){
     {label:'Solgt', value:kjFmtInt(m.solgt), sub:m.evaluert+' evalueringer'},
     {label:'Returnert', value:kjFmtInt(m.retur), sub:(m.solgt+m.retur)+' p\u00e5 auksjon'},
     {label:'Effektiv prod / solgt', value:kjFmtKr(m.effektivProdPerSolgt), sub:'inkl. retur-overhead'},
-    {label:'CAC per solgt', value:kjFmtKr(m.cac), sub:'marketing \u00f7 solgte'},
+    {label:'CAC per solgt', value:kjFmtKr(m.cac), sub:'Peasy-marketing \u00f7 Peasy-solgt'},
     {label:'Faktisk prod snitt', value:kjFmtKr(m.faktiskProdSnitt), sub:'kun solgte (sammenligning)'},
     {label:'Snitt h\u00f8yeste bud', value:kjFmtKr(m.snittBud), sub:'av solgte biler'}
   ];
@@ -4704,7 +4709,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c264</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c265</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
