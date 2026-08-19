@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c250</title>
+<title>Peasy Pulse v16.04.c254</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c250 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c254 &middot; <span id="hdr-date">18. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c250 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c254 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1805,7 +1805,7 @@ window.MARK_V16_04 = (function(){
 </main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
-var TARGETS={evalMottatt:15,mottattSolgt:70,prodDays:3};
+var TARGETS={prodDays:3};
 var CUTOFF=new Date('2025-11-01');
 var BRACKETS=[
   {name:'Lav',range:'0-100k',lo:0,hi:100000,color:'#00875A'},
@@ -1885,7 +1885,7 @@ function renderEvalCharts(rows,data){
   var recv30=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d30;}).length;
   var recv90=evalAll.filter(function(r){var d=parseDate(r[17]);return d&&d>=d90;}).length;
   var ep30=window.getEvalAksept(30).pct;
-  var ep30col = ep30>=15?'#2E7D32':'#C62828';
+  var ep30col = '#004225';
   var ep90=window.getEvalAksept(90).pct;
   var epD=ep30-ep90;
   var mottAll=(data&&data.mottatt)||[];
@@ -1895,29 +1895,37 @@ function renderEvalCharts(rows,data){
   var sold30=soldAll.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d30;}).length;
   var sold90=soldAll.filter(function(c){var d=parseDate(c.sDate);return d&&d>=d90;}).length;
   var bp30=window.getBudAksept(30).pct;
-  var bp30col = bp30>=70?'#2E7D32':bp30>=60?'#E65100':'#C62828';
+  var bp30col = '#004225';
   var bp90=window.getBudAksept(90).pct;
   var bpD=bp30-bp90;
   function setKpi(prefix,v30,v90,delta,target){
-    var c30=v30>=target?'#2E7D32':'#C62828';var cD=delta>0?'#2E7D32':delta<0?'#C62828':'#888';
+    var c30='#004225';var cD=delta>0?'#2E7D32':delta<0?'#C62828':'#888';
     var el30=document.getElementById(prefix+'-30');var el90=document.getElementById(prefix+'-90');var elD=document.getElementById(prefix+'-d');
     if(el30){el30.textContent=v30+'%';el30.style.color=c30;}if(el90)el90.textContent=v90+'%';if(elD){elD.textContent=(delta>0?'+':'')+delta+'pp vs 90d';elD.style.color=cD;}
   }
-  setKpi('ep',ep30,ep90,epD,15);setKpi('bp',bp30,bp90,bpD,70);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
-  var days=[],evalPerDay=[],evalPerDayPeasy=[],evalPerDayDrive=[],recvPerDay=[],mottPerDay=[],soldPerDay=[];
-  for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);evalPerDay.push(0);recvPerDay.push(0);mottPerDay.push(0);soldPerDay.push(0);}
-  evalAll.forEach(function(r){var d=parseDate(r[13]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0){evalPerDay[idx]=(evalPerDay[idx]||0)+1;var src=String(r[11]||'').toLowerCase();if(src==='peasy')evalPerDayPeasy[idx]=(evalPerDayPeasy[idx]||0)+1;if(src==='driveno')evalPerDayDrive[idx]=(evalPerDayDrive[idx]||0)+1;}});
-  evalAll.forEach(function(r){var d=parseDate(r[17]);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)recvPerDay[idx]++;});
-  mottAll.forEach(function(c){var d=parseDate(c.rDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)mottPerDay[idx]++;});
-  soldAll.forEach(function(c){var d=parseDate(c.sDate);if(!d||d<d90)return;var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var idx=days.indexOf(ds);if(idx>=0)soldPerDay[idx]++;});
+  setKpi('ep',ep30,ep90,epD,null);setKpi('bp',bp30,bp90,bpD,null);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
+  var days=[],prisetPerDay=[],soldPerDay=[],returPerDay=[];
+  for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);prisetPerDay.push(0);soldPerDay.push(0);returPerDay.push(0);}
   var leadsPerDay=days.map(function(){return 0;}),leadsPerDayPeasy=days.map(function(){return 0;}),leadsPerDayDrive=days.map(function(){return 0;}),acceptPerDay=days.map(function(){return 0;});
-  (rows||[]).slice(1).forEach(function(r){if(!r[1])return;var dl=parseDate(r[14]);if(dl&&dl>=d90){var s2=String(r[11]||'').toLowerCase();if(s2==='peasy'||s2==='driveno'){var ds=dl.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var ix=days.indexOf(ds);if(ix>=0){leadsPerDay[ix]++;if(s2==='peasy')leadsPerDayPeasy[ix]++;else leadsPerDayDrive[ix]++;}}}var da=parseDate(r[15])||parseDate(r[16]);if(da&&da>=d90){var d2=da.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var ix2=days.indexOf(d2);if(ix2>=0)acceptPerDay[ix2]++;}});
+  (rows||[]).slice(1).forEach(function(r){
+    if(!r[1])return;
+    var dest=parseDate(r[31]);
+    if(dest&&dest>=d90){var ix=days.indexOf(dest.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}));if(ix>=0)prisetPerDay[ix]++;}
+    var da=parseDate(r[15])||parseDate(r[16]);
+    if(da&&da>=d90){var ix2=days.indexOf(da.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}));if(ix2>=0)acceptPerDay[ix2]++;}
+    var dsold=parseDate(r[18]);
+    if(dsold&&dsold>=d90){var ix3=days.indexOf(dsold.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}));if(ix3>=0)soldPerDay[ix3]++;}
+    var dret=parseDate(r[21]);
+    if(dret&&dret>=d90){var ix4=days.indexOf(dret.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}));if(ix4>=0)returPerDay[ix4]++;}
+    var dl=parseDate(r[14]);
+    if(dl&&dl>=d90){var s2=String(r[11]||'').toLowerCase();if(s2==='peasy'||s2==='driveno'){var ix5=days.indexOf(dl.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}));if(ix5>=0){leadsPerDay[ix5]++;if(s2==='peasy')leadsPerDayPeasy[ix5]++;else leadsPerDayDrive[ix5]++;}}}
+  });
   function rolling14(num,den){return days.map(function(_,i){var n=0,d=0;for(var j=Math.max(0,i-29);j<=i;j++){n+=num[j];d+=den[j];}return d>=3?Math.round(n/d*100):null;});}
-  var evalRate=rolling14(recvPerDay,evalPerDay);
-  var budRate=rolling14(soldPerDay,mottPerDay);
-  var chartOpts=function(targetPct,lineColor){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){if(ctx.dataset.label==='Rate')return 'Akseptrate: '+(ctx.parsed.y!==null?ctx.parsed.y+'%':'-');if(ctx.dataset.label==='Mal')return 'Mal: '+targetPct+'%';return ctx.dataset.label+': '+ctx.parsed.y+' stk';}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:lineColor,font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}};};
+  var evalRate=rolling14(acceptPerDay,prisetPerDay);
+  var budRate=rolling14(soldPerDay,days.map(function(_,i){return soldPerDay[i]+returPerDay[i];}));
+  var chartOpts=function(targetPct,lineColor){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){if(ctx.dataset.label==='Rate')return 'Akseptrate: '+(ctx.parsed.y!==null?ctx.parsed.y+'%':'-');return ctx.dataset.label+': '+ctx.parsed.y+' stk';}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:lineColor,font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}};};
   var c1=document.getElementById('evalTrendChart');
-  if(c1){var ex1=Chart.getChart(c1);if(ex1)ex1.destroy();new Chart(c1,{data:{labels:days,datasets:[{type:'bar',label:'Evaluert',data:evalPerDay,backgroundColor:'rgba(0,66,37,0.12)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:evalRate,segment:{borderColor:function(c){return (c.p1.parsed.y!=null&&c.p1.parsed.y<15)?'#C62828':'#2E7D32';}},borderColor:'#C62828',backgroundColor:'rgba(198,40,40,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 15;}),borderColor:'rgba(198,40,40,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(15,'#C62828')});}
+  if(c1){var ex1=Chart.getChart(c1);if(ex1)ex1.destroy();new Chart(c1,{data:{labels:days,datasets:[{type:'bar',label:'Priset',data:prisetPerDay,backgroundColor:'rgba(0,66,37,0.12)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:evalRate,borderColor:'#004225',backgroundColor:'rgba(0,66,37,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1}]},options:chartOpts(null,'#004225')});}
   var cL=document.getElementById('leadsDailyChart');
   if(cL){var exL=Chart.getChart(cL);if(exL)exL.destroy();
     var leadsSma30=days.map(function(_,i){var s=0,n=0;for(var j=Math.max(0,i-29);j<=i;j++){s+=leadsPerDay[j];n++;}return n>0?+(s/n).toFixed(1):null;});
@@ -1928,7 +1936,7 @@ function renderEvalCharts(rows,data){
   }
   var lS=0,lN=0;for(var li=Math.max(0,leadsPerDay.length-30);li<leadsPerDay.length;li++){lS+=leadsPerDay[li];lN++;}var kl=document.getElementById('leads-30d-kpi');if(kl)kl.textContent=lN>0?(lS/lN).toFixed(1):'-';var cLP=document.getElementById('leadsDailyChartPeasy');if(cLP){var exLP=Chart.getChart(cLP);if(exLP)exLP.destroy();var leadsSma30Peasy=days.map(function(_,i){var s=0,n=0;for(var j=Math.max(0,i-29);j<=i;j++){s+=(leadsPerDayPeasy[j]||0);n++;}return n>0?+(s/n).toFixed(1):null;});new Chart(cLP,{data:{labels:days,datasets:[{type:'bar',label:'Peasy-leads mottatt',data:leadsPerDayPeasy,backgroundColor:'rgba(0,135,90,0.55)',borderColor:'rgba(0,135,90,0.8)',borderWidth:1,order:2},{type:'line',label:'30d snitt',data:leadsSma30Peasy,borderColor:'#004225',backgroundColor:'rgba(0,66,37,0.05)',fill:false,borderWidth:2,pointRadius:0,tension:0.35,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});var lSP=0,lNP=0;for(var liP=Math.max(0,leadsPerDayPeasy.length-30);liP<leadsPerDayPeasy.length;liP++){lSP+=(leadsPerDayPeasy[liP]||0);lNP++;}var klP=document.getElementById('leads-30d-kpi-peasy');if(klP)klP.textContent=lNP>0?(lSP/lNP).toFixed(1):'-';}var cLD=document.getElementById('leadsDailyChartDrive');if(cLD){var exLD=Chart.getChart(cLD);if(exLD)exLD.destroy();var leadsSma30Drive=days.map(function(_,i){var s=0,n=0;for(var j=Math.max(0,i-29);j<=i;j++){s+=(leadsPerDayDrive[j]||0);n++;}return n>0?+(s/n).toFixed(1):null;});new Chart(cLD,{data:{labels:days,datasets:[{type:'bar',label:'Drive-leads mottatt',data:leadsPerDayDrive,backgroundColor:'rgba(255,107,53,0.55)',borderColor:'rgba(255,107,53,0.8)',borderWidth:1,order:2},{type:'line',label:'30d snitt',data:leadsSma30Drive,borderColor:'#FF6B35',backgroundColor:'rgba(255,107,53,0.05)',fill:false,borderWidth:2,pointRadius:0,tension:0.35,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});var lSD=0,lND=0;for(var liD=Math.max(0,leadsPerDayDrive.length-30);liD<leadsPerDayDrive.length;liD++){lSD+=(leadsPerDayDrive[liD]||0);lND++;}var klD=document.getElementById('leads-30d-kpi-drive');if(klD)klD.textContent=lND>0?(lSD/lND).toFixed(1):'-';}
   var c2=document.getElementById('budTrendChart');
-  if(c2){var ex2=Chart.getChart(c2);if(ex2)ex2.destroy();new Chart(c2,{data:{labels:days,datasets:[{type:'bar',label:'Solgt',data:soldPerDay,backgroundColor:'rgba(0,135,90,0.35)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:budRate,segment:{borderColor:function(c){return (c.p1.parsed.y!=null&&c.p1.parsed.y<70)?'#C62828':'#00875A';}},borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1},{type:'line',label:'Mal',data:days.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.4)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}]},options:chartOpts(70,'#00875A')});}
+  if(c2){var ex2=Chart.getChart(c2);if(ex2)ex2.destroy();new Chart(c2,{data:{labels:days,datasets:[{type:'bar',label:'Solgt',data:soldPerDay,backgroundColor:'rgba(0,135,90,0.35)',yAxisID:'y2',order:3},{type:'line',label:'Rate',data:budRate,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:true,borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.4,yAxisID:'y',spanGaps:true,order:1}]},options:chartOpts(null,'#00875A')});}
   var hbSum=days.map(function(){return 0;}),hbCnt=days.map(function(){return 0;}),dlavSum=days.map(function(){return 0;}),dlavCnt=days.map(function(){return 0;}),feeSumD=days.map(function(){return 0;}),soldCntD=days.map(function(){return 0;}),prodKostD=days.map(function(){return 0;}),returCntD=days.map(function(){return 0;});
   var _ff=window.feeFromE||function(){return 0;};var _rk=(window.peasyConfig&&window.peasyConfig.returKost)||3000;var _pu=(window.peasyConfig&&window.peasyConfig.prodKostUnder35k)||2250;var _po=(window.peasyConfig&&window.peasyConfig.prodKostOver35k)||2750;
   (rows||[]).slice(1).forEach(function(r){var hb=parseInt(String(r[4]||'').replace(/[^0-9]/g,''),10)||0;var dlav=(parseDLow(r[3])||0);var sd=parseDate(r[18]);if(sd&&sd>=d90){var ds2=sd.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var ix2=days.indexOf(ds2);if(ix2>=0){if(hb>0){hbSum[ix2]+=hb;hbCnt[ix2]++;}if(dlav>0){dlavSum[ix2]+=dlav;dlavCnt[ix2]++;}var ef=_ff(r[4]);if(ef)feeSumD[ix2]+=ef;soldCntD[ix2]++;var bd=parseInt(String(r[19]||'').replace(/[^0-9]/g,''),10)||0;prodKostD[ix2]+=(bd>=35000?_po:_pu);}}var rrd=parseDate(r[21]);if(rrd&&rrd>=d90&&!r[18]){var ds3=rrd.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});var ix3=days.indexOf(ds3);if(ix3>=0)returCntD[ix3]++;}});
@@ -1944,7 +1952,7 @@ function renderEvalCharts(rows,data){
   var ankLine=days.map(function(_,k){var c=_roll(ankCnt,k);return c>0?Math.round(_roll(ankSum,k)/c):null;});
   var mottLine=days.map(function(_,k){var c=_roll(mottDlCnt,k);return c>0?Math.round(_roll(mottDlSum,k)/c):null;});
   var cAM=document.getElementById('ankerMottChart');
-  if(cAM){var exAM=Chart.getChart(cAM);if(exAM)exAM.destroy();new Chart(cAM,{data:{labels:days,datasets:[{type:'line',label:'Snitt anker (alle evaluert)',data:ankLine,borderColor:'#004225',backgroundColor:'rgba(0,66,37,0.05)',fill:false,borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.35,spanGaps:true},{type:'line',label:'Snitt mottatt (akseptert)',data:mottLine,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:true,borderWidth:2,pointRadius:0,tension:0.35,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.parsed.y!=null?ctx.parsed.y.toLocaleString('nb-NO')+' kr':'-');}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{ticks:{color:'#888',font:{size:9},callback:function(v){return Math.round(v/1000)+'k';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});var kam=document.getElementById('am-30d-kpi');var an=ankLine[ankLine.length-1],mo=mottLine[mottLine.length-1];if(kam){if(an&&mo){var gp=Math.round(100*(mo-an)/an);kam.textContent=(gp>0?'+':'')+gp+'%';kam.style.color=gp<-10?'#C62828':(gp<0?'#E65100':'#2E7D32');}else kam.textContent='-';}}
+  if(cAM){var exAM=Chart.getChart(cAM);if(exAM)exAM.destroy();new Chart(cAM,{data:{labels:days,datasets:[{type:'line',label:'Snitt D-lav (alle priset)',data:ankLine,borderColor:'#004225',backgroundColor:'rgba(0,66,37,0.05)',fill:false,borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.35,spanGaps:true},{type:'line',label:'Snitt D-lav (mottatt)',data:mottLine,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:true,borderWidth:2,pointRadius:0,tension:0.35,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.parsed.y!=null?ctx.parsed.y.toLocaleString('nb-NO')+' kr':'-');}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{ticks:{color:'#888',font:{size:9},callback:function(v){return Math.round(v/1000)+'k';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});var kam=document.getElementById('am-30d-kpi');var an=ankLine[ankLine.length-1],mo=mottLine[mottLine.length-1];if(kam){if(an&&mo){var gp=Math.round(100*(mo-an)/an);kam.textContent=(gp>0?'+':'')+gp+'%';kam.style.color=gp<-10?'#C62828':(gp<0?'#E65100':'#2E7D32');}else kam.textContent='-';}}
   var fD=function(s){if(!s)return null;var p=String(s).trim().split('.');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:null;};
   var badge=document.getElementById('aksept-badge');var tb=document.getElementById('aksept-tbody');if(!tb)return;
   var aksept=(rows||[]).filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());}).sort(function(a,b){return new Date(fD(String(b[15]||b[16]||'').split(' ')[0]))-new Date(fD(String(a[15]||a[16]||'').split(' ')[0]));}).slice(0,40);
@@ -2024,34 +2032,32 @@ function workHoursElapsed(from){var wS=8,wE=16,now=new Date(),total=0,cur=new Da
 function buildEvalHtml(data,rows){
   var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">';
   h+='<div style="background:#fff;border-radius:16px;padding:24px;border:1px solid rgba(0,66,37,0.08);box-shadow:0 4px 24px rgba(0,66,37,0.07)">';
-  h+='<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:16px">Eval-aksept &mdash; Mottatt / Evaluert</div>';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:16px">Eval-aksept &mdash; Bestilt / Priset</div>';
   h+='<div style="display:flex;align-items:flex-end;gap:20px;margin-bottom:12px">';
   h+='<div><div style="font-size:11px;color:#aaa;margin-bottom:4px">Siste 30 dager</div><div id="ep-30" style="font-size:42px;font-weight:900;line-height:1;color:#C62828">&ndash;</div></div>';
   h+='<div><div style="font-size:11px;color:#aaa;margin-bottom:4px">Siste 90 dager</div><div id="ep-90" style="font-size:28px;font-weight:700;line-height:1;color:#aaa">&ndash;</div></div>';
-  h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="ep-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div><div style="font-size:10px;color:#aaa;margin-top:4px">Mal: 20%</div></div>';
-  h+='</div><div style="height:4px;background:rgba(0,66,37,0.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:20%;background:rgba(0,66,37,0.2);border-radius:99px"></div></div>';
-  h+='<div style="font-size:10px;color:#aaa;margin-top:6px">15% = mal &middot; 1 av 5 evaluerte biler aksepterer og sender inn bilen</div></div>';
+  h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="ep-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div></div>';
+  h+='</div><div style="font-size:10px;color:#aaa;margin-top:6px">Andel priset som bestiller henting/levering</div></div>';
   h+='<div style="background:#fff;border-radius:16px;padding:24px;border:1px solid rgba(0,135,90,0.08);box-shadow:0 4px 24px rgba(0,66,37,0.07)">';
-  h+='<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:16px">Bud-aksept &mdash; Solgt / Mottatt</div>';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#667A72;margin-bottom:16px">Bud-aksept &mdash; Solgt / Solgt+retur</div>';
   h+='<div style="display:flex;align-items:flex-end;gap:20px;margin-bottom:12px">';
   h+='<div><div style="font-size:11px;color:#aaa;margin-bottom:4px">Siste 30 dager</div><div id="bp-30" style="font-size:42px;font-weight:900;line-height:1;color:#C62828">&ndash;</div></div>';
   h+='<div><div style="font-size:11px;color:#aaa;margin-bottom:4px">Siste 90 dager</div><div id="bp-90" style="font-size:28px;font-weight:700;line-height:1;color:#aaa">&ndash;</div></div>';
-  h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="bp-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div><div style="font-size:10px;color:#aaa;margin-top:4px">Mal: 70%</div></div>';
-  h+='</div><div style="height:4px;background:rgba(0,66,37,0.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:70%;background:rgba(0,135,90,0.2);border-radius:99px"></div></div>';
-  h+='<div style="font-size:10px;color:#aaa;margin-top:6px">70% = mal &middot; 7 av 10 mottatte biler skal selges på auksjon</div></div></div>';
+  h+='<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:#aaa;margin-bottom:4px">Endring</div><div id="bp-d" style="font-size:22px;font-weight:900;color:#888">&ndash;</div></div>';
+  h+='</div><div style="font-size:10px;color:#aaa;margin-top:6px">Andel avsluttede auksjoner som ble solgt</div></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Daglige leads mottatt &mdash; siste 90 dager</div></div>';
   h+='<div style="padding:12px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="leads-30d-kpi" style="font-size:22px;font-weight:900;color:#004225;line-height:1">&ndash;</div><div style="font-size:10px;color:#aaa">reg / dag</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Søyler = leads mottatt per dag. Linje = 30-dagers glidende snitt.</div></div>';
   h+='<div style="padding:16px;position:relative;height:220px"><canvas id="leadsDailyChart"></canvas></div></div>';
       h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Daglige Peasy-leads mottatt &mdash; siste 90 dager</div></div>';h+='<div style="padding:12px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt Peasy</span><div id="leads-30d-kpi-peasy" style="font-size:22px;font-weight:900;color:#004225;line-height:1">&ndash;</div></div><div style="font-size:10px;color:#aaa">reg / dag</div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Søyler = Peasy-leads per dag (uten Drive). Linje = 30-dagers glidende snitt.</div></div>';h+='<div style="padding:16px;position:relative;height:220px"><canvas id="leadsDailyChartPeasy"></canvas></div></div>';
       h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Daglige Drive-leads mottatt &mdash; siste 90 dager</div></div>';h+='<div style="padding:12px 18px;background:rgba(255,107,53,0.04);border-left:3px solid #FF6B35;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt Drive</span><div id="leads-30d-kpi-drive" style="font-size:22px;font-weight:900;color:#FF6B35;line-height:1">&ndash;</div></div><div style="font-size:10px;color:#aaa">reg / dag</div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Søyler = Drive-leads per dag (uten Peasy). Linje = 30-dagers glidende snitt.</div></div>';h+='<div style="padding:16px;position:relative;height:220px"><canvas id="leadsDailyChartDrive"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Eval-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div style="padding:12px 18px;background:rgba(198,40,40,0.04);border-left:3px solid #C62828;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="eval-30d-kpi" style="font-size:22px;font-weight:900;color:#C62828;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grå søyler = evaluert per dag. Linje = eval-aksept (mottatt / evaluert), 30d. Grønn over mål, rød under. Stiplet = 15%-mål.</div></div>';
+  h+='<div style="padding:12px 18px;background:rgba(198,40,40,0.04);border-left:3px solid #C62828;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="eval-30d-kpi" style="font-size:22px;font-weight:900;color:#C62828;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grå søyler = priset (Estimering) per dag. Linje = bestilt / priset, samme 30d-vindu som tallet over.</div></div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="evalTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:24px"><div class="th"><div class="th-title">Bud-aksept utvikling &mdash; siste 90 dager</div></div>';
-  h+='<div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="bud-30d-kpi" style="font-size:22px;font-weight:900;color:#00875A;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grønne søyler = solgt per dag. Linje = bud-aksept (solgt / mottatt), 30d. Grønn over mål, rød under. Stiplet = 70%-mål.</div></div>';
+  h+='<div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="bud-30d-kpi" style="font-size:22px;font-weight:900;color:#00875A;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Grønne søyler = solgt per dag. Linje = solgt / (solgt+retur), samme 30d-vindu som tallet over.</div></div>';
   h+='<div style="padding:16px;position:relative;height:240px"><canvas id="budTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Snitt h\u00f8yeste bud \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(123,31,162,0.04);border-left:3px solid #7B1FA2;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="hb-30d-kpi" style="font-size:22px;font-weight:900;color:#7B1FA2;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Linja = snitt h\u00f8yeste bud for SOLGTE biler, 30d rullende. Gr\u00e5 stiplet = snitt D lav (det vi lovet). Gapet mellom dem = verditapet kunden ser.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="hbTrendChart"></canvas></div></div>';
-  h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Snitt anker vs snitt mottatt \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Mottatt vs anker (30d)</span><div id="am-30d-kpi" style="font-size:22px;font-weight:900;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Stiplet linje = snitt anker p\u00e5 alle evaluerte. Gr\u00f8nn = snitt anker p\u00e5 de som ble mottatt (akseptert). Ligger gr\u00f8nn langt under, aksepterer bare de billige bilene \u2014 de dyre faller fra.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="ankerMottChart"></canvas></div></div>';
+  h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Snitt D-lav, alle priset vs mottatt \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Mottatt vs alle (D-lav, 30d)</span><div id="am-30d-kpi" style="font-size:22px;font-weight:900;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Stiplet = snitt D-lav p\u00e5 alle priset. Gr\u00f8nn = snitt D-lav p\u00e5 de som ble mottatt. Ligger gr\u00f8nn langt under, aksepterer bare de billigere tilbudene. Dette er kunden sitt laveste tall, ikke ankeret.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="ankerMottChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Netto per solgt bil \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="netto-30d-kpi" style="font-size:22px;font-weight:900;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Fee minus prod-, retur- og markedskost per solgt bil, 30d rullende. Stiplet = null. Under = vi taper penger per bil.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="nettoTrendChart"></canvas></div></div>';
   h+=buildVenterPaSvarHtml(rows);
   /* Venter pa prissetting blokk fortsetter:
@@ -2086,7 +2092,7 @@ function buildEvalHtml(data,rows){
 function tkEsc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function tkCard(label,id,sub){return '<div style="background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(0,66,37,0.1);box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:6px">'+label+'</div><div id="'+id+'" style="font-size:32px;font-weight:900;line-height:1">-</div><div style="font-size:11px;color:#aaa;margin-top:4px">'+sub+'</div></div>';}
 function buildTiltakHtml(){
-  var defTxt='1. juni 2026 byttet vi prisemotor: fra Finn aktive annonser til car.info-comps. Vi vil se om car.info-kohorten (biler evaluert etter 1. juni) aksepterer eval-tilbudet oftere (m\u00e5l 15%), og om de likevel selges p\u00e5 auksjon (m\u00e5l 70%).';
+  var defTxt='1. juni 2026 byttet vi prisemotor: fra Finn aktive annonser til car.info-comps. Vi vil se om car.info-kohorten (biler evaluert etter 1. juni) aksepterer eval-tilbudet oftere, og om de likevel selges p\u00e5 auksjon.';
   var saved=(window.peasyConfig&&window.peasyConfig.tiltakDesc)||'';
   var h='';
   h+='<div style="background:#fff;border-left:4px solid #1D9E75;border-radius:12px;padding:18px 22px;margin-bottom:20px">';
@@ -2098,15 +2104,15 @@ function buildTiltakHtml(){
   h+='<input type="date" id="tiltakDateInput" style="font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,66,37,0.2);background:#fff;color:#004225"></div>';
   h+='<div style="padding-bottom:4px;font-size:12px;color:#667A72" id="tiltakLagInfo"></div></div>';
   h+='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px">';
-  h+=tkCard('Eval-aksept (kohort)','tk-ep','m\u00e5l 15%');
-  h+=tkCard('Bud-aksept (kohort)','tk-bp','m\u00e5l 70%');
+  h+=tkCard('Eval-aksept (kohort)','tk-ep','bestilt / priset');
+  h+=tkCard('Bud-aksept (kohort)','tk-bp','solgt / solgt+retur');
   h+=tkCard('Kohort-st\u00f8rrelse','tk-cohort-n','biler evaluert etter tiltak');
   h+='</div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Graf 1 \u2014 Evaluert \u2192 Mottatt (eval-aksept)</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Linja = eval-aksept akkumulert: alle mottatte delt p\u00e5 alle evaluerte s\u00e5 langt, for kohorten (evaluert etter 1. juni). Gr\u00f8nn over 15%, r\u00f8d under. Stiplet = 15%-m\u00e5l.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Linja = eval-aksept akkumulert: alle mottatte delt p\u00e5 alle evaluerte s\u00e5 langt, for kohorten (evaluert etter 1. juni). </div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="tkChart1"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Graf 2 \u2014 Mottatt \u2192 Solgt (bud-aksept)</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Linja = bud-aksept akkumulert: alle solgte delt p\u00e5 alle mottatte s\u00e5 langt. Gr\u00f8nn over 70%, r\u00f8d under. Stiplet = 70%-m\u00e5l.</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Linja = bud-aksept akkumulert: alle solgte delt p\u00e5 alle mottatte s\u00e5 langt. </div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="tkChart2"></canvas></div></div>';
   return h;
 }
@@ -2114,7 +2120,7 @@ var tkChart1=null,tkChart2=null;
 function tkRateChart(canvasId,labels,rate,target,rateLbl){
   var el=document.getElementById(canvasId);if(!el)return;
   var ex=Chart.getChart(el);if(ex)ex.destroy();
-  new Chart(el,{type:'line',data:{labels:labels,datasets:[{label:(rateLbl||'Rate'),data:rate,borderColor:'#2E7D32',segment:{borderColor:function(c){return (c.p1.parsed.y!=null&&c.p1.parsed.y<target)?'#C62828':'#2E7D32';}},backgroundColor:'rgba(0,135,90,0.07)',fill:true,borderWidth:2.5,pointRadius:2,tension:0.3,spanGaps:true},{label:'Mal '+target+'%',data:labels.map(function(){return target;}),borderColor:'rgba(120,120,120,0.55)',borderWidth:1.5,borderDash:[6,4],pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:11},boxWidth:14}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.parsed.y!=null?ctx.parsed.y+'%':'-');}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,suggestedMax:Math.max(target*1.6,25),ticks:{color:'#888',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});
+  new Chart(el,{type:'line',data:{labels:labels,datasets:[{label:(rateLbl||'Rate'),data:rate,borderColor:'#004225',backgroundColor:'rgba(0,135,90,0.07)',fill:true,borderWidth:2.5,pointRadius:2,tension:0.3,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:11},boxWidth:14}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.parsed.y!=null?ctx.parsed.y+'%':'-');}}}},scales:{x:{ticks:{color:'#888',font:{size:9},maxTicksLimit:12},grid:{display:false},border:{display:false}},y:{min:0,suggestedMax:40,ticks:{color:'#888',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});
 }
 var tkBuildChart=tkRateChart;
 function renderTiltakCharts(){
@@ -2133,8 +2139,8 @@ function renderTiltakCharts(){
   var pEval=kohort.length?Math.round(mottatt.length/kohort.length*100):0;
   var pBud=mottatt.length?Math.round(solgt.length/mottatt.length*100):null;
   function setHtml(id,html){var e=document.getElementById(id);if(e)e.innerHTML=html;}
-  setHtml('tk-ep','<span style="color:'+(pEval>=15?'#2E7D32':'#C62828')+'">'+pEval+'%</span>');
-  setHtml('tk-bp',pBud!=null?('<span style="color:'+(pBud>=70?'#2E7D32':'#C62828')+'">'+pBud+'%</span>'):'<span style="font-size:18px;color:#aaa">for tidlig</span>');
+  setHtml('tk-ep','<span style="color:#004225">'+pEval+'%</span>');
+  setHtml('tk-bp',pBud!=null?('<span style="color:#004225">'+pBud+'%</span>'):'<span style="font-size:18px;color:#aaa">for tidlig</span>');
   setHtml('tk-cohort-n',String(kohort.length));
   var s1=document.querySelector('#tk-ep + div');if(s1)s1.textContent=mottatt.length+' mottatt / '+kohort.length+' evaluert';
   var s2=document.querySelector('#tk-bp + div');if(s2)s2.textContent=solgt.length+' solgt / '+mottatt.length+' mottatt';
@@ -2157,7 +2163,7 @@ function render(data,rows){
   var aGs=(function(g){if(!g.length)return null;var s=g.slice().sort(function(a,b){return a-b;});var m=Math.floor(s.length/2);return+(s.length%2?s[m]:(s[m-1]+s[m])/2).toFixed(1);})(data.sold.map(function(c){return c.gap;}));
   var rk671=(window.peasyConfig&&window.peasyConfig.returKost)||3000;
   var nC=tR*rk671,nR=tU-nC;
-  var mOk=mR>=TARGETS.evalMottatt,sOk=sR>=TARGETS.mottattSolgt;
+  var mOk=true,sOk=true;
   var todayStr=new Date().toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit',year:'numeric'});
   var tdC=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr);}).length;
   var tdC_peasy=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr)&&String(r[11]||'').toLowerCase()==='peasy';}).length;
@@ -2234,8 +2240,8 @@ function render(data,rows){
   var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (siste 30 dager)</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral" onclick="setMode(\'pipe\')" style="cursor:pointer"><div class="dial-label">Pipe - uavklart</div><div class="dial-value" style="color:#E65100">'+pipeCount+'</div><div class="dial-unit">Snitt verdi '+pipeSnitt+'k</div><div class="dial-sub">Eval sendt, kunden har ikke bestilt transport</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">Biler i dag</div><div class="dial-sub">Snitt <strong>'+leads30avg+'</strong> pr dag siste 30 dager (sum '+leads30d+' &middot; CPL '+(leads30d>0?Math.round(spend30/leads30d):0)+' kr)</div><div class="target-tag">Live</div></div>'
-    +'<div class="dial-card '+(ea30.pct>=TARGETS.evalMottatt?'on-target':'off-target')+'"><div class="dial-label">Eval-aksept</div><div class="dial-value" style="color:'+(ea30.pct<TARGETS.evalMottatt?'#C62828':'#2E7D32')+'">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Selger aksepterer evaluering</div><div class="target-tag">Mål '+TARGETS.evalMottatt+'%</div></div>'
-    +'<div class="dial-card '+(ba30.pct>=TARGETS.mottattSolgt?'on-target':'off-target')+'"><div class="dial-label">Bud-aksept</div><div class="dial-value" style="color:'+(ba30.pct<TARGETS.mottattSolgt?'#C62828':'#2E7D32')+'">'+ba30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ba30.solgt+' av '+ba30.avsluttet+'</div><div class="dial-sub">Høyeste bud akseptert</div><div class="target-tag">Mål '+TARGETS.mottattSolgt+'%</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Eval-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Selger aksepterer evaluering</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Bud-aksept</div><div class="dial-value" style="color:#004225">'+ba30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ba30.solgt+' av '+ba30.avsluttet+'</div><div class="dial-sub">Høyeste bud akseptert</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon nå</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">Biler på anlegg</div><div class="dial-sub">I produksjon</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt bilverdi</div><div class="arc-wrap"><svg id="arc7"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+aE30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum omsetning kr '+(aE30*sold30arr.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+sold30arr.length+' solgte</div><div class="target-tag">30 dager</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Snitt Peasy inntekt</div><div class="arc-wrap"><svg id="arc8"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+aU30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Sum inntekt kr '+(aU30*uVals30.length).toLocaleString('nb-NO')+'</div><div class="dial-sub">Siste 30d / '+uVals30.length+' solgte</div><div class="target-tag">30 dager</div></div>'
@@ -2283,8 +2289,8 @@ function render(data,rows){
 
   var nowDate = new Date();
   var dagsDateStr = nowDate.toLocaleDateString('nb-NO',{day:'numeric',month:'long',year:'numeric'});
-  var ep7col = ep7>=15?'#2E7D32':'#C62828';
-  var bp7col = bp7>=70?'#2E7D32':bp7>=60?'#E65100':'#C62828';
+  var ep7col = '#004225';
+  var bp7col = '#004225';
 
   function lagColor(v, target) { return v===null?'#aaa':v<=target?'#2E7D32':v<=target*1.5?'#E65100':'#C62828'; }
 
@@ -2311,8 +2317,8 @@ function render(data,rows){
   // 7d rates
   opsHtml += '<div style="display:flex;gap:24px;padding-top:14px;border-top:1px solid rgba(0,66,37,0.06);flex-wrap:wrap">';
   opsHtml += '<div style="font-size:12px;color:#667A72">7-dagers rater: ';
-  opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> (mål 15%) &nbsp;&middot;&nbsp; ';
-  opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong> (mål 70%)</div>';
+  opsHtml += '<strong style="color:'+ep7col+'">Eval-aksept '+ep7+'%</strong> &nbsp;&middot;&nbsp; ';
+  opsHtml += '<strong style="color:'+bp7col+'">Bud-aksept '+bp7+'%</strong></div>';
   opsHtml += '</div>';
   opsHtml += '</div>';
 
@@ -2384,8 +2390,8 @@ function render(data,rows){
     // Overstyr kort 2 og kort 3 til a bruke sentral getEvalAksept/getBudAksept
     try{
       var cards=document.querySelectorAll('.dial-card');
-      if(cards[2]){var ev=window.getEvalAksept(30);var v=cards[2].querySelector('.dial-value');if(v){v.textContent=ev.pct+'%';v.style.color=ev.pct>=15?'#2E7D32':'#C62828';}}
-      if(cards[3]){var bd=window.getBudAksept(30);var v=cards[3].querySelector('.dial-value');if(v){v.textContent=bd.pct+'%';v.style.color=bd.pct>=70?'#2E7D32':bd.pct>=60?'#E65100':'#C62828';}}
+      if(cards[2]){var ev=window.getEvalAksept(30);var v=cards[2].querySelector('.dial-value');if(v){v.textContent=ev.pct+'%';v.style.color='#004225';}}
+      if(cards[3]){var bd=window.getBudAksept(30);var v=cards[3].querySelector('.dial-value');if(v){v.textContent=bd.pct+'%';v.style.color='#004225';}}
     }catch(e){console.error('overstyr feil',e);}
 
     drawArc(document.getElementById('arc0'),100,'#004225');
@@ -2589,7 +2595,7 @@ function buildKartTabell(posMap,filter,pnrAllowed){
     +'<div style="background:rgba(0,66,37,0.04);border-radius:10px;padding:14px 18px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">'
     +'<div><span style="font-size:22px;font-weight:700;color:'+filterColor+'">'+sumBiler+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">'+filterLabels[filter]+'</div></div>'
     +'<div><span style="font-size:22px;font-weight:700;color:var(--green)">'+sumSteder+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">steder i Norge</div></div>'
-    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:'+(aksRate>=15?'#00875A':'#C62828')+'">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate (mål 15%)</div></div>':'')
+    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#004225">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate</div></div>':'')
     +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#1565C0">'+sumSolgt+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">solgt totalt</div></div>':'')
     +'</div></td></tr>';
   var tbody=document.getElementById('kart-tabell-body');
@@ -3204,7 +3210,7 @@ function buildUkeHtml(){
   h+='<div class="section-label">Brakett-analyse for uka</div>';
   h+='<div id="uke-brackets" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px"></div>';
   h+='<div class="table-card"><div class="th"><div class="th-title">8-ukers trend</div></div>';
-  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = Leads mottatt per uke. Lysegrønne søyler = solgt per uke. Linje = 90-dagers rullerende bud-aksept-snitt (mål 70%, venstre akse).</div>';
+  h+='<div class="chart-explain"><strong>Hvordan lese:</strong> Mørkegrønne søyler = Leads mottatt per uke. Lysegrønne søyler = solgt per uke. Linje = 90-dagers rullerende bud-aksept-snitt (venstre akse).</div>';
   h+='<div style="padding:16px;position:relative;height:260px"><canvas id="ukeTrendChart"></canvas></div></div>';
   return h;
 }
@@ -3418,8 +3424,8 @@ function renderUkesrapport(){
       {label:'CPL',val:cpl90.toLocaleString('nb-NO')+' kr',sub:'7 000 kr / '+cur.registrert+' leads (uka)',col:'#004225'},
       {label:'Verdi / lead',val:verdiPerLead.toLocaleString('nb-NO')+' kr',sub:'Marg '+(margPerLead>=0?'+':'')+margPerLead.toLocaleString('nb-NO')+' kr',col:margPerLead>=0?'#2E7D32':'#C62828'},
       {label:'ROI marketing',val:roi90+'x',sub:'Per krone i marketing',col:'#004225'},
-      {label:'Eval-aksept',val:ep90flow+'%',sub:'Mål 15%'+(ep90flow>=15?' ✓':''),col:ep90flow>=15?'#2E7D32':'#C62828'},
-      {label:'Bud-aksept',val:bp90flow+'%',sub:'Mål 70%'+(bp90flow>=70?' ✓':''),col:bp90flow>=70?'#2E7D32':'#C62828'}
+      {label:'Eval-aksept',val:ep90flow+'%',sub:'bestilt / priset',col:'#004225'},
+      {label:'Bud-aksept',val:bp90flow+'%',sub:'solgt / solgt+retur',col:'#004225'}
     ];
     markEl.innerHTML=mark.map(function(c){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.08);border-radius:10px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,66,37,0.04)"><div style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:24px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div><div style="font-size:10px;color:#888;margin-top:8px">'+c.sub+'</div></div>';}).join('');
     var markFEl=document.getElementById('uke-marketing-forklaring');
@@ -3450,7 +3456,7 @@ function renderUkesrapport(){
       html+='<p style="margin:6px 0"><strong>2. ROI '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+'x</strong> betyr at hver krone i marketing returnerer '+(cpl90>0?(verdi/cpl90).toFixed(1).replace('.',','):'0')+' kr i Peasy netto &mdash; så lenge konvertering holder seg.</p>';
       html+='<p style="margin:6px 0"><strong>3. Maksgrensen for CPL</strong> er '+maksCPL.toLocaleString('nb-NO')+' kr. Så lenge CPL er under dette tjener du penger på marginal-leadet. I dag er CPL '+cpl90.toLocaleString('nb-NO')+' kr &mdash; god margin.</p>';
       html+='<div style="background:#F5F7F5;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:12px"><strong>⚡ Forslag:</strong> Doble budsjettet til '+doblet.toLocaleString('nb-NO')+' kr/uke. Forventet effekt (om CPL holder): ~'+(64*2)+' leads/uke, ~'+ekstraNetto.toLocaleString('nb-NO')+' kr ekstra Peasy netto. Risiko: lav. Mål CPL etter 2 uker &mdash; hvis under '+Math.round(maksCPL*0.5).toLocaleString('nb-NO')+' kr, push videre. Stopp når marg/lead &lt; 200 kr.</div>';
-      html+='<div style="font-size:11px;color:#888;margin-top:8px;font-style:italic">Reell flaskehals akkurat nå: '+(ep_<15?'Eval-aksept ('+ep_+'%, mål 15%) &mdash; flere selgere må akseptere estimatet':bp_<70?'Bud-aksept ('+bp_+'%, mål 70%) &mdash; for mange returnerer etter bud':'Ingen flaskehals &mdash; full pipeline-helse')+'.</div>';
+      html+='<div style="font-size:11px;color:#888;margin-top:8px;font-style:italic">Eval-aksept '+ep_+'% · bud-aksept '+bp_+'%.</div>';
       markFEl.innerHTML=html;
     }
   }
@@ -3553,8 +3559,8 @@ function renderUkesrapport(){
       return '<div class="bracket-card" style="--bc:'+b.color+'"><div class="bc-label" style="color:'+b.color+'">'+b.name+' <span class="bc-range">'+b.range+'</span></div>'
         +'<div class="bc-row"><span class="bc-key">Registrert</span><span class="bc-val">'+b.reg+'</span></div>'
         +'<div class="bc-row"><span class="bc-key">Solgt</span><span class="bc-val">'+b.solgt+'</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Eval-aksept</span><span class="bc-val '+(b.ep>=15?'pos':'neg')+'">'+b.ep+'%</span></div>'
-        +'<div class="bc-row"><span class="bc-key">Bud-aksept</span><span class="bc-val '+(b.bp>=70?'pos':'neg')+'">'+b.bp+'%</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Eval-aksept</span><span class="bc-val '+''+'">'+b.ep+'%</span></div>'
+        +'<div class="bc-row"><span class="bc-key">Bud-aksept</span><span class="bc-val '+''+'">'+b.bp+'%</span></div>'
         +'<div class="bc-row"><span class="bc-key">Avg gap</span><span class="bc-val '+(b.avgGap>=0?'pos':'neg')+'">'+(b.avgGap!=null?fmtPct(b.avgGap):'-')+'</span></div>'
         +'</div>';
     }).join('');
@@ -3576,7 +3582,6 @@ function renderUkesrapport(){
         {type:'bar',label:'Leads mottatt',data:regSerie,backgroundColor:'rgba(0,66,37,0.55)',yAxisID:'y2',order:3},
         {type:'bar',label:'Solgt',data:solgtSerie,backgroundColor:'rgba(0,135,90,0.55)',yAxisID:'y2',order:3},
         {type:'line',label:'Bud-aksept %',data:bpSerie,borderColor:'#00875A',backgroundColor:'rgba(0,135,90,0.08)',fill:false,borderWidth:2.5,pointRadius:3,tension:0.3,yAxisID:'y',order:1},
-        {type:'line',label:'Mal 70%',data:labels.map(function(){return 70;}),borderColor:'rgba(0,135,90,0.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,yAxisID:'y',order:2}
       ]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#888',font:{size:10}},grid:{display:false},border:{display:false}},y:{min:0,max:100,position:'left',ticks:{color:'#00875A',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y2:{position:'right',beginAtZero:true,ticks:{color:'#888',font:{size:9},callback:function(v){return v+' stk';}},grid:{display:false},border:{display:false}}}}
     });
@@ -4319,16 +4324,12 @@ function applyV2FiltersAndRender(){
 
 function colorForEvalAksept(pct){
   if(pct===null)return {color:'var(--muted)',bg:'transparent'};
-  if(pct>=20)return {color:'#11733B',bg:'#E5F4EC'};
-  if(pct>=15)return {color:'#8A6708',bg:'#FBF1D2'};
-  return {color:'#A8221C',bg:'#FBE5E2'};
+  return {color:'#004225',bg:'transparent'};
 }
 
 function colorForBudAksept(pct){
   if(pct===null)return {color:'var(--muted)',bg:'transparent'};
-  if(pct>=70)return {color:'#11733B',bg:'#E5F4EC'};
-  if(pct>=60)return {color:'#8A6708',bg:'#FBF1D2'};
-  return {color:'#A8221C',bg:'#FBE5E2'};
+  return {color:'#004225',bg:'transparent'};
 }
 
 function renderV2Summary(records){
@@ -4341,8 +4342,8 @@ function renderV2Summary(records){
   var easyAnkers=records.map(function(r){return (r.easy&&Number.isFinite(r.easy.dLav))?r.easy.dLav:null;}).filter(function(v){return v!==null;});var avgEasy=easyAnkers.length>0?easyAnkers.reduce(function(s,v){return s+v;},0)/easyAnkers.length:null;var avgEasyTxt=avgEasy===null?'—':Math.round(avgEasy).toLocaleString('nb-NO')+' kr';
   var cards=[
     {label:'Evalueringer sendt',value:f.n,sub:'fra '+V2BM_BENCHMARK_START,color:'var(--text)',bg:'var(--card)'},
-    {label:'Eval-aksept (mål 15-20%)',value:fmtPct(f.evalAksept),sub:'venter: '+f.venter,color:evCol.color,bg:evCol.bg},
-    {label:'Bud-aksept (mål 70%)',value:fmtPct(f.budAksept),sub:f.solgt+' solgt / '+f.returnert+' retur',color:bdCol.color,bg:bdCol.bg},
+    {label:'Eval-aksept',value:fmtPct(f.evalAksept),sub:'venter: '+f.venter,color:evCol.color,bg:evCol.bg},
+    {label:'Bud-aksept',value:fmtPct(f.budAksept),sub:f.solgt+' solgt / '+f.returnert+' retur',color:bdCol.color,bg:bdCol.bg},
     {label:'Avvist',value:f.avvist,sub:avvistPct!==null?avvistPct+'% av avgjorte':'—',color:'var(--text)',bg:'var(--card)'},
     {label:'Snitt Easy Eval lav',value:avgEasyTxt,sub:easyAnkers.length+' av '+f.n+' har Eval lav',color:'var(--text)',bg:'var(--card)'},
     {label:'Bot-avvik snitt |Δ%|',value:f.avvikSnitt===null?'—':(Math.round(f.avvikSnitt*10)/10)+'%',sub:f.andelInnenfor5===null?'—':Math.round(f.andelInnenfor5)+'% innenfor ±5%',color:'var(--text)',bg:'var(--card)'}
@@ -4693,7 +4694,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c250</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c254</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -4761,7 +4762,7 @@ var M=monthly();var now=new Date();var cur=now.getFullYear()+'-'+('0'+(now.getMo
 var keys=Object.keys(M).filter(function(k){return k>='2025-11';}).sort();
 var pa=function(a){return a.length?Math.round(100*a.reduce(function(s,x){return s+x;},0)/a.length):null;};
 var avcol=function(p){if(p==null)return '#999';if(p>=-8)return '#2E7D32';if(p>=-18)return '#E65100';return '#C62828';};
-var ecol=function(p){return p>=15?'#2E7D32':(p>=10?'#E65100':'#C62828');};
+var ecol=function(p){return '#004225';};
 var TH=function(a){return '<th style="padding:7px 10px;text-align:'+a+';font-size:10px;color:#778;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">';};
 var TD=function(a,c){return '<td style="padding:6px 10px;text-align:'+a+';font-size:13px'+(c?';color:'+c+';font-weight:700':'')+'">';};
 var h='<div style="font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#667;margin-bottom:4px">M\u00e5ltavle \u2014 m\u00e5nedlig \u00b7 h\u00f8yeste bud (det kunden ser) mot D lav</div>';
