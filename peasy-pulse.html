@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c273</title>
+<title>Peasy Pulse v16.04.c274</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c273 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c274 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c273 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c274 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -2004,6 +2004,15 @@ async function loadData(){
   var ws=wb.Sheets[wb.SheetNames[0]];
   var rows=XLSX.utils.sheet_to_json(ws,{header:1});
   try{rows=await overlayErpEvents(rows);}catch(e){}
+  window._liste16Recent=[];
+  try{
+    var l16url=(window.PA_PROXY_ERP||'')+'rejected?t='+Date.now();
+    var l16r=await fetch(l16url,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')},signal:AbortSignal.timeout(8000)});
+    if(l16r.ok){
+      var l16j=await l16r.json();
+      window._liste16Recent=l16j.biler||[];
+    }
+  }catch(eL16){ window._liste16Recent=[]; }
   return rows;
 }
 
@@ -2307,7 +2316,8 @@ function render(data,rows){
   var evalAll2 = (rows||[]).slice(1).filter(function(r){return r[1]&&parseDLow(r[3]);});
   function pdOps(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
   var evalToday   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate;}).length;
-  var avvistToday = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=todayDate&&String(r[12]||'').toLowerCase().includes('avvist by customer');}).length;
+  var avvistTodayRows = (typeof window.liste16AvvistToday==='function') ? window.liste16AvvistToday() : [];
+  var avvistToday = avvistTodayRows.length;
   var bestiltToday= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;}).length;
   var mottattToday= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;}).length;
   var solgtToday  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;}).length;
@@ -2356,7 +2366,7 @@ function render(data,rows){
   }
 
   opsHtml += dagKort('Leads mottatt i dag', tdC, tdC_peasy+' Peasy &middot; '+tdC_drive+' Drive', '#004225');
-  opsHtml += dagKort('Avvist tilbud', avvistToday, 'av evaluert i dag', avvistToday>0?'#C62828':'#2E7D32');
+  opsHtml += dagKort('Avvist tilbud', avvistToday, 'kundeavvis i dag (liste 16)', avvistToday>0?'#C62828':'#2E7D32');
   opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
   opsHtml += dagKort('Solgt i dag', solgtToday, 'på auksjon', solgtToday>0?'#2E7D32':'#667A72');
@@ -3122,13 +3132,42 @@ async function initKart(){
 
 function fmtK(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':Math.round(n/1000)+'k';}
 function fmtKm(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':n.toLocaleString('nb-NO')+' km';}
+window.liste16AvvistToday=function(){
+  var list=window._liste16Recent||[];
+  var today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+  function dayOf(iso){
+    if(!iso) return '';
+    var d=new Date(iso);
+    if(isNaN(d.getTime())) d=new Date(String(iso).replace(' ','T'));
+    if(isNaN(d.getTime())) return String(iso).slice(0,10);
+    return d.toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+  }
+  return list.filter(function(b){
+    var st=(b.status_entity&&b.status_entity.status)||'';
+    if(st!=='REJECTED_BY_CUSTOMER') return false;
+    var iso=(b.process_milestones&&b.process_milestones.rejected_at)||'';
+    return dayOf(iso)===today;
+  }).map(function(b){
+    var dd=b.drive_no_car_data||{};
+    var mil=b.process_milestones||{};
+    var st=(b.status_entity&&b.status_entity.status)||'';
+    var arsak=b.reject_reason||'—';
+    var min=b.price_final_min, max=b.price_final_max;
+    var band=(min!=null&&max!=null)?(min+'-'+max):'';
+    var km=dd.mileage||dd.km||b.mileage||null;
+    return {0:b.id,1:b.registration_number,3:band,6:dd.manufacturer_name||b.manufacturer||'',7:dd.model_series||'',8:dd.model_year||'',11:b.source,12:'Avvist by customer',13:mil.rejected_at||'',22:km,_arsak:arsak,_rejectedAt:mil.rejected_at||''};
+  });
+};
 function buildDagsTabell(evalAll2, todayDate){
   var pdOps=function(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;};
   var AVVIST=['avvist by customer','avvist by admin','avvist'];
   var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
 
   var evalI   = evalAll2.filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate;});
-  var avvistI = evalAll2.filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
+  var avvistI = window.liste16AvvistToday();
+  if(!avvistI.length){
+    avvistI = evalAll2.filter(function(r){var d=pdOps(r[14]);return d&&d>=todayDate&&AVVIST.indexOf(String(r[12]||'').toLowerCase())!==-1;});
+  }
   var bestiltI= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;});
   var mottattI= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;});
   var solgtI  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;});
@@ -3152,7 +3191,9 @@ function buildDagsTabell(evalAll2, todayDate){
 
   if(grupper.length===0)return '';
 
-  var rowHtml=function(r,i,isSolgt){
+  var rowHtml=function(r,i,kind){
+    var isSolgt=kind==='solgt';
+    var isAvvist=kind==='avvist';
     var isFresh=leadsTodaySet.has(String(r[1]||'').trim());
     var bg=isFresh?'background:rgba(0,135,90,0.14)':(i%2===0?'':'background:rgba(0,66,37,0.02)');
     var dlh=String(r[3]||'').trim();
@@ -3161,7 +3202,12 @@ function buildDagsTabell(evalAll2, todayDate){
     var kmVal=r[22]?parseInt(String(r[22]).replace(/[^\d]/g,'')):NaN;
     var kmStr=!isNaN(kmVal)?kmVal.toLocaleString('nb-NO')+' km':'—';
     var STATUS_NO={'Avvist by customer':'Avvist av kunde','Avvist by admin':'Avvist av admin','Avvist':'Avvist','sold':'Solgt','Venter på trans. best.':'Venter aksept','Mottatt':'Mottatt','contract_signed':'Kontrakt signert','waiting_for_sign_contract':'Venter pa signering','received':'Mottatt','on_auction':'På auksjon','select_auction_date':'Velger dato','waiting_for_sale_reaction':'Venter svar','waiting_for_transport':'På vei','waiting_for_valuation':'I produksjon','waiting_for_preparation':'Klargjøres','to_be_returned':'Til retur','change_owner':'Venter salgsmelding','ar_car_created':'Opprettet','waiting_for_sign_contract':'Venter signering','returnert':'Returnert','returned':'Returnert','Endelig estimat':'Venter p\u00e5 bestilling av lev / hent','Nye biler':'Ny reg.','Utenfor Gire':'Utenfor område','ar_car_created':'Opprettet'};
-    var status=STATUS_NO[r[12]]||r[12]||'—';
+    var status=isAvvist?(r._arsak||STATUS_NO[r[12]]||r[12]||'—'):(STATUS_NO[r[12]]||r[12]||'—');
+    var datoVis='—';
+    if(r._rejectedAt){
+      var rd=new Date(r._rejectedAt);
+      datoVis=isNaN(rd.getTime())?String(r._rejectedAt).slice(0,16).replace('T',' '):rd.toLocaleString('nb-NO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }else if(r[13]){datoVis=String(r[13]).split(' ')[0];}
     var extraCols='';
     if(isSolgt){
       var budV=r[4]?parseInt(String(r[4]).replace(/[^\d]/g,'')):NaN;/*c117HB*/
@@ -3180,7 +3226,7 @@ function buildDagsTabell(evalAll2, todayDate){
     }
     return '<tr style="border-bottom:1px solid var(--border);'+bg+'">'
       +'<td style="padding:8px 12px;font-family:var(--mono);font-weight:700;font-size:12px">'+r[1]+'</td>'
-      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(r[13]?String(r[13]).split(' ')[0]:'—')+'</td>'
+      +'<td style="padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted)">'+datoVis+'</td>'
       +'<td style="padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right">'+(function(){if(!r[13])return '—';var dp=String(r[13]).split(' ')[0].split('.');if(dp.length!==3)return '—';var ed=new Date(parseInt(dp[2]),parseInt(dp[1])-1,parseInt(dp[0]));if(isNaN(ed.getTime()))return '—';var days=Math.floor((Date.now()-ed.getTime())/86400000);return days===0?'i dag':(days+' d');})()+'</td>'
       +'<td style="padding:8px 12px;font-size:12px">'+r[6]+' '+r[7]+' '+r[8]+'</td>'
       +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:12px">'+kmStr+'</td>'
@@ -3200,15 +3246,15 @@ function buildDagsTabell(evalAll2, todayDate){
       +'<table style="width:100%;border-collapse:collapse;table-layout:fixed">'
       +'<thead><tr style="background:rgba(0,66,37,0.03)">'
       +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:90px">Regnr</th>'
-      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:100px">Evaluert</th>'
+      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:100px">'+(g.label==='Avvist i dag'?'Avvist':'Evaluert')+'</th>'
       +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:80px">Dager</th>'
       +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Bil</th>'
       +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:120px">KM</th>'
       +'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:190px">Peasy Est Verdi</th>'
       +(g.label==='Solgt på auksjon'?'<th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Høyeste bud</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Avvik</th>':'')
-      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:140px">Status</th>'
+      +'<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:140px">'+(g.label==='Avvist i dag'?'Årsak':'Status')+'</th>'
       +'</tr></thead>'
-      +'<tbody>'+(g.biler.length===0?'<tr><td colspan="10" style="padding:14px 18px;text-align:center;color:var(--muted);font-size:11px;font-style:italic">'+(g.placeholder?'Venter på "Estimat sendt"-kolonne fra Andrey i ERP public report':'Ingen biler i dag')+'</td></tr>':g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon');}).join(''))+'</tbody>'
+      +'<tbody>'+(g.biler.length===0?'<tr><td colspan="10" style="padding:14px 18px;text-align:center;color:var(--muted);font-size:11px;font-style:italic">'+(g.placeholder?'Venter på "Estimat sendt"-kolonne fra Andrey i ERP public report':'Ingen biler i dag')+'</td></tr>':g.biler.map(function(r,i){return rowHtml(r,i,g.label==='Solgt på auksjon'?'solgt':(g.label==='Avvist i dag'?'avvist':''));}).join(''))+'</tbody>'
       +'</table></div>';
   });
   out+='</div>';
@@ -4748,7 +4794,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c273</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c274</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
