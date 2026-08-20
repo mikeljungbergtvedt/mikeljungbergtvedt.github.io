@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c268</title>
+<title>Peasy Pulse v16.04.c269</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c268 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c269 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c268 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c269 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -4748,7 +4748,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c268</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c269</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -5176,7 +5176,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
             var ev = (v3m && v3m.easy) || null;
             var real = ev && (ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
             if (!real) return { dLav: null, dHoy: null, anker: null };
-            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence };
+            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence, comps_count: ev.comps_count };
           })(),
           v3: v3m,
           manufacturer: b.manufacturer || null,
@@ -5224,11 +5224,34 @@ setTimeout(tick,1500);setInterval(tick,5000);
   function renderCardListe3(e){
     const easy = e.easy || {}, v3m = e.v3 || {}, v3 = (v3m.v2) || {}, id = (v3m.identifikasjon) || {};
     const vg = (typeof window.pickV3gBand==='function') ? window.pickV3gBand(e.v3g) : {dLav:e.v3g?.dLav ?? e.v3g?.v3g?.dLav ?? null, anker:e.v3g?.anker ?? e.v3g?.v3g?.anker ?? null, dHoy:e.v3g?.dHoy ?? e.v3g?.v3g?.dHoy ?? null, score:e.v3g ? (e.v3g.score ?? e.v3g.v3g?.score ?? e.v3g.confidence ?? null) : null, begrunnelse:e.v3g?.v3g?.begrunnelse || e.v3g?.begrunnelse || null};
-    const dV3 = qaPct(v3.dLav, easy.dLav);
-    const dVg = qaPct(vg.dLav, easy.dLav);
+    const easyAnker = (v3m && v3m.easy && v3m.easy.anker != null) ? v3m.easy.anker : easy.anker;
+    const dV3 = qaPct(v3.anker, easyAnker);
+    const dVg = qaPct(vg.anker, easyAnker);
     const maxAbs = Math.max(dV3==null?0:Math.abs(dV3), dVg==null?0:Math.abs(dVg));
-    const bp = v3.bulletproof_score ? Math.round(v3.bulletproof_score*100) : null;
+    const bp = v3.bulletproof_score != null ? Math.round(Number(v3.bulletproof_score) <= 1 ? v3.bulletproof_score*100 : v3.bulletproof_score) : null;
     const conf = v3.confidence;
+    function qaIdent(bot){
+      if(bot==='v3' && bp!=null) return String(bp);
+      return '—';
+    }
+    function qaComps(bot){
+      if(bot==='easy'){
+        if(easy.comps_count!=null && easy.comps_count!=='') return String(easy.comps_count);
+        if(easy.confidence!=null) return String(easy.confidence);
+        return '—';
+      }
+      if(bot==='v3'){
+        if(v3.comps_count!=null) return String(v3.comps_count);
+        if(conf!=null) return String(conf);
+        return '—';
+      }
+      var n = e.v3g && e.v3g.carinfo && e.v3g.carinfo.comps;
+      if(n==null && e.v3g && e.v3g.v3g) n = e.v3g.comps;
+      if(vg.score!=null && n!=null) return n+'/'+vg.score;
+      if(n!=null) return String(n);
+      if(vg.score!=null) return String(vg.score);
+      return '—';
+    }
     const hasN = function(n){ return n!=null && Number.isFinite(Number(n)) && Number(n)>0; };
     const easyOk = hasN(easy.dLav);
     const v3Ok = hasN(v3.dLav);
@@ -5341,33 +5364,37 @@ setTimeout(tick,1500);setInterval(tick,5000);
           +'<br><a href="'+esc(ol)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;word-break:break-all;">'+esc(ol)+'</a>'
           +'</div>';
       })()}
-      <div style="display:grid;grid-template-columns:44px 1fr 1fr 1fr 42px;gap:4px 10px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
+      <div style="display:grid;grid-template-columns:44px 1fr 1fr 1fr 40px 52px;gap:4px 8px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;">
         <div style="color:var(--muted);font-size:10px;"></div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">D-lav</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">Anker</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">D-høy</div>
-        <div style="color:var(--muted);font-size:10px;text-align:right;">Score</div>
+        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Origin-ident (V3 bulletproof). Easy/V3G har ikke egen ident-score ennå.">Ident</div>
+        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Comps: Easy conf eller n · V3 n · V3G n/score">Comps</div>
         <div style="color:var(--muted);">Easy</div>
         <div style="text-align:right;font-weight:700;">${fmt(easy.dLav)}</div>
-        <div style="text-align:right;font-weight:600;">${fmt((v3m && v3m.easy && v3m.easy.anker) || easy.anker || null)}</div>
+        <div style="text-align:right;font-weight:600;">${fmt(easyAnker)}</div>
         <div style="text-align:right;">${fmt(easy.dHoy)}</div>
-        <div style="text-align:right;color:var(--muted);">${(v3m && v3m.easy && v3m.easy.confidence!=null) ? v3m.easy.confidence : '-'}</div>
+        <div style="text-align:right;color:var(--muted);">${qaIdent('easy')}</div>
+        <div style="text-align:right;color:var(--muted);">${qaComps('easy')}</div>
         <div style="color:var(--muted);">V3</div>
         <div style="text-align:right;">${fmt(v3.dLav)}</div>
         <div style="text-align:right;font-weight:600;color:${(v3.confidence===0||v3.anker===0)?'#A8221C':'inherit'}">${(v3.confidence===0||v3.anker===0)?'nektet':fmt(v3.anker)}</div>
         <div style="text-align:right;">${fmt(v3.dHoy)}</div>
-        <div style="text-align:right;color:var(--muted);">${v3.confidence!=null ? v3.confidence : '-'}</div>
+        <div style="text-align:right;color:var(--muted);">${qaIdent('v3')}</div>
+        <div style="text-align:right;color:var(--muted);">${qaComps('v3')}</div>
         <div style="color:var(--muted);">V3G</div>
         <div style="text-align:right;">${fmt(vg.dLav)}</div>
         <div style="text-align:right;font-weight:600;">${fmt(vg.anker)}${vg.override?' <span style="font-size:9px;font-weight:800;color:#1B5E20;">QA</span>':''}</div>
         <div style="text-align:right;">${fmt(vg.dHoy)}</div>
-        <div style="text-align:right;color:var(--muted);">${vg.score!=null ? vg.score : '-'}</div>
+        <div style="text-align:right;color:var(--muted);">${qaIdent('v3g')}</div>
+        <div style="text-align:right;color:var(--muted);">${qaComps('v3g')}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
         <div>${(function(){var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O')return '<b style="color:#E65100;">V3G Ordna</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter margin og fee).';if(a==='B')return '<b style="color:#1B5E20;">B V3G</b> D-lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.90 etter margin og fee).';return '<b style="color:#6A1B9A;">A Easy</b> D-lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
-        <div>V3 ${fmt(v3.dLav)}${dV3!=null?' <b style="color:'+(Math.abs(dV3)>15?'#A8221C':'var(--text)')+'">('+(dV3>=0?'+':'')+dV3+'%)</b>':''}
-         · V3G ${fmt(vg.dLav)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}</div>
-        ${bpConfLine?'<div>'+esc(bpConfLine)+'</div>':''}
+        <div>Anker V3 ${fmt(v3.anker)}${dV3!=null?' <b style="color:'+(Math.abs(dV3)>15?'#A8221C':'var(--text)')+'">('+(dV3>=0?'+':'')+dV3+'%)</b>':''}
+         · V3G ${fmt(vg.anker)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}
+         <span style="color:#999;"> mot Easy</span></div>
         ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${((vg.kalkyle==='retur'||vg.retur_mult)&&vg.original_dLav!=null)?'<div style="color:#1B5E20;">Retur-kalkyle ×'+(vg.retur_mult||0.90)+': standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${(vg.origin_cap&&vg.origin_cap.originPrice)?'<div style="color:#E65100;">Origin-cap ×0.95: '+fmt(vg.origin_cap.from)+' → '+fmt(vg.origin_cap.to)+' (annonse '+fmt(vg.origin_cap.originPrice)+')</div>':''}
