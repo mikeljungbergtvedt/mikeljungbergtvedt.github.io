@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c274</title>
+<title>Peasy Pulse v16.04.c275</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c274 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c275 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c274 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c275 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1685,6 +1685,12 @@ window.MARK_V16_04 = (function(){
 <section class="mode-section" data-mode="pipe" id="pipe-section" style="display:none;">
   <h1 class="page" style="margin-bottom:4px">Pipe - uavklart</h1>
   <div class="page-sub" style="margin-bottom:14px">Eval er sendt, venter pa at kunden bestiller transport. Konverteringsbottleneck - aktuell rate <span id="pipe-aksept-rate" style="font-weight:700;color:#004225">-</span> gar videre til Gire bestilt (siste 30d). Live ERP-status.</div>
+  <div id="pipe-fee-card" style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:12px;padding:14px 16px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#667;font-weight:700;margin-bottom:10px">Peasy-fee i pipe</div>
+    <div id="pipe-fee-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px"></div>
+    <div style="height:88px;position:relative"><canvas id="pipe-fee-chart"></canvas></div>
+    <div id="pipe-fee-note" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+  </div>
   <div id="pipe-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px"></div>
   <div style="margin-bottom:18px;font-size:11px;color:var(--muted);text-align:right">Sist oppdatert: <span id="pipe-updated">-</span> &middot; XLSX + live ERP-events &middot; <a href="#" onclick="loadPipe();return false" style="color:var(--green);text-decoration:none">Last pa nytt</a></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px">
@@ -4116,6 +4122,57 @@ async function loadPipe(){
     kpis+=kpi('Snitt alder',snittAge+' ar','flate-snitt');
     if(finansPct!==null)kpis+=kpi('Finans-andel',finansPct+' %','har finans');
     document.getElementById('pipe-kpis').innerHTML=kpis;
+    // c275: Peasy-fee i pipe — X = sum feeFromE(D-lav), forventet = X × (solgt 30d / leads 30d)
+    try{
+      var xFee=0, nFee=0;
+      enriched.forEach(function(e){
+        var dlav=(typeof parseDLow==='function')?parseDLow(e.r[cVerdi]):null;
+        var fee=(typeof feeFromE==='function')?feeFromE(dlav):null;
+        if(fee){ xFee+=fee; nFee++; }
+      });
+      var d30To=new Date();d30To.setDate(d30To.getDate()-1);d30To.setHours(23,59,59,999);
+      var d30From=new Date(d30To);d30From.setDate(d30From.getDate()-29);d30From.setHours(0,0,0,0);
+      var leads30=0,sold30=0;
+      lr.slice(1).forEach(function(r){
+        var dL=parseDate(r[14]); if(dL&&dL>=d30From&&dL<=d30To) leads30++;
+        var dS=parseDate(r[18]); if(dS&&dS>=d30From&&dS<=d30To) sold30++;
+      });
+      var ratio=leads30>0?(sold30/leads30):0;
+      var forventet=Math.round(xFee*ratio);
+      var ratioPct=leads30>0?(Math.round(ratio*1000)/10):null;
+      var feeStats=document.getElementById('pipe-fee-stats');
+      if(feeStats){
+        feeStats.innerHTML=
+          kpi('N', n, 'uavklart · Venter trans. best.','#004225')
+          +kpi('X', fmt(xFee)+' kr', nFee+' biler med D-lav · 100 % salg','#E65100')
+          +kpi('30d-ratio', ratioPct==null?'—':(ratioPct+' %'), sold30+' solgt / '+leads30+' leads')
+          +kpi('Forventet', fmt(forventet)+' kr', 'X × 30d-ratio','#004225');
+      }
+      var feeNote=document.getElementById('pipe-fee-note');
+      if(feeNote) feeNote.textContent='Fee fra D-lav (trapp 5900/8900/9900/11900), ikke D-lav × fee. Leads = SD mottatt, solgt = Solgt på, alle kilder, samme 30d som Pulse.';
+      var canvas=document.getElementById('pipe-fee-chart');
+      if(canvas && typeof Chart!=='undefined'){
+        var ex=Chart.getChart(canvas);
+        if(ex) ex.destroy();
+        new Chart(canvas,{
+          type:'bar',
+          data:{
+            labels:['Forventet','X (100 % salg)'],
+            datasets:[{data:[forventet,xFee],backgroundColor:['rgba(0,66,37,0.85)','rgba(230,81,0,0.55)'],borderRadius:4,barPercentage:0.55,categoryPercentage:0.7}]
+          },
+          options:{
+            indexAxis:'y',
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return Math.round(ctx.parsed.x||0).toLocaleString('nb-NO')+' kr';}}}},
+            scales:{
+              x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#888',font:{size:10},callback:function(v){return Math.round(v/1000)+'k';}}},
+              y:{grid:{display:false},ticks:{color:'#004225',font:{size:11,weight:'600'}}}
+            }
+          }
+        });
+      }
+    }catch(eFee){}
     // Dynamisk eval-aksept-rate (samme logikk som Operasjonelt) - bruk window.getEvalAksept hvis tilgjengelig
     var pipeRate='-';
     try{
@@ -4794,7 +4851,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c274</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c275</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
