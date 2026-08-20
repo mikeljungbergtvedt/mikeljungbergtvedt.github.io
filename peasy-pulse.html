@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c282</title>
+<title>Peasy Pulse v16.04.c283</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -296,7 +296,7 @@ function authLogout(){
     <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
-    <span class="hdr-meta">v16.04.c282 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
+    <span class="hdr-meta">v16.04.c283 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
 </header>
@@ -448,7 +448,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c282 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c283 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -5255,7 +5255,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c282</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c283</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -5632,6 +5632,21 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       } catch (eFl) {}
       try {
+        const sigR = await fetch(PA_PROXY_ERP.replace('/list/','/signaler'), {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
+        if (sigR.ok) {
+          const sigJ = await sigR.json();
+          const raw = (sigJ && sigJ.signaler) || {};
+          const map = {};
+          Object.keys(raw).forEach(function(k){
+            var ent = raw[k];
+            if (!ent) return;
+            map[String(k)] = ent;
+            if (ent.regnr) map[String(ent.regnr).toUpperCase()] = ent;
+          });
+          window._signaler_data = map;
+        }
+      } catch (eSig) {}
+      try {
         var qaSp = countListe3Split(liste3);
         applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
       } catch (eQaSp) {}
@@ -5643,13 +5658,25 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!measR.ok) { measR = await fetch(measFallback); }
       const measText = await measR.text();
       const measRecs = measText.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e) { return null; } }).filter(Boolean);
-      // Bygg map: regnr -> nyeste V3-measurement
+      // Siste Easy / V3 / V3G per bot — ikke bare siste v3-rad (Honda 11:11 droppet Easy).
       const v3ByRegnr = {};
+      const easyByRegnr = {};
+      function isRealEasy(ev){
+        if (!ev || typeof ev !== 'object') return false;
+        if (Number.isFinite(Number(ev.dLav))) return true;
+        return ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort;
+      }
       for (const r of measRecs) {
-        if (r.evaluator !== 'v3') continue;
         const rg = String(r.regnr || '').toUpperCase();
         if (!rg) continue;
-        if (!v3ByRegnr[rg] || (r.timestamp || '') > (v3ByRegnr[rg].timestamp || '')) v3ByRegnr[rg] = r;
+        if (r.evaluator === 'v3' || r.v2) {
+          if (!v3ByRegnr[rg] || (r.timestamp || '') > (v3ByRegnr[rg].timestamp || '')) v3ByRegnr[rg] = r;
+        }
+        if (isRealEasy(r.easy)) {
+          if (!easyByRegnr[rg] || (r.timestamp || '') > (easyByRegnr[rg]._ts || '')) {
+            easyByRegnr[rg] = Object.assign({}, r.easy, { _ts: r.timestamp, kjorbar: r.easy.kjorbar || r.kjorbar || null });
+          }
+        }
       }
 
       // [v3g] Fetch V3G-measurements (Grok) - defensiv, feiler stille
@@ -5708,10 +5735,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
           km,
           created_at: b.created_at || b.updated_at || null,
           easy: (function(){
-            var ev = (v3m && v3m.easy) || null;
-            var real = ev && (ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
+            var ev = easyByRegnr[rg] || (v3m && v3m.easy) || null;
+            var real = ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
             if (!real) return { dLav: null, dHoy: null, anker: null };
-            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence, comps_count: ev.comps_count, ident_score: ev.ident_score, comps_score: ev.comps_score, combined_score: ev.combined_score };
+            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence, comps_count: ev.comps_count, ident_score: ev.ident_score, comps_score: ev.comps_score, combined_score: ev.combined_score, begrunnelse_kort: ev.begrunnelse_kort, kjorbar: ev.kjorbar };
           })(),
           v3: v3m,
           manufacturer: b.manufacturer || null,
@@ -5802,7 +5829,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if(vg.score!=null) return String(vg.score);
       return '—';
     }
-    const hasN = function(n){ return n!=null && Number.isFinite(Number(n)) && Number(n)>0; };
+    const hasN = function(n){ return n!=null && Number.isFinite(Number(n)); };
     const easyOk = hasN(easy.dLav);
     const v3Ok = hasN(v3.dLav);
     const v3gOk = hasN(vg.dLav);
@@ -5836,8 +5863,19 @@ setTimeout(tick,1500);setInterval(tick,5000);
       label='VURDER'; color='#8A6708'; icon='🟡';
     }
     if (kmBlock && !scope) { label='QA'; color='#A8221C'; icon='🔴'; }
+    const sellerCmt = String((e.v3g && e.v3g.kundeComment) || v3m.kundeComment || v3m.sd_comment || (easy && easy.begrunnelse_kort && '') || '').trim();
+    const kjorbar = (function(){
+      var kb = (v3m && v3m.kjorbar) || (e.v3g && e.v3g.kjorbar) || (easy && easy.kjorbar) || null;
+      if (kb === 'nei' || kb === 'usikker' || kb === 'ja') return kb;
+      var sig = window._signaler_data && (window._signaler_data[e.regnr] || window._signaler_data[String(e.erpId)]);
+      if (sig && (sig.kjorbar==='nei'||sig.kjorbar==='usikker'||sig.kjorbar==='ja')) return sig.kjorbar;
+      var cmt = String((e.v3g && e.v3g.kundeComment) || v3m.kundeComment || v3m.sd_comment || (sig && sig.comment) || '').trim();
+      if (/ikke\s*kj[øo]rbar|kan ikke kj[øo]res|d[øo]d motor|0\s*bar|starter ikke|reparasjonsobjekt|delebil|totalskade|motorstopp|motor.*defekt|cylinder\s*\d+\s*(er\s+)?(defekt|d[øo]d)|sylinder\s*\d+\s*(er\s+)?(defekt|d[øo]d)|\d\s*bar\s*av/i.test(cmt)) return 'nei';
+      if (cmt) return 'usikker';
+      return null;
+    })();
+    if (kjorbar === 'nei' && !scope && allPriced) { label='QA'; color='#A8221C'; icon='🔴'; }
     const key = e.regnr + '__' + e.erpId;
-    const sellerCmt = String((e.v3g && e.v3g.kundeComment) || v3m.kundeComment || '').trim();
     const sellerLabel = (String(e.source||'').toLowerCase()==='driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
     const srcLive = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
     const armLive = (typeof abArm==='function') ? abArm(e.erpId, srcLive) : 'A';
@@ -5898,8 +5936,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const src = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
       const arm = (typeof abArm==='function') ? abArm(e.erpId, src) : 'A';
       const sendWho = arm==='O' ? 'V3G ORDNA' : (arm==='B' ? 'V3G' : 'Easy');
-      const sendBg = arm==='O' ? '#E65100' : (arm==='B' ? '#1B5E20' : '#6A1B9A');
-      actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">📤 SEND '+sendWho+'</button>';
+      const sendBg = kjorbar==='nei' ? '#A8221C' : (arm==='O' ? '#E65100' : (arm==='B' ? '#1B5E20' : '#6A1B9A'));
+      const sendTxt = kjorbar==='nei' ? 'QA — IKKE KJØRBAR' : ('📤 SEND '+sendWho);
+      actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">'+sendTxt+'</button>';
     }
     return `<div class="qa-card ${scope||!allPriced?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
@@ -5912,6 +5951,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
       </div>
       ${timelineHtml}
       ${klasseBanner}
+      ${(function(){
+        if (kjorbar==='nei') return '<div style="margin-bottom:8px;padding:8px 10px;background:#FDECEA;border:1px solid #E57373;border-radius:6px;font-size:12px;color:#A8221C;font-weight:800;letter-spacing:0.4px;">IKKE KJØRBAR</div>';
+        if (kjorbar==='usikker') return '<div style="margin-bottom:8px;padding:8px 10px;background:#FFF8E1;border:1px solid #FFD54F;border-radius:6px;font-size:12px;color:#8A6708;font-weight:800;letter-spacing:0.4px;">SJEKK KJØRBARHET</div>';
+        return '';
+      })()}
+      <div style="margin-bottom:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border);border-radius:6px;font-size:12px;line-height:1.45;">
+        <b>${esc(sellerLabel)}</b>
+        <div style="margin-top:3px;color:${sellerCmt?'#333':'#888'};">${sellerCmt ? esc(sellerCmt) : '(tom)'}</div>
+      </div>
       ${qaKmBanner(kmBlock)}
       ${(function(){
         const orig = v3m.origin || (e.v3g && e.v3g.origin) || null;
