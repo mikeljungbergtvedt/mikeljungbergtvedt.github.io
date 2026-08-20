@@ -4692,45 +4692,75 @@ async function loadScoreboard(){
 function renderOrdnaDashboard(){
   var rows=(window._lastRows||[]).slice(1).filter(isOrdnaRow);
   function pd(v){return parseDate(v);}
+  function shortD(s){var p=String(s||'').trim().split(' ')[0]; return p||'—';}
   function kpi(lbl,val,sub,col){return '<div style="background:#fff;border:1px solid rgba(230,81,0,0.18);border-radius:10px;padding:10px 14px"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#8D6E63">'+lbl+'</div><div style="font-size:20px;font-weight:800;color:'+(col||'#E65100')+'">'+val+'</div><div style="font-size:10px;color:#667">'+(sub||'')+'</div></div>';}
-  function fmtN(n){return Math.round(n).toLocaleString('nb-NO');}
-  var now=new Date();
+  function isAkseptert(r){
+    if(pd(r[15])||pd(r[16])||pd(r[17])||pd(r[18])||pd(r[21])) return true;
+    var st=String(r[12]||'').toLowerCase();
+    if(/avvist|declined|rejected/.test(st)) return false;
+    return /trans\.?\s*best|waiting_for_transport|mottatt|received|auction|sold|return|contract|waiting_for_sale|waiting_for_prep|waiting_for_val|car_received|ready_for|select_auction|change_owner|to_be_returned/.test(st);
+  }
+  function bestiltDato(r){
+    return pd(r[15])||pd(r[16])||pd(r[17])||pd(r[18])||pd(r[21])||(isAkseptert(r)?(pd(r[31])||pd(r[14])):null);
+  }
+  function pack(inP){
+    var leads=rows.filter(function(r){return inP(pd(r[14]));}).length;
+    var priset=rows.filter(function(r){return inP(pd(r[31]));}).length;
+    var bestilt=rows.filter(function(r){return inP(bestiltDato(r));}).length;
+    var sold=rows.filter(function(r){return inP(pd(r[18]));}).length;
+    var ret=rows.filter(function(r){return inP(pd(r[21]));}).length;
+    var ferdig=sold+ret;
+    return {
+      leads:leads, priset:priset, bestilt:bestilt, sold:sold, ret:ret, ferdig:ferdig,
+      ep:priset?Math.round(bestilt/priset*100):null,
+      bp:ferdig?Math.round(sold/ferdig*100):null
+    };
+  }
   var d30=new Date(); d30.setDate(d30.getDate()-1); d30.setHours(23,59,59,999);
   var d30from=new Date(d30); d30from.setDate(d30from.getDate()-29); d30from.setHours(0,0,0,0);
-  function in30(d){return d&&d>=d30from&&d<=d30;}
-  var leadsT=rows.filter(function(r){return !!pd(r[14]);}).length;
-  var prisetT=rows.filter(function(r){return !!pd(r[31]);}).length;
-  var soldT=rows.filter(function(r){return !!pd(r[18]);}).length;
-  var retT=rows.filter(function(r){return !!pd(r[21]);}).length;
-  var leads30=rows.filter(function(r){return in30(pd(r[14]));}).length;
-  var priset30=rows.filter(function(r){return in30(pd(r[31]));}).length;
-  var sold30=rows.filter(function(r){return in30(pd(r[18]));}).length;
-  var ret30=rows.filter(function(r){return in30(pd(r[21]));}).length;
-  var l2s30=leads30?Math.round(sold30/leads30*1000)/10:null;
-  var l2sT=leadsT?Math.round(soldT/leadsT*1000)/10:null;
-  var ratio30=l2s30;
+  var m30=pack(function(d){return d&&d>=d30from&&d<=d30;});
+  var mT=pack(function(d){return !!d;});
+  function rowKpi(title, m){
+    return '<div style="grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8D6E63">'+title+'</div>'
+      +kpi('Leads mottatt', m.leads, 'SD-dato i perioden')
+      +kpi('Eval-aksept', m.ep==null?'—':m.ep+'%', m.bestilt+' bestilt / '+m.priset+' priset', '#004225')
+      +kpi('Bestilt hent/lev', m.bestilt, 'aksepterte eval')
+      +kpi('Solgt', m.sold, m.ferdig?(m.bp+'% av ferdig auksjon'):'ingen ferdig', '#2E7D32')
+      +kpi('Returnert', m.ret, m.ferdig?(Math.round(m.ret/m.ferdig*100)+'% av ferdig auksjon'):'ingen ferdig', m.ret?'#C62828':'#667')
+      +kpi('Bud-aksept', m.bp==null?'—':m.bp+'%', m.sold+' solgt / '+m.ferdig+' ferdig (solgt eller returnert)', '#004225');
+  }
   var el30=document.getElementById('ordna-kpi');
-  if(el30) el30.innerHTML='<div style="grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8D6E63">Siste 30 dager</div>'
-    +kpi('Leads', leads30, 'SD mottatt')
-    +kpi('Priset', priset30, 'Estimering')
-    +kpi('Solgt', sold30, '')
-    +kpi('Retur', ret30, '')
-    +kpi('Lead → solgt', ratio30==null?'—':ratio30+' %', sold30+' / '+leads30)
-    +kpi('30d-ratio', ratio30==null?'—':ratio30+' %', 'solgt / leads');
+  if(el30) el30.innerHTML=rowKpi('Siste 30 dager', m30);
   var elT=document.getElementById('ordna-kpi-tot');
-  if(elT) elT.innerHTML='<div style="grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8D6E63">Totalt</div>'
-    +kpi('Leads', leadsT, 'alle')
-    +kpi('Priset', prisetT, '')
-    +kpi('Solgt', soldT, '')
-    +kpi('Retur', retT, '')
-    +kpi('Lead → solgt', l2sT==null?'—':l2sT+' %', soldT+' / '+leadsT);
+  if(elT) elT.innerHTML=rowKpi('Totalt', mT);
+  var flyt=document.getElementById('ordna-flyt');
+  if(flyt){
+    var ep=m30.ep==null?'—':m30.ep+'%';
+    var bp=m30.bp==null?'—':m30.bp+'%';
+    var rp=m30.ferdig?Math.round(m30.ret/m30.ferdig*100)+'%':'—';
+    flyt.innerHTML='<div class="section-label" style="margin-bottom:8px">Ordna-flyt — siste 30 dager</div>'
+      +'<div style="background:#fff;border:1px solid rgba(230,81,0,0.18);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:stretch">'
+      +'<div><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Leads mottatt</div><div style="font-size:28px;font-weight:900;color:#E65100">'+m30.leads+'</div></div>'
+      +'<div><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Eval-aksept</div><div style="font-size:28px;font-weight:900;color:#004225">'+ep+'</div><div style="font-size:10px;color:#888">bestilt / priset</div></div>'
+      +'<div><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Auksjon ferdig</div><div style="font-size:28px;font-weight:900;color:#004225">'+m30.ferdig+'</div><div style="font-size:10px;color:#888">solgt + returnert</div></div>'
+      +'<div><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Solgt</div><div style="font-size:28px;font-weight:900;color:#2E7D32">'+m30.sold+'</div><div style="font-size:10px;color:#888">Bud-aksept '+bp+'</div></div>'
+      +'<div><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Returnert</div><div style="font-size:28px;font-weight:900;color:#C62828">'+m30.ret+'</div><div style="font-size:10px;color:#888">retur-rate '+rp+'</div></div>'
+      +'</div>';
+  }
   var tbody=document.getElementById('ordna-cars-tbody');
   if(tbody){
-    if(!rows.length) tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">Ingen Ordna-biler</td></tr>';
+    if(!rows.length) tbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted)">Ingen Ordna-biler</td></tr>';
     else tbody.innerHTML=rows.slice().sort(function(a,b){return (pd(b[14])||0)-(pd(a[14])||0);}).map(function(r){
-      var dlav=parseDLow(r[3]);
-      var fee=feeFromE(dlav);
-      return '<tr style="border-top:1px solid rgba(230,81,0,0.12)"><td style="padding:8px 12px;font-weight:700">'+(r[1]||'—')+'</td><td style="padding:8px 12px;color:#667">'+(r[6]||'—')+'</td><td style="padding:8px 12px">'+(r[12]||'—')+'</td><td style="padding:8px 12px;text-align:right">'+(dlav?fmtN(dlav)+' kr':'—')+'</td><td style="padding:8px 12px;text-align:right">'+(fee?fmtN(fee)+' kr':'—')+'</td></tr>';
+      var bil=[r[6]||'',r[7]||'',r[8]||''].filter(Boolean).join(' ');
+      return '<tr style="border-top:1px solid rgba(230,81,0,0.12)">'
+        +'<td style="padding:8px 12px;font-weight:700">'+(r[1]||'—')+'</td>'
+        +'<td style="padding:8px 12px;color:#667">'+(bil||'—')+'</td>'
+        +'<td style="padding:8px 12px">'+(r[12]||'—')+'</td>'
+        +'<td style="padding:8px 12px;color:#667">'+shortD(r[14])+'</td>'
+        +'<td style="padding:8px 12px;color:#667">'+(shortD(r[15]||r[16])!=='—'?shortD(r[15]||r[16]):(isAkseptert(r)?'ja':'—'))+'</td>'
+        +'<td style="padding:8px 12px;color:#2E7D32">'+shortD(r[18])+'</td>'
+        +'<td style="padding:8px 12px;color:#C62828">'+shortD(r[21])+'</td>'
+        +'</tr>';
     }).join('');
   }
   var canvas=document.getElementById('leadsDailyChartOrdna');
