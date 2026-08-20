@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c270</title>
+<title>Peasy Pulse v16.04.c271</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c270 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c271 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c270 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c271 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -4748,7 +4748,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c270</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c271</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -5030,6 +5030,34 @@ setTimeout(tick,1500);setInterval(tick,5000);
   }
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  function qaKmBlock(e){
+    var v3m = (e && e.v3) || {};
+    var v2 = v3m.v2 || {};
+    var g = (e && e.v3g) || {};
+    var vg = g.v3g || {};
+    var st = v3m.km_status || v2.km_status || g.km_status || vg.km_status || null;
+    var eu = (v3m.km_siste_eu != null) ? v3m.km_siste_eu : (v2.km_siste_eu != null ? v2.km_siste_eu : (g.km_siste_eu != null ? g.km_siste_eu : null));
+    var euDato = v3m.km_siste_eu_dato || v2.km_siste_eu_dato || g.km_siste_eu_dato || null;
+    var blob = '';
+    try { blob = JSON.stringify({a:v2.risiko_flagg, b:v2.begrunnelse_kort, c:v3m.easy && v3m.easy.begrunnelse_kort, d:e && e.easy && e.easy.begrunnelse_kort}); } catch(x){}
+    var blocked = st ? (st === 'UMULIG_LAVERE_ENN_EU') : (blob && blob.indexOf('UMULIG_LAVERE_ENN_EU') >= 0);
+    if (!blocked) return null;
+    return { status: st || 'UMULIG_LAVERE_ENN_EU', km: e && e.km, eu: eu, euDato: euDato };
+  }
+  function qaKmBanner(block){
+    if (!block) return '';
+    function kmt(n){ if(n==null||!Number.isFinite(Number(n))) return null; return Math.round(Number(n)).toLocaleString('nb-NO'); }
+    function dato(s){ if(!s) return ''; var t=String(s).slice(0,10); var p=t.split('-'); return p.length===3 ? p[2]+'.'+p[1]+'.'+p[0] : t; }
+    var oppgitt = kmt(block.km);
+    var eu = kmt(block.eu);
+    var d = dato(block.euDato);
+    var linje = (oppgitt && eu)
+      ? 'Selger '+oppgitt+' km · EU '+(d?d+' · ':'')+eu+' km. '
+      : 'Oppgitt km er lavere enn siste EU. ';
+    return '<div style="margin-bottom:8px;padding:8px 10px;background:#FDECEA;border:1px solid #E57373;border-radius:6px;font-size:12px;color:#A8221C;">'
+      +'<b>Km umulig mot EU.</b> '+linje+'Innhent km-bekreftelse (bilde av teller + bekreft regnr) før bud.</div>';
+  }
+
   function statusFor(r){
     const easy = r.easy || {}, v3 = r.v2 || {};
     const easyMid = (easy.dLav && easy.dHoy) ? (easy.dLav + easy.dHoy)/2 : null;
@@ -5282,6 +5310,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const armGate = (typeof abArm==='function') ? abArm(e.erpId, srcGate) : 'A';
     const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
     const compsGate = armGate==='A' ? qaNum(easy.comps_score) : qaNum((e.v3g&&e.v3g.comps_score)!=null?e.v3g.comps_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.comps_score));
+    const kmBlock = qaKmBlock(e);
     let label='SEND', color='#0F6E66', icon='✅';
     if (scope) {
       label='UTENFOR SCOPE'; color='#6D4C41'; icon='⛔';
@@ -5298,6 +5327,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else if (maxAbs > 15){
       label='VURDER'; color='#8A6708'; icon='🟡';
     }
+    if (kmBlock && !scope) { label='QA'; color='#A8221C'; icon='🔴'; }
     const key = e.regnr + '__' + e.erpId;
     const sellerCmt = String((e.v3g && e.v3g.kundeComment) || v3m.kundeComment || '').trim();
     const sellerLabel = (String(e.source||'').toLowerCase()==='driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
@@ -5352,6 +5382,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else if (scope) {
       const fant = (e.v3g && e.v3g.biltype && e.v3g.biltype.fant) || (e.v3 && e.v3.biltype && e.v3.biltype.fant) || 'ikke personbil/varebil';
       actionHtml = '<div style="flex:1;min-width:100px;padding:10px 12px;background:#EFEBE9;color:#6D4C41;border:1px solid #D7CCC8;border-radius:6px;font-weight:600;font-size:13px;text-align:center;">⛔ UTENFOR SCOPE — '+esc(fant)+'</div>';
+    } else if (kmBlock) {
+      actionHtml = '<div style="flex:1;min-width:100px;padding:10px 12px;background:#FDECEA;color:#A8221C;border:1px solid #E57373;border-radius:6px;font-weight:600;font-size:13px;text-align:center;">⛔ Innhent km-bekreftelse</div>';
     } else if (!allPriced) {
       actionHtml = '<button disabled class="qa-send-btn" title="Venter på '+missing.join(', ')+'" style="flex:1;min-width:100px;padding:10px 12px;background:#BDBDBD;color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:not-allowed;">Venter: '+esc(missing.join(', '))+'</button>';
     } else {
@@ -5372,6 +5404,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       </div>
       ${timelineHtml}
       ${klasseBanner}
+      ${qaKmBanner(kmBlock)}
       ${(function(){
         const orig = v3m.origin || (e.v3g && e.v3g.origin) || null;
         const ol = e.finn_link
@@ -5427,7 +5460,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${actionHtml}
         <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️${(sellerCmt || (e.hist && e.hist.length))?' <span style="color:#A8221C;font-weight:700;">●</span>':''}</button>
       </div>
-      ${(!sentTime && !scope) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
+      ${(!sentTime && !scope && !kmBlock) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
         <input class="qa-anker-input" type="number" step="1000" min="5000" placeholder="Nytt anker (${ankerWho})" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-source="${esc(srcLive)}" data-km="${e.km||0}" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
         <button type="button" class="qa-anker-btn" data-key="${key}" style="padding:8px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;">Sett anker</button>
       </div>` : ''}
@@ -5474,8 +5507,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
         body: JSON.stringify({regnr, internnr: erpId, km})
       });
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP '+r.status));
       btn.textContent = j.queued ? 'Kø-lagt ✓' : (j.ok ? 'OK ✓' : 'Feil');
       btn.style.background = '#0F6E66';
       const sent = loadSent();
