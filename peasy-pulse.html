@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c269</title>
+<title>Peasy Pulse v16.04.c270</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c269 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c270 &middot; <span id="hdr-date">19. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c269 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c270 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -4748,7 +4748,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c269</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c270</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -5176,7 +5176,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
             var ev = (v3m && v3m.easy) || null;
             var real = ev && (ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
             if (!real) return { dLav: null, dHoy: null, anker: null };
-            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence, comps_count: ev.comps_count };
+            return { dLav: ev.dLav, dHoy: ev.dHoy, anker: ev.anker, confidence: ev.confidence, comps_count: ev.comps_count, ident_score: ev.ident_score, comps_score: ev.comps_score, combined_score: ev.combined_score };
           })(),
           v3: v3m,
           manufacturer: b.manufacturer || null,
@@ -5230,11 +5230,26 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const maxAbs = Math.max(dV3==null?0:Math.abs(dV3), dVg==null?0:Math.abs(dVg));
     const bp = v3.bulletproof_score != null ? Math.round(Number(v3.bulletproof_score) <= 1 ? v3.bulletproof_score*100 : v3.bulletproof_score) : null;
     const conf = v3.confidence;
+    function qaNum(v){ var n=Number(v); return Number.isFinite(n)?n:null; }
     function qaIdent(bot){
+      if(bot==='easy' && qaNum(easy.ident_score)!=null) return String(qaNum(easy.ident_score));
+      if(bot==='v3' && qaNum(v3.ident_score)!=null) return String(qaNum(v3.ident_score));
       if(bot==='v3' && bp!=null) return String(bp);
+      if(bot==='v3g'){
+        var g = e.v3g||{};
+        var s = qaNum(g.ident_score!=null?g.ident_score:(g.v3g&&g.v3g.ident_score));
+        if(s!=null) return String(s);
+      }
       return '—';
     }
     function qaComps(bot){
+      if(bot==='easy' && qaNum(easy.comps_score)!=null) return String(qaNum(easy.comps_score));
+      if(bot==='v3' && qaNum(v3.comps_score)!=null) return String(qaNum(v3.comps_score));
+      if(bot==='v3g'){
+        var g2 = e.v3g||{};
+        var s2 = qaNum(g2.comps_score!=null?g2.comps_score:(g2.v3g&&g2.v3g.comps_score));
+        if(s2!=null) return String(s2);
+      }
       if(bot==='easy'){
         if(easy.comps_count!=null && easy.comps_count!=='') return String(easy.comps_count);
         if(easy.confidence!=null) return String(easy.confidence);
@@ -5246,7 +5261,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
         return '—';
       }
       var n = e.v3g && e.v3g.carinfo && e.v3g.carinfo.comps;
-      if(n==null && e.v3g && e.v3g.v3g) n = e.v3g.comps;
       if(vg.score!=null && n!=null) return n+'/'+vg.score;
       if(n!=null) return String(n);
       if(vg.score!=null) return String(vg.score);
@@ -5264,14 +5278,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!v3gOk) missing.push('V3G');
     }
     const allPriced = !scope && missing.length===0;
+    const srcGate = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
+    const armGate = (typeof abArm==='function') ? abArm(e.erpId, srcGate) : 'A';
+    const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
+    const compsGate = armGate==='A' ? qaNum(easy.comps_score) : qaNum((e.v3g&&e.v3g.comps_score)!=null?e.v3g.comps_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.comps_score));
     let label='SEND', color='#0F6E66', icon='✅';
     if (scope) {
       label='UTENFOR SCOPE'; color='#6D4C41'; icon='⛔';
     } else if (!allPriced) {
       label='VENTER BOTS'; color='#8A8A8A'; icon='◌';
-    } else if (maxAbs > 30 || (bp!=null && bp<75) || (conf!=null && conf<40)){
+    } else if (identGate != null) {
+      if (identGate < 70) { label='QA'; color='#A8221C'; icon='🔴'; }
+      else if (compsGate != null && compsGate < 60) { label='VURDER'; color='#8A6708'; icon='🟡'; }
+      else if (identGate >= 70 && compsGate != null && compsGate >= 60 && maxAbs >= 15) { label='QA'; color='#A8221C'; icon='🔴'; }
+      else if (identGate >= 70 && compsGate != null && compsGate >= 60) { label='SEND'; color='#0F6E66'; icon='✅'; }
+      else { label='VURDER'; color='#8A6708'; icon='🟡'; }
+    } else if (maxAbs > 30){
       label='QA'; color='#A8221C'; icon='🔴';
-    } else if (maxAbs > 15 || (conf!=null && conf<85)){
+    } else if (maxAbs > 15){
       label='VURDER'; color='#8A6708'; icon='🟡';
     }
     const key = e.regnr + '__' + e.erpId;
@@ -5369,8 +5393,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="color:var(--muted);font-size:10px;text-align:right;">D-lav</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">Anker</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">D-høy</div>
-        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Origin-ident (V3 bulletproof). Easy/V3G har ikke egen ident-score ennå.">Ident</div>
-        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Comps: Easy conf eller n · V3 n · V3G n/score">Comps</div>
+        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Origin-ident 0–100. 100 = Finn-origin matcher Vegvesen. Ellers Vegvesen-felt (typisk 70–90).">Ident</div>
+        <div style="color:var(--muted);font-size:10px;text-align:right;" title="Comps 0–100 gitt ident (nevner). Kan ikke overstige ident. Tynt utvalg kappes.">Comps</div>
         <div style="color:var(--muted);">Easy</div>
         <div style="text-align:right;font-weight:700;">${fmt(easy.dLav)}</div>
         <div style="text-align:right;font-weight:600;">${fmt(easyAnker)}</div>
