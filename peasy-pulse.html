@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c285</title>
+<title>Peasy Pulse v16.04.c287</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -296,7 +296,7 @@ function authLogout(){
     <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
-    <span class="hdr-meta">v16.04.c285 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
+    <span class="hdr-meta">v16.04.c287 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
 </header>
@@ -448,7 +448,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c285 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c287 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -2298,6 +2298,19 @@ function fmtDate(val){if(!val)return '-';var d=parseDate(val);if(!d||isNaN(d))re
 function pct(n,of){return of?Math.round(n/of*100):0;}
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:null;}
 
+function statusRank(s, erpStatus){
+  var u=String(erpStatus||'').toUpperCase();
+  var lo=String(s||'').toLowerCase();
+  if(/avvist|declined|rejected/.test(lo)||/REJECTED/.test(u)) return 90;
+  if(/sold|solgt/.test(lo)||u==='SOLD'||u==='SOLD_AND_PAID') return 80;
+  if(/return/.test(lo)||u==='RETURNED'||u==='TO_BE_RETURNED') return 70;
+  if(/contract|sign|change_owner|sales_note/.test(lo)||/CONTRACT|SIGN|CHANGE_OWNER/.test(u)) return 60;
+  if(/auction|sale_reaction/.test(lo)||/AUCTION|SALE_REACTION/.test(u)) return 50;
+  if(/mottatt|received|preparation|valuation|picturing/.test(lo)||/RECEIVED|PREPARATION|VALUATION|PICTURING/.test(u)) return 40;
+  if(/trans\.?\s*best|waiting_for_transport|på vei|on_the_way|ar_car_created/.test(lo)||/WAITING_FOR_TRANSPORT|ON_THE_WAY|AR_CAR_CREATED|ORDER_DELIVERY/.test(u)) return 30;
+  if(/endelig estimat/.test(lo)||u==='ESTIMATING_AR_FINAL') return 10;
+  return 0;
+}
 function overlayErpEvents(rows){
   if(!rows||!rows.length) return Promise.resolve(rows);
   var base=(window.PA_PROXY_ERP||'').replace(/\/list\/$/,'');
@@ -2314,7 +2327,10 @@ function overlayErpEvents(rows){
         var live=j.byRegnr[reg];
         if(!live) continue;
         n++;
-        if(live.pulseStatus) r[12]=live.pulseStatus;
+        var xlsxSt=String(r[12]||'').trim();
+        var liveRank=statusRank(live.pulseStatus, live.status);
+        var xlsxRank=statusRank(xlsxSt, '');
+        if(live.pulseStatus && liveRank>xlsxRank) r[12]=live.pulseStatus;
         var xlsxBud=parseInt(String(r[4]||'').replace(/\D/g,''),10)||0;
         if(live.maxBid&&!xlsxBud){ r[4]=live.maxBid; if(!r[19]) r[19]=live.maxBid; }
         var d=live.dateNO;
@@ -5292,7 +5308,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c285</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c287</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
