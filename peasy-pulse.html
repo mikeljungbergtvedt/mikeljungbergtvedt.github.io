@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c290</title>
+<title>Peasy Pulse v16.04.c291</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -459,7 +459,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c290 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c291 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -5368,7 +5368,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c290</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c291</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6026,23 +6026,22 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!sisK && rc === 2) sisK = 'varebil';
       if (!sisK && rc === 1) sisK = 'personbil';
       if (!klasse && !sisK) return '';
-      var title = klasse === 'varebil' ? 'VAREBIL' : (klasse === 'personbil' ? 'PERSONBIL' : String(klasse || sisK).toUpperCase());
-      var fant = bt.fant ? String(bt.fant).split('/')[0].trim() : '';
-      var comps = (sisK === 'varebil' || rc === 2)
-        ? 'Comps: kun varebil — ikke blandet med personbil'
-        : ((sisK === 'personbil' || rc === 1)
-          ? 'Comps: kun personbil — ikke blandet med varebil'
-          : 'Comps: biltype-filter ikke bekreftet på Finn-søk');
-      var mix = !!(klasse && sisK && klasse !== sisK);
+      function klasseLbl(k){
+        if (k === 'varebil') return 'Varebil';
+        if (k === 'personbil') return 'Personbil';
+        return k ? String(k).charAt(0).toUpperCase()+String(k).slice(1) : 'ukjent';
+      }
+      var originLbl = klasse ? klasseLbl(klasse) : 'ukjent';
+      var compsK = sisK || '';
+      var mix = !!(klasse && compsK && klasse !== compsK);
+      var compsTxt = mix
+        ? klasseLbl(compsK)+' — AVVIK'
+        : (compsK ? 'samme klasse' : 'ikke bekreftet');
       var bg = mix ? '#FDECEA' : (klasse === 'varebil' ? '#EFEBE9' : '#E8F5E9');
       var bd = mix ? '#E57373' : (klasse === 'varebil' ? '#A1887F' : '#A5D6A7');
       var col = mix ? '#A8221C' : (klasse === 'varebil' ? '#4E342E' : '#1B5E20');
-      return '<div style="margin-bottom:8px;padding:7px 10px;background:'+bg+';border:1px solid '+bd+';border-radius:6px;font-size:12px;color:'+col+';">'
-        +'<b>'+esc(title)+'</b>'
-        +(fant ? ' <span style="font-weight:400;color:#666;">· '+esc(fant)+'</span>' : '')
-        +'<div style="margin-top:2px;font-size:11px;">'+esc(comps)
-        +(mix ? ' <b>AVVIK: Finn-søk='+esc(sisK)+'</b>' : '')
-        +'</div></div>';
+      return '<div style="margin-bottom:8px;padding:6px 10px;background:'+bg+';border:1px solid '+bd+';border-radius:6px;font-size:12px;color:'+col+';">'
+        +'Origin: <b>'+esc(originLbl)+'</b> · Comps: <b>'+esc(compsTxt)+'</b></div>';
     })();
     // c216: SEND grå til Easy+V3+V3G har priset. Utenfor scope sendes ikke.
     let actionHtml;
