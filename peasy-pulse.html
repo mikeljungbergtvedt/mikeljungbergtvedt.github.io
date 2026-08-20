@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c289</title>
+<title>Peasy Pulse v16.04.c290</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -44,6 +44,9 @@ header{background:var(--green);min-height:56px;height:56px;padding:0 16px 0 20px
 .nav-more-menu .mode-btn{width:100%;text-align:left;padding:10px 14px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.85);border-radius:8px;min-height:36px;}
 .nav-more-menu .mode-btn:hover{background:rgba(255,255,255,0.08);}
 .nav-more-menu .mode-btn.active{background:rgba(255,200,0,0.16);color:#FFD54A;}
+.nav-more-sep{height:1px;background:rgba(255,255,255,0.10);margin:6px 8px;}
+.nav-more-menu .nav-logout{color:rgba(255,255,255,0.55);}
+.nav-more-menu .nav-logout:hover{background:rgba(255,255,255,0.08);color:#fff;}
 .nav-group-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.38);padding:10px 14px 4px;margin-top:4px;}
 .nav-group-label:first-child{margin-top:0;}
 main{max-width:1400px;margin:0 auto;padding:40px 24px 80px;}
@@ -305,7 +308,6 @@ function authLogout(){
     <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
-    <span class="hdr-meta">v16.04.c289 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
 </header>
@@ -457,7 +459,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c289 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c290 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1916,6 +1918,20 @@ function toggleHamburger(ev){
     restorePulseNavBtns();
   }
 }
+function appendMoreLogout(moreMenu){
+  if(!moreMenu) return;
+  moreMenu.querySelectorAll('.nav-logout,.nav-more-sep').forEach(function(el){el.remove();});
+  var sep=document.createElement('div');
+  sep.className='nav-more-sep nav-logout';
+  var out=document.createElement('button');
+  out.type='button';
+  out.className='mode-btn nav-logout';
+  out.setAttribute('role','menuitem');
+  out.textContent='Logg ut';
+  out.onclick=function(){authLogout();};
+  moreMenu.appendChild(sep);
+  moreMenu.appendChild(out);
+}
 function toggleNavMore(ev){
   if(ev) ev.stopPropagation();
   var wrap=document.getElementById('nav-more');
@@ -1935,6 +1951,7 @@ function layoutPulseNav(){
   var right=header&&header.querySelector('.header-right');
   if(!header||!toggle||!moreWrap||!moreMenu) return;
   var keepMoreOpen=moreWrap.classList.contains('open');
+  moreMenu.querySelectorAll('.nav-logout,.nav-more-sep').forEach(function(el){el.remove();});
   restorePulseNavBtns();
   moreWrap.classList.remove('open');
   if(moreBtn) moreBtn.setAttribute('aria-expanded','false');
@@ -1945,18 +1962,11 @@ function layoutPulseNav(){
     if(moreBtn) moreBtn.classList.remove('active');
     return;
   }
+  moreWrap.hidden=false;
   var gaps=28;
+  var moreW=moreWrap.offsetWidth||56;
   var avail=header.clientWidth-(logo?logo.offsetWidth:0)-(right?right.offsetWidth:0)-gaps;
   var btns=PULSE_NAV.map(function(item){return document.getElementById('btn-'+item.id);}).filter(Boolean);
-  var total=0;
-  btns.forEach(function(b){total+=b.offsetWidth+2;});
-  if(total<=avail){
-    moreWrap.hidden=true;
-    if(moreBtn) moreBtn.classList.remove('active');
-    return;
-  }
-  moreWrap.hidden=false;
-  var moreW=moreWrap.offsetWidth||56;
   var budget=Math.max(0,avail-moreW);
   var used=0;
   var overflowStart=-1;
@@ -1965,13 +1975,11 @@ function layoutPulseNav(){
     if(used+w>budget && i>=2){ overflowStart=i; break; }
     used+=w;
   }
-  if(overflowStart<0){
-    moreWrap.hidden=true;
-    if(moreBtn) moreBtn.classList.remove('active');
-    return;
+  if(overflowStart>=0){
+    for(var j=overflowStart;j<btns.length;j++) moreMenu.appendChild(btns[j]);
   }
-  for(var j=overflowStart;j<btns.length;j++) moreMenu.appendChild(btns[j]);
-  if(moreBtn) moreBtn.classList.toggle('active', !!moreMenu.querySelector('.mode-btn.active'));
+  appendMoreLogout(moreMenu);
+  if(moreBtn) moreBtn.classList.toggle('active', !!moreMenu.querySelector('.mode-btn.active:not(.nav-logout)'));
   if(keepMoreOpen){
     moreWrap.classList.add('open');
     if(moreBtn) moreBtn.setAttribute('aria-expanded','true');
@@ -5360,7 +5368,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c289</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c290</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
