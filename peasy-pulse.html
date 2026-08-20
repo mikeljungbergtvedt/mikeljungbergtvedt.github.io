@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c284</title>
+<title>Peasy Pulse v16.04.c285</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -296,7 +296,7 @@ function authLogout(){
     <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
-    <span class="hdr-meta">v16.04.c284 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
+    <span class="hdr-meta">v16.04.c285 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false">logg ut</a></span>
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
 </header>
@@ -448,7 +448,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c284 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c285 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -2712,7 +2712,7 @@ function render(data,rows){
   }
 
   opsHtml += dagKort('Leads mottatt i dag', tdC, tdC_peasy+' Peasy &middot; '+tdC_drive+' Drive', '#004225');
-  opsHtml += '<div style="grid-column:1/-1;font-size:12px;color:#E65100;padding:2px 4px 0">Ordna i dag: <strong>'+tdC_ordna+'</strong> <span style="color:#667">(egen kohort, ikke i Peasy/Drive-tall)</span></div>';
+  opsHtml += dagKort('Ordna leads i dag', tdC_ordna, 'egen kohort — tabell under', tdC_ordna>0?'#E65100':'#667A72');
   opsHtml += dagKort('Avvist tilbud', avvistToday, 'kundeavvis i dag (liste 16)', avvistToday>0?'#C62828':'#2E7D32');
   opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
@@ -3524,10 +3524,17 @@ function buildDagsTabell(evalAll2, todayDate){
 
   var evalI_peasy = evalI.filter(function(r){return String(r[11]||'').toLowerCase()==='peasy';});
   var evalI_drive = evalI.filter(function(r){return String(r[11]||'').toLowerCase()==='driveno';});
+  var evalI_ordna = (window._lastRows||[]).slice(1).filter(function(r){
+    if(!isOrdnaRow(r)||!r[1]) return false;
+    var d=pdOps(r[14]);
+    return d&&d>=todayDate;
+  });
+  evalI_ordna.forEach(function(r){var k=String(r[1]||'').trim(); if(k) leadsTodaySet.add(k);});
 
   var grupper=[
     {label:'Peasy leads mottatt i dag',emoji:'📋',biler:evalI_peasy,color:'#1565C0'},
     {label:'Drive leads mottatt i dag',emoji:'📋',biler:evalI_drive,color:'#FF6B35'},
+    {label:'Ordna leads mottatt i dag',emoji:'📋',biler:evalI_ordna,color:'#E65100'},
     {label:'Estimat sendt ut i dag',emoji:'📤',biler:estimatI,color:'#888'},
     {label:'Avvist i dag',emoji:'❌',biler:avvistI,color:'#C62828'},
     {label:'Bestilt hent/lev',emoji:'📦',biler:bestiltI,color:'#E65100'},
@@ -5255,7 +5262,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c284</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c285</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
