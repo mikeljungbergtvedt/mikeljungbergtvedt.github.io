@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c277</title>
+<title>Peasy Pulse v16.04.c278</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c277 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c278 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c277 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c278 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -1882,6 +1882,160 @@ function buildVenterPaSvarHtml(rows){
   return h;
 }
 
+window._avvPeriod = window._avvPeriod || '30d';
+function setAvvPeriod(p){
+  window._avvPeriod = p === 'uke' ? 'uke' : '30d';
+  ['30d','uke'].forEach(function(k){
+    var b = document.getElementById('avv-period-' + k);
+    if (!b) return;
+    if (k === window._avvPeriod) { b.style.background = 'var(--green)'; b.style.color = '#fff'; b.style.fontWeight = '700'; }
+    else { b.style.background = 'transparent'; b.style.color = 'var(--muted)'; b.style.fontWeight = '500'; }
+  });
+  renderAvvisningerCharts(window._lastRows || []);
+}
+function avvEstDate(r){
+  return parseDate(r[31]) || parseDate(r[13]);
+}
+function avvWindow(period){
+  if (period === 'uke') {
+    var today = new Date();
+    var x = new Date(today);
+    x.setHours(0,0,0,0);
+    var day = x.getDay() || 7;
+    if (day !== 1) x.setDate(x.getDate() - (day - 1));
+    var to = new Date(today); to.setHours(23,59,59,999);
+    return { from: x, to: to };
+  }
+  var end = new Date(); end.setDate(end.getDate() - 1); end.setHours(23,59,59,999);
+  var start = new Date(end); start.setDate(start.getDate() - 29); start.setHours(0,0,0,0);
+  return { from: start, to: end };
+}
+function avvFuel(r){
+  var s = String(r[7] || '').toLowerCase();
+  var mk = String(r[6] || '').toLowerCase();
+  if (/tesla|polestar|\bid\.|model y|model 3|model s|model x|enyaq|taycan|ioniq.*ev|kona.*ev|leaf|e-tron|\bi3\b|\bi4\b|\bix\b|eqs|eqe|eqa|eqb|ev6|niro ev|kona electric/i.test(s) || mk === 'tesla' || mk === 'polestar') return 'EL';
+  if (/hybrid|phev|plug-in|recharge|prius|niro hybrid/i.test(s)) return 'Hybrid';
+  return 'Annet';
+}
+function avvSrc(r){
+  var s = String(r[11] || '').toLowerCase();
+  if (s === 'peasy') return 'Peasy';
+  if (s === 'driveno') return 'Drive';
+  if (s === 'ordna') return 'Ordna';
+  return null;
+}
+function avvIsRej(r){
+  return String(r[12] || '').toLowerCase().indexOf('avvist by customer') >= 0;
+}
+function avvBucket(dLow){
+  if (!(dLow > 0)) return null;
+  if (dLow <= 35000) return '≤35k';
+  if (dLow <= 75000) return '35–75k';
+  if (dLow <= 150000) return '75–150k';
+  if (dLow <= 300000) return '150–300k';
+  return '>300k';
+}
+function avvAgg(rows, keys, classify){
+  var tot = {}, n = {};
+  keys.forEach(function(k){ tot[k] = 0; n[k] = 0; });
+  rows.forEach(function(r){
+    var k = classify(r);
+    if (!k || tot[k] == null) return;
+    tot[k]++;
+    if (avvIsRej(r)) n[k]++;
+  });
+  return {
+    labels: keys,
+    ns: keys.map(function(k){ return n[k]; }),
+    tots: keys.map(function(k){ return tot[k]; }),
+    pcts: keys.map(function(k){ return tot[k] ? Math.round(n[k] / tot[k] * 1000) / 10 : 0; })
+  };
+}
+function avvBarChart(canvasId, pack, colors){
+  var canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+  var ex = Chart.getChart(canvas);
+  if (ex) ex.destroy();
+  var pcts = pack.pcts, ns = pack.ns, tots = pack.tots;
+  var maxP = 0;
+  pcts.forEach(function(p){ if (p > maxP) maxP = p; });
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: pack.labels,
+      datasets: [{ data: pcts, backgroundColor: colors, borderRadius: 4, barPercentage: 0.72 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 28 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              var i = ctx.dataIndex;
+              if (!tots[i]) return 'Ingen eval';
+              return ns[i] + ' avvist / ' + tots[i] + ' eval (' + pcts[i] + ' %)';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#667', font: { size: 10 } } },
+        y: {
+          min: 0,
+          suggestedMax: Math.max(20, Math.ceil((maxP + 8) / 5) * 5),
+          ticks: { color: '#888', font: { size: 10 }, callback: function(v){ return v + '%'; } },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        }
+      }
+    },
+    plugins: [{
+      afterDatasetsDraw: function(chart){
+        var ctx = chart.ctx;
+        var meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.textAlign = 'center';
+        meta.data.forEach(function(bar, i){
+          ctx.fillStyle = '#004225';
+          ctx.font = '700 11px Inter,sans-serif';
+          ctx.fillText(tots[i] ? (pcts[i] + '%') : '—', bar.x, bar.y - 14);
+          ctx.fillStyle = '#667';
+          ctx.font = '400 9px Inter,sans-serif';
+          ctx.fillText(tots[i] ? (ns[i] + '/' + tots[i]) : '0/0', bar.x, bar.y - 2);
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+function renderAvvisningerCharts(rows){
+  var w = avvWindow(window._avvPeriod || '30d');
+  var fmt = function(d){ return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }); };
+  var lbl = document.getElementById('avv-period-label');
+  if (lbl) lbl.textContent = fmt(w.from) + ' – ' + fmt(w.to);
+  ['30d','uke'].forEach(function(k){
+    var b = document.getElementById('avv-period-' + k);
+    if (!b) return;
+    if (k === (window._avvPeriod || '30d')) { b.style.background = 'var(--green)'; b.style.color = '#fff'; b.style.fontWeight = '700'; }
+    else { b.style.background = 'transparent'; b.style.color = 'var(--muted)'; b.style.fontWeight = '500'; }
+  });
+  var kohort = (rows || []).slice(1).filter(function(r){
+    if (!r[1] || !parseDLow(r[3])) return false;
+    var d = avvEstDate(r);
+    return d && d >= w.from && d <= w.to;
+  });
+  var brKeys = ['≤35k','35–75k','75–150k','150–300k','>300k'];
+  var br = avvAgg(kohort, brKeys, function(r){ return avvBucket(parseDLow(r[3])); });
+  var fuel = avvAgg(kohort, ['EL','Hybrid','Annet'], avvFuel);
+  var srcRows = kohort.filter(function(r){ return avvSrc(r); });
+  var src = avvAgg(srcRows, ['Peasy','Drive','Ordna'], avvSrc);
+  avvBarChart('avvChartBracket', br, ['#A8221C','#E65100','#00875A','#1565C0','#7B1FA2']);
+  avvBarChart('avvChartFuel', fuel, ['#1565C0','#00875A','#8A8A8A']);
+  avvBarChart('avvChartSource', src, ['#004225','#FF6B35','#E65100']);
+}
+
 function renderEvalCharts(rows,data){
   var now=new Date(),d30=new Date(now),d90=new Date(now);
   d30.setDate(d30.getDate()-30);d30.setHours(0,0,0,0);d90.setDate(d90.getDate()-90);d90.setHours(0,0,0,0);
@@ -1910,6 +2064,7 @@ function renderEvalCharts(rows,data){
     if(el30){el30.textContent=v30+'%';el30.style.color=c30;}if(el90)el90.textContent=v90+'%';if(elD){elD.textContent=(delta>0?'+':'')+delta+'pp vs 90d';elD.style.color=cD;}
   }
   setKpi('ep',ep30,ep90,epD,null);setKpi('bp',bp30,bp90,bpD,null);var k=document.getElementById('eval-30d-kpi');if(k)k.textContent=ep30+'%';var kb=document.getElementById('bud-30d-kpi');if(kb)kb.textContent=bp30+'%';
+  try{ renderAvvisningerCharts(rows); }catch(eAvv){}
   var days=[],prisetPerDay=[],soldPerDay=[],returPerDay=[];
   for(var i=89;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});days.push(ds);prisetPerDay.push(0);soldPerDay.push(0);returPerDay.push(0);}
   var leadsPerDay=days.map(function(){return 0;}),leadsPerDayPeasy=days.map(function(){return 0;}),leadsPerDayDrive=days.map(function(){return 0;}),leadsPerDayOrdna=days.map(function(){return 0;}),acceptPerDay=days.map(function(){return 0;});
@@ -2114,6 +2269,18 @@ function buildEvalHtml(data,rows){
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Snitt h\u00f8yeste bud \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(123,31,162,0.04);border-left:3px solid #7B1FA2;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="hb-30d-kpi" style="font-size:22px;font-weight:900;color:#7B1FA2;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Linja = snitt h\u00f8yeste bud for SOLGTE biler, 30d rullende. Gr\u00e5 stiplet = snitt Evaluering lav (det vi lovet). Gapet mellom dem = verditapet kunden ser.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="hbTrendChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Snitt Evaluering lav, alle priset vs mottatt \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(0,135,90,0.04);border-left:3px solid #00875A;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Mottatt vs alle (Evaluering lav, 30d)</span><div id="am-30d-kpi" style="font-size:22px;font-weight:900;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Stiplet = snitt Evaluering lav p\u00e5 alle priset. Gr\u00f8nn = snitt Evaluering lav p\u00e5 de som ble mottatt. Ligger gr\u00f8nn langt under, aksepterer bare de billigere tilbudene. Dette er kunden sitt laveste tall, ikke ankeret.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="ankerMottChart"></canvas></div></div>';
   h+='<div class="table-card" style="margin-bottom:16px"><div class="th"><div class="th-title">Netto per solgt bil \u2014 siste 90 dager</div></div><div style="padding:12px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;display:flex;gap:24px;align-items:center"><div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">30d snitt</span><div id="netto-30d-kpi" style="font-size:22px;font-weight:900;line-height:1">&ndash;</div></div><div style="color:#667A72;line-height:1.5"><strong>Hvordan lese:</strong> Fee minus prod-, retur- og markedskost per solgt bil, 30d rullende. Stiplet = null. Under = vi taper penger per bil.</div></div><div style="padding:16px;position:relative;height:220px"><canvas id="nettoTrendChart"></canvas></div></div>';
+  h+='<div class="section-label">Avvisninger</div>';
+  h+='<div style="font-size:12px;color:#667;margin:-6px 0 12px;line-height:1.45">Avvist av kunde / evaluert. Estimering-dato. Søyle = avvisningsrate, merket med n og prosent.</div>';
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">';
+  h+='<div style="display:inline-flex;gap:4px;background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:10px;padding:4px">';
+  h+='<button type="button" id="avv-period-30d" onclick="setAvvPeriod(\'30d\')" style="padding:6px 12px;border:none;background:var(--green);color:#fff;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">30 dager</button>';
+  h+='<button type="button" id="avv-period-uke" onclick="setAvvPeriod(\'uke\')" style="padding:6px 12px;border:none;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit">Uke</button>';
+  h+='</div><span id="avv-period-label" style="font-size:12px;color:#667"></span></div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px">';
+  h+='<div class="table-card"><div class="th"><div class="th-title">Per Evaluering lav</div></div><div style="padding:8px 14px 4px;font-size:11px;color:#667">≤35k / 35–75k / 75–150k / 150–300k / &gt;300k</div><div style="padding:8px 12px 16px;position:relative;height:220px"><canvas id="avvChartBracket"></canvas></div></div>';
+  h+='<div class="table-card"><div class="th"><div class="th-title">EL vs hybrid vs annet</div></div><div style="padding:8px 14px 4px;font-size:11px;color:#667">Drivlinje fra merke/modell</div><div style="padding:8px 12px 16px;position:relative;height:220px"><canvas id="avvChartFuel"></canvas></div></div>';
+  h+='<div class="table-card"><div class="th"><div class="th-title">Peasy vs Drive vs Ordna</div></div><div style="padding:8px 14px 4px;font-size:11px;color:#667">Kilde. Rate per evaluert i perioden.</div><div style="padding:8px 12px 16px;position:relative;height:220px"><canvas id="avvChartSource"></canvas></div></div>';
+  h+='</div>';
   h+=buildVenterPaSvarHtml(rows);
   /* Venter pa prissetting blokk fortsetter:
   h+='<div class="table-card" style="margin-bottom:24px"><table><thead><tr><th>Mottatt</th><th>SLA</th><th>RegNr</th><th>Bil</th><th>KM</th><th>Estimat lav &ndash; hoy</th></tr></thead><tbody>';
@@ -4856,7 +5023,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c277</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c278</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
