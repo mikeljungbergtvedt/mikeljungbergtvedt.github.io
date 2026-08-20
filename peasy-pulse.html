@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c278</title>
+<title>Peasy Pulse v16.04.c279</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -257,7 +257,7 @@ function authLogout(){
     
     <button class="hamburger-btn" id="btn-hamburger" onclick="document.querySelector('.mode-toggle').classList.toggle('open')">☰</button>
       <div class="mode-toggle">
-      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c278 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
+      <span class="hdr-meta" style="position:absolute;top:8px;right:14px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;white-space:nowrap;z-index:2">v16.04.c279 &middot; <span id="hdr-date">20. august 2026</span> &middot; <a href="#" onclick="authLogout();return false" style="color:#aaa;text-decoration:underline">logg ut</a></span><button class="mode-btn active" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" id="btn-kjerne" onclick="setMode('kjerne')">Kjernen</button>
       <button class="mode-btn" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -469,7 +469,7 @@ function authLogout(){
 
 <script>
 // ============================================================
-// Markedsforing v16.04.c278 — Peasy legacy + A/B / Drive / Ordna
+// Markedsforing v16.04.c279 — Peasy legacy + A/B / Drive / Ordna
 // ============================================================
 window.MARK_V16_04 = (function(){
   var START_DATE = new Date('2025-11-01');
@@ -2398,11 +2398,12 @@ function render(data,rows){
   var tdC=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr);}).length;
   var tdC_peasy=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr)&&String(r[11]||'').toLowerCase()==='peasy';}).length;
   var tdC_drive=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr)&&String(r[11]||'').toLowerCase()==='driveno';}).length;
+  var tdC_ordna=(rows||[]).slice(1).filter(function(r){return r[14]&&String(r[14]).startsWith(todayStr)&&String(r[11]||'').toLowerCase()==='ordna';}).length;
   var dSC=Math.max(1,Math.floor((Date.now()-CUTOFF.getTime())/86400000));
   var pD=(tE/dSC).toFixed(1);
-  // Leads mottatt siste 30 dager (samme rad-logikk som funnel)
+  // Leads mottatt siste 30 dager — Peasy alene (Drive/Ordna vises på dagskort, ikke i snitt)
   var d30Lead=new Date();d30Lead.setDate(d30Lead.getDate()-30);d30Lead.setHours(0,0,0,0);
-  var leads30d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!r[14])return false;var s2=String(r[11]||'').toLowerCase();if(s2!=='peasy'&&s2!=='driveno'&&s2!=='ordna')return false;var d=parseDate(r[14]);return d&&d>=d30Lead;}).length;
+  var leads30d=(rows||[]).slice(1).filter(function(r){if(!r[1]||!r[14])return false;if(String(r[11]||'').toLowerCase()!=='peasy')return false;var d=parseDate(r[14]);return d&&d>=d30Lead;}).length;
   var leads30avg=(leads30d/30).toFixed(1);
   var _d30ms_ref=new Date();_d30ms_ref.setDate(_d30ms_ref.getDate()-30);_d30ms_ref.setHours(0,0,0,0);var d30ms=_d30ms_ref.getTime();
   var sold30arr=data.sold.filter(function(c){var d=parseDate(c.sDate);return d&&d.getTime()>=d30ms;});
@@ -2436,7 +2437,7 @@ function render(data,rows){
   var roi30=cplKontrakt30>0?(nettoSum30/sold30c/cplKontrakt30):0;
   // Netto inntekt per solgt bil = snitt fee - snitt prod kost - lead-kost
   var nettoPerSolgt30=aU30-snittProdKost30-cplKontrakt30;
-  var lead2sold30=leads30d>0?Math.round(sold30c/leads30d*1000)/10:0;
+  var lead2sold30=leads30peasy>0?Math.round(sold30peasy/leads30peasy*1000)/10:0;
   window._netto30={fee:aU30,prodKost:snittProdKost30,leadKost:cplKontrakt30,netto:nettoPerSolgt30,sold30:sold30c,retur30:retur30c,spend30:spend30,roi30:roi30};
   // === v16.04.c171: 90d-pipeline (parallell til 30d for langtids markedsplanlegging) ===
   var d90Lead=new Date();d90Lead.setDate(d90Lead.getDate()-90);d90Lead.setHours(0,0,0,0);
@@ -2470,7 +2471,7 @@ function render(data,rows){
   var pipeSnitt=pipeN?Math.round(pipeSum/pipeN/1000):0;
   var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (siste 30 dager)</div><div class="dials-grid" style="margin-bottom:32px">'
     +'<div class="dial-card neutral" onclick="setMode(\'pipe\')" style="cursor:pointer"><div class="dial-label">Pipe - uavklart</div><div class="dial-value" style="color:#E65100">'+pipeCount+'</div><div class="dial-unit">Snitt verdi '+pipeSnitt+'k</div><div class="dial-sub">Eval sendt, kunden har ikke bestilt transport</div><div class="target-tag">Live</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">Biler i dag</div><div class="dial-sub">Snitt <strong>'+leads30avg+'</strong> pr dag siste 30 dager (sum '+leads30d+' &middot; CPL Peasy '+(cplPeasy30||0)+' kr)</div><div class="target-tag">Live</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Leads mottatt i dag / snitt</div><div class="arc-wrap"><svg id="arc6"></svg></div><div class="dial-value">'+tdC+'</div><div class="dial-unit">Biler i dag</div><div class="dial-sub">Peasy-snitt <strong>'+leads30avg+'</strong> pr dag siste 30 dager (sum '+leads30d+' &middot; CPL Peasy '+(cplPeasy30||0)+' kr)</div><div class="target-tag">Live</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Eval-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Selger aksepterer evaluering</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Bud-aksept</div><div class="dial-value" style="color:#004225">'+ba30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ba30.solgt+' av '+ba30.avsluttet+'</div><div class="dial-sub">Høyeste bud akseptert</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">I produksjon nå</div><div class="arc-wrap"><svg id="arc3"></svg></div><div class="dial-value">'+data.inProd.length+'</div><div class="dial-unit">Biler på anlegg</div><div class="dial-sub">I produksjon</div><div class="target-tag">Live</div></div>'
@@ -2479,7 +2480,7 @@ function render(data,rows){
     +'<div class="dial-card neutral"><div class="dial-label">Snitt prod kost</div><div class="arc-wrap"><svg id="arc10"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+snittProdKost30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgte bil</div><div class="dial-sub">Sum kr '+sumProdKost30.toLocaleString('nb-NO')+' &middot; '+retur30c+' retur</div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">CAC</div><div class="arc-wrap"><svg id="arc9"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="dial-unit">Kost per solgt Peasy</div><div class="dial-sub">ROI <strong>'+roi30.toFixed(1)+'x</strong> <span style="color:#888;font-weight:400">(inkl returbiler)</span></div><div class="target-tag">Siste 30d</div></div>'
     +'<div class="dial-card neutral"><div class="dial-label">Netto per solgt</div><div class="arc-wrap"><svg id="arc11"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500;color:'+(nettoPerSolgt30>0?'#2E7D32':'#C62828')+'">Kr. '+Math.round(nettoPerSolgt30).toLocaleString('nb-NO')+'</div><div class="dial-unit">Per solgt bil</div><div class="dial-sub">Fee '+aU30.toLocaleString('nb-NO')+' &minus; prod '+snittProdKost30.toLocaleString('nb-NO')+' &minus; CAC '+cplKontrakt30.toLocaleString('nb-NO')+'</div><div class="target-tag">Siste 30d</div></div>'
-    +'<div class="dial-card neutral"><div class="dial-label">Lead → Solgt</div><div class="arc-wrap"><svg id="arc12"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">'+lead2sold30.toFixed(1)+'%</div><div class="dial-unit">'+sold30c+' av '+leads30d+' leads</div><div class="dial-sub">Total konvertering</div><div class="target-tag">Siste 30d</div></div>'
+    +'<div class="dial-card neutral"><div class="dial-label">Lead → Solgt</div><div class="arc-wrap"><svg id="arc12"></svg></div><div class="dial-value" style="font-size:22px;font-weight:500">'+lead2sold30.toFixed(1)+'%</div><div class="dial-unit">'+sold30peasy+' av '+leads30peasy+' leads</div><div class="dial-sub">Peasy-konvertering</div><div class="target-tag">Siste 30d</div></div>'
     +'</div></div>';
   var iPS=data.inProd.slice().sort(function(a,b){return(b.daysSinceMottatt||0)-(a.daysSinceMottatt||0);});
   var mxD=Math.max.apply(null,iPS.map(function(c){return c.daysSinceMottatt||0;}).concat([1]));
@@ -2538,7 +2539,7 @@ function render(data,rows){
       +'</div>';
   }
 
-  opsHtml += dagKort('Leads mottatt i dag', tdC, tdC_peasy+' Peasy &middot; '+tdC_drive+' Drive', '#004225');
+  opsHtml += dagKort('Leads mottatt i dag', tdC, tdC_peasy+' Peasy &middot; '+tdC_drive+' Drive &middot; '+tdC_ordna+' Ordna', '#004225');
   opsHtml += dagKort('Avvist tilbud', avvistToday, 'kundeavvis i dag (liste 16)', avvistToday>0?'#C62828':'#2E7D32');
   opsHtml += dagKort('Bestilt hent/lev', bestiltToday, 'aksepterte i dag', bestiltToday>0?'#2E7D32':'#667A72');
   opsHtml += dagKort('Mottatt i dag', mottattToday, 'ankom anlegg', mottattToday>0?'#1565C0':'#667A72');
@@ -5023,7 +5024,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c278</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c279</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
