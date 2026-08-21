@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c296</title>
+<title>Peasy Pulse v16.04.c297</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -5633,7 +5633,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c296</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c297</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6222,23 +6222,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const srcGate = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
     const armGate = (typeof abArm==='function') ? abArm(e.erpId, srcGate) : 'A';
     const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
-    const compsGate = armGate==='A' ? qaNum(easy.comps_score) : qaNum((e.v3g&&e.v3g.comps_score)!=null?e.v3g.comps_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.comps_score));
     const kmBlock = qaKmBlock(e);
+    const krV3 = (dV3==null||easyAnker==null)?null:Math.abs(Number(v3.anker)-Number(easyAnker));
+    const krVg = (dVg==null||easyAnker==null)?null:Math.abs(Number(vg.anker)-Number(easyAnker));
+    const maxKr = Math.max(krV3||0, krVg||0);
+    const ankerQa = maxAbs >= 15 && maxKr >= 5000;
     let label='SEND', color='#0F6E66', icon='✅';
     if (scope) {
       label='UTENFOR SCOPE'; color='#6D4C41'; icon='⛔';
     } else if (!allPriced) {
       label='VENTER BOTS'; color='#8A8A8A'; icon='◌';
-    } else if (identGate != null) {
-      if (identGate < 70) { label='QA'; color='#A8221C'; icon='🔴'; }
-      else if (compsGate != null && compsGate < 60) { label='VURDER'; color='#8A6708'; icon='🟡'; }
-      else if (identGate >= 70 && compsGate != null && compsGate >= 60 && maxAbs >= 15) { label='QA'; color='#A8221C'; icon='🔴'; }
-      else if (identGate >= 70 && compsGate != null && compsGate >= 60) { label='SEND'; color='#0F6E66'; icon='✅'; }
-      else { label='VURDER'; color='#8A6708'; icon='🟡'; }
-    } else if (maxAbs > 30){
+    } else if (identGate != null && identGate < 70) {
       label='QA'; color='#A8221C'; icon='🔴';
-    } else if (maxAbs > 15){
-      label='VURDER'; color='#8A6708'; icon='🟡';
+    } else if (ankerQa) {
+      label='QA'; color='#A8221C'; icon='🔴';
     }
     if (kmBlock && !scope) { label='QA'; color='#A8221C'; icon='🔴'; }
     const sellerCmt = String((e.v3g && e.v3g.kundeComment) || v3m.kundeComment || v3m.sd_comment || (easy && easy.begrunnelse_kort && '') || '').trim();
