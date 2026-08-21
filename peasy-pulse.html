@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c295</title>
+<title>Peasy Pulse v16.04.c296</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -297,6 +297,7 @@ function authLogout(){
       <button class="mode-btn" data-mode="kart" id="btn-kart" onclick="setMode('kart')">Kart</button>
       <button class="mode-btn" data-mode="sporsmal" id="btn-sporsmal" onclick="setMode('sporsmal')">Spm</button>
       <button class="mode-btn" data-mode="v2bm" id="btn-v2bm" onclick="setMode('v2bm')">V3 BM</button>
+      <button class="mode-btn" data-mode="ab" id="btn-ab" onclick="setMode('ab')">A/B</button>
       <button class="mode-btn" data-mode="innst" id="btn-innst" onclick="setMode('innst')">Innstillinger</button>
     </div>
     <div class="nav-more" id="nav-more" hidden>
@@ -1834,6 +1835,42 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+
+<section class="mode-section" data-mode="ab" id="ab-section" style="display:none;">
+  <div class="page-sub" style="margin-bottom:10px">A/B anker-konsept fra 21.8.2026 08:38 UTC (Easy v20.110). A Easy: D lav = predikert bud (anker × 0.60). B V3G: gammel D. Kunden ser bare D. A vinner hvis eval → salg er høyere enn B — lavere eval-aksept er forventet, høyere bud-aksept er poenget. Ordna er ute.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+    <input id="ab-search" type="text" placeholder="Søk regnr..." oninput="renderAbTab()" style="flex:1;min-width:200px;max-width:320px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--card);color:var(--text);">
+    <span id="ab-updated" style="font-size:11px;color:var(--muted);"></span>
+  </div>
+  <div id="ab-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;"></div>
+  <div id="ab-note" style="font-size:12px;color:var(--muted);line-height:1.45;margin:0 0 14px;"></div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px var(--shadow);">
+    <div style="overflow-x:auto;">
+      <table id="ab-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--green);text-align:left;">
+            <th style="padding:10px 12px;color:#fff;">Arm</th>
+            <th style="padding:10px 12px;color:#fff;">Reg nr</th>
+            <th style="padding:10px 12px;color:#fff;">Intern</th>
+            <th style="padding:10px 12px;color:#fff;">Bil</th>
+            <th style="padding:10px 12px;color:#fff;">Priset</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">Easy anker</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">Easy D</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">V3G anker</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">V3G D</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">Live D</th>
+            <th style="padding:10px 12px;color:#fff;">Status</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">Bud E</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">E / anker</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">E vs Easy D</th>
+            <th style="padding:10px 12px;text-align:right;color:#fff;">E vs V3G D</th>
+          </tr>
+        </thead>
+        <tbody id="ab-tbody"><tr><td colspan="15" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 </main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -1866,6 +1903,7 @@ var PULSE_NAV=[
   {id:'kart',group:'Annet'},
   {id:'sporsmal',group:'Annet'},
   {id:'v2bm',group:'Annet'},
+  {id:'ab',group:'Annet'},
   {id:'innst',group:'Annet'}
 ];
 function restorePulseNavBtns(){
@@ -2037,6 +2075,7 @@ function setMode(m){
       if(m==='score'){try{loadScoreboard();}catch(e){}}
       if(m==='qa'){loadQA();}
       if(m==='v2bm'){loadV2Benchmark();}
+      if(m==='ab'){loadAbTab();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);if(typeof renderFinMoney==='function')renderFinMoney();},100);
@@ -4936,6 +4975,232 @@ async function loadV2Benchmark(){
   }catch(e){document.getElementById('v2bm-tbody').innerHTML='<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: '+e.message+'</td></tr>';}
 }
 
+const ANKER_AB_START_ISO='2026-08-21T08:38:00.000Z';
+const ANKER_AB_START_MS=Date.parse(ANKER_AB_START_ISO);
+
+function abMedian(a){
+  var b=(a||[]).filter(function(x){return Number.isFinite(x);}).slice().sort(function(x,y){return x-y;});
+  if(!b.length)return null;
+  return b[Math.floor(b.length/2)];
+}
+function abPctTxt(p){
+  if(p==null||!Number.isFinite(p))return '—';
+  return (Math.round(p*10)/10).toLocaleString('nb-NO')+' %';
+}
+function abGapTxt(num, den){
+  if(!Number.isFinite(num)||!Number.isFinite(den)||den===0)return '—';
+  var p=(num-den)/den*100;
+  return (p>=0?'+':'')+(Math.round(p*10)/10)+' %';
+}
+function abGapCol(num, den){
+  if(!Number.isFinite(num)||!Number.isFinite(den)||den===0)return 'var(--muted)';
+  var a=Math.abs((num-den)/den*100);
+  return a<5?'#2E7D32':(a<15?'#E65100':'#C62828');
+}
+function abParseBud(row){
+  if(!row)return null;
+  var n=parseInt(String(row[4]||'').replace(/[^\d]/g,''),10);
+  return (Number.isFinite(n)&&n>0)?n:null;
+}
+function abEasyAnker(r){
+  var n=r&&r.easy?Number(r.easy.anker):NaN;
+  return Number.isFinite(n)&&n>0?n:null;
+}
+function abEasyD(r){
+  var n=r&&r.easy?Number(r.easy.dLav):NaN;
+  return Number.isFinite(n)&&n!==0?n:null;
+}
+function abV3gAnker(r){
+  var n=pickV3gBand(r&&r._v3g).anker;
+  return Number.isFinite(n)&&n>0?n:null;
+}
+function abV3gD(r){
+  var n=pickV3gBand(r&&r._v3g).dLav;
+  return Number.isFinite(n)&&n!==0?n:null;
+}
+function abLiveD(r, arm){
+  return arm==='A'?abEasyD(r):abV3gD(r);
+}
+function abLiveAnker(r, arm){
+  return arm==='A'?abEasyAnker(r):abV3gAnker(r);
+}
+function abFunnel(recs){
+  var n=recs.length,acc=0,auc=0,sold=0,ret=0,avvist=0;
+  recs.forEach(function(r){
+    var c=classifyRecord(r);
+    if(c.akseptert)acc++;
+    if(c.avvist)avvist++;
+    if(c.solgt)sold++;
+    if(c.returnert)ret++;
+    var bud=abParseBud(findErpRowForRecord(r));
+    if((bud&&bud>0)||c.solgt||c.returnert)auc++;
+  });
+  var closed=sold+ret;
+  return {
+    n:n,acc:acc,auc:auc,sold:sold,ret:ret,avvist:avvist,
+    evalAksept:n?acc/n*100:null,
+    evalAuksjon:n?auc/n*100:null,
+    auksjonSalg:closed?sold/closed*100:null,
+    evalSalg:n?sold/n*100:null
+  };
+}
+function abChip(label, value, sub, color){
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">'
+    +'<div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">'+label+'</div>'
+    +'<div style="font-size:22px;font-weight:900;color:'+(color||'var(--text)')+';line-height:1.15;margin:6px 0 4px">'+value+'</div>'
+    +(sub?'<div style="font-size:11px;color:var(--muted);line-height:1.4">'+sub+'</div>':'')
+    +'</div>';
+}
+function abArmCard(title, f, color, bg){
+  return '<div style="background:'+bg+';border:1px solid var(--border);border-radius:12px;padding:14px 16px;">'
+    +'<div style="font-size:12px;font-weight:800;color:'+color+';margin-bottom:10px">'+title+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;font-size:12px;">'
+    +'<div><div style="color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">Priset</div><div style="font-size:20px;font-weight:900">'+f.n+'</div></div>'
+    +'<div><div style="color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">Eval-aksept</div><div style="font-size:20px;font-weight:900">'+abPctTxt(f.evalAksept)+'</div><div style="color:var(--muted);font-size:11px">'+f.acc+' av '+f.n+'</div></div>'
+    +'<div><div style="color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">Eval → auksjon</div><div style="font-size:20px;font-weight:900">'+abPctTxt(f.evalAuksjon)+'</div><div style="color:var(--muted);font-size:11px">'+f.auc+' av '+f.n+'</div></div>'
+    +'<div><div style="color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">Auksjon → salg</div><div style="font-size:20px;font-weight:900">'+abPctTxt(f.auksjonSalg)+'</div><div style="color:var(--muted);font-size:11px">'+f.sold+' av '+(f.sold+f.ret)+'</div></div>'
+    +'<div style="grid-column:1/-1;padding-top:6px;border-top:1px solid rgba(0,0,0,0.06)"><div style="color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">Eval → salg (netto)</div><div style="font-size:22px;font-weight:900;color:'+color+'">'+abPctTxt(f.evalSalg)+'</div><div style="color:var(--muted);font-size:11px">'+f.sold+' salg av '+f.n+' priset</div></div>'
+    +'</div></div>';
+}
+
+async function loadAbTab(){
+  var body=document.getElementById('ab-tbody');
+  if(body) body.innerHTML='<tr><td colspan="15" style="padding:30px;text-align:center;color:var(--muted);">Laster ...</td></tr>';
+  try{
+    var t=Date.now();
+    var mUrl=(window.PA_PROXY_ERP||'').replace('/list/','/measurements')+'?t='+t;
+    var mFallback='https://mikeljungbergtvedt.github.io/v2-measurements.jsonl?t='+t;
+    if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
+      try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(eX){}
+    }
+    var mRes=await fetch(mUrl).catch(function(){return{ok:false};});
+    if(!mRes||!mRes.ok) mRes=await fetch(mFallback).catch(function(){return{ok:false};});
+    var mText=(mRes&&mRes.ok)?await mRes.text():'';
+    var measurements=mText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
+    var v3gMaps=await fetchV3gMaps();
+    window._v2bmErpMaps=buildErpRowMaps();
+    var byKey={};
+    function take(rec, ts){
+      if(!rec)return;
+      var tms=ts?new Date(ts).getTime():0;
+      if(!Number.isFinite(tms)||tms<ANKER_AB_START_MS)return;
+      var src=sourceForErp(rec.erpId, rec);
+      if(isOrdnaSource(src)||isOrdnaSource(rec.source))return;
+      var arm=abArm(rec.erpId, src, rec.timestamp||ts);
+      if(arm!=='A'&&arm!=='B')return;
+      var k=String(rec.erpId!=null?rec.erpId:rec.regnr||'');
+      if(!k)return;
+      var ex=byKey[k];
+      if(!ex||tms>ex._ts) byKey[k]=Object.assign({},rec,{_ts:tms,_arm:arm,_src:src});
+    }
+    measurements.forEach(function(r){
+      r._v3g=findV3gFor(r.regnr,r.erpId,v3gMaps);
+      take(r, r.timestamp);
+    });
+    Object.keys((v3gMaps&&v3gMaps.byKey)||{}).forEach(function(k){
+      var rec=v3gMaps.byKey[k];
+      if(!rec)return;
+      var erp=rec.erpId;
+      if(erp!=null&&byKey[String(erp)])return;
+      var stub={
+        regnr:rec.regnr,
+        erpId:erp,
+        timestamp:rec.timestamp,
+        source:rec.source,
+        easy:null,
+        v2:null,
+        _v3g:rec,
+        identifikasjon:{variant:((rec.make||'')+' '+(rec.model||'')).trim()}
+      };
+      take(stub, rec.timestamp);
+    });
+    window._abRecords=Object.keys(byKey).map(function(k){return byKey[k];});
+    var el=document.getElementById('ab-updated');
+    if(el) el.textContent='Sist oppdatert: '+new Date().toLocaleString('nb-NO');
+    renderAbTab();
+  }catch(e){
+    if(body) body.innerHTML='<tr><td colspan="15" style="padding:30px;text-align:center;color:var(--red);">Kunne ikke laste: '+e.message+'</td></tr>';
+  }
+}
+
+function renderAbTab(){
+  var records=(window._abRecords||[]).slice();
+  var q=((document.getElementById('ab-search')||{}).value||'').trim().toLowerCase();
+  if(q) records=records.filter(function(r){return String(r.regnr||'').toLowerCase().indexOf(q)>=0||String(r.erpId||'').indexOf(q)>=0;});
+  records.sort(function(a,b){return (b._ts||0)-(a._ts||0);});
+  var aRecs=records.filter(function(r){return r._arm==='A';});
+  var bRecs=records.filter(function(r){return r._arm==='B';});
+  var fA=abFunnel(aRecs), fB=abFunnel(bRecs);
+  var bothAnker=[], easyHit=[], v3gHit=[];
+  records.forEach(function(r){
+    var ea=abEasyAnker(r), va=abV3gAnker(r);
+    if(ea&&va) bothAnker.push(ea/va);
+    var bud=abParseBud(findErpRowForRecord(r));
+    if(!bud)return;
+    var ed=abEasyD(r), vd=abV3gD(r);
+    if(ed) easyHit.push(Math.abs(bud-ed)/ed);
+    if(vd) v3gHit.push(Math.abs(bud-vd)/vd);
+  });
+  var kpis=document.getElementById('ab-kpis');
+  if(kpis){
+    kpis.innerHTML=abArmCard('A Easy — predikert bud', fA, '#6A1B9A', '#F3E5F5')
+      +abArmCard('B V3G — gammel D', fB, '#1B5E20', '#E8F5E9')
+      +abChip('Anker A vs B', bothAnker.length?((Math.round(abMedian(bothAnker)*1000)/10)+' %'):'—', bothAnker.length?('median Easy-anker / V3G-anker, '+bothAnker.length+' biler med begge'):'samme jobb — anker mot anker', '#004225')
+      +abChip('Treff bud E', (easyHit.length||v3gHit.length)?('Easy '+abPctTxt((abMedian(easyHit)||0)*100)+' · V3G '+abPctTxt((abMedian(v3gHit)||0)*100)):'—', (easyHit.length||v3gHit.length)?'median |E − D| / D. Lavere = bedre bud-prediksjon':'ingen auksjon med bud E ennå', '#004225');
+  }
+  var note=document.getElementById('ab-note');
+  if(note){
+    var netA=fA.evalSalg, netB=fB.evalSalg;
+    var lead='Netto eval → salg er det som teller. Bud-treff alene vinner ikke.';
+    if(netA!=null&&netB!=null&&(fA.n+fB.n)>0){
+      if(netA>netB) lead='A ligger over B på netto eval → salg så langt. '+lead;
+      else if(netB>netA) lead='B ligger over A på netto eval → salg så langt. '+lead;
+      else lead='A og B like på netto så langt. '+lead;
+    }
+    note.textContent=lead;
+  }
+  var html='';
+  if(!records.length){
+    html='<tr><td colspan="15" style="padding:30px;text-align:center;color:var(--muted);">Ingen biler priset etter 21.8.2026 08:38 ennå.</td></tr>';
+  } else {
+    records.forEach(function(r){
+      var arm=r._arm;
+      var src=r._src||sourceForErp(r.erpId,r);
+      var cls=classifyRecord(r);
+      var sc=statusBucketColor(cls.bucket);
+      var statusHtml='<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:'+sc.bg+';color:'+sc.color+';font-size:11px;font-weight:600;">'+cls.label+'</span>';
+      var variant=(r.identifikasjon&&r.identifikasjon.variant)?r.identifikasjon.variant.slice(0,40):'—';
+      var ea=abEasyAnker(r), ed=abEasyD(r), va=abV3gAnker(r), vd=abV3gD(r);
+      var live=abLiveD(r, arm);
+      var liveAnker=abLiveAnker(r, arm);
+      var bud=abParseBud(findErpRowForRecord(r));
+      var liveBg=arm==='A'?'background:#F3E5F5;font-weight:800;':(arm==='B'?'background:#E8F5E9;font-weight:800;':'');
+      var eAnkerTxt=(bud&&liveAnker)?(Math.round(bud/liveAnker*100)+' %'):'—';
+      html+='<tr style="border-top:1px solid var(--border);">'
+        +'<td style="padding:8px 10px;">'+(typeof abBadge==='function'?abBadge(r.erpId,src,r.timestamp):arm)+'</td>'
+        +'<td style="padding:8px 10px;font-weight:600;">'+(r.regnr||'—')+'</td>'
+        +'<td style="padding:8px 10px;color:var(--muted);font-size:11px;font-family:monospace;">'+(r.erpId||'—')+'</td>'
+        +'<td style="padding:8px 10px;color:var(--muted);">'+variant+'</td>'
+        +'<td style="padding:8px 10px;color:var(--muted);font-size:11px;">'+fmtPrisetV2(r.timestamp)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;">'+fmtKrV2(ea)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;">'+fmtKrV2(ed)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;">'+fmtKrV2(va)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;">'+fmtKrV2(vd)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;'+liveBg+'">'+fmtKrV2(live)+'</td>'
+        +'<td style="padding:8px 10px;">'+statusHtml+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;font-weight:600;">'+fmtKrV2(bud)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;">'+eAnkerTxt+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;color:'+abGapCol(bud,ed)+';font-weight:600;">'+abGapTxt(bud,ed)+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;color:'+abGapCol(bud,vd)+';font-weight:600;">'+abGapTxt(bud,vd)+'</td>'
+        +'</tr>';
+    });
+  }
+  var tb=document.getElementById('ab-tbody');
+  if(tb) tb.innerHTML=html;
+}
+window.loadAbTab=loadAbTab;
+window.renderAbTab=renderAbTab;
+
 function findOverrideForRecord(r){
   var byErp=window._v2bmOverrideByErpId||{};
   var byReg=window._v2bmOverrideByRegnr||{};
@@ -5368,7 +5633,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c295</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c296</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
