@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c297</title>
+<title>Peasy Pulse v16.04.c298</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -298,6 +298,7 @@ function authLogout(){
       <button class="mode-btn" data-mode="sporsmal" id="btn-sporsmal" onclick="setMode('sporsmal')">Spm</button>
       <button class="mode-btn" data-mode="v2bm" id="btn-v2bm" onclick="setMode('v2bm')">V3 BM</button>
       <button class="mode-btn" data-mode="ab" id="btn-ab" onclick="setMode('ab')">A/B</button>
+      <button class="mode-btn" data-mode="sosial" id="btn-sosial" onclick="setMode('sosial')">Sosial</button>
       <button class="mode-btn" data-mode="innst" id="btn-innst" onclick="setMode('innst')">Innstillinger</button>
     </div>
     <div class="nav-more" id="nav-more" hidden>
@@ -1871,6 +1872,16 @@ window.MARK_V16_04 = (function(){
     </div>
   </div>
 </section>
+
+<section class="mode-section" data-mode="sosial" id="sosial-section" style="display:none;">
+  <div class="page-sub" style="margin-bottom:10px">Sosial innboks. Utkast her. Bare Publiser sender til Meta.</div>
+  <div id="sosial-errors" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;background:#FFF8E1;border:1px solid #FFE082;color:#8A6708;font-size:12px;line-height:1.45;"></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+    <button type="button" onclick="loadSosial()" style="padding:7px 12px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Oppdater</button>
+    <span id="sosial-updated" style="font-size:11px;color:var(--muted);"></span>
+  </div>
+  <div id="sosial-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+</section>
 </main>
 <script>
 var API='https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx';
@@ -1904,6 +1915,7 @@ var PULSE_NAV=[
   {id:'sporsmal',group:'Annet'},
   {id:'v2bm',group:'Annet'},
   {id:'ab',group:'Annet'},
+  {id:'sosial',group:'Annet'},
   {id:'innst',group:'Annet'}
 ];
 function restorePulseNavBtns(){
@@ -2076,6 +2088,7 @@ function setMode(m){
       if(m==='qa'){loadQA();}
       if(m==='v2bm'){loadV2Benchmark();}
       if(m==='ab'){loadAbTab();}
+      if(m==='sosial'){loadSosial();}
   if(m==='tiltak')setTimeout(function(){renderTiltakCharts();},100);
   document.body.classList.toggle('uke-mode',m==='uke');if(m==='uke')setTimeout(function(){renderUkesrapport();},100);
   if(m==='fin')setTimeout(function(){if(typeof drawScatter==='function'&&window._lastData)drawScatter(window._lastData.sold,window._lastData.returned);if(typeof renderFinMoney==='function')renderFinMoney();},100);
@@ -5201,6 +5214,121 @@ function renderAbTab(){
 window.loadAbTab=loadAbTab;
 window.renderAbTab=renderAbTab;
 
+function sosialBase(){
+  return String(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'')+'/social';
+}
+function sosialEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function sosialTid(ts){
+  if(!ts) return '—';
+  var d=new Date(ts);
+  if(isNaN(d.getTime())) return String(ts);
+  try{
+    return d.toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return d.toISOString(); }
+}
+function sosialKilde(it){
+  if(it.isHidden || it.source==='hidden') return 'Skjult';
+  if(it.source==='ad') return 'Annonse';
+  if(it.source==='google') return 'Google';
+  if(it.source==='dm' && it.platform==='instagram') return 'IG DM';
+  if(it.source==='dm') return 'Messenger';
+  return 'Innlegg';
+}
+async function loadSosial(){
+  var box=document.getElementById('sosial-list');
+  var errEl=document.getElementById('sosial-errors');
+  var upd=document.getElementById('sosial-updated');
+  if(box) box.innerHTML='<div style="padding:20px;color:var(--muted);">Laster …</div>';
+  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
+  try{
+    var r=await fetch(sosialBase()+'/inbox?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+    var j=await r.json();
+    window._sosialInbox=j;
+    if(upd) upd.textContent=(j.updatedAt?sosialTid(j.updatedAt):'')+(j.graphVersion?' · '+j.graphVersion:'');
+    var errs=j.errors||[];
+    if(errEl && errs.length){
+      errEl.style.display='block';
+      errEl.textContent=errs.map(function(e){return (e.where||'?')+': '+(e.message||e.code||'');}).join(' · ');
+    }
+    renderSosial();
+  }catch(e){
+    if(box) box.innerHTML='<div style="padding:20px;color:var(--red);">Kunne ikke laste: '+sosialEsc(e.message)+'</div>';
+  }
+}
+function renderSosial(){
+  var j=window._sosialInbox||{items:[]};
+  var box=document.getElementById('sosial-list');
+  if(!box) return;
+  var items=j.items||[];
+  if(!items.length){
+    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen meldinger. Gul stripe over viser API-feil hvis Graph mangler rettighet.</div>';
+    return;
+  }
+  box.innerHTML=items.map(function(it,i){
+    var dis=(!it.canReply || it.category==='scam_against_peasy')?'disabled':'';
+    var hidden=it.isHidden?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#8A6708;">HIDDEN</span>':'';
+    var ad=it.adName||it.adId||'—';
+    return '<div class="sosial-row" data-ix="'+i+'" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:6px;">'
+      +'<span>'+sosialEsc(sosialTid(it.ts))+'</span>'
+      +'<span>'+sosialEsc(sosialKilde(it))+'</span>'
+      +'<span>Annonse: '+sosialEsc(ad)+'</span>'
+      +'<span>'+sosialEsc(it.category||'')+'</span>'
+      +hidden+'</div>'
+      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+sosialEsc(it.author||'—')+'</div>'
+      +'<div style="font-size:13px;white-space:pre-wrap;margin-bottom:10px;">'+(it.text==null?'<i style="color:var(--muted);">(tom — Standard Access)</i>':sosialEsc(it.text))+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      +'<button type="button" onclick="sosialDraft('+i+')" style="padding:6px 10px;border:none;border-radius:8px;background:#1565C0;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Utkast</button>'
+      +'<button type="button" '+dis+' onclick="sosialPublish('+i+')" style="padding:6px 10px;border:none;border-radius:8px;background:'+(dis?'#BDBDBD':'var(--green)')+';color:#fff;font-size:12px;font-weight:600;cursor:'+(dis?'not-allowed':'pointer')+';">Publiser</button>'
+      +'</div>'
+      +'<div class="sosial-draft" style="display:none;margin-top:10px;padding:10px;background:#F7F7F4;border-radius:8px;font-size:13px;white-space:pre-wrap;"></div>'
+      +'</div>';
+  }).join('');
+}
+async function sosialDraft(ix){
+  var it=(window._sosialInbox&&window._sosialInbox.items||[])[ix];
+  if(!it) return;
+  var row=document.querySelector('.sosial-row[data-ix="'+ix+'"]');
+  var box=row&&row.querySelector('.sosial-draft');
+  if(box){ box.style.display='block'; box.textContent='Lager utkast …'; }
+  try{
+    var r=await fetch(sosialBase()+'/draft-reply',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      body:JSON.stringify({id:it.id,author:it.author,text:it.text,source:it.source,category:it.category})
+    });
+    var j=await r.json();
+    it._draft=j.draft||'';
+    it._draftBlocked=!!j.blocked;
+    if(box) box.textContent=j.blocked?(j.reason||'Ikke utkast.'):(j.draft||'');
+  }catch(e){
+    if(box) box.textContent='Feil: '+e.message;
+  }
+}
+async function sosialPublish(ix){
+  var it=(window._sosialInbox&&window._sosialInbox.items||[])[ix];
+  if(!it || !it.canReply || it.category==='scam_against_peasy') return;
+  if(!it._draft){ await sosialDraft(ix); }
+  if(it._draftBlocked || !it._draft) return;
+  if(!confirm('Publiser svaret på Meta?')) return;
+  try{
+    var r=await fetch(sosialBase()+'/reply',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id:it.id, draft:it._draft, replyKind:it.replyKind, conversationId:it.conversationId,
+        category:it.category, origText:it.text, author:it.author
+      })
+    });
+    var j=await r.json();
+    alert(j.ok?'Sendt.':('Ikke sendt: '+(j.err||'')));
+    if(j.ok) loadSosial();
+  }catch(e){ alert('Feil: '+e.message); }
+}
+window.loadSosial=loadSosial;
+
 function findOverrideForRecord(r){
   var byErp=window._v2bmOverrideByErpId||{};
   var byReg=window._v2bmOverrideByRegnr||{};
@@ -5633,7 +5761,7 @@ async function updatePulseStatus(){
 window.addEventListener('load',updatePulseStatus);
 setInterval(updatePulseStatus,60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c297</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c298</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
