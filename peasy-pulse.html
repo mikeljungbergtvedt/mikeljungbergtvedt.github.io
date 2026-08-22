@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c303</title>
+<title>Peasy Pulse v16.04.c304</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -5247,7 +5247,8 @@ function sosialFeilKort(e){
   var c=String((e&&e.code)||'');
   var blob=w+' '+m+' '+c;
   if(/META_PAGE_TOKEN|token/i.test(blob)) return 'Page-token mangler eller er ugyldig på Mini.';
-  if(/ads_read|ads_posts|#10|#294/i.test(blob)) return 'Annonsekommentarer stengt (ads_read). Organiske innlegg og DM kan likevel vises.';
+  if(/META_SYSTEM_USER_TOKEN/i.test(blob)) return 'System-user-token mangler i Mini .env. Annonser kan ikke listes.';
+  if(/ads_read|ads_posts|#10|#294/i.test(blob)) return 'ads_posts stengt. Annonser hentes via ad-konto hvis system-token er satt.';
   if(/ig_dm|instagram/i.test(w) && /403|access|permission|not.*enabled/i.test(blob)) return 'Instagram DM er ikke slått på.';
   if(/Standard Access|tom melding|tom kommentar/i.test(blob)) return 'Facebook sender ikke meldingstekst (Standard Access). Åpne samtalen i Meta.';
   if(/pages_messaging|administratorer|testere av appen/i.test(blob)) return 'Sending fra Pulse er stengt til Meta godkjenner pages_messaging. Svar i Meta-innboksen.';
@@ -5286,15 +5287,17 @@ function setSosialFilter(f){
   renderSosial();
 }
 function sosialOpenHref(th){
-  if(th&&th.permalink) return th.permalink;
-  if(th&&th.conversationId){
+  if(!th) return '';
+  var isAd=th.source==='ad'||th.source==='hidden'||th.isHidden||th.replyKind==='comment';
+  if(isAd) return th.permalink||'';
+  if(th.source==='dm'||th.conversationId){
     var type=th.platform==='instagram'?'IG_MESSAGE':'FB_MESSAGE';
     var asset=th.platform==='instagram'?'17841477106377473':'773695659166753';
     return 'https://business.facebook.com/latest/inbox/all?asset_id='+encodeURIComponent(asset)
-      +'&business_id=629150950054199&selected_item_id='+encodeURIComponent(th.conversationId)
+      +'&business_id=629150950054199&selected_item_id='+encodeURIComponent(th.conversationId||th.id)
       +'&thread_type='+type;
   }
-  return '';
+  return th.permalink||'';
 }
 function sosialMsgHtml(m){
   var fromPage=!!(m&&m.fromPage);
@@ -5366,6 +5369,23 @@ function renderSosial(){
   var shown=threads;
   if(filter==='open') shown=threads.filter(function(th){return th.unanswered&&th.canReply;});
   else if(filter==='empty') shown=threads.filter(function(th){return th.emptyInbound;});
+  shown=shown.slice().sort(function(a,b){
+    function rank(th){
+      var ad=th.source==='ad'||th.source==='hidden'||th.isHidden;
+      var trust=th.category==='trust'||th.isTroll;
+      if(th.unanswered&&ad&&trust) return 0;
+      if(th.unanswered&&ad) return 1;
+      if(th.unanswered&&trust) return 2;
+      if(th.unanswered) return 3;
+      if(ad&&trust) return 4;
+      if(ad) return 5;
+      if(trust) return 6;
+      return 7;
+    }
+    var r=rank(a)-rank(b);
+    if(r) return r;
+    return String(b.ts||'').localeCompare(String(a.ts||''));
+  });
   if(!threads.length){
     box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen tråder. Gul stripe over viser API-feil hvis Graph mangler rettighet.</div>';
     return;
@@ -5393,7 +5413,7 @@ function renderSosial(){
     var threadHtml=msgs.map(sosialMsgHtml).join('');
     var composer='';
     if(href){
-      composer+='<div style="margin-top:8px;"><a href="'+sosialEsc(href)+'" target="_blank" rel="noopener" style="display:inline-block;padding:7px 12px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Åpne samtale i Meta</a></div>';
+      composer+='<div style="margin-top:8px;"><a href="'+sosialEsc(href)+'" target="_blank" rel="noopener" style="display:inline-block;padding:7px 12px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">'+(isDm?'Åpne samtale i Meta':'Åpne kommentar')+'</a></div>';
     }
     if(open && !isDm){
       var draft=th._draft||'';
@@ -5919,7 +5939,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c303</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c304</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
