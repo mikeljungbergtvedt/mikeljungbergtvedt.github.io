@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c302</title>
+<title>Peasy Pulse v16.04.c303</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1875,12 +1875,13 @@ window.MARK_V16_04 = (function(){
 </section>
 
 <section class="mode-section" data-mode="sosial" id="sosial-section" style="display:none;">
-  <div class="page-sub" style="margin-bottom:10px">Tråder. Svar bare der siste melding ikke er fra Peasy. Publiser sender til Meta.</div>
+  <div class="page-sub" style="margin-bottom:10px">Les her. Svar i Meta — sending fra Pulse er stengt til Meta godkjenner pages_messaging.</div>
   <div id="sosial-errors" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;background:#FFF8E1;border:1px solid #FFE082;color:#5D4E00;font-size:13px;line-height:1.5;"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
     <button type="button" onclick="loadSosial(true)" style="padding:7px 12px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Oppdater</button>
     <button type="button" id="sosial-filter-open" onclick="setSosialFilter('open')" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Ubesvarte</button>
-    <button type="button" id="sosial-filter-all" onclick="setSosialFilter('all')" style="padding:7px 12px;border:none;border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Alle</button>
+    <button type="button" id="sosial-filter-empty" onclick="setSosialFilter('empty')" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Uten tekst</button>
+    <button type="button" id="sosial-filter-all" onclick="setSosialFilter('all')" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Alle</button>
     <span id="sosial-count" style="font-size:12px;font-weight:700;color:var(--red);"></span>
     <span id="sosial-updated" style="font-size:11px;color:var(--muted);"></span>
   </div>
@@ -5248,7 +5249,8 @@ function sosialFeilKort(e){
   if(/META_PAGE_TOKEN|token/i.test(blob)) return 'Page-token mangler eller er ugyldig på Mini.';
   if(/ads_read|ads_posts|#10|#294/i.test(blob)) return 'Annonsekommentarer stengt (ads_read). Organiske innlegg og DM kan likevel vises.';
   if(/ig_dm|instagram/i.test(w) && /403|access|permission|not.*enabled/i.test(blob)) return 'Instagram DM er ikke slått på.';
-  if(/Standard Access|tom melding|tom kommentar/i.test(blob)) return 'Facebook sender ikke meldingstekst (Standard Access). Skriv svaret selv i utkastfeltet.';
+  if(/Standard Access|tom melding|tom kommentar/i.test(blob)) return 'Facebook sender ikke meldingstekst (Standard Access). Åpne samtalen i Meta.';
+  if(/pages_messaging|administratorer|testere av appen/i.test(blob)) return 'Sending fra Pulse er stengt til Meta godkjenner pages_messaging. Svar i Meta-innboksen.';
   if(m) return m.slice(0,160);
   return w||'Ukjent Graph-feil';
 }
@@ -5280,8 +5282,19 @@ function paintSosialBadge(n){
   if(btn) btn.textContent=v>0?('Sosial '+v):'Sosial';
 }
 function setSosialFilter(f){
-  window._sosialFilter=f==='all'?'all':'open';
+  window._sosialFilter=(f==='all'||f==='empty')?f:'open';
   renderSosial();
+}
+function sosialOpenHref(th){
+  if(th&&th.permalink) return th.permalink;
+  if(th&&th.conversationId){
+    var type=th.platform==='instagram'?'IG_MESSAGE':'FB_MESSAGE';
+    var asset=th.platform==='instagram'?'17841477106377473':'773695659166753';
+    return 'https://business.facebook.com/latest/inbox/all?asset_id='+encodeURIComponent(asset)
+      +'&business_id=629150950054199&selected_item_id='+encodeURIComponent(th.conversationId)
+      +'&thread_type='+type;
+  }
+  return '';
 }
 function sosialMsgHtml(m){
   var fromPage=!!(m&&m.fromPage);
@@ -5332,55 +5345,69 @@ function renderSosial(){
   if(!box) return;
   var threads=sosialThreads();
   var unanswered=sosialUnansweredN(j);
+  var emptyN=typeof j.emptyInbound==='number'?j.emptyInbound:threads.filter(function(th){return th.emptyInbound;}).length;
   var filter=window._sosialFilter||'open';
   var openBtn=document.getElementById('sosial-filter-open');
+  var emptyBtn=document.getElementById('sosial-filter-empty');
   var allBtn=document.getElementById('sosial-filter-all');
-  if(openBtn){
-    openBtn.style.background=filter==='open'?'var(--green)':'#fff';
-    openBtn.style.color=filter==='open'?'#fff':'inherit';
-  }
-  if(allBtn){
-    allBtn.style.background=filter==='all'?'var(--green)':'#fff';
-    allBtn.style.color=filter==='all'?'#fff':'inherit';
-  }
+  [['open',openBtn],['empty',emptyBtn],['all',allBtn]].forEach(function(pair){
+    var el=pair[1];
+    if(!el) return;
+    var on=filter===pair[0];
+    el.style.background=on?'var(--green)':'#fff';
+    el.style.color=on?'#fff':'inherit';
+  });
   var cnt=document.getElementById('sosial-count');
   if(cnt){
-    cnt.textContent=unanswered? (unanswered+' ubesvart') : 'Ingen ubesvarte';
+    cnt.textContent=(unanswered? (unanswered+' ubesvart') : 'Ingen ubesvarte')+(emptyN?(' · '+emptyN+' uten tekst'):'');
     cnt.style.color=unanswered?'var(--red)':'var(--muted)';
   }
   paintSosialBadge(unanswered);
-  var shown=filter==='all'?threads:threads.filter(function(th){return th.unanswered&&th.canReply;});
+  var shown=threads;
+  if(filter==='open') shown=threads.filter(function(th){return th.unanswered&&th.canReply;});
+  else if(filter==='empty') shown=threads.filter(function(th){return th.emptyInbound;});
   if(!threads.length){
     box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen tråder. Gul stripe over viser API-feil hvis Graph mangler rettighet.</div>';
     return;
   }
   if(!shown.length){
-    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen ubesvarte. <a href="#" onclick="setSosialFilter(\'all\');return false;">Vis alle ('+threads.length+')</a></div>';
+    var emptyHint=filter==='empty'
+      ?'Ingen tråder uten tekst.'
+      :('Ingen ubesvarte med tekst. '+(emptyN?emptyN+' uten tekst ligger under Uten tekst. ':''));
+    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">'+emptyHint+'<a href="#" onclick="setSosialFilter(\'all\');return false;">Vis alle ('+threads.length+')</a></div>';
     return;
   }
   box.innerHTML=shown.map(function(th){
     var ix=threads.indexOf(th);
     var open=!!(th.unanswered&&th.canReply);
-    var dis=!open;
+    var isDm=th.replyKind==='message'||th.source==='dm';
+    var href=sosialOpenHref(th);
     var hidden=th.isHidden?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#8A6708;">HIDDEN</span>':'';
-    var badge=open
-      ?'<span style="margin-left:8px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#fff;background:#C62828;border-radius:99px;padding:2px 7px;">UBESVART</span>'
-      :(th.canReply?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#2E7D32;">SVART</span>':'');
+    var badge=th.emptyInbound
+      ?'<span style="margin-left:8px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#5D4E00;background:#FFE082;border-radius:99px;padding:2px 7px;">UTEN TEKST</span>'
+      :(open
+        ?'<span style="margin-left:8px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#fff;background:#C62828;border-radius:99px;padding:2px 7px;">UBESVART</span>'
+        :(th.canReply||th.replyKind==='message'?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#2E7D32;">SVART</span>':''));
     var ad=th.adName||th.adId||'';
     var msgs=(th.messages&&th.messages.length)?th.messages:[{author:th.author,authorId:th.authorId,text:th.lastInboundText||th.text,ts:th.ts,fromPage:false}];
     var threadHtml=msgs.map(sosialMsgHtml).join('');
     var composer='';
-    if(open){
+    if(href){
+      composer+='<div style="margin-top:8px;"><a href="'+sosialEsc(href)+'" target="_blank" rel="noopener" style="display:inline-block;padding:7px 12px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Åpne samtale i Meta</a></div>';
+    }
+    if(open && !isDm){
       var draft=th._draft||'';
-      composer='<textarea class="sosial-ta" data-ix="'+ix+'" rows="4" placeholder="Skriv eller hent utkast. Du kan redigere før Publiser." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin:8px 0;">'+sosialEsc(draft)+'</textarea>'
+      composer+='<textarea class="sosial-ta" data-ix="'+ix+'" rows="4" placeholder="Skriv eller hent utkast. Du kan redigere før Publiser." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin:8px 0;">'+sosialEsc(draft)+'</textarea>'
         +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
         +'<button type="button" onclick="sosialDraft('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:#1565C0;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Foreslå utkast</button>'
         +'<button type="button" onclick="sosialPublish('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Publiser</button>'
         +'</div>';
+    }else if(isDm){
+      composer+='<div style="font-size:12px;color:var(--muted);margin-top:6px;">Sending fra Pulse er stengt til Meta godkjenner pages_messaging.</div>';
     }else if(!th.canReply){
-      composer='<div style="font-size:12px;color:var(--muted);margin-top:6px;">Kan ikke svare herfra.</div>';
+      composer+='<div style="font-size:12px;color:var(--muted);margin-top:6px;">Kan ikke svare herfra.</div>';
     }
-    var border=open?'2px solid #C62828':'1px solid var(--border)';
+    var border=open?'2px solid #C62828':(th.emptyInbound?'1px solid #FFE082':'1px solid var(--border)');
     return '<div class="sosial-row" data-ix="'+ix+'" style="background:var(--card);border:'+border+';border-radius:12px;padding:12px 14px;">'
       +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px;">'
       +'<span>'+sosialEsc(sosialTid(th.ts))+'</span>'
@@ -5388,10 +5415,7 @@ function renderSosial(){
       +(ad?'<span>Annonse: '+sosialEsc(ad)+'</span>':'')
       +'<span>'+sosialEsc(th.category||'')+'</span>'
       +hidden+badge+'</div>'
-      +'<div style="font-weight:700;font-size:13px;margin-bottom:8px;">'+sosialEsc(th.author||'—')
-      +(th.permalink?' <a href="'+sosialEsc(th.permalink)+'" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne hos Facebook</a>':'')
-      +(!th.permalink && th.source==='dm'?' <a href="https://business.facebook.com/latest/inbox/all?asset_id=773695659166753" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne Meta-innboks</a>':'')
-      +'</div>'
+      +'<div style="font-weight:700;font-size:13px;margin-bottom:8px;">'+sosialEsc(th.author||'—')+'</div>'
       +threadHtml
       +composer
       +'</div>';
@@ -5447,7 +5471,7 @@ async function sosialPublish(ix){
       })
     });
     var j=await r.json();
-    alert(j.ok?'Sendt.':('Ikke sendt: '+(j.err||'')));
+    alert(j.ok?'Sendt.':(j.err||'Ikke sendt.'));
     if(j.ok) loadSosial(true);
   }catch(e){ alert('Feil: '+e.message); }
 }
@@ -5895,7 +5919,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c302</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c303</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
