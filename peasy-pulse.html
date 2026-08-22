@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c301</title>
+<title>Peasy Pulse v16.04.c302</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -309,6 +309,7 @@ function authLogout(){
   <div class="header-right">
     <div id="pulse-status-ready" role="button" tabindex="0" title="Priset, ikke sendt — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
     <div id="pulse-status-wait" role="button" tabindex="0" title="Venter på prising — åpne QA / Send" onclick="setMode('qa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('qa');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">⏳ …</div>
+    <div id="pulse-status-sosial" role="button" tabindex="0" title="Ubesvarte i Sosial — åpne Sosial" onclick="setMode('sosial')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setMode('sosial');}" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;cursor:pointer;">Sosial</div>
     <div class="pill"><div class="pulse-dot"></div><span id="clock">&ndash;</span></div>
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
@@ -1874,10 +1875,13 @@ window.MARK_V16_04 = (function(){
 </section>
 
 <section class="mode-section" data-mode="sosial" id="sosial-section" style="display:none;">
-  <div class="page-sub" style="margin-bottom:10px">Sosial innboks. Utkast her. Bare Publiser sender til Meta.</div>
+  <div class="page-sub" style="margin-bottom:10px">Tråder. Svar bare der siste melding ikke er fra Peasy. Publiser sender til Meta.</div>
   <div id="sosial-errors" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;background:#FFF8E1;border:1px solid #FFE082;color:#5D4E00;font-size:13px;line-height:1.5;"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-    <button type="button" onclick="loadSosial()" style="padding:7px 12px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Oppdater</button>
+    <button type="button" onclick="loadSosial(true)" style="padding:7px 12px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Oppdater</button>
+    <button type="button" id="sosial-filter-open" onclick="setSosialFilter('open')" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Ubesvarte</button>
+    <button type="button" id="sosial-filter-all" onclick="setSosialFilter('all')" style="padding:7px 12px;border:none;border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Alle</button>
+    <span id="sosial-count" style="font-size:12px;font-weight:700;color:var(--red);"></span>
     <span id="sosial-updated" style="font-size:11px;color:var(--muted);"></span>
   </div>
   <div id="sosial-list" style="display:flex;flex-direction:column;gap:10px;"></div>
@@ -5248,14 +5252,58 @@ function sosialFeilKort(e){
   if(m) return m.slice(0,160);
   return w||'Ukjent Graph-feil';
 }
-async function loadSosial(){
+function sosialThreads(){
+  var j=window._sosialInbox||{};
+  return j.threads||j.items||[];
+}
+function sosialUnansweredN(j){
+  j=j||window._sosialInbox||{};
+  if(typeof j.unanswered==='number') return j.unanswered;
+  return sosialThreads().filter(function(th){return th.unanswered&&th.canReply;}).length;
+}
+function paintSosialBadge(n){
+  var el=document.getElementById('pulse-status-sosial');
+  if(!el) return;
+  var v=Number(n);
+  if(!isFinite(v)||v<0) v=0;
+  el.textContent='Sosial '+v;
+  if(v>0){
+    el.style.background='#C62828';
+    el.style.color='#fff';
+    el.title=v+' ubesvarte i Sosial';
+  }else{
+    el.style.background='rgba(255,255,255,0.15)';
+    el.style.color='rgba(255,255,255,0.65)';
+    el.title='Ingen ubesvarte i Sosial';
+  }
+  var btn=document.getElementById('btn-sosial');
+  if(btn) btn.textContent=v>0?('Sosial '+v):'Sosial';
+}
+function setSosialFilter(f){
+  window._sosialFilter=f==='all'?'all':'open';
+  renderSosial();
+}
+function sosialMsgHtml(m){
+  var fromPage=!!(m&&m.fromPage);
+  var who=fromPage?'Peasy':((m&&m.author)||'Kunde');
+  var empty=!m||m.text==null||m.text==='';
+  var body=empty?'<i style="color:var(--muted);">Ingen tekst fra Facebook</i>':sosialEsc(m.text);
+  var box=fromPage
+    ?'margin-left:28px;background:#E8F5E9;border:1px solid #C8E6C9;'
+    :'margin-right:28px;background:#F7F7F7;border:1px solid #E0E0E0;';
+  return '<div style="'+box+'border-radius:10px;padding:8px 10px;margin-bottom:6px;">'
+    +'<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+sosialEsc(who)+' · '+sosialEsc(sosialTid(m&&m.ts))+'</div>'
+    +'<div style="font-size:13px;white-space:pre-wrap;line-height:1.4;">'+body+'</div></div>';
+}
+async function loadSosial(force){
   var box=document.getElementById('sosial-list');
   var errEl=document.getElementById('sosial-errors');
   var upd=document.getElementById('sosial-updated');
   if(box) box.innerHTML='<div style="padding:20px;color:var(--muted);">Laster …</div>';
   if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   try{
-    var r=await fetch(sosialBase()+'/inbox?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+    var q=(force?'refresh=1&':'')+'t='+Date.now();
+    var r=await fetch(sosialBase()+'/inbox?'+q,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
     var j=await r.json();
     window._sosialInbox=j;
     if(upd) upd.textContent=(j.updatedAt?sosialTid(j.updatedAt):'')+(j.graphVersion?' · '+j.graphVersion:'');
@@ -5272,48 +5320,86 @@ async function loadSosial(){
       errEl.style.display='block';
       errEl.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Facebook / API</div>'+lines.map(function(l){return '<div>• '+sosialEsc(l)+'</div>';}).join('');
     }
+    paintSosialBadge(sosialUnansweredN(j));
     renderSosial();
   }catch(e){
     if(box) box.innerHTML='<div style="padding:20px;color:var(--red);">Kunne ikke laste: '+sosialEsc(e.message)+'</div>';
   }
 }
 function renderSosial(){
-  var j=window._sosialInbox||{items:[]};
+  var j=window._sosialInbox||{threads:[],items:[]};
   var box=document.getElementById('sosial-list');
   if(!box) return;
-  var items=j.items||[];
-  if(!items.length){
-    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen meldinger. Gul stripe over viser API-feil hvis Graph mangler rettighet.</div>';
+  var threads=sosialThreads();
+  var unanswered=sosialUnansweredN(j);
+  var filter=window._sosialFilter||'open';
+  var openBtn=document.getElementById('sosial-filter-open');
+  var allBtn=document.getElementById('sosial-filter-all');
+  if(openBtn){
+    openBtn.style.background=filter==='open'?'var(--green)':'#fff';
+    openBtn.style.color=filter==='open'?'#fff':'inherit';
+  }
+  if(allBtn){
+    allBtn.style.background=filter==='all'?'var(--green)':'#fff';
+    allBtn.style.color=filter==='all'?'#fff':'inherit';
+  }
+  var cnt=document.getElementById('sosial-count');
+  if(cnt){
+    cnt.textContent=unanswered? (unanswered+' ubesvart') : 'Ingen ubesvarte';
+    cnt.style.color=unanswered?'var(--red)':'var(--muted)';
+  }
+  paintSosialBadge(unanswered);
+  var shown=filter==='all'?threads:threads.filter(function(th){return th.unanswered&&th.canReply;});
+  if(!threads.length){
+    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen tråder. Gul stripe over viser API-feil hvis Graph mangler rettighet.</div>';
     return;
   }
-  box.innerHTML=items.map(function(it,i){
-    var dis=(!it.canReply || it.category==='scam_against_peasy');
-    var hidden=it.isHidden?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#8A6708;">HIDDEN</span>':'';
-    var ad=it.adName||it.adId||'—';
-    var inn=it.text==null||it.text===''?'<i style="color:var(--muted);">Ingen tekst fra Facebook. Skriv svaret selv under.</i>':sosialEsc(it.text);
-    var draft=it._draft||'';
-    return '<div class="sosial-row" data-ix="'+i+'" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">'
-      +'<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:6px;">'
-      +'<span>'+sosialEsc(sosialTid(it.ts))+'</span>'
-      +'<span>'+sosialEsc(sosialKilde(it))+'</span>'
-      +'<span>Annonse: '+sosialEsc(ad)+'</span>'
-      +'<span>'+sosialEsc(it.category||'')+'</span>'
-      +hidden+'</div>'
-      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+sosialEsc(it.author||'—')
-      +(it.permalink?' <a href="'+sosialEsc(it.permalink)+'" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne hos Facebook</a>':'')
-      +(!it.permalink && it.source==='dm'?' <a href="https://business.facebook.com/latest/inbox/all?asset_id=773695659166753" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne Meta-innboks</a>':'')
+  if(!shown.length){
+    box.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);">Ingen ubesvarte. <a href="#" onclick="setSosialFilter(\'all\');return false;">Vis alle ('+threads.length+')</a></div>';
+    return;
+  }
+  box.innerHTML=shown.map(function(th){
+    var ix=threads.indexOf(th);
+    var open=!!(th.unanswered&&th.canReply);
+    var dis=!open;
+    var hidden=th.isHidden?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#8A6708;">HIDDEN</span>':'';
+    var badge=open
+      ?'<span style="margin-left:8px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#fff;background:#C62828;border-radius:99px;padding:2px 7px;">UBESVART</span>'
+      :(th.canReply?'<span style="margin-left:8px;font-size:10px;font-weight:800;color:#2E7D32;">SVART</span>':'');
+    var ad=th.adName||th.adId||'';
+    var msgs=(th.messages&&th.messages.length)?th.messages:[{author:th.author,authorId:th.authorId,text:th.lastInboundText||th.text,ts:th.ts,fromPage:false}];
+    var threadHtml=msgs.map(sosialMsgHtml).join('');
+    var composer='';
+    if(open){
+      var draft=th._draft||'';
+      composer='<textarea class="sosial-ta" data-ix="'+ix+'" rows="4" placeholder="Skriv eller hent utkast. Du kan redigere før Publiser." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin:8px 0;">'+sosialEsc(draft)+'</textarea>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+        +'<button type="button" onclick="sosialDraft('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:#1565C0;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Foreslå utkast</button>'
+        +'<button type="button" onclick="sosialPublish('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Publiser</button>'
+        +'</div>';
+    }else if(!th.canReply){
+      composer='<div style="font-size:12px;color:var(--muted);margin-top:6px;">Kan ikke svare herfra.</div>';
+    }
+    var border=open?'2px solid #C62828':'1px solid var(--border)';
+    return '<div class="sosial-row" data-ix="'+ix+'" style="background:var(--card);border:'+border+';border-radius:12px;padding:12px 14px;">'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px;">'
+      +'<span>'+sosialEsc(sosialTid(th.ts))+'</span>'
+      +'<span>'+sosialEsc(sosialKilde(th))+'</span>'
+      +(ad?'<span>Annonse: '+sosialEsc(ad)+'</span>':'')
+      +'<span>'+sosialEsc(th.category||'')+'</span>'
+      +hidden+badge+'</div>'
+      +'<div style="font-weight:700;font-size:13px;margin-bottom:8px;">'+sosialEsc(th.author||'—')
+      +(th.permalink?' <a href="'+sosialEsc(th.permalink)+'" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne hos Facebook</a>':'')
+      +(!th.permalink && th.source==='dm'?' <a href="https://business.facebook.com/latest/inbox/all?asset_id=773695659166753" target="_blank" rel="noopener" style="font-weight:600;font-size:12px;">Åpne Meta-innboks</a>':'')
       +'</div>'
-      +'<div style="font-size:13px;white-space:pre-wrap;margin-bottom:10px;">'+inn+'</div>'
-      +'<textarea class="sosial-ta" data-ix="'+i+'" rows="4" placeholder="Skriv eller hent utkast. Du kan redigere før Publiser." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin-bottom:8px;">'+sosialEsc(draft)+'</textarea>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      +'<button type="button" onclick="sosialDraft('+i+')" style="padding:6px 10px;border:none;border-radius:8px;background:#1565C0;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Foreslå utkast</button>'
-      +'<button type="button" '+(dis?'disabled':'')+' onclick="sosialPublish('+i+')" style="padding:6px 10px;border:none;border-radius:8px;background:'+(dis?'#BDBDBD':'var(--green)')+';color:#fff;font-size:12px;font-weight:600;cursor:'+(dis?'not-allowed':'pointer')+';">Publiser</button>'
-      +'</div></div>';
+      +threadHtml
+      +composer
+      +'</div>';
   }).join('');
   box.querySelectorAll('.sosial-ta').forEach(function(ta){
     ta.oninput=function(){
       var ix=Number(ta.getAttribute('data-ix'));
-      var it=(window._sosialInbox&&window._sosialInbox.items||[])[ix];
+      var it=sosialThreads()[ix];
       if(it) it._draft=ta.value;
     };
   });
@@ -5322,7 +5408,7 @@ function sosialTa(ix){
   return document.querySelector('.sosial-ta[data-ix="'+ix+'"]');
 }
 async function sosialDraft(ix){
-  var it=(window._sosialInbox&&window._sosialInbox.items||[])[ix];
+  var it=sosialThreads()[ix];
   if(!it) return;
   var ta=sosialTa(ix);
   if(ta) ta.value='Lager utkast …';
@@ -5330,7 +5416,7 @@ async function sosialDraft(ix){
     var r=await fetch(sosialBase()+'/draft-reply',{
       method:'POST',
       headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
-      body:JSON.stringify({id:it.id,author:it.author,text:it.text,source:it.source,category:it.category})
+      body:JSON.stringify({id:it.id,author:it.author,text:it.lastInboundText||it.text,source:it.source,category:it.category})
     });
     var j=await r.json();
     it._draftBlocked=!!j.blocked;
@@ -5341,30 +5427,40 @@ async function sosialDraft(ix){
   }
 }
 async function sosialPublish(ix){
-  var it=(window._sosialInbox&&window._sosialInbox.items||[])[ix];
-  if(!it || !it.canReply || it.category==='scam_against_peasy') return;
+  var it=sosialThreads()[ix];
+  if(!it || !it.canReply || !it.unanswered || it.category==='scam_against_peasy') return;
   var ta=sosialTa(ix);
   var draft=ta?ta.value.trim():(it._draft||'');
   it._draft=draft;
   if(!draft){ await sosialDraft(ix); draft=(sosialTa(ix)&&sosialTa(ix).value.trim())||''; it._draft=draft; }
   if(it._draftBlocked || !draft) return;
   if(!confirm('Publiser svaret på Meta?')) return;
+  var replyId=it.lastInboundId||it.id;
   try{
     var r=await fetch(sosialBase()+'/reply',{
       method:'POST',
       headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
       body:JSON.stringify({
-        id:it.id, draft:draft, replyKind:it.replyKind, conversationId:it.conversationId,
-        category:it.category, origText:it.text, author:it.author, authorId:it.authorId,
+        id:replyId, draft:draft, replyKind:it.replyKind, conversationId:it.conversationId,
+        category:it.category, origText:it.lastInboundText||it.text, author:it.author, authorId:it.authorId,
         platform:it.platform, recipientId:it.authorId
       })
     });
     var j=await r.json();
     alert(j.ok?'Sendt.':('Ikke sendt: '+(j.err||'')));
-    if(j.ok) loadSosial();
+    if(j.ok) loadSosial(true);
   }catch(e){ alert('Feil: '+e.message); }
 }
+async function updateSosialStatus(){
+  try{
+    var r=await fetch(sosialBase()+'/status?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+    var j=await r.json();
+    if(typeof j.unanswered==='number') paintSosialBadge(j.unanswered);
+  }catch(e){ /* header-pill tåler pause */ }
+}
 window.loadSosial=loadSosial;
+window.setSosialFilter=setSosialFilter;
+window.updateSosialStatus=updateSosialStatus;
 
 function findOverrideForRecord(r){
   var byErp=window._v2bmOverrideByErpId||{};
@@ -5795,10 +5891,11 @@ async function updatePulseStatus(){
     if(waitEl){waitEl.style.background='rgba(255,255,255,0.15)';waitEl.style.color='rgba(255,255,255,0.65)';waitEl.textContent='⏳ ? pris';}
   }
 }
-window.addEventListener('load',updatePulseStatus);
+window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus();});
 setInterval(updatePulseStatus,60000);
+setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c301</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c302</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
