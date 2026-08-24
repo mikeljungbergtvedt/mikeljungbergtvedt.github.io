@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c311</title>
+<title>Peasy Pulse v16.04.c312</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.04.c311';</script>
+<script>document.title='Peasy Pulse v16.04.c312';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -223,7 +223,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c311</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c312</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -283,11 +283,12 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c311</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c312</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" data-mode="qa" id="btn-qa" onclick="setMode('qa')">QA / Send</button>
+      <button class="mode-btn" data-mode="utpris" id="btn-utpris" onclick="setMode('utpris')">Finn-utpris</button>
       <button class="mode-btn" data-mode="pipe" id="btn-pipe" onclick="setMode('pipe')">Pipe</button>
       <button class="mode-btn" data-mode="eval" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
       <button class="mode-btn" data-mode="ordna" id="btn-ordna" onclick="setMode('ordna')">Ordna</button>
@@ -1804,6 +1805,31 @@ window.MARK_V16_04 = (function(){
 <div id="qa-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;"></div>
   </section>
 
+  <section class="mode-section" data-mode="utpris" id="utpris-section" style="display:none;">
+    <h1 class="page" style="margin-bottom:8px">Finn-utpris</h1>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Prisen en forhandler setter når origin legges på Finn etter klargjøring. Egen motor — ikke bot, ikke send, ikke D-lav.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+      <input id="utpris-regnr" type="text" placeholder="Skilt" autocomplete="off" style="padding:10px 14px;font-size:16px;border:1px solid var(--border);border-radius:8px;min-width:160px;text-transform:uppercase;letter-spacing:0.06em;font-family:monospace;font-weight:700;">
+      <button type="button" id="utpris-hent" style="padding:10px 18px;background:var(--green);color:#fff;border:0;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">Hent</button>
+    </div>
+    <div id="utpris-status" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></div>
+    <div id="utpris-big" style="font-size:42px;font-weight:800;letter-spacing:-0.03em;color:var(--text);margin:8px 0 20px;">—</div>
+    <h2 style="font-size:14px;margin:0 0 8px;">Valgte</h2>
+    <div style="overflow-x:auto;margin-bottom:22px;">
+      <table id="utpris-valgte" style="width:100%;border-collapse:collapse;font-size:13px;font-family:monospace;">
+        <thead><tr style="text-align:left;color:var(--muted);font-size:11px;"><th style="padding:6px 8px;">Skilt</th><th style="padding:6px 8px;text-align:right;">Ask</th><th style="padding:6px 8px;text-align:right;">Km</th><th style="padding:6px 8px;">Status</th><th style="padding:6px 8px;">Url</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <h2 style="font-size:14px;margin:0 0 8px;">Ekskluderte</h2>
+    <div style="overflow-x:auto;">
+      <table id="utpris-eks" style="width:100%;border-collapse:collapse;font-size:13px;font-family:monospace;">
+        <thead><tr style="text-align:left;color:var(--muted);font-size:11px;"><th style="padding:6px 8px;">Skilt</th><th style="padding:6px 8px;">Grunn</th><th style="padding:6px 8px;text-align:right;">Ask</th><th style="padding:6px 8px;text-align:right;">Km</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
   <div class="page-sub" style="margin-bottom:14px">V3 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
@@ -1907,6 +1933,7 @@ var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
 var PULSE_NAV=[
   {id:'ops',group:'Drift'},
   {id:'qa',group:'Drift'},
+  {id:'utpris',group:'Drift'},
   {id:'pipe',group:'Drift'},
   {id:'eval',group:'Drift'},
   {id:'ordna',group:'Drift'},
@@ -2085,7 +2112,7 @@ function setMode(m){
   var moreBtn=document.getElementById('btn-more');
   if(moreBtn) moreBtn.classList.toggle('active', !!document.querySelector('#nav-more-menu .mode-btn.active'));
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
-  document.body.classList.toggle('skip-dials', m==='qa'||m==='sosial'||m==='uke');
+  document.body.classList.toggle('skip-dials', m==='qa'||m==='sosial'||m==='uke'||m==='utpris');
   if(m==='qa'||m==='sosial'){
     var sec=document.getElementById(m==='qa'?'qa-section':'sosial-section');
     requestAnimationFrame(function(){
@@ -2101,6 +2128,7 @@ function setMode(m){
   if(m==='pipe'){try{loadPipe();}catch(e){}}
       if(m==='score'){try{loadScoreboard();}catch(e){}}
       if(m==='qa'){loadQA();}
+      if(m==='utpris'){ var _ur=document.getElementById('utpris-regnr'); if(_ur) setTimeout(function(){ _ur.focus(); }, 40); }
       if(m==='v2bm'){loadV2Benchmark();}
       if(m==='ab'){loadAbTab();}
       if(m==='sosial'){loadSosial();}
@@ -5964,7 +5992,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c311</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c312</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6828,6 +6856,94 @@ setTimeout(tick,1500);setInterval(tick,5000);
       setTimeout(() => { btn.textContent = orig; btn.style.background = '#2E7D32'; }, 3000);
     }
   }
+})();
+</script>
+
+<!-- c312: Finn-utpris-fane. Egen motor, ikke bot, ikke send. -->
+<script>
+(function(){
+  const WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
+  const TOKEN = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
+
+  function fmt(n){
+    if (n == null || n === '') return '–';
+    var x = Number(n);
+    if (!isFinite(x)) return '–';
+    return Math.round(x).toLocaleString('nb-NO');
+  }
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function cell(v, right){
+    return '<td style="padding:6px 8px;'+(right?'text-align:right;':'')+'">'+v+'</td>';
+  }
+
+  async function hentUtpris(){
+    var inp = document.getElementById('utpris-regnr');
+    var btn = document.getElementById('utpris-hent');
+    var st = document.getElementById('utpris-status');
+    var big = document.getElementById('utpris-big');
+    var vt = document.getElementById('utpris-valgte');
+    var et = document.getElementById('utpris-eks');
+    if (!inp || !btn || !st || !big) return;
+    var regnr = String(inp.value || '').toUpperCase().replace(/[\s-]/g,'');
+    inp.value = regnr;
+    if (!/^[A-Z]{1,3}\d{4,6}$/.test(regnr) && !/^[A-Z0-9]{5,8}$/.test(regnr)) {
+      st.textContent = 'Skriv skilt.';
+      return;
+    }
+    btn.disabled = true;
+    st.textContent = 'Henter …';
+    big.textContent = '—';
+    if (vt) vt.querySelector('tbody').innerHTML = '';
+    if (et) et.querySelector('tbody').innerHTML = '';
+    try {
+      var url = WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/finn-utpris?regnr=' + encodeURIComponent(regnr));
+      var r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+      var j = await r.json().catch(function(){ return {}; });
+      if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP ' + r.status));
+      var o = j.origin || {};
+      var n = Number(j.n) || 0;
+      var ut = j.finn_utpris;
+      if (ut == null || ut === '' || !(Number(ut) > 0)) {
+        big.textContent = 'for få live treff';
+        big.style.fontSize = '28px';
+      } else {
+        big.textContent = fmt(ut) + ' kr';
+        big.style.fontSize = '42px';
+      }
+      st.textContent = [o.merke, o.modell, o.aar, o.drivstoff, o.karosseri].filter(Boolean).join(' · ')
+        + (o.km != null ? ' · ' + fmt(o.km) + ' km' : '')
+        + ' · n=' + n;
+      var vb = vt && vt.querySelector('tbody');
+      if (vb) {
+        vb.innerHTML = (j.valgte || []).map(function(v){
+          var link = v.url ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">Finn</a>' : '–';
+          return '<tr>'+cell(esc(v.skilt||'–'))+cell(fmt(v.ask),true)+cell(fmt(v.km),true)+cell(esc(v.status||'–'))+cell(link)+'</tr>';
+        }).join('') || '<tr><td colspan="5" style="padding:10px 8px;color:var(--muted);">Ingen live treff</td></tr>';
+      }
+      var eb = et && et.querySelector('tbody');
+      if (eb) {
+        eb.innerHTML = (j.ekskluderte || []).map(function(e){
+          return '<tr>'+cell(esc(e.skilt||'–'))+cell(esc(e.grunn||'–'))+cell(fmt(e.ask),true)+cell(fmt(e.km),true)+'</tr>';
+        }).join('') || '<tr><td colspan="4" style="padding:10px 8px;color:var(--muted);">Ingen ekskluderte</td></tr>';
+      }
+    } catch (e) {
+      st.textContent = e && e.message ? e.message : String(e);
+      big.textContent = '—';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function bind(){
+    var btn = document.getElementById('utpris-hent');
+    var inp = document.getElementById('utpris-regnr');
+    if (btn) btn.addEventListener('click', hentUtpris);
+    if (inp) inp.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); hentUtpris(); }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
 })();
 </script>
 
