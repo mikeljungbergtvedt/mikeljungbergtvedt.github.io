@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c316</title>
+<title>Peasy Pulse v16.04.c317</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.04.c316';</script>
+<script>document.title='Peasy Pulse v16.04.c317';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c316</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c317</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c316</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c317</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6056,7 +6056,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c316</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c317</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6498,6 +6498,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       } catch(e) { console.warn('[v3g] fetch failed:', e); }
 
+      // [bot4] Fetch Bot 4-measurements — defensiv, feiler stille. Aldri i SEND-gate.
+      const bot4ByRegnr = {};
+      try {
+        const bot4Url = PA_PROXY_ERP.replace('/list/','/bot4-measurements') + '?t=' + Date.now();
+        const bot4Fallback = 'https://mikeljungbergtvedt.github.io/bot4-measurements.jsonl';
+        let bot4R = await fetch(bot4Url).catch(() => ({ok:false}));
+        if (!bot4R || !bot4R.ok) { bot4R = await fetch(bot4Fallback).catch(() => ({ok:false})); }
+        if (bot4R && bot4R.ok) {
+          const bot4Text = await bot4R.text();
+          const bot4Recs = bot4Text.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e) { return null; } }).filter(Boolean);
+          for (const r of bot4Recs) {
+            const rg = String(r.regnr || '').toUpperCase();
+            if (!rg) continue;
+            if (!bot4ByRegnr[rg] || (r.timestamp || '') > (bot4ByRegnr[rg].timestamp || '')) bot4ByRegnr[rg] = r;
+          }
+        }
+      } catch(e) { console.warn('[bot4] fetch failed:', e); }
+
       // [qa-hist] Fetch master-XLSX for ERP-historikk per regnr
       var histByReg = {};
       try {
@@ -6547,6 +6565,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           source: b.source || (v3gByRegnr[rg] && v3gByRegnr[rg].source) || null,
           rawErp: b,
           v3g: v3gByRegnr[rg] || null,
+          bot4: bot4ByRegnr[rg] || null,
           hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
         };
       }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
@@ -6814,11 +6833,18 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="text-align:right;">${fmt(vg.dHoy)}</div>
         <div style="text-align:right;color:var(--muted);">${qaIdent('v3g')}</div>
         <div style="text-align:right;color:var(--muted);">${qaComps('v3g')}</div>
+        <div style="color:var(--muted);">Bot 4</div>
+        <div style="text-align:right;">–</div>
+        <div style="text-align:right;font-weight:600;color:${(e.bot4&&e.bot4.ok===false)?'#A8221C':'inherit'}">${(function(){var b=e.bot4;if(!b)return '–';if(b.ok===false||(b.error&&!Number.isFinite(Number(b.finn_utpris))))return 'feil';return fmt(b.finn_utpris);})()}</div>
+        <div style="text-align:right;">–</div>
+        <div style="text-align:right;color:var(--muted);">—</div>
+        <div style="text-align:right;color:var(--muted);">${(e.bot4&&e.bot4.n_comps!=null)?String(e.bot4.n_comps):'—'}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
         <div>${(function(){var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O')return '<b style="color:#E65100;">V3G Ordna</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter margin og fee).';if(a==='B')return '<b style="color:#1B5E20;">B V3G</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.90 etter margin og fee).';return '<b style="color:#6A1B9A;">A Easy</b> Lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
         <div>Finn-pris V3 ${fmt(v3.anker)}${dV3!=null?' <b style="color:'+(Math.abs(dV3)>15?'#A8221C':'var(--text)')+'">('+(dV3>=0?'+':'')+dV3+'%)</b>':''}
          · V3G ${fmt(vg.anker)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}
+         · Bot 4 ${(function(){var b=e.bot4;if(!b)return '–';if(b.ok===false||(b.error&&!Number.isFinite(Number(b.finn_utpris))))return 'feil';return fmt(b.finn_utpris);})()}
          <span style="color:#999;"> mot Easy</span></div>
         ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${((vg.kalkyle==='retur'||vg.retur_mult)&&vg.original_dLav!=null)?'<div style="color:#1B5E20;">Retur-kalkyle ×'+(vg.retur_mult||0.90)+': standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
@@ -6826,8 +6852,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${actionHtml}
-        ${!sentTime ? `<button type="button" class="qa-clear-btn" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId||''))}" title="Slett all eval-cache. Easy, V3 og V3G priser på blankt ark med km fra ERP." style="padding:10px 12px;background:#fff;color:#A8221C;border:1px solid #E57373;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Slett cache</button>` : ''}
-        <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️${(sellerCmt || (e.hist && e.hist.length))?' <span style="color:#A8221C;font-weight:700;">●</span>':''}</button>
+        ${!sentTime ? `<button type="button" class="qa-clear-btn" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId||''))}" title="Slett all eval-cache. Easy, V3, V3G og Bot 4 priser på blankt ark med km fra ERP." style="padding:10px 12px;background:#fff;color:#A8221C;border:1px solid #E57373;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Slett cache</button>` : ''}
+        <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️${(sellerCmt || (e.hist && e.hist.length) || (e.bot4 && (e.bot4.rationale || e.bot4.error)))?' <span style="color:#A8221C;font-weight:700;">●</span>':''}</button>
       </div>
       ${(!sentTime && !scope && !kmBlock) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
         <input class="qa-anker-input" type="number" step="1000" min="5000" placeholder="Nytt Finn-pris (${ankerWho})" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-source="${esc(srcLive)}" data-km="${e.km||0}" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
@@ -6836,7 +6862,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
         <div><b>${esc(sellerLabel)}:</b> <i>${sellerCmt ? esc(sellerCmt) : '(tom)'}</i></div>
         ${v3.begrunnelse_kort?'<div style="margin-top:6px;"><b>V3 begrunnelse:</b> '+esc(v3.begrunnelse_kort)+'</div>':''}
-        ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}${e.hist && e.hist.length ? '<div style="margin-top:10px;"><b>ERP-historikk (' + e.hist.length + ' tidligere):</b><table style="width:100%;font-size:11px;margin-top:4px;border-collapse:collapse;"><tr style="background:#eef;"><th style="text-align:left;padding:3px 4px;">Internnr</th><th style="text-align:left;padding:3px 4px;">Reg.dato</th><th style="text-align:left;padding:3px 4px;">Status</th><th style="text-align:right;padding:3px 4px;">Lav – Høy</th><th style="text-align:left;padding:3px 4px;">Ret/Solgt</th></tr>' + e.hist.map(function(h){return '<tr style="border-top:1px solid #ddd;"><td style="padding:3px 4px;">' + esc(h.internnr) + '</td><td style="padding:3px 4px;">' + esc(String(h.reg_dato||'')) + '</td><td style="padding:3px 4px;">' + esc(displayStatus(h.status||'')) + '</td><td style="padding:3px 4px;text-align:right;">' + fmtAr(h.ar) + '</td><td style="padding:3px 4px;">' + esc(String(h.ret||h.solgt||'—')) + '</td></tr>';}).join('') + '</table></div>' : ''}
+        ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}${(function(){var b=e.bot4;if(!b)return '<div style="margin-top:6px;"><b>Bot 4:</b> <i>(ingen måling)</i></div>';var txt=b.rationale||b.error||'(tom)';return '<div style="margin-top:6px;"><b>Bot 4:</b></div><pre style="white-space:pre-wrap;margin:4px 0 0;font-family:inherit;font-size:12px;line-height:1.4;">'+esc(txt)+'</pre>';})()}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}${e.hist && e.hist.length ? '<div style="margin-top:10px;"><b>ERP-historikk (' + e.hist.length + ' tidligere):</b><table style="width:100%;font-size:11px;margin-top:4px;border-collapse:collapse;"><tr style="background:#eef;"><th style="text-align:left;padding:3px 4px;">Internnr</th><th style="text-align:left;padding:3px 4px;">Reg.dato</th><th style="text-align:left;padding:3px 4px;">Status</th><th style="text-align:right;padding:3px 4px;">Lav – Høy</th><th style="text-align:left;padding:3px 4px;">Ret/Solgt</th></tr>' + e.hist.map(function(h){return '<tr style="border-top:1px solid #ddd;"><td style="padding:3px 4px;">' + esc(h.internnr) + '</td><td style="padding:3px 4px;">' + esc(String(h.reg_dato||'')) + '</td><td style="padding:3px 4px;">' + esc(displayStatus(h.status||'')) + '</td><td style="padding:3px 4px;text-align:right;">' + fmtAr(h.ar) + '</td><td style="padding:3px 4px;">' + esc(String(h.ret||h.solgt||'—')) + '</td></tr>';}).join('') + '</table></div>' : ''}
       </div>
     </div>`;
   }
@@ -6844,7 +6870,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   async function qaClearCache(btn){
     const regnr = btn.dataset.regnr, erpId = btn.dataset.erpid, key = btn.dataset.key;
     if (!regnr) return;
-    if (!window.confirm('Slett all eval-cache for '+regnr+'? Easy, V3 og V3G priser på blankt ark med km fra ERP. Sender ikke til kunden.')) return;
+    if (!window.confirm('Slett all eval-cache for '+regnr+'? Easy, V3, V3G og Bot 4 priser på blankt ark med km fra ERP. Sender ikke til kunden.')) return;
     btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Sletter …';
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/clear-cache'), {
@@ -6923,6 +6949,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<!-- c317: Bot 4 rad + rasjonale i ℹ️. Ikke i SEND-gate. -->
 <!-- c316: table-layout:auto på .mode-section table, «Bil» får innholdsbredde. -->
 <!-- c315: Operasjonelt-kort class=table-card, :has() overflow-x !important. -->
 <!-- c314: tabeller fyller bredden under 1500px (scroll på wrapper); hamburger synlig på mobil. -->
