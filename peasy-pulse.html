@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c320</title>
+<title>Peasy Pulse v16.05.c322</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.04.c320';</script>
+<script>document.title='Peasy Pulse v16.05.c322';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c320</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c322</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c320</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c322</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1183,13 +1183,18 @@ window.MARK_V16_04 = (function(){
 </table>
 <button onclick="innstAddPeriode()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer;margin-bottom:24px">+ Legg til periode</button>
 
-<h3>Regioner (Kart)</h3>
-<p style="color:#666;font-size:13px">Postnr-intervall som grupperer «Topp steder» på Kart-fanen. Startverdier — juster selv. Lagre til GitHub for å dele.</p>
-<table id="innst-regioner-tbl" style="width:100%;border-collapse:collapse;margin-bottom:12px">
-<thead><tr style="background:#f5f5f5;text-align:left"><th style="padding:8px">Navn</th><th style="padding:8px">Fra postnr</th><th style="padding:8px">Til postnr</th><th style="padding:8px">Slett</th></tr></thead>
-<tbody></tbody>
-</table>
-<button onclick="innstAddRegion()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer;margin-bottom:24px">+ Legg til region</button>
+<h3>Regioner</h3>
+<p style="color:#666;font-size:13px">
+  Postnummer-intervaller som grupperer «Topp steder» på <strong>Kart</strong>,
+  <strong>Pipe – avklart</strong> og <strong>Pipe – uavklart</strong>.
+  Regionene er geografi (hvor bilen står), ikke hentesone — om Peasy henter
+  avgjøres av transportkost og ligger i kolonne P/Q.
+  Én region kan ha flere intervaller. Endringer slår inn med én gang;
+  lagre til GitHub for å dele.
+</p>
+<div id="innst-regioner-warn" style="display:none;background:#FFF8E1;border:1px solid #FFB300;color:#7a5200;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px"></div>
+<div id="innst-regioner-box"></div>
+<button onclick="innstAddRegion()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer;margin:8px 0 24px">+ Legg til region</button>
 
 <h3>GitHub PAT-token</h3>
 <p style="font-size:12px;color:#666">Lagres kun lokalt i din browser (localStorage). Brukes til å commit'e <code>peasy-config.json</code> til repoet.</p>
@@ -1647,7 +1652,24 @@ window.MARK_V16_04 = (function(){
     var merker = topN(allRows.map(function(r){ return r[COL.MERKE]; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler" + (n ? " (" + Math.round(x.v/n*100) + "%)" : "")}; });
     br.appendChild(statCard("Topp merker", merker));
 
-    var steder = topN(allRows.map(function(r){ return r[COL.STED]; }), 10).map(function(x){ return {label:x.k, value:x.v + " biler" + (n ? " (" + Math.round(x.v/n*100) + "%)" : "")}; });
+    // Topp steder — samme regioner som Kart og Pipe-uavklart
+    var stedReg = {}, stedTot = 0;
+    allRows.forEach(function(r){
+      var rn = _kartRegionForPnr(r[COL.POSTNR]);
+      if(!rn) return;                       // mangler postnr
+      stedTot++;
+      stedReg[rn] = (stedReg[rn] || 0) + 1;
+    });
+    var steder = Object.keys(stedReg)
+      .sort(function(a, b){ return stedReg[b] - stedReg[a]; })
+      .map(function(k){
+        return {
+          label: k,
+          value: stedReg[k] + " biler" + (n ? " (" + Math.round(stedReg[k] / n * 100) + "%)" : "")
+        };
+      });
+    if(stedTot < n) steder.push({label: "Postnummer ikke oppgitt", value: (n - stedTot) + " biler (" + Math.round((n - stedTot) / n * 100) + "%)"});
+    if(!steder.length) steder = [{label: "Sted", value: "Ingen data"}];
     br.appendChild(statCard("Topp steder", steder));
 
     // Bilens stasted (Peasy-anlegg via ERP-API location_id)
@@ -3198,7 +3220,7 @@ function renderFinMoney(){
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 
 // Load config først, deretter data
-var peasyConfig={returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,tiltakDesc:'',marketingPerioder:[{fra:'2025-11-01',til:null,krPerDag:1000}],regioner:[{navn:'Oslo',fra:1,til:1295},{navn:'Bergen',fra:5003,til:5268},{navn:'Trondheim',fra:7003,til:7098},{navn:'Stavanger',fra:4001,til:4098},{navn:'Sandnes',fra:4301,til:4329},{navn:'Tromsø',fra:9003,til:9048}]};
+var peasyConfig={returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,tiltakDesc:'',marketingPerioder:[{fra:'2025-11-01',til:null,krPerDag:1000}],regioner:[]};
 function feeFromE(e){if(!e)return null;var n=typeof e==='number'?e:parseInt(String(e).replace(/[\s\u00a0]/g,''));if(isNaN(n))return null;if(n<=35000)return 5900;if(n<=75000)return 8900;if(n<=150000)return 9900;return 11900;}window.feeFromE=feeFromE;
 function loadConfig(){return fetch('peasy-config.json?cb='+Date.now()).then(function(r){return r.json();}).then(function(c){peasyConfig=c;window.peasyConfig=c;}).catch(function(){window.peasyConfig=peasyConfig;});}
 // Beregn marketing spend over en periode (fraDate, tilDate)
@@ -3207,21 +3229,83 @@ window.beregneSpend=beregneSpend;
 loadConfig().then(function(){return loadData();}).then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 
 function _kartDefaultRegioner(){
-  return [{navn:'Oslo',fra:1,til:1295},{navn:'Bergen',fra:5003,til:5268},{navn:'Trondheim',fra:7003,til:7098},{navn:'Stavanger',fra:4001,til:4098},{navn:'Sandnes',fra:4301,til:4329},{navn:'Tromsø',fra:9003,til:9048}];
+  return [
+    {navn:'Oslo (Skedsmo)',        ranges:[[1,1399],[1470,1499],[1900,2159],[3000,3049],[3400,3439]]},
+    {navn:'Oslofjorden Øst (Ski)', ranges:[[1400,1469],[1500,1899]]},
+    {navn:'Bergen',                ranges:[[5003,5499],[5600,5999]]},
+    {navn:'Sandnes',               ranges:[[4000,4499],[5500,5599]]},
+    {navn:'Trondheim',             ranges:[[7003,7399],[7500,7799]]}
+  ];
 }
+
+// Godtar bade ny form {navn, ranges:[[fra,til],...]} og gammel {navn, fra, til}
+function _kartRegionRanges(rg){
+  var out = [];
+  if(rg && rg.ranges && rg.ranges.length){
+    rg.ranges.forEach(function(q){
+      var a = Number(q && q[0]) || 0, b = Number(q && q[1]) || 0;
+      if(a > b){ var t = a; a = b; b = t; }
+      if(a > 0) out.push([a, b]);
+    });
+    return out;
+  }
+  var f = Number(rg && rg.fra) || 0, t2 = Number(rg && rg.til) || 0;
+  if(f > t2){ var x = f; f = t2; t2 = x; }
+  if(f > 0) out.push([f, t2]);
+  return out;
+}
+
 function _kartRegioner(){
-  var r=(window.peasyConfig&&window.peasyConfig.regioner)||[];
-  return r.length?r:_kartDefaultRegioner();
+  var r = (window.peasyConfig && window.peasyConfig.regioner) || [];
+  return r.length ? r : _kartDefaultRegioner();
 }
+
 function _kartRegionForPnr(pnr){
-  var n=parseInt(String(pnr||'').replace(/\D/g,''),10);
+  var n = parseInt(String(pnr || '').replace(/\D/g, ''), 10);
   if(!n) return null;
-  var regs=_kartRegioner();
-  for(var i=0;i<regs.length;i++){
-    if(n>=Number(regs[i].fra)&&n<=Number(regs[i].til)) return regs[i].navn||('Region '+(i+1));
+  var regs = _kartRegioner();
+  for(var i = 0; i < regs.length; i++){
+    var rs = _kartRegionRanges(regs[i]);
+    for(var j = 0; j < rs.length; j++){
+      if(n >= rs[j][0] && n <= rs[j][1]) return regs[i].navn || ('Region ' + (i + 1));
+    }
   }
   return 'Øvrige Norge';
 }
+
+// Overlapp-sjekk til Innstillinger. Forste treff i lista vinner.
+function _kartRegionOverlapp(){
+  var flat = [], regs = _kartRegioner();
+  regs.forEach(function(rg, i){
+    _kartRegionRanges(rg).forEach(function(q){
+      flat.push({fra: q[0], til: q[1], navn: rg.navn || ('Region ' + (i + 1))});
+    });
+  });
+  flat.sort(function(a, b){ return a.fra - b.fra; });
+  var ut = [];
+  for(var k = 1; k < flat.length; k++){
+    if(flat[k].fra <= flat[k - 1].til){
+      ut.push(flat[k - 1].navn + ' (' + flat[k - 1].fra + '–' + flat[k - 1].til + ') overlapper '
+            + flat[k].navn + ' (' + flat[k].fra + '–' + flat[k].til + ')');
+    }
+  }
+  return ut;
+}
+
+// Re-render alt som bruker regioner, uten reload
+var _regEndretTimer = null;
+function _kartRegionerEndret(){
+  clearTimeout(_regEndretTimer);
+  _regEndretTimer = setTimeout(function(){
+    try { if(window._kartMap && window._kartRender) window._kartRender(); } catch(e){}
+    try { if(window.loadPipe) window.loadPipe(); } catch(e){}
+    try { if(window.loadPipeAvklart) window.loadPipeAvklart(); } catch(e){}
+  }, 400);
+}
+
+window._kartRegionRanges   = _kartRegionRanges;
+window._kartRegionOverlapp = _kartRegionOverlapp;
+window._kartRegionerEndret = _kartRegionerEndret;
 function _kartNormSted(s){
   s=String(s||'').trim();
   if(!s) return {key:'',vis:''};
@@ -4605,25 +4689,7 @@ function innstRender(){
     inputs[2].value=kr;
   });
   var _tt=document.getElementById('innst-tiltaktekst');if(_tt){_tt.value=c.tiltakDesc||'';_tt.oninput=function(){if(!window.peasyConfig)window.peasyConfig={};window.peasyConfig.tiltakDesc=_tt.value;document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);};}
-  if(!c.regioner||!c.regioner.length){c.regioner=_kartDefaultRegioner();if(window.peasyConfig)window.peasyConfig.regioner=c.regioner;}
-  var rbody=document.querySelector('#innst-regioner-tbl tbody');
-  if(rbody){
-    rbody.innerHTML='';
-    (c.regioner||[]).forEach(function(rg,i){
-      var tr=document.createElement('tr');
-      tr.style.borderBottom='1px solid #eee';
-      var inp='padding:6px 8px;border:1px solid #ccc;border-radius:4px;min-width:110px;font-size:14px;color:#111;background:#fff';
-      tr.innerHTML='<td style="padding:8px"><input type="text" data-i="'+i+'" data-k="navn" onchange="innstUpdateRegion(this)" style="'+inp+'" /></td>'
-        +'<td style="padding:8px"><input type="number" data-i="'+i+'" data-k="fra" onchange="innstUpdateRegion(this)" style="'+inp+';width:110px" /></td>'
-        +'<td style="padding:8px"><input type="number" data-i="'+i+'" data-k="til" onchange="innstUpdateRegion(this)" style="'+inp+';width:110px" /></td>'
-        +'<td style="padding:8px"><button onclick="innstDeleteRegion('+i+')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:4px;padding:4px 10px;cursor:pointer">X</button></td>';
-      rbody.appendChild(tr);
-      var inputs=tr.querySelectorAll('input');
-      inputs[0].value=rg.navn||'';
-      inputs[1].value=rg.fra==null?'':rg.fra;
-      inputs[2].value=rg.til==null?'':rg.til;
-    });
-  }
+  innstRegionerRender();
   if(typeof _kartFillPeriodeSelect==='function') _kartFillPeriodeSelect();
   document.getElementById('innst-json').textContent=JSON.stringify(c,null,2);
   // Token preview
@@ -4643,22 +4709,92 @@ function innstAddPeriode(){
   window.peasyConfig.marketingPerioder.push({fra:new Date().toISOString().slice(0,10),til:null,krPerDag:1000});
   innstRender();
 }
-function innstUpdateRegion(el){
-  var i=parseInt(el.dataset.i),k=el.dataset.k,v=el.value;
-  if(!window.peasyConfig.regioner)window.peasyConfig.regioner=[];
-  if(k==='fra'||k==='til') v=parseInt(v,10)||0;
-  window.peasyConfig.regioner[i][k]=v;
-  document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);
+function innstRegionerRender(){
+  var c = window.peasyConfig || (window.peasyConfig = {});
+  if(!c.regioner || !c.regioner.length) c.regioner = _kartDefaultRegioner();
+  var box = document.getElementById('innst-regioner-box');
+  if(!box) return;
+  var inp = 'padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:14px;color:#111;background:#fff';
+  var h = '';
+  c.regioner.forEach(function(rg, i){
+    var rs = _kartRegionRanges(rg);
+    rg.ranges = rs.length ? rs : [[0, 0]];
+    delete rg.fra; delete rg.til;              // rydd bort gammelt format
+    var navn = String(rg.navn || '').replace(/"/g, '&quot;');
+    h += '<div style="border:1px solid #e3e3e3;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fafafa">'
+       +   '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">'
+       +     '<input type="text" value="' + navn + '" data-i="' + i + '" onchange="innstRegionNavn(this)" style="' + inp + ';flex:1;font-weight:600" />'
+       +     '<button onclick="innstDeleteRegion(' + i + ')" style="background:#fff5f5;color:#C62828;border:1px solid #C62828;border-radius:6px;padding:5px 12px;cursor:pointer">Slett region</button>'
+       +   '</div>';
+    rg.ranges.forEach(function(q, j){
+      h += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'
+         +   '<span style="font-size:12px;color:#666;width:56px">Postnr</span>'
+         +   '<input type="number" value="' + q[0] + '" data-i="' + i + '" data-j="' + j + '" data-k="0" onchange="innstRegionRange(this)" style="' + inp + ';width:100px" />'
+         +   '<span style="color:#666">–</span>'
+         +   '<input type="number" value="' + q[1] + '" data-i="' + i + '" data-j="' + j + '" data-k="1" onchange="innstRegionRange(this)" style="' + inp + ';width:100px" />'
+         +   '<button onclick="innstDeleteRange(' + i + ',' + j + ')" title="Fjern intervall" style="background:#fff;border:1px solid #ccc;border-radius:6px;padding:4px 9px;cursor:pointer;color:#C62828">×</button>'
+         + '</div>';
+    });
+    h += '<button onclick="innstAddRange(' + i + ')" style="margin-top:4px;padding:4px 10px;background:#fff;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:12px">+ intervall</button>'
+       + '</div>';
+  });
+  box.innerHTML = h;
+  innstRegionerVarsel();
+  var jn = document.getElementById('innst-json');
+  if(jn) jn.textContent = JSON.stringify(window.peasyConfig, null, 2);
 }
+
+function innstRegionerVarsel(){
+  var w = document.getElementById('innst-regioner-warn');
+  if(!w) return;
+  var ovl = _kartRegionOverlapp();
+  if(ovl.length){
+    w.style.display = '';
+    w.innerHTML = '<strong>Overlapp:</strong><br>' + ovl.join('<br>')
+                + '<br><span style="opacity:.8">Første region i lista vinner.</span>';
+  } else {
+    w.style.display = 'none';
+    w.innerHTML = '';
+  }
+}
+
+function innstRegionNavn(el){
+  window.peasyConfig.regioner[+el.dataset.i].navn = el.value;
+  innstRegionerRender();
+  _kartRegionerEndret();
+}
+
+function innstRegionRange(el){
+  var rg = window.peasyConfig.regioner[+el.dataset.i];
+  rg.ranges[+el.dataset.j][+el.dataset.k] = parseInt(el.value, 10) || 0;
+  innstRegionerRender();
+  _kartRegionerEndret();
+}
+
+function innstAddRange(i){
+  var rg = window.peasyConfig.regioner[i];
+  if(!rg.ranges) rg.ranges = [];
+  rg.ranges.push([0, 0]);
+  innstRegionerRender();
+}
+
+function innstDeleteRange(i, j){
+  window.peasyConfig.regioner[i].ranges.splice(j, 1);
+  innstRegionerRender();
+  _kartRegionerEndret();
+}
+
 function innstAddRegion(){
-  if(!window.peasyConfig.regioner)window.peasyConfig.regioner=[];
-  window.peasyConfig.regioner.push({navn:'Ny region',fra:0,til:0});
-  innstRender();
+  if(!window.peasyConfig.regioner) window.peasyConfig.regioner = [];
+  window.peasyConfig.regioner.push({navn: 'Ny region', ranges: [[0, 0]]});
+  innstRegionerRender();
 }
+
 function innstDeleteRegion(i){
-  if(!confirm('Slette region?'))return;
-  window.peasyConfig.regioner.splice(i,1);
-  innstRender();
+  if(!confirm('Slette region?')) return;
+  window.peasyConfig.regioner.splice(i, 1);
+  innstRegionerRender();
+  _kartRegionerEndret();
 }
 function innstDeletePeriode(i){
   if(!confirm('Slette periode?'))return;
@@ -5080,19 +5216,25 @@ async function loadPipe(){
     function stedExtraRows(){
       return extraKeys.map(function(k){
         var x=extraSted[k];
-        var pct=medSted?Math.round(x.n/medSted*1000)/10:0;
+        var pct=n?Math.round(x.n/n*1000)/10:0;
         return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 18px 6px 32px;font-size:12px;border-top:1px solid var(--border)"><div style="font-weight:600">'+x.vis+'</div><div style="color:var(--muted)">'+x.n+' biler ('+pct+' %)</div></div>';
       }).join('');
     }
     var stedHtml='', extrasInserted=false;
     regKeys.forEach(function(k){
-      stedHtml+=segRow(k,regioner[k].n,regioner[k].sumMid,medSted);
+      stedHtml+=segRow(k,regioner[k].n,regioner[k].sumMid,n);
       if(k==='Øvrige Norge'){ stedHtml+=stedExtraRows(); extrasInserted=true; }
     });
     if(!extrasInserted) stedHtml+=stedExtraRows();
-    var utenPct=n?Math.round(utenSted/n*100):0;
-    var qcCol=(n&&(utenSted/n)>0.15)?'var(--orange)':'var(--muted)';
-    stedHtml+='<div style="padding:10px 18px 8px;font-size:11px;line-height:1.45;overflow-wrap:break-word;color:'+qcCol+'">'+utenSted+' av '+n+' biler i pipe mangler sted ('+utenPct+' %)</div>';
+    if(utenSted) stedHtml += segRow('Postnummer ikke oppgitt', utenSted, 0, n);
+    var utenPct = n ? Math.round(utenSted / n * 100) : 0;
+    var qcCol   = (n && (utenSted / n) > 0.15) ? 'var(--orange)' : 'var(--muted)';
+    stedHtml += '<div style="padding:10px 18px 8px;font-size:11px;line-height:1.45;overflow-wrap:break-word;color:' + qcCol + '">'
+      + utenSted + ' av ' + n + ' biler (' + utenPct + ' %) har ikke oppgitt postnummer. '
+      + 'Postnummer kommer fra Vipps ved henvendelsen, eller fra kunden når henting bestilles / levering avtales. '
+      + 'Ikke oppgitt betyr ikke ukjent sted — bare ikke opplyst ennå; bilen kan like gjerne stå i Oslo. '
+      + 'Regionene er geografi, ikke hentesone: om Peasy henter avgjøres av transportkost (kolonne P/Q).'
+      + '</div>';
     document.getElementById('pipe-seg-sted').innerHTML=stedHtml;
     // Main tabell
     // Estimering col for sort
@@ -6359,7 +6501,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c320</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c322</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
