@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c322</title>
+<title>Peasy Pulse v16.05.c323</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c322';</script>
+<script>document.title='Peasy Pulse v16.05.c323';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c322</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c323</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c322</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c323</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6501,7 +6501,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c322</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c323</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6782,6 +6782,110 @@ setTimeout(tick,1500);setInterval(tick,5000);
     return '—';
   }
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // c323: samme kalkyle som peasy-auto/v2/pricing-formula.js — vis Finn-pris → Lav/Høy.
+  function qaCalcPricing(anchorPrice, km, modelYear){
+    var a = Number(anchorPrice);
+    if (!Number.isFinite(a) || a <= 0) return null;
+    var year = Number(modelYear) || 0;
+    var kmN = Number(km) || 0;
+    var age = (new Date().getFullYear()) - (year || new Date().getFullYear());
+    var kmPerYear = age > 0 ? Math.round(kmN / age) : 0;
+    var segment = (kmN >= 100000 || kmPerYear > 25000) ? 'highkm' : 'normal';
+    var spreadPct = segment === 'highkm' ? 0.075 : 0.05;
+    var segMod = (function(){
+      if (a > 500000) return { mult: 1.58, tag: 'konservativ' };
+      if (year >= 2023 && kmN > 0 && kmN < 50000) return { mult: 1.58, tag: 'konservativ' };
+      if (year >= 2010 && year <= 2014 && kmN >= 100000) return { mult: 0.67, tag: 'aggressiv' };
+      return { mult: 1.00, tag: 'standard' };
+    })();
+    var brackets = [
+      { maxAnker: 100000, min: 8000, maks: 12000 },
+      { maxAnker: 250000, min: 12000, maks: 22000 },
+      { maxAnker: 400000, min: 22000, maks: 35000 },
+      { maxAnker: 600000, min: 35000, maks: 50000 },
+      { maxAnker: Infinity, min: 50000, maks: 70000 }
+    ];
+    var mb = brackets.find(function(b){ return a <= b.maxAnker; }) || brackets[brackets.length-1];
+    var marginRaw = Math.round(a * 0.12 / 1000) * 1000;
+    var marginBase = Math.min(mb.maks, Math.max(mb.min, marginRaw));
+    var margin = Math.round(marginBase * segMod.mult / 1000) * 1000;
+    var brutto = a - margin;
+    var fee = brutto < 35000 ? 5900 : brutto < 75000 ? 8900 : brutto < 150000 ? 9900 : 11900;
+    var dMid = brutto - fee;
+    var dLavRaw = Math.round(dMid * (1 - spreadPct) / 1000) * 1000;
+    var spread;
+    if (dLavRaw < 30000) spread = 2500;
+    else if (dLavRaw < 100000) spread = Math.max(5000, Math.round(dMid * spreadPct / 1000) * 1000);
+    else spread = Math.round(dMid * spreadPct / 1000) * 1000;
+    return {
+      anchorPrice: a, margin: margin, brutto: brutto, fee: fee, dMid: dMid,
+      dLav: Math.round((dMid - spread) / 1000) * 1000,
+      dHoy: Math.round((dMid + spread) / 1000) * 1000,
+      segment: segment, spreadPct: spreadPct, segmentModifier: segMod
+    };
+  }
+  function qaApplyHaircut(pr, mult, kind){
+    if (!pr || !Number.isFinite(Number(mult))) return pr;
+    var cut = function(n){ return Math.round(Number(n) * Number(mult) / 1000) * 1000; };
+    var dLav = cut(pr.dLav), dHoy = cut(pr.dHoy);
+    if (!(dHoy > dLav)) dHoy = dLav + 5000;
+    var out = Object.assign({}, pr, { dLav: dLav, dHoy: dHoy, original_dLav: pr.dLav, original_dHoy: pr.dHoy });
+    if (kind === 'ordna') { out.ordna_kalkyle = true; out.ordna_mult = Number(mult); }
+    else { out.retur_kalkyle = true; out.retur_mult = Number(mult); }
+    return out;
+  }
+  function qaApplyVrakpant(pr){
+    if (!pr || pr.dLav == null || Number(pr.dLav) >= 5000) return pr;
+    return Object.assign({}, pr, { dLav: 5000, dHoy: 10000, vrakpant_override: true });
+  }
+  function qaPickPricing(stored, anker, km, year, haircut){
+    if (stored && Number.isFinite(Number(stored.margin)) && Number.isFinite(Number(stored.fee)) && Number.isFinite(Number(stored.anchorPrice != null ? stored.anchorPrice : stored.anker))) {
+      var s = Object.assign({}, stored);
+      if (s.anchorPrice == null && s.anker != null) s.anchorPrice = s.anker;
+      return s;
+    }
+    var pr = qaCalcPricing(anker, km, year);
+    if (!pr) return null;
+    if (haircut && haircut.mult) pr = qaApplyHaircut(pr, haircut.mult, haircut.kind);
+    return qaApplyVrakpant(pr);
+  }
+  function qaKalkyleHtml(title, pr){
+    if (!pr || !Number.isFinite(Number(pr.anchorPrice)) || !Number.isFinite(Number(pr.margin)) || !Number.isFinite(Number(pr.fee))) return '';
+    var kr = function(n){ return Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('nb-NO') : '–'; };
+    var isOrdna = !!(pr.ordna_kalkyle || pr.ordna_mult);
+    var isRetur = !!(pr.retur_kalkyle || pr.retur_mult);
+    var haircutLbl = isOrdna ? '×0.75 (Ordna)' : (isRetur ? '×0.90 (V3G retur)' : null);
+    var stdLav = (haircutLbl && pr.original_dLav != null) ? pr.original_dLav : null;
+    var stdHoy = (haircutLbl && pr.original_dHoy != null) ? pr.original_dHoy : null;
+    var lines = [
+      'Finn-pris: ' + kr(pr.anchorPrice) + ' kr',
+      '- Forhandler margin: ' + kr(pr.margin) + ' kr',
+      '= Brutto: ' + kr(pr.brutto) + ' kr',
+      '- Peasy fee: ' + kr(pr.fee) + ' kr',
+      '= Mid: ' + kr(pr.dMid) + ' kr'
+    ];
+    if (haircutLbl && stdLav != null && !pr.vrakpant_override) {
+      lines.push('Lav: ' + kr(stdLav) + ' · Høy: ' + kr(stdHoy));
+      lines.push(haircutLbl + ': Lav ' + kr(pr.dLav) + ' · Høy ' + kr(pr.dHoy));
+    } else if (haircutLbl) {
+      lines.push(haircutLbl + ' etter margin og fee');
+      lines.push('Lav: ' + kr(pr.dLav) + ' · Høy: ' + kr(pr.dHoy));
+    } else {
+      lines.push('Lav: ' + kr(pr.dLav) + ' · Høy: ' + kr(pr.dHoy));
+    }
+    if (pr.vrakpant_override) lines.push('Vrakpant-gulv 5 000 / 10 000');
+    return '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;"><b>'+esc(title)+'</b><pre style="display:block;margin:4px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.45;white-space:pre-wrap;">'+esc(lines.join('\n'))+'</pre></div>';
+  }
+  function qaHistHtml(hist){
+    if (!hist || !hist.length) return '';
+    return '<div style="margin-top:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border);border-radius:6px;font-size:12px;line-height:1.45;"><b>ERP-historikk (' + hist.length + ' tidligere):</b>' + hist.map(function(h){
+      return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;font-size:11px;">'
+        + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span><b>' + esc(h.internnr) + '</b> · ' + esc(String(h.reg_dato||'')) + '</span><span>' + esc(displayStatus(h.status||'')) + '</span></div>'
+        + '<div style="margin-top:2px;">Lav – Høy ' + fmtAr(h.ar) + ' · Ret/Solgt ' + esc(String(h.ret||h.solgt||'—')) + '</div>'
+        + '</div>';
+    }).join('') + '</div>';
+  }
 
   function qaKmBlock(e){
     var v3m = (e && e.v3) || {};
@@ -7142,6 +7246,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (kjorbar === 'nei' && !scope && allPriced) { label='QA'; color='#A8221C'; icon='🔴'; }
     const key = e.regnr + '__' + e.erpId;
     const sellerLabel = (String(e.source||'').toLowerCase()==='driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
+    const yearQa = Number(id.model_year) || Number(e.v3g && e.v3g.modelYear) || 0;
+    const v3KalkHtml = qaKalkyleHtml('V3 kalkyle', qaPickPricing((v3m && v3m.pricing) || v3.pricing, v3.anker, e.km, yearQa, null));
+    const vgHair = (vg.kalkyle==='ordna' || vg.ordna_mult) ? {mult: vg.ordna_mult || 0.75, kind: 'ordna'} : ((vg.kalkyle==='retur' || vg.retur_mult) ? {mult: vg.retur_mult || 0.90, kind: 'retur'} : null);
+    const vgKalkHtml = qaKalkyleHtml('V3G kalkyle', qaPickPricing(e.v3g && e.v3g.pricing, vg.anker, e.km, yearQa, vgHair));
+    const histHtml = qaHistHtml(e.hist);
     const srcLive = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
     const armLive = (typeof abArm==='function') ? abArm(e.erpId, srcLive) : 'A';
     const ankerWho = armLive==='O' ? 'V3G Ordna' : (armLive==='B' ? 'V3G' : 'Easy');
@@ -7236,6 +7345,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <b>${esc(sellerLabel)}</b>
         <div style="margin-top:3px;color:${sellerCmt?'#333':'#888'};">${sellerCmt ? esc(sellerCmt) : '(tom)'}</div>
       </div>
+      ${histHtml}
       ${qaKmBanner(kmBlock)}
       ${(function(){
         const orig = v3m.origin || (e.v3g && e.v3g.origin) || null;
@@ -7298,7 +7408,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${actionHtml}
         ${!sentTime ? `<button type="button" class="qa-clear-btn" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId||''))}" title="Slett all eval-cache. Easy, V3, V3G og Bot 4 priser på blankt ark med km fra ERP." style="padding:10px 12px;background:#fff;color:#A8221C;border:1px solid #E57373;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Slett cache</button>` : ''}
-        <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️${(sellerCmt || (e.hist && e.hist.length) || (e.bot4 && (e.bot4.rationale || e.bot4.error)))?' <span style="color:#A8221C;font-weight:700;">●</span>':''}</button>
+        <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️</button>
       </div>
       ${(!sentTime && !scope && !kmBlock) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
         <input class="qa-anker-input" type="number" step="1000" min="5000" placeholder="Nytt Finn-pris (${ankerWho})" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-source="${esc(srcLive)}" data-km="${e.km||0}" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
@@ -7307,7 +7417,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
         <div><b>${esc(sellerLabel)}:</b> <i>${sellerCmt ? esc(sellerCmt) : '(tom)'}</i></div>
         ${v3.begrunnelse_kort?'<div style="margin-top:6px;"><b>V3 begrunnelse:</b> '+esc(v3.begrunnelse_kort)+'</div>':''}
-        ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}${(function(){var b=e.bot4;if(!b)return '<div style="margin-top:6px;"><b>Bot 4:</b> <i>(ingen måling)</i></div>';var txt=b.rationale||b.error||'(tom)';return '<div style="margin-top:6px;"><b>Bot 4:</b></div><pre style="white-space:pre-wrap;margin:4px 0 0;font-family:inherit;font-size:12px;line-height:1.4;">'+esc(txt)+'</pre>';})()}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}${e.hist && e.hist.length ? '<div style="margin-top:10px;"><b>ERP-historikk (' + e.hist.length + ' tidligere):</b><table style="width:100%;font-size:11px;margin-top:4px;border-collapse:collapse;"><tr style="background:#eef;"><th style="text-align:left;padding:3px 4px;">Internnr</th><th style="text-align:left;padding:3px 4px;">Reg.dato</th><th style="text-align:left;padding:3px 4px;">Status</th><th style="text-align:right;padding:3px 4px;">Lav – Høy</th><th style="text-align:left;padding:3px 4px;">Ret/Solgt</th></tr>' + e.hist.map(function(h){return '<tr style="border-top:1px solid #ddd;"><td style="padding:3px 4px;">' + esc(h.internnr) + '</td><td style="padding:3px 4px;">' + esc(String(h.reg_dato||'')) + '</td><td style="padding:3px 4px;">' + esc(displayStatus(h.status||'')) + '</td><td style="padding:3px 4px;text-align:right;">' + fmtAr(h.ar) + '</td><td style="padding:3px 4px;">' + esc(String(h.ret||h.solgt||'—')) + '</td></tr>';}).join('') + '</table></div>' : ''}
+        ${v3KalkHtml}
+        ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}
+        ${vgKalkHtml}
+        ${(function(){var b=e.bot4;if(!b)return '<div style="margin-top:6px;"><b>Bot 4:</b> <i>(ingen måling)</i></div>';var txt=b.rationale||b.error||'(tom)';return '<div style="margin-top:6px;"><b>Bot 4:</b></div><pre style="white-space:pre-wrap;margin:4px 0 0;font-family:inherit;font-size:12px;line-height:1.4;">'+esc(txt)+'</pre>';})()}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}
       </div>
     </div>`;
   }
@@ -7394,6 +7507,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<!-- c323: QA-kort: fjern rød ℹ️-prikk, ERP-historikk under selgerkommentar, bot-kalkyle i V3/V3G begrunnelse. -->
 <!-- c317: Bot 4 rad + rasjonale i ℹ️. Ikke i SEND-gate. -->
 <!-- c316: table-layout:auto på .mode-section table, «Bil» får innholdsbredde. -->
 <!-- c315: Operasjonelt-kort class=table-card, :has() overflow-x !important. -->
