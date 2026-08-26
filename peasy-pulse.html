@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c319</title>
+<title>Peasy Pulse v16.04.c320</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.04.c319';</script>
+<script>document.title='Peasy Pulse v16.04.c320';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c319</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c320</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c319</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c320</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -4937,7 +4937,7 @@ async function loadPipe(){
     if(!lr.length){tbody.innerHTML='<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted)">Ingen ERP-data</td></tr>';return;}
     var hdr=lr[0];
     function ci(re){for(var i=0;i<hdr.length;i++){if(re.test(String(hdr[i]||'')))return i;}return -1;}
-    var cId=ci(/^internnr/i),cReg=ci(/^regnr/i),cMerke=ci(/^merke$/i),cModell=ci(/^modell$/i),cYear=ci(/^år$/i),cKm=ci(/^km$/i),cVerdi=ci(/endelig.*ar.*verdi/i),cStatus=ci(/^status$/i),cSted=ci(/^sted$/i),cSd=ci(/sd.*mottatt/i),cFinans=ci(/^finans$/i),cKilde=ci(/^kilde$/i);
+    var cId=ci(/^internnr/i),cReg=ci(/^regnr/i),cMerke=ci(/^merke$/i),cModell=ci(/^modell$/i),cYear=ci(/^år$/i),cKm=ci(/^km$/i),cVerdi=ci(/endelig.*ar.*verdi/i),cStatus=ci(/^status$/i),cSted=ci(/^sted$/i),cPost=ci(/^postnr/i),cSd=ci(/sd.*mottatt/i),cFinans=ci(/^finans$/i),cKilde=ci(/^kilde$/i);
     var pipe=lr.slice(1).filter(function(r){if(isOrdnaRow(r))return false;return /trans\.?\s*best/i.test(String(r[cStatus]||''));});
     // Parse verdi range
     function parseVerdi(v){var m=String(v||'').match(/(\d+)\D+(\d+)/);if(!m)return null;return{lav:parseInt(m[1],10),hoy:parseInt(m[2],10),mid:(parseInt(m[1],10)+parseInt(m[2],10))/2};}
@@ -5054,10 +5054,45 @@ async function loadPipe(){
     enriched.forEach(function(e){var mk=String(e.r[cMerke]||'?');if(!merker[mk])merker[mk]={n:0,sumMid:0};merker[mk].n++;if(e.v)merker[mk].sumMid+=e.v.mid;});
     var merkeHtml=Object.keys(merker).sort(function(a,b){return merker[b].n-merker[a].n;}).slice(0,10).map(function(k){return segRow(k,merker[k].n,merker[k].sumMid,n);}).join('');
     document.getElementById('pipe-seg-merke').innerHTML=merkeHtml;
-    // Sted top 10
-    var steder={};
-    enriched.forEach(function(e){var st=String(e.r[cSted]||'?');if(!steder[st])steder[st]={n:0,sumMid:0};steder[st].n++;if(e.v)steder[st].sumMid+=e.v.mid;});
-    var stedHtml=Object.keys(steder).sort(function(a,b){return steder[b].n-steder[a].n;}).slice(0,10).map(function(k){return segRow(k,steder[k].n,steder[k].sumMid,n);}).join('');
+    // Sted — regionopprulling via _kartRegionForPnr (samme peasyConfig.regioner som Kart)
+    var regioner={}, extraSted={}, utenSted=0;
+    enriched.forEach(function(e){
+      var ns=_kartNormSted(e.r[cSted]);
+      var pnr=cPost>=0&&e.r[cPost]?String(e.r[cPost]).replace(/[\s\u00a0]/g,'').padStart(4,'0'):'';
+      if(pnr==='0000') pnr='';
+      var mid=e.v?e.v.mid:0;
+      if(pnr){
+        var reg=_kartRegionForPnr(pnr)||'Øvrige Norge';
+        if(!regioner[reg]) regioner[reg]={n:0,sumMid:0};
+        regioner[reg].n++;
+        if(mid) regioner[reg].sumMid+=mid;
+      } else if(ns.key){
+        if(!extraSted[ns.key]) extraSted[ns.key]={vis:ns.vis,n:0,sumMid:0};
+        extraSted[ns.key].n++;
+        if(mid) extraSted[ns.key].sumMid+=mid;
+      } else {
+        utenSted++;
+      }
+    });
+    var medSted=n-utenSted;
+    var regKeys=Object.keys(regioner).sort(function(a,b){return regioner[b].n-regioner[a].n;});
+    var extraKeys=Object.keys(extraSted).sort(function(a,b){return extraSted[b].n-extraSted[a].n;});
+    function stedExtraRows(){
+      return extraKeys.map(function(k){
+        var x=extraSted[k];
+        var pct=medSted?Math.round(x.n/medSted*1000)/10:0;
+        return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 18px 6px 32px;font-size:12px;border-top:1px solid var(--border)"><div style="font-weight:600">'+x.vis+'</div><div style="color:var(--muted)">'+x.n+' biler ('+pct+' %)</div></div>';
+      }).join('');
+    }
+    var stedHtml='', extrasInserted=false;
+    regKeys.forEach(function(k){
+      stedHtml+=segRow(k,regioner[k].n,regioner[k].sumMid,medSted);
+      if(k==='Øvrige Norge'){ stedHtml+=stedExtraRows(); extrasInserted=true; }
+    });
+    if(!extrasInserted) stedHtml+=stedExtraRows();
+    var utenPct=n?Math.round(utenSted/n*100):0;
+    var qcCol=(n&&(utenSted/n)>0.15)?'var(--orange)':'var(--muted)';
+    stedHtml+='<div style="padding:10px 18px 8px;font-size:11px;line-height:1.45;overflow-wrap:break-word;color:'+qcCol+'">'+utenSted+' av '+n+' biler i pipe mangler sted ('+utenPct+' %)</div>';
     document.getElementById('pipe-seg-sted').innerHTML=stedHtml;
     // Main tabell
     // Estimering col for sort
@@ -6324,7 +6359,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c319</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c320</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
