@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.04.c318</title>
+<title>Peasy Pulse v16.04.c319</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.04.c318';</script>
+<script>document.title='Peasy Pulse v16.04.c319';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c318</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.04.c319</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c318</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.04.c319</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -3300,13 +3300,27 @@ function _kartUpdateDekning(tot,med){
   el.style.color=(tot&&(uten/tot)>0.15)?'var(--orange)':'var(--muted)';
   el.style.fontWeight=(tot&&(uten/tot)>0.15)?'600':'400';
 }
+function _kartCellNeiNull(v){
+  if(v==null) return false;
+  var s=String(v).replace(/[\s\u00a0]/g,'');
+  if(!s||s==='0'||s==='-'||s==='–'||s==='—') return false;
+  return true;
+}
+function _kartENeiNull(v){
+  if(v==null) return false;
+  var s=String(v).replace(/[\s\u00a0]/g,'').replace(/[^\d,.\-]/g,'').replace(',','.');
+  if(!s||s==='0'||s==='-'||s==='–') return false;
+  var n=parseFloat(s);
+  return isFinite(n) && n!==0;
+}
+function _kartSolgtRateTxt(solgt,auksjon){
+  if(!auksjon) return '–';
+  return (Math.round(solgt/auksjon*1000)/10).toFixed(1).replace('.',',')+' %';
+}
 function buildKartTabell(posMap,filter,pnrAllowed){
   filter=filter||'alle';
   window._kartPosMap=posMap;
   window._kartPnrAllowed=pnrAllowed;
-  var AKSEPTERT=['Venter på trans. best.','Mottatt','sold','contract_signed','received','on_auction','select_auction_date','waiting_for_sale_reaction','waiting_for_transport','to_be_returned'];
-  var AVVIST=['Avvist by customer','Avvist by admin','Avvist'];
-  var filterLabels={alle:'Alle biler',akseptert:'Aksepterte biler',avvist:'Avviste biler',solgt:'Solgte biler'};
   var p=_kartPeriodeStart();
   var src=_kartRowsAll||[];
   var leads=[];
@@ -3322,11 +3336,17 @@ function buildKartTabell(posMap,filter,pnrAllowed){
     if(pnr) medPnr++;
     var status=r[12]||'';
     var pass=filter==='alle'?true
-      :filter==='akseptert'?AKSEPTERT.indexOf(status)!==-1
-      :filter==='avvist'?AVVIST.indexOf(status)!==-1
+      :filter==='akseptert'?_AKSEPTERT.indexOf(status)!==-1
+      :filter==='avvist'?_AVVIST.indexOf(status)!==-1
       :filter==='solgt'?((status||'').toLowerCase()==='sold'||(status||'').toLowerCase()==='sold_and_paid'||String(status).toLowerCase().indexOf('solgt')!==-1)
       :true;
-    leads.push({pnr:pnr,sted:r[10]||'',status:status,pass:pass});
+    var eOk=_kartENeiNull(r[4]);
+    leads.push({
+      pnr:pnr,sted:r[10]||'',status:status,pass:pass,
+      paAuksjon:eOk,
+      solgt:eOk&&_kartCellNeiNull(r[18]),
+      returnert:eOk&&_kartCellNeiNull(r[21])
+    });
   }
   _kartUpdateDekning(totLeads, medPnr);
   var regions={};
@@ -3348,13 +3368,13 @@ function buildKartTabell(posMap,filter,pnrAllowed){
     if(L.pnr) reg.steder[sk].pnrs[L.pnr]=true;
   });
   function counts(arr){
-    var tot=arr.length, aks=0, avv=0, sol=0;
+    var tot=arr.length, auk=0, sol=0, ret=0;
     arr.forEach(function(b){
-      if(AKSEPTERT.indexOf(b.status)!==-1) aks++;
-      if(AVVIST.indexOf(b.status)!==-1) avv++;
-      if(b.status==='sold') sol++;
+      if(b.paAuksjon) auk++;
+      if(b.solgt) sol++;
+      if(b.returnert) ret++;
     });
-    return {tot:tot,aks:aks,avv:avv,sol:sol};
+    return {tot:tot,auk:auk,sol:sol,ret:ret};
   }
   var regList=Object.keys(regions).map(function(k){
     var rg=regions[k];
@@ -3375,32 +3395,21 @@ function buildKartTabell(posMap,filter,pnrAllowed){
     return b.c.tot-a.c.tot;
   });
   var sumBiler=regList.reduce(function(s,r){return s+r.c.tot;},0);
-  var sumAkseptert=regList.reduce(function(s,r){return s+r.c.aks;},0);
-  var sumAvvist=regList.reduce(function(s,r){return s+r.c.avv;},0);
+  var sumAuk=regList.reduce(function(s,r){return s+r.c.auk;},0);
   var sumSolgt=regList.reduce(function(s,r){return s+r.c.sol;},0);
-  var aksRate=sumBiler>0?Math.round(sumAkseptert/sumBiler*100):0;
   var tbody=document.getElementById('kart-tabell-body');
   if(!tbody)return;
   if(!window._kartOpenRegion) window._kartOpenRegion={};
-  var filterColor=filter==='akseptert'?'#00875A':filter==='avvist'?'#C62828':filter==='solgt'?'#1565C0':'var(--green)';
   var summary='<tr><td colspan="6" style="padding:14px 12px 10px">'
-    +'<div style="background:rgba(0,66,37,0.04);border-radius:10px;padding:14px 18px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">'
-    +'<div><span style="font-size:22px;font-weight:700;color:'+filterColor+'">'+sumBiler+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">'+filterLabels[filter]+'</div></div>'
-    +'<div><span style="font-size:22px;font-weight:700;color:var(--green)">'+regList.length+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">regioner</div></div>'
-    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#004225">'+aksRate+'%</span><div style="font-size:11px;color:var(--muted);margin-top:2px">akseptrate</div></div>':'')
-    +(filter==='alle'?'<div><span style="font-size:22px;font-weight:700;color:#1565C0">'+sumSolgt+'</span><div style="font-size:11px;color:var(--muted);margin-top:2px">solgt totalt</div></div>':'')
+    +'<div style="background:rgba(0,66,37,0.04);border-radius:10px;padding:14px 18px;font-size:15px;font-weight:600;color:var(--green)">'
+    +sumBiler+' Leads · '+sumAuk+' på auksjon · <span style="color:#00875A">'+sumSolgt+' solgt</span> · '+_kartSolgtRateTxt(sumSolgt,sumAuk)+' solgtrate'
     +'</div></td></tr>';
-  function rateCell(c){
-    var rate=c.tot>0?Math.round(c.aks/c.tot*100):0;
-    var col=rate>=20?'#00875A':rate>=10?'var(--orange)':'#C62828';
-    return '<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700;color:'+col+'">'+(c.tot>0?rate+'%':'—')+'</td>';
-  }
   function numCells(c){
     return '<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700">'+c.tot+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#00875A">'+c.aks+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#C62828">'+c.avv+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono)">'+c.sol+'</td>'
-      +rateCell(c);
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono)">'+c.auk+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:#00875A;font-weight:700">'+c.sol+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:var(--orange);font-weight:700">'+c.ret+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-weight:700">'+_kartSolgtRateTxt(c.sol,c.auk)+'</td>';
   }
   var html=summary;
   regList.forEach(function(rg,i){
@@ -3478,11 +3487,11 @@ function kartToggleRegion(name){
           <thead id="kart-tabell-head">
             <tr style="border-bottom:2px solid var(--border)">
               <th style="text-align:left;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Region / sted</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Totalt</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:700;color:#00875A;font-size:10px;letter-spacing:1px;text-transform:uppercase">Akseptert</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:700;color:#C62828;font-size:10px;letter-spacing:1px;text-transform:uppercase">Avvist</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Solgt</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Akseptrate</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Leads</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">På auksjon</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:#00875A;font-size:10px;letter-spacing:1px;text-transform:uppercase">Solgt</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--orange);font-size:10px;letter-spacing:1px;text-transform:uppercase">Returnert</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">Solgtrate</th>
             </tr>
           </thead>
           <tbody id="kart-tabell-body"></tbody>
@@ -6315,7 +6324,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c318</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.04.c319</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
