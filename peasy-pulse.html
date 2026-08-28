@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c323</title>
+<title>Peasy Pulse v16.05.c324</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c323';</script>
+<script>document.title='Peasy Pulse v16.05.c324';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c323</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c324</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c323</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c324</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2586,6 +2586,44 @@ function overlayErpEvents(rows){
     })
     .catch(function(){return rows;});
 }
+function pickReturSnapshotKeys(fileJ, miniJ){
+  if(miniJ && miniJ.ok && Array.isArray(miniJ.keys)) return miniJ.keys;
+  if(fileJ && Array.isArray(fileJ.keys)) return fileJ.keys;
+  return null;
+}
+async function loadReturSnapshot(){
+  var fileP=fetch('retur-snapshot.json?t='+Date.now(),{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():null;})
+    .catch(function(){return null;});
+  var miniP=Promise.resolve(null);
+  var base=(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'');
+  if(base){
+    miniP=fetch(base+'/retur-snapshot',{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')},signal:AbortSignal.timeout(8000)})
+      .then(function(r){return r.ok?r.json():null;})
+      .catch(function(){return null;});
+  }
+  var pair=await Promise.all([fileP,miniP]);
+  window._returSnapshotKeys=pickReturSnapshotKeys(pair[0],pair[1]);
+  return window._returSnapshotKeys;
+}
+function countReturAvvistBudToday(rows, prevKeys, todayDate, pdOps){
+  if(!prevKeys) return 0;
+  var prev={};
+  prevKeys.forEach(function(k){prev[String(k)]=true;});
+  var counted={};
+  var n=0;
+  (rows||[]).forEach(function(r){
+    var intern=String(r[0]==null?'':r[0]).trim();
+    if(!intern||prev[intern]||counted[intern]) return;
+    var st=String(r[12]||'').toLowerCase();
+    var pickup=pdOps(r[21]);
+    if(st==='to_be_returned' || (pickup && pickup>=todayDate)){
+      counted[intern]=true;
+      n++;
+    }
+  });
+  return n;
+}
 async function loadData(){
   var res=await fetch(API);
   var buf=await res.arrayBuffer();
@@ -2602,6 +2640,7 @@ async function loadData(){
       window._liste16Recent=l16j.biler||[];
     }
   }catch(eL16){ window._liste16Recent=[]; }
+  try{await loadReturSnapshot();}catch(eSnap){ window._returSnapshotKeys=null; }
   return rows;
 }
 
@@ -2924,7 +2963,7 @@ function render(data,rows){
   var bestiltToday= evalAll2.filter(function(r){var d=pdOps(r[15])||pdOps(r[16]);return d&&d>=todayDate;}).length;
   var mottattToday= evalAll2.filter(function(r){var d=pdOps(r[17]);return d&&d>=todayDate;}).length;
   var solgtToday  = evalAll2.filter(function(r){var d=pdOps(r[18]);return d&&d>=todayDate;}).length;
-  var retToday    = evalAll2.filter(function(r){var d=pdOps(r[21]);return d&&d>=todayDate;}).length;
+  var retToday    = countReturAvvistBudToday(evalAll2, window._returSnapshotKeys, todayDate, pdOps);
   var d7 = new Date(); d7.setDate(d7.getDate()-30); d7.setHours(0,0,0,0);
   var eval7d   = evalAll2.filter(function(r){var d=pdOps(r[13]);return d&&d>=d7;});
   var aksept7d = eval7d.filter(function(r){return(r[15]&&String(r[15]).trim())||(r[16]&&String(r[16]).trim());});
@@ -6501,7 +6540,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c323</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c324</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
