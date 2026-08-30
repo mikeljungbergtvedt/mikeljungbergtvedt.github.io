@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c329</title>
+<title>Peasy Pulse v16.05.c330</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c329';</script>
+<script>document.title='Peasy Pulse v16.05.c330';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c329</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c330</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c329</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c330</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6579,7 +6579,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c329</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c330</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7052,6 +7052,75 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const listR = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
       const listJ = await listR.json();
       const liste3 = listJ.biler || [];
+      const v3ByRegnr = {};
+      const easyByRegnr = {};
+      const v3gByRegnr = {};
+      const bot4ByRegnr = {};
+      const loop2ByRegnr = {};
+      var histByReg = {};
+      var qaPainted = false;
+      function paintQACards(){
+        try {
+        const enriched = liste3.map(b => {
+          const rg = String(b.registration_number || '').toUpperCase();
+          const v3m = v3ByRegnr[rg] || null;
+          // Km-prioritet: ERP.mileage -> V3-measurement.km -> null
+          const km = (v3m && v3m.km) ? Number(v3m.km) : (b.mileage != null ? Number(b.mileage) : null);
+          return {
+            regnr: rg,
+            erpId: b.id,
+            km,
+            created_at: b.created_at || b.updated_at || null,
+            easy: (function(){
+              var ev = easyByRegnr[rg] || (v3m && v3m.easy) || null;
+              var real = ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
+              if (!real) return { dLav: null, dHoy: null, anker: null };
+              return Object.assign({}, ev);
+            })(),
+            v3: v3m,
+            manufacturer: b.manufacturer || null,
+            finn_link: b.finn_link || null,
+            source: b.source || (v3gByRegnr[rg] && v3gByRegnr[rg].source) || null,
+            rawErp: b,
+            v3g: v3gByRegnr[rg] || null,
+            bot4: bot4ByRegnr[rg] || null,
+            loop2: loop2ByRegnr[rg] || {},
+            hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
+          };
+        }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+
+        if (upd) upd.textContent = new Date().toLocaleString('nb-NO');
+        const sumEl = document.getElementById('qa-summary');
+        if (sumEl) {
+        const nTot = enriched.length;
+        const nEval = enriched.filter(e => e.v3).length;
+        const nPop = nEval;
+        const nNoPop = nTot - nEval;
+        sumEl.textContent = nTot + ' biler på liste 3 (usendte, eldste øverst)';
+        const cEl = document.getElementById('qa-counters');
+        if (cEl) cEl.innerHTML = '<span class="qa-counter" style="background:#E8F1EF;color:#0F6E66;">' + nEval + ' populert</span>' + '<span class="qa-counter" style="background:#F0F0F0;color:#666;">' + nNoPop + ' ikke populert</span>';
+      }
+      window._qaFilter = function(q){
+        const s = (q||'').toLowerCase().trim();
+        document.querySelectorAll('.qa-card').forEach(function(card){
+          const t = card.textContent.toLowerCase();
+          card.style.display = (!s || t.includes(s)) ? '' : 'none';
+        });
+      };
+        const container = document.getElementById('qa-cards');
+        if (!container) return;
+        container.innerHTML = enriched.length ? enriched.map(renderCardListe3).join('') : '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Ingen biler på liste 3</div>';
+        container.querySelectorAll('.qa-detail-btn').forEach(b => b.onclick = () => { const el = document.getElementById('qa-detail-' + b.dataset.key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
+        container.querySelectorAll('.qa-send-btn').forEach(b => b.onclick = () => qaSend(b));
+        container.querySelectorAll('.qa-anker-btn').forEach(b => b.onclick = () => qaSetAnker(b));
+        container.querySelectorAll('.qa-clear-btn').forEach(b => b.onclick = () => qaClearCache(b));
+        qaPainted = true;
+        } catch (ePaint) {
+          console.warn('[qa] paint failed:', ePaint);
+          if (!qaPainted) throw ePaint;
+        }
+      }
+      paintQACards();
       try {
         const flR = await fetch(PA_PROXY_ERP.replace('/list/','/finn-links'), {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
         if (flR.ok) {
@@ -7078,8 +7147,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
         var qaSp = countListe3Split(liste3);
         applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
       } catch (eQaSp) {}
+      paintQACards();
 
       // 2) Fetch V3-measurements. c192: primær = Mac Mini /measurements (live), fallback jsdelivr (stale)
+      try {
       const measUrl = PA_PROXY_ERP.replace('/list/','/measurements') + '?t=' + Date.now();
       const measFallback = 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl';
       let measR = await fetch(measUrl).catch(() => ({ok:false}));
@@ -7087,8 +7158,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const measText = await measR.text();
       const measRecs = measText.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e) { return null; } }).filter(Boolean);
       // Siste Easy / V3 / V3G per bot — ikke bare siste v3-rad (Honda 11:11 droppet Easy).
-      const v3ByRegnr = {};
-      const easyByRegnr = {};
       function isRealEasy(ev){
         if (!ev || typeof ev !== 'object') return false;
         if (Number.isFinite(Number(ev.dLav))) return true;
@@ -7106,9 +7175,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
           }
         }
       }
+      paintQACards();
+      } catch(e) { console.warn('[meas] fetch failed:', e); }
 
       // [v3g] Fetch V3G-measurements (Grok) - defensiv, feiler stille
-      const v3gByRegnr = {};
       try {
         const v3gUrl = PA_PROXY_ERP.replace('/list/','/v3g-measurements') + '?t=' + Date.now();
         const v3gFallback = 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl';
@@ -7122,11 +7192,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
             if (!rg) continue;
             if (!v3gByRegnr[rg] || (r.timestamp || '') > (v3gByRegnr[rg].timestamp || '')) v3gByRegnr[rg] = r;
           }
+          paintQACards();
         }
       } catch(e) { console.warn('[v3g] fetch failed:', e); }
 
       // [bot4] Fetch Bot 4-measurements — defensiv, feiler stille. Aldri i SEND-gate.
-      const bot4ByRegnr = {};
       try {
         const bot4Url = PA_PROXY_ERP.replace('/list/','/bot4-measurements') + '?t=' + Date.now();
         const bot4Fallback = 'https://mikeljungbergtvedt.github.io/bot4-measurements.jsonl';
@@ -7140,11 +7210,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
             if (!rg) continue;
             if (!bot4ByRegnr[rg] || (r.timestamp || '') > (bot4ByRegnr[rg].timestamp || '')) bot4ByRegnr[rg] = r;
           }
+          paintQACards();
         }
       } catch(e) { console.warn('[bot4] fetch failed:', e); }
 
       // [loop2] Claude/Grok/Gemini — samme mønster som Bot 4. Visning. Aldri SEND. Aldri ERP.
-      const loop2ByRegnr = {};
       try {
         const loop2Url = PA_PROXY_ERP.replace('/list/','/loop2-measurements') + '?t=' + Date.now();
         const loop2Fallback = 'https://mikeljungbergtvedt.github.io/loop2-measurements.jsonl';
@@ -7161,13 +7231,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
             const prev = loop2ByRegnr[rg][chef];
             if (!prev || (r.timestamp || '') > (prev.timestamp || '')) loop2ByRegnr[rg][chef] = r;
           }
+          paintQACards();
         }
       } catch(e) { console.warn('[loop2] fetch failed:', e); }
 
       // [qa-hist] Fetch master-XLSX for ERP-historikk per regnr
-      var histByReg = {};
       try {
-        var _hRes = await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx&t='+Date.now());
+        var _hRes = await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx&t='+Date.now(), {signal: AbortSignal.timeout(4000)});
         if (_hRes.ok) {
           var _hBuf = new Uint8Array(await _hRes.arrayBuffer());
           var _hWb = XLSX.read(_hBuf, {type:'array'});
@@ -7187,63 +7257,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
               solgt: _r[_hI('Solgt på')]||''
             });
           }
+          paintQACards();
         }
       } catch(e) { console.warn('[qa-hist] fetch failed:', e); }
-
-      // 3) Sorter liste 3 eldst forst (basert pa created_at eller order_date)
-      const enriched = liste3.map(b => {
-        const rg = String(b.registration_number || '').toUpperCase();
-        const v3m = v3ByRegnr[rg] || null;
-        // Km-prioritet: ERP.mileage -> V3-measurement.km -> null
-        const km = (v3m && v3m.km) ? Number(v3m.km) : (b.mileage != null ? Number(b.mileage) : null);
-        return {
-          regnr: rg,
-          erpId: b.id,
-          km,
-          created_at: b.created_at || b.updated_at || null,
-          easy: (function(){
-            var ev = easyByRegnr[rg] || (v3m && v3m.easy) || null;
-            var real = ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort);
-            if (!real) return { dLav: null, dHoy: null, anker: null };
-            return Object.assign({}, ev);
-          })(),
-          v3: v3m,
-          manufacturer: b.manufacturer || null,
-          finn_link: b.finn_link || null,
-          source: b.source || (v3gByRegnr[rg] && v3gByRegnr[rg].source) || null,
-          rawErp: b,
-          v3g: v3gByRegnr[rg] || null,
-          bot4: bot4ByRegnr[rg] || null,
-          loop2: loop2ByRegnr[rg] || {},
-          hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
-        };
-      }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
-
-      if (upd) upd.textContent = new Date().toLocaleString('nb-NO');
-      const sumEl = document.getElementById('qa-summary');
-      if (sumEl) {
-      const nTot = enriched.length;
-      const nEval = enriched.filter(e => e.v3).length;
-      const nPop = nEval;
-      const nNoPop = nTot - nEval;
-      sumEl.textContent = nTot + ' biler på liste 3 (usendte, eldste øverst)';
-      const cEl = document.getElementById('qa-counters');
-      if (cEl) cEl.innerHTML = '<span class="qa-counter" style="background:#E8F1EF;color:#0F6E66;">' + nEval + ' populert</span>' + '<span class="qa-counter" style="background:#F0F0F0;color:#666;">' + nNoPop + ' ikke populert</span>';
-    }
-    window._qaFilter = function(q){
-      const s = (q||'').toLowerCase().trim();
-      document.querySelectorAll('.qa-card').forEach(function(card){
-        const t = card.textContent.toLowerCase();
-        card.style.display = (!s || t.includes(s)) ? '' : 'none';
-      });
-    };
-      const container = document.getElementById('qa-cards');
-      if (!container) return;
-      container.innerHTML = enriched.length ? enriched.map(renderCardListe3).join('') : '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Ingen biler på liste 3</div>';
-      container.querySelectorAll('.qa-detail-btn').forEach(b => b.onclick = () => { const el = document.getElementById('qa-detail-' + b.dataset.key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
-      container.querySelectorAll('.qa-send-btn').forEach(b => b.onclick = () => qaSend(b));
-      container.querySelectorAll('.qa-anker-btn').forEach(b => b.onclick = () => qaSetAnker(b));
-      container.querySelectorAll('.qa-clear-btn').forEach(b => b.onclick = () => qaClearCache(b));
     } catch(e) {
       const c = document.getElementById('qa-cards'); if (c) c.innerHTML = '<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">Feil ved lasting: ' + esc(e.message) + '</div>';
     }
@@ -7744,6 +7760,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<!-- c330: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
 <!-- c328: QA Finn-pris to spor — Dagens (Easy/V3/V3G/Bot 4) + Ny loop (Claude/Grok/Gemini). Samme akse, to spredninger. loop2-measurements.jsonl. Ikke SEND, ikke ERP. -->
 <!-- c326: QA-kort Finn-spredning-stripe + ℹ️-fjell (polyline) og bot-tabell. Kun visning. -->
 <!-- c325: QA ℹ️: Easy kalkyle (lagret eval) foran V3/V3G. Tom slot «ingen eval». Alle kort. -->
