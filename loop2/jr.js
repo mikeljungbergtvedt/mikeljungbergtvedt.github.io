@@ -94,6 +94,16 @@ async function gatherIdentity(hint, opts) {
     if (c && c.available) {
       carinfoReady = true;
       listings.own_sold = Array.isArray(c.own_sold) ? c.own_sold : [];
+      if (c.identity && typeof c.identity === 'object') {
+        const extra = c.identity;
+        if (!origin.merke && extra.merke) origin.merke = String(extra.merke);
+        if (!origin.modell && extra.modell) origin.modell = String(extra.modell);
+        if (origin.aar == null && extra.aar != null) origin.aar = Number(extra.aar);
+        if (!origin.drivstoff && extra.drivstoff) origin.drivstoff = String(extra.drivstoff);
+        if (origin.hk == null && extra.hk != null) origin.hk = Number(extra.hk);
+        if (!origin.vin && extra.vin) origin.vin = String(extra.vin);
+        if (!origin.drivlinje && extra.drivlinje) origin.drivlinje = String(extra.drivlinje);
+      }
     } else {
       notes.push((c && c.reason) || 'car.info client unavailable');
     }

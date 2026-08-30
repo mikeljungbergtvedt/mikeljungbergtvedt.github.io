@@ -1,98 +1,168 @@
 'use strict';
 
 /**
- * JR car.info adapter — try-require Mini V3/V3G collectors at runtime.
- * Does not copy or edit those files. Twin pick is not done here.
- *
- * Mini paths (when runner lives at /Users/bot/peasy-auto/loop2):
- *   ../v2/v3-eval.js
- *   ../v2/v3-eval-runner.js
- *   ../v3g/v3g-eval.js
- *   ../origin-cv.js
- *   ../ident-comps-score.js
- *   ../finn-origin.js
- *   ../ai-finn-comp-filter.js
- *   ../peasy-auto.js          (Easy v20 — process, never required)
+ * JR car.info client — Mini files in this order, then the autoringen license-plate API.
+ *   /Users/bot/peasy-auto/v2/v3-trinn3-carinfo.js
+ *   /Users/bot/peasy-auto/v3g/v3g-carinfo.js
+ *   /Users/bot/peasy-auto/bot4/market.js
+ * Never require peasy-auto.js. No ±km / ±year lock. Chefs pick twins.
  */
 
-const mini = require('./mini-load');
+const fs = require('fs');
+const path = require('path');
+const { normListing } = require('./listing');
 
-const CARINFO_REL = [
-  'v2/v3-eval.js',
-  'v2/v3-eval-runner.js',
-  'v3g/v3g-eval.js',
-  'origin-cv.js',
-  'ident-comps-score.js',
-  'finn-origin.js',
-  'ai-finn-comp-filter.js',
-  'peasy-auto.js',
-];
-
-const CARINFO_EXPORTS = [
-  'searchRaw',
-  'search',
-  'fetchComps',
-  'finnSearch',
-  'fetchCarInfo',
-  'collectAllData',
-  'collectOnly',
-  'getCarInfoApi',
-  'fetchClassifieds',
+const CARINFO_PATHS = [
+  '/Users/bot/peasy-auto/v2/v3-trinn3-carinfo.js',
+  '/Users/bot/peasy-auto/v3g/v3g-carinfo.js',
+  '/Users/bot/peasy-auto/bot4/market.js',
 ];
 
 function empty(reason, extra) {
   return Object.assign({
     available: false,
-    reason: reason || 'Mini car.info searcher unavailable',
+    reason: reason || 'car.info unavailable',
     own_sold: [],
-    extra: [],
   }, extra || {});
 }
 
-function mapCarinfoResult(result) {
-  const raw = mini.flattenListings(result);
-  let ownSold = [];
-  if (result && Array.isArray(result.own_sold)) ownSold = result.own_sold.map(mini.normListing).filter(Boolean);
-  if (!ownSold.length) {
-    ownSold = raw.filter((l) => mini.isSold(l) && mini.isOwnDealer(l));
+function carInfoKey(opts) {
+  const o = opts || {};
+  if (o.carInfoKey != null) return String(o.carInfoKey).trim();
+  return String(process.env.CAR_INFO_KEY || '').trim();
+}
+
+function loadCarinfoMini(opts) {
+  const o = opts || {};
+  if (o.carinfoMini) return { mod: o.carinfoMini, file: '(injected)' };
+  const paths = o.carinfoPaths || CARINFO_PATHS;
+  const tried = [];
+  for (const file of paths) {
+    tried.push(file);
+    if (path.basename(file) === 'peasy-auto.js') continue;
+    if (!fs.existsSync(file)) {
+      tried[tried.length - 1] = file + ' (missing)';
+      continue;
+    }
+    try {
+      return { mod: require(file), file, tried };
+    } catch (e) {
+      tried[tried.length - 1] = file + ' (' + String(e && e.message || e).slice(0, 80) + ')';
+    }
   }
-  if (!ownSold.length) {
-    const dealer = raw.filter((l) => mini.isOwnDealer(l));
-    ownSold = dealer.length ? dealer.filter(mini.isSold) : raw.filter(mini.isSold);
-  }
-  return {
-    available: true,
-    own_sold: ownSold,
-    extra: raw,
-    used: null,
+  return { mod: null, file: null, tried };
+}
+
+function identityFromPayload(result) {
+  if (!result || typeof result !== 'object') return null;
+  const extra = {
+    merke: result.brand || result.make || null,
+    modell: result.series || result.model || null,
+    aar: result.model_year || result.year || null,
+    drivstoff: result.engine_type || result.fuel || null,
+    hk: result.horsepower || result.hp || null,
+    vin: result.vin || null,
+    drivlinje: result.drive || result.drivlinje || null,
+    car_name: result.car_name || null,
+    engine: result.engine_name || result.engine || null,
+    trim_package: result.trim_package || null,
+    chassis: result.chassis || null,
   };
+  const any = Object.keys(extra).some((k) => extra[k] != null && extra[k] !== '');
+  return any ? extra : null;
+}
+
+function soldBags(payload) {
+  const result = (payload && (payload.result || payload)) || {};
+  const val = result.valuation || {};
+  return [
+    result.company_classifieds,
+    result.private_classifieds,
+    result.own_sold,
+    val.company_classifieds,
+    val.private_classifieds,
+    val.own_sold,
+  ].filter(Array.isArray);
+}
+
+function mapOwnSold(payload) {
+  const out = [];
+  const seen = new Set();
+  for (const bag of soldBags(payload)) {
+    for (const item of bag) {
+      const sold = item && (item.ca_sold_date || item.sold_date || item.classified_removed_date);
+      if (!sold) continue;
+      const n = normListing(item);
+      if (!n) continue;
+      const key = [n.regnr || '', n.url || '', n.pris || '', n.sold_date || ''].join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+function buildCarInfoUrl(regnr, km) {
+  const plate = encodeURIComponent(String(regnr || '').toUpperCase().replace(/\s+/g, ''));
+  const mileage = Number.isFinite(Number(km)) ? Number(km) : 0;
+  return 'https://api.car.info/v2/app/autoringen/license-plate/N/' + plate + '/' + mileage;
+}
+
+async function readJson(res) {
+  if (!res) return null;
+  if (res.json && typeof res.json === 'object' && !res.json.then) return res.json;
+  if (typeof res.json === 'function') {
+    try { return await res.json(); } catch (_e) { /* fall through */ }
+  }
+  if (typeof res.text === 'function') {
+    const t = await res.text();
+    try { return t ? JSON.parse(t) : null; } catch (_e) { return null; }
+  }
+  return null;
 }
 
 async function searchRaw(origin, opts) {
-  const o = Object.assign({ kmCut: false, yearCut: false, twinLock: false }, opts || {});
-  const flags = Object.assign({}, mini.UNBOUNDED, {
-    kmCut: false,
-    yearCut: false,
-    twinLock: false,
-  });
+  const o = opts || {};
+  const src = origin || {};
+  const key = carInfoKey(o);
+  if (!key) return empty('CAR_INFO_KEY missing');
+
+  const loaded = loadCarinfoMini(o);
+
   try {
-    const paths = mini.resolveMiniPaths(CARINFO_REL, o);
-    const loaded = await mini.tryLoadFirst(paths, Object.assign({}, o, { exportNames: CARINFO_EXPORTS }));
-    if (!loaded.available) {
-      return empty('Mini car.info module missing or not a library. Tried: ' + (loaded.tried || []).join('; '), { tried: loaded.tried });
+    const url = buildCarInfoUrl(src.regnr, src.km);
+    const fetchFn = o.fetch || global.fetch;
+    if (typeof fetchFn !== 'function') return empty('fetch unavailable for car.info');
+    const res = await fetchFn(url, {
+      headers: {
+        'x-auth-identifier': 'autoringen',
+        'x-auth-key': key,
+        Accept: 'application/json',
+        'Accept-Language': 'nb',
+      },
+    });
+    const ok = res && (res.ok === true || (res.status >= 200 && res.status < 300));
+    if (!ok) {
+      return empty('car.info HTTP ' + ((res && res.status) || 'fail'), { used: loaded.file });
     }
-    const result = await mini.callSearcher(loaded.fn, origin || {}, flags);
-    const mapped = mapCarinfoResult(result);
-    mapped.used = { file: loaded.file, export: loaded.name };
-    return mapped;
+    const payload = await readJson(res);
+    const ownSold = mapOwnSold(payload);
+    const result = (payload && (payload.result || payload)) || {};
+    return {
+      available: true,
+      own_sold: ownSold,
+      identity: ownSold.length ? null : identityFromPayload(result),
+      used: { file: loaded.file || CARINFO_PATHS[0] },
+    };
   } catch (e) {
-    return empty('Mini car.info search failed: ' + String(e && e.message || e));
+    return empty('car.info search failed: ' + String(e && e.message || e), { used: loaded.file });
   }
 }
 
 module.exports = {
   searchRaw,
-  CARINFO_REL,
-  CARINFO_EXPORTS,
-  mapCarinfoResult,
+  buildCarInfoUrl,
+  mapOwnSold,
+  CARINFO_PATHS,
 };

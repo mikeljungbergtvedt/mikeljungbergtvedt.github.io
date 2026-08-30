@@ -25,18 +25,16 @@ Per car, JR builds:
 
 No km/year cut in the search. No locked twin window (`±n km`, `±n year`). Twin pick is the chef’s job.
 
-JR try-requires Mini Easy/V3/V3G **at runtime** (no copies, no edits). `peasy-auto.js` is listed but never `require`d — it calls `main()` on load.
+JR wires **exact Mini files**. It does not guess export names and it never `require`s `peasy-auto.js` (that file starts Easy).
 
-When the runner lives at `/Users/bot/peasy-auto/loop2`:
+| Adapter | Mini path | What JR calls |
+|---------|-----------|---------------|
+| `clients/finn.js` | `/Users/bot/peasy-auto/finn-origin.js` | `findFinnOrigin(regnr, { vin, erpId })` → `origin_on_finn`. Raw folder is HTTP GET `https://www.finn.no/mobility/search/car?q={merke}+{modell}&registration_class=1` (User-Agent + Accept-Language like that file), then `parseCollectionHits(html)` → `finn_now`. `fetchFinnSearch` is origin fallback only (pickHit / fails on several hits). **Not called:** `buildSisterSearch`, `kmWindow`, `yearWindow`. |
+| `clients/carinfo.js` | `/Users/bot/peasy-auto/v2/v3-trinn3-carinfo.js`, then `/Users/bot/peasy-auto/v3g/v3g-carinfo.js`, then `/Users/bot/peasy-auto/bot4/market.js` | `GET https://api.car.info/v2/app/autoringen/license-plate/N/{regnr}/{km}` with `CAR_INFO_KEY`. Sold classifieds → `own_sold`. |
 
-| Adapter | Mini require paths |
-|---------|-------------------|
-| `clients/finn.js` | `../finn-origin.js`, `../ai-finn-comp-filter.js`, `../v2/v3-eval.js`, `../v2/v3-eval-runner.js`, `../v3g/v3g-eval.js`, `../origin-cv.js`, `../ident-comps-score.js` |
-| `clients/carinfo.js` | `../v2/v3-eval.js`, `../v2/v3-eval-runner.js`, `../v3g/v3g-eval.js`, `../origin-cv.js`, `../ident-comps-score.js`, `../finn-origin.js`, `../ai-finn-comp-filter.js` |
+No `year_from` / `year_to` / `mileage_from` / `mileage_to`. No km band. No ± year window. Twin pick is the chef’s job.
 
-Absolute equivalents: `/Users/bot/peasy-auto/<same>`. First existing module with `searchRaw` / `search` / `fetchComps` / `finnSearch` (then a few aliases) wins. Call flags are always `kmCut:false yearCut:false twinLock:false`. If Easy/V3 already windowed a pool, JR maps the raw arrays and does not re-apply ±km / ±year.
-
-If no Mini module is loadable, `searchRaw` returns `{ available: false, reason }` and the runner writes `ok: false` instead of crashing Pulse. ERP lookup stays GET-only (`clients/erp-read.js`).
+Missing Mini file or `CAR_INFO_KEY` → `{ available: false, reason }` and the runner writes `ok: false` instead of crashing Pulse. ERP lookup stays GET-only (`clients/erp-read.js`).
 
 ## Chefs
 
@@ -98,8 +96,7 @@ cd /Users/bot/peasy-auto/loop2
 node run.js --cars cars.json --dry-run \
   --out ~/mikeljungbergtvedt.github.io/loop2-measurements.jsonl
 
-# 4) When Finn/car.info hooks are wired on Mini, drop --dry-run.
-#    Missing clients still write ok:false instead of crashing.
+# 4) Live run (Mini finn-origin.js + CAR_INFO_KEY). Missing Mini/key → ok:false.
 node run.js --cars cars.json \
   --out ~/mikeljungbergtvedt.github.io/loop2-measurements.jsonl
 ```
