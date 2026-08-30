@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c331</title>
+<title>Peasy Pulse v16.05.c332</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c331';</script>
+<script>document.title='Peasy Pulse v16.05.c332';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c331</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c332</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c331</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c332</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6579,7 +6579,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c331</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c332</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7045,20 +7045,72 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
   window.loadQA = async function(){
     const upd = document.getElementById('qa-updated'); if (upd) upd.textContent = 'Laster …';
+    var qaPainted = false;
+    var liste3 = [];
     try {
-      // 1) Fetch liste 3 (final_estimate) fra ERP
+      // 1) Fetch liste 3 (final_estimate) fra ERP. Ingen AbortSignal.timeout — Safari «Load failed» ved treg Tailscale.
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
       const PA_TOKEN_ERP = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
-      const listR = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}, signal: AbortSignal.timeout(4000)});
-      const listJ = await listR.json();
-      const liste3 = listJ.biler || [];
+      var listJ = null;
+      try {
+        var listR = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}});
+        if (!listR || !listR.ok) throw new Error('list not ok');
+        listJ = await listR.json();
+      } catch (eList1) {
+        try {
+          var listR2 = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}});
+          if (!listR2 || !listR2.ok) throw new Error('list retry not ok');
+          listJ = await listR2.json();
+        } catch (eList2) {
+          listJ = null;
+        }
+      }
+      if (listJ) {
+        liste3 = listJ.biler || [];
+        try { localStorage.setItem('peasy-qa-list3', JSON.stringify(liste3)); } catch (eLs) {}
+      } else {
+        var fromLs = null;
+        try { fromLs = JSON.parse(localStorage.getItem('peasy-qa-list3') || ''); } catch (eParse) { fromLs = null; }
+        if (fromLs && Array.isArray(fromLs)) {
+          liste3 = fromLs;
+        } else {
+          try {
+            var fbR = await fetch('https://mikeljungbergtvedt.github.io/loop2-measurements.jsonl');
+            var fbText = await fbR.text();
+            var seen = {};
+            var skipPlates = {SU50565:1, BU25987:1, BT63926:1};
+            liste3 = [];
+            fbText.split('\n').forEach(function(line){
+              if (!line) return;
+              var rec;
+              try { rec = JSON.parse(line); } catch (eLine) { return; }
+              if (!rec) return;
+              var rg = String(rec.regnr || rec.registration_number || '').toUpperCase().replace(/\s+/g,'');
+              if (skipPlates[rg]) return;
+              var intern = rec.internnr || rec.erpId || '';
+              var uk = String(intern || rg);
+              if (!uk) return;
+              if (seen[uk]) return;
+              seen[uk] = 1;
+              liste3.push({
+                registration_number: rg,
+                id: rec.internnr || rec.erpId,
+                created_at: rec.timestamp || null,
+                manufacturer: rec.merke || null,
+                mileage: rec.km
+              });
+            });
+          } catch (eFb) {
+            liste3 = [];
+          }
+        }
+      }
       const v3ByRegnr = {};
       const easyByRegnr = {};
       const v3gByRegnr = {};
       const bot4ByRegnr = {};
       const loop2ByRegnr = {};
       var histByReg = {};
-      var qaPainted = false;
       function paintQACards(){
         var enriched = [];
         try {
@@ -7253,7 +7305,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
       // [qa-hist] Fetch master-XLSX for ERP-historikk per regnr
       try {
-        var _hRes = await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx&t='+Date.now(), {signal: AbortSignal.timeout(4000)});
+        var _to = (typeof AbortSignal!=='undefined' && AbortSignal.timeout) ? AbortSignal.timeout(4000) : undefined;
+        var _hRes = await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx&t='+Date.now(), _to ? {signal: _to} : {});
         if (_hRes.ok) {
           var _hBuf = new Uint8Array(await _hRes.arrayBuffer());
           var _hWb = XLSX.read(_hBuf, {type:'array'});
@@ -7277,7 +7330,19 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       } catch(e) { console.warn('[qa-hist] fetch failed:', e); }
     } catch(e) {
-      const c = document.getElementById('qa-cards'); if (c) c.innerHTML = '<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">Feil ved lasting: ' + esc(e.message) + '</div>';
+      console.warn('[qa] loadQA:', e);
+      if (qaPainted) return;
+      var c = document.getElementById('qa-cards');
+      if (!c) return;
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('peasy-qa-list3') || ''); } catch (eC) { cached = null; }
+      if (cached && Array.isArray(cached) && cached.length) {
+        c.innerHTML = cached.map(function(b){
+          return '<div class="qa-card" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;"><div style="font-family:monospace;font-weight:700;font-size:14px;">'+esc(String((b&&b.registration_number)||''))+'</div><div style="font-size:11px;color:var(--muted);">'+esc(String((b&&b.id)||''))+'</div></div>';
+        }).join('');
+      } else {
+        c.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Ingen biler på liste 3</div>';
+      }
     }
   };
 
@@ -7776,7 +7841,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
-<!-- c331: QA-kort vises alltid. setMode window.loadQA + try/catch. paintQACards per-kort try/catch + fallback uten rethrow. Liste-3 AbortSignal.timeout(4000). #qa-cards «Åpner kort …». -->
+<!-- c332: Liste-3 uten AbortSignal.timeout. Retry + localStorage peasy-qa-list3 + loop2-fallback. Aldri «Feil ved lasting: Load failed». Hist-timeout guarded. -->
+<!-- c331: QA-kort vises alltid. setMode window.loadQA + try/catch. paintQACards per-kort try/catch + fallback uten rethrow. #qa-cards «Åpner kort …». -->
 <!-- c331-base: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
 <!-- c328: QA Finn-pris to spor — Dagens (Easy/V3/V3G/Bot 4) + Ny loop (Claude/Grok/Gemini). Samme akse, to spredninger. loop2-measurements.jsonl. Ikke SEND, ikke ERP. -->
 <!-- c326: QA-kort Finn-spredning-stripe + ℹ️-fjell (polyline) og bot-tabell. Kun visning. -->
