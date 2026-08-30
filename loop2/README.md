@@ -25,7 +25,18 @@ Per car, JR builds:
 
 No km/year cut in the search. No locked twin window (`±n km`, `±n year`). Twin pick is the chef’s job.
 
-Finn and car.info clients are **not in this GitHub Pages repo**. Hooks live in `clients/finn.js` and `clients/carinfo.js` (`TODO`). ERP lookup, if added later, must stay **GET-only** (`clients/erp-read.js`). Until those hooks are wired, the runner dry-runs and writes `ok: false` measurements instead of crashing Pulse.
+JR try-requires Mini Easy/V3/V3G **at runtime** (no copies, no edits). `peasy-auto.js` is listed but never `require`d — it calls `main()` on load.
+
+When the runner lives at `/Users/bot/peasy-auto/loop2`:
+
+| Adapter | Mini require paths |
+|---------|-------------------|
+| `clients/finn.js` | `../finn-origin.js`, `../ai-finn-comp-filter.js`, `../v2/v3-eval.js`, `../v2/v3-eval-runner.js`, `../v3g/v3g-eval.js`, `../origin-cv.js`, `../ident-comps-score.js` |
+| `clients/carinfo.js` | `../v2/v3-eval.js`, `../v2/v3-eval-runner.js`, `../v3g/v3g-eval.js`, `../origin-cv.js`, `../ident-comps-score.js`, `../finn-origin.js`, `../ai-finn-comp-filter.js` |
+
+Absolute equivalents: `/Users/bot/peasy-auto/<same>`. First existing module with `searchRaw` / `search` / `fetchComps` / `finnSearch` (then a few aliases) wins. Call flags are always `kmCut:false yearCut:false twinLock:false`. If Easy/V3 already windowed a pool, JR maps the raw arrays and does not re-apply ±km / ±year.
+
+If no Mini module is loadable, `searchRaw` returns `{ available: false, reason }` and the runner writes `ok: false` instead of crashing Pulse. ERP lookup stays GET-only (`clients/erp-read.js`).
 
 ## Chefs
 

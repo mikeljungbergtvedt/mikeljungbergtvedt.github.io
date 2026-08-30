@@ -76,7 +76,7 @@ async function gatherIdentity(hint, opts) {
   let finnReady = false;
   let carinfoReady = false;
   try {
-    const f = await finn.searchRaw(origin, { kmCut: false, yearCut: false, twinLock: false });
+    const f = await finn.searchRaw(origin, Object.assign({}, o, { kmCut: false, yearCut: false, twinLock: false }));
     if (f && f.available) {
       finnReady = true;
       listings.finn_now = Array.isArray(f.finn_now) ? f.finn_now : [];
@@ -90,7 +90,7 @@ async function gatherIdentity(hint, opts) {
   }
 
   try {
-    const c = await carinfo.searchRaw(origin, { kmCut: false, yearCut: false, twinLock: false });
+    const c = await carinfo.searchRaw(origin, Object.assign({}, o, { kmCut: false, yearCut: false, twinLock: false }));
     if (c && c.available) {
       carinfoReady = true;
       listings.own_sold = Array.isArray(c.own_sold) ? c.own_sold : [];
