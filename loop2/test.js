@@ -11,7 +11,6 @@ const publish = require('./publish');
 const run = require('./run');
 const finn = require('./clients/finn');
 const carinfo = require('./clients/carinfo');
-const mini = require('./clients/mini-load');
 
 function tmpFile(name) {
   return path.join(os.tmpdir(), 'loop2-test-' + process.pid + '-' + name);
@@ -67,7 +66,10 @@ async function testLatestWinsAndDots() {
 }
 
 async function testJrNoTwinLock() {
-  const d = await jr.gatherIdentity({ internnr: 2, regnr: 'AA11111', merke: 'X', modell: 'Y', aar: 2019, km: 50000 });
+  const d = await jr.gatherIdentity(
+    { internnr: 2, regnr: 'AA11111', merke: 'X', modell: 'Y', aar: 2019, km: 50000 },
+    { finnOriginPath: path.join(os.tmpdir(), 'no-finn-origin.js'), carInfoKey: '' }
+  );
   assert.strictEqual(d.role, 'jr');
   assert.strictEqual(d.search.km_cut, false);
   assert.strictEqual(d.search.year_cut, false);
@@ -130,7 +132,7 @@ async function testCommentStubStillParses() {
 async function testSourceGuards() {
   const files = [
     'run.js', 'jr.js', 'chefs.js', 'schema.js', 'publish.js',
-    'clients/finn.js', 'clients/carinfo.js', 'clients/erp-read.js', 'clients/mini-load.js',
+    'clients/finn.js', 'clients/carinfo.js', 'clients/erp-read.js', 'clients/listing.js',
   ];
   for (const rel of files) {
     const src = fs.readFileSync(path.join(__dirname, rel), 'utf8');
@@ -139,16 +141,27 @@ async function testSourceGuards() {
     assert.ok(!/confirmFinalEstimate\s*\(/.test(src), rel + ' calls confirmFinalEstimate');
     assert.ok(!/\/final_estimate/.test(src), rel + ' hits /final_estimate');
     assert.ok(!/\bwrites_erp\s*=\s*true\b/.test(src), rel + ' assigns writes_erp true');
+    assert.ok(!/require\([^)]*peasy-auto\.js/.test(src), rel + ' requires peasy-auto.js');
   }
   const finnSrc = fs.readFileSync(path.join(__dirname, 'clients/finn.js'), 'utf8');
   const ciSrc = fs.readFileSync(path.join(__dirname, 'clients/carinfo.js'), 'utf8');
   assert.ok(!/TODO:/.test(finnSrc), 'finn.js still has TODO stub');
   assert.ok(!/TODO:/.test(ciSrc), 'carinfo.js still has TODO stub');
-  assert.ok(finnSrc.includes('finn-origin.js') && finnSrc.includes('tryLoadFirst'));
-  assert.ok(ciSrc.includes('v3-eval.js') && ciSrc.includes('tryLoadFirst'));
+  assert.ok(finnSrc.includes('/Users/bot/peasy-auto/finn-origin.js'), 'finn.js must require Mini finn-origin.js');
+  assert.ok(finnSrc.includes('findFinnOrigin') && finnSrc.includes('parseCollectionHits') && finnSrc.includes('fetchFinnSearch'));
+  assert.ok(!/mod\.buildSisterSearch\s*\(/.test(finnSrc), 'JR must not call buildSisterSearch');
+  assert.ok(!/mod\.kmWindow\s*\(/.test(finnSrc), 'JR must not call kmWindow');
+  assert.ok(!/mod\.yearWindow\s*\(/.test(finnSrc), 'JR must not call yearWindow');
+  assert.ok(ciSrc.includes('/Users/bot/peasy-auto/v2/v3-trinn3-carinfo.js'));
+  assert.ok(ciSrc.includes('/Users/bot/peasy-auto/v3g/v3g-carinfo.js'));
+  assert.ok(ciSrc.includes('/Users/bot/peasy-auto/bot4/market.js'));
+  assert.ok(ciSrc.includes('https://api.car.info/v2/app/autoringen/license-plate/N/'));
+  assert.ok(!/tryLoadFirst/.test(finnSrc + ciSrc), 'stop guessed tryLoadFirst');
+  assert.ok(!fs.existsSync(path.join(__dirname, 'clients/mini-load.js')), 'mini-load.js guessed-export loader must stay gone');
   const chefsSrc = fs.readFileSync(path.join(__dirname, 'chefs.js'), 'utf8');
   assert.ok(chefsSrc.includes("'claude'") && chefsSrc.includes("'grok'") && chefsSrc.includes("'gemini'"));
   assert.strictEqual(chefs.CHEFS.join(','), 'claude,grok,gemini');
+  assert.ok(fs.existsSync(path.join(__dirname, 'copy-to-mini.sh')));
 }
 
 async function testPublishAppend() {
@@ -166,107 +179,187 @@ async function testPublishAppend() {
   }
 }
 
+function fakeFinnOrigin(overrides) {
+  const calls = { findFinnOrigin: 0, parseCollectionHits: 0, fetchFinnSearch: 0, buildSisterSearch: 0, kmWindow: 0, yearWindow: 0 };
+  const mod = {
+    findFinnOrigin: async function (regnr, opts) {
+      calls.findFinnOrigin += 1;
+      assert.ok(opts && ('vin' in opts) && ('erpId' in opts));
+      return { regnr, price: 210000, link: 'https://www.finn.no/mobility/item/9', status: 'Til salgs' };
+    },
+    parseCollectionHits: function (html) {
+      calls.parseCollectionHits += 1;
+      assert.ok(typeof html === 'string');
+      return [
+        { regnr: 'AB11111', price: 199000, km: 80000, year: 2019, link: 'https://www.finn.no/mobility/item/1', heading: 'Volvo V60' },
+      ];
+    },
+    fetchFinnSearch: async function () {
+      calls.fetchFinnSearch += 1;
+      throw new Error('fetchFinnSearch is origin fallback only');
+    },
+    buildSisterSearch: function () { calls.buildSisterSearch += 1; throw new Error('do not call buildSisterSearch'); },
+    kmWindow: function () { calls.kmWindow += 1; throw new Error('do not call kmWindow'); },
+    yearWindow: function () { calls.yearWindow += 1; throw new Error('do not call yearWindow'); },
+  };
+  return { mod: Object.assign(mod, overrides || {}), calls };
+}
+
 async function testMissingMiniDoesNotCrash() {
   const origin = { internnr: 26001, regnr: 'XX26001', merke: 'VOLVO', modell: 'V60', aar: 2018, km: 120000 };
-  const f = await finn.searchRaw(origin, { peasyAutoDir: path.join(os.tmpdir(), 'loop2-no-mini-' + process.pid) });
-  const c = await carinfo.searchRaw(origin, { peasyAutoDir: path.join(os.tmpdir(), 'loop2-no-mini-' + process.pid) });
+  const f = await finn.searchRaw(origin, { finnOriginPath: path.join(os.tmpdir(), 'no-finn-origin-' + process.pid + '.js') });
+  const c = await carinfo.searchRaw(origin, { carInfoKey: '' });
   assert.strictEqual(f.available, false);
   assert.strictEqual(c.available, false);
+  assert.ok(/finn-origin\.js/.test(f.reason || ''));
+  assert.strictEqual(c.reason, 'CAR_INFO_KEY missing');
   assert.ok(!/TODO/.test(f.reason || ''));
   assert.ok(!/TODO/.test(c.reason || ''));
   assert.ok(Array.isArray(f.finn_now) && Array.isArray(f.sold_under_3m));
   assert.ok(Array.isArray(c.own_sold));
 }
 
-async function testInjectedMiniFinnSearchRaw() {
+async function testFinnRawUrlHasNoYearOrKmCut() {
+  const origin = { internnr: 26001, regnr: 'XX26001', merke: 'VOLVO', modell: 'V60', aar: 2018, km: 120000 };
+  const url = finn.buildRawSearchUrl(origin);
+  assert.strictEqual(url, 'https://www.finn.no/mobility/search/car?q=VOLVO+V60&registration_class=1');
+  assert.deepStrictEqual(finn.urlHasForbiddenQuery(url), []);
+  assert.ok(!/year_from|year_to|mileage_from|mileage_to/.test(url));
+  const fake = fakeFinnOrigin();
   const seen = [];
-  const fake = {
-    searchRaw: async function (origin, flags) {
-      seen.push(flags);
-      assert.strictEqual(flags.kmCut, false);
-      assert.strictEqual(flags.yearCut, false);
-      assert.strictEqual(flags.twinLock, false);
-      return {
-        finn_now: [{ regnr: 'AB11111', price: 199000, km: 80000, year: 2019, link: 'https://www.finn.no/mobility/item/1', status: 'Til salgs' }],
-        sold_under_3m: [{ licence_plate: 'CD22222', classified_price: 180000, mileage_km: 90000, ca_sold_date: new Date().toISOString(), classified_url: 'https://www.finn.no/mobility/item/2' }],
-        origin_on_finn: { regnr: origin.regnr, price: 210000, link: 'https://www.finn.no/mobility/item/9', status: 'Til salgs' },
-      };
+  const out = await finn.searchRaw(origin, {
+    finnOrigin: fake.mod,
+    fetch: async function (u, init) {
+      seen.push({ url: u, headers: init && init.headers });
+      assert.deepStrictEqual(finn.urlHasForbiddenQuery(u), []);
+      assert.ok(!/year_from|mileage_from|mileage_to/.test(u));
+      assert.ok(init.headers['User-Agent']);
+      assert.ok(init.headers['Accept-Language']);
+      return { ok: true, status: 200, text: async () => '<html><article>199 000 kr</article></html>' };
     },
-  };
-  const out = await finn.searchRaw({ internnr: 26001, regnr: 'XX26001' }, { mini: fake });
+  });
   assert.strictEqual(out.available, true);
-  assert.ok(!/TODO/.test(JSON.stringify(out)));
+  assert.strictEqual(seen.length, 1);
+  assert.strictEqual(seen[0].url, url);
+  assert.strictEqual(fake.calls.findFinnOrigin, 1);
+  assert.strictEqual(fake.calls.parseCollectionHits, 1);
+  assert.strictEqual(fake.calls.fetchFinnSearch, 0);
+  assert.strictEqual(fake.calls.buildSisterSearch, 0);
+  assert.strictEqual(fake.calls.kmWindow, 0);
+  assert.strictEqual(fake.calls.yearWindow, 0);
   assert.strictEqual(out.finn_now.length, 1);
   assert.strictEqual(out.finn_now[0].pris, 199000);
-  assert.strictEqual(out.sold_under_3m.length, 1);
   assert.strictEqual(out.origin_on_finn.regnr, 'XX26001');
-  assert.strictEqual(seen.length, 1);
+  assert.deepStrictEqual(finn.FINN_ORIGIN_EXPORTS, [
+    'fetchFinnSearch', 'parseCollectionHits', 'findFinnOrigin', 'buildSisterSearch', 'kmWindow', 'yearWindow',
+  ]);
+  assert.strictEqual(finn.FINN_ORIGIN_PATH, '/Users/bot/peasy-auto/finn-origin.js');
 }
 
-async function testInjectedMiniFinnSearchExport() {
-  const fake = {
-    finnSearch: async function () {
-      return [
-        { regnr: 'EF33333', pris: 150000, km: 40000, status: 'til_salgs', url: 'https://www.finn.no/mobility/item/3' },
-        { regnr: 'GH44444', pris: 140000, km: 41000, sold_date: new Date().toISOString(), url: 'https://www.finn.no/mobility/item/4' },
-      ];
+async function testFinnOriginFallbackFetchFinnSearch() {
+  const fake = fakeFinnOrigin({
+    findFinnOrigin: async function () { return null; },
+    fetchFinnSearch: async function (regnr, opts) {
+      fake.calls.fetchFinnSearch += 1;
+      assert.strictEqual(regnr, 'ZZ99999');
+      assert.strictEqual(opts.erpId, 7);
+      return { regnr, price: 150000, link: 'https://www.finn.no/mobility/item/3' };
     },
-  };
-  const out = await finn.searchRaw({ internnr: 7, regnr: 'ZZ99999' }, { mini: fake });
+  });
+  const out = await finn.searchRaw({ internnr: 7, erpId: 7, regnr: 'ZZ99999', merke: 'BMW', modell: 'X3' }, {
+    finnOrigin: fake.mod,
+    fetch: async function () {
+      return { ok: true, status: 200, text: async () => '<html></html>' };
+    },
+  });
   assert.strictEqual(out.available, true);
-  assert.strictEqual(out.used.export, 'finnSearch');
-  assert.strictEqual(out.finn_now.length, 1);
-  assert.strictEqual(out.sold_under_3m.length, 1);
+  assert.strictEqual(out.origin_on_finn.regnr, 'ZZ99999');
+  assert.strictEqual(out.origin_on_finn.pris, 150000);
+  assert.strictEqual(fake.calls.fetchFinnSearch, 1);
+  assert.strictEqual(fake.calls.buildSisterSearch + fake.calls.kmWindow + fake.calls.yearWindow, 0);
 }
 
-async function testInjectedMiniCarinfoFetchComps() {
-  const fake = {
-    fetchComps: async function (origin, flags) {
-      assert.strictEqual(flags.kmCut, false);
-      assert.strictEqual(flags.yearCut, false);
-      assert.strictEqual(flags.twinLock, false);
+async function testCarinfoSoldClassifieds() {
+  const seen = [];
+  const out = await carinfo.searchRaw({ internnr: 26002, regnr: 'YY26002', km: 70000 }, {
+    carInfoKey: 'test-key',
+    carinfoMini: { note: 'injected Mini v3-trinn3-carinfo' },
+    fetch: async function (url, init) {
+      seen.push({ url, headers: init && init.headers });
+      assert.strictEqual(url, 'https://api.car.info/v2/app/autoringen/license-plate/N/YY26002/70000');
+      assert.ok(!/year_from|mileage_to/.test(url));
+      assert.strictEqual(init.headers['x-auth-identifier'], 'autoringen');
+      assert.strictEqual(init.headers['x-auth-key'], 'test-key');
+      assert.strictEqual(init.headers['Accept-Language'], 'nb');
       return {
-        company_classifieds: [
-          { licence_plate: 'JJ55555', classified_price: 175000, mileage_km: 70000, ca_sold_date: '2026-08-01', classified_url: 'https://www.finn.no/mobility/item/5' },
-          { licence_plate: 'KK66666', classified_price: 190000, mileage_km: 60000, classified_url: 'https://www.finn.no/mobility/item/6' },
-        ],
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          result: {
+            brand: 'Volvo',
+            series: 'V60',
+            valuation: {
+              company_classifieds: [
+                { licence_plate: 'JJ55555', classified_price: 175000, mileage_km: 70000, ca_sold_date: '2026-08-01', classified_url: 'https://www.finn.no/mobility/item/5' },
+                { licence_plate: 'KK66666', classified_price: 190000, mileage_km: 60000, classified_url: 'https://www.finn.no/mobility/item/6' },
+              ],
+            },
+          },
+        }),
       };
     },
-  };
-  const out = await carinfo.searchRaw({ internnr: 26002, regnr: 'YY26002' }, { mini: fake });
+  });
   assert.strictEqual(out.available, true);
   assert.ok(!/TODO/.test(JSON.stringify(out)));
-  assert.ok(out.own_sold.length >= 1);
+  assert.strictEqual(out.own_sold.length, 1);
   assert.strictEqual(out.own_sold[0].pris, 175000);
-  assert.ok(out.extra.length >= 1);
+  assert.strictEqual(seen.length, 1);
+  assert.deepStrictEqual(carinfo.CARINFO_PATHS, [
+    '/Users/bot/peasy-auto/v2/v3-trinn3-carinfo.js',
+    '/Users/bot/peasy-auto/v3g/v3g-carinfo.js',
+    '/Users/bot/peasy-auto/bot4/market.js',
+  ]);
 }
 
 async function testInjectedMiniMakesJrReady() {
-  const fakeFinn = {
-    search: async function () {
-      return { finn_now: [{ regnr: 'LL77777', price: 100000, km: 10000, link: 'https://www.finn.no/x' }], sold_under_3m: [], origin_on_finn: null };
-    },
-  };
-  const fakeCi = {
-    collectAllData: async function () {
-      return { own_sold: [{ regnr: 'MM88888', price: 90000, sold_date: '2026-07-01', type: 'forhandler' }] };
-    },
-  };
+  const fake = fakeFinnOrigin();
   const d = await jr.gatherIdentity(
     { internnr: 11, regnr: 'NN11111', merke: 'X', modell: 'Y', aar: 2020, km: 10000 },
-    { finnClient: { searchRaw: (o) => finn.searchRaw(o, { mini: fakeFinn }) }, carinfoClient: { searchRaw: (o) => carinfo.searchRaw(o, { mini: fakeCi }) } }
+    {
+      finnClient: {
+        searchRaw: (o) => finn.searchRaw(o, {
+          finnOrigin: fake.mod,
+          fetch: async () => ({ ok: true, status: 200, text: async () => '<html></html>' }),
+        }),
+      },
+      carinfoClient: {
+        searchRaw: (o) => carinfo.searchRaw(o, {
+          carInfoKey: 'k',
+          fetch: async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              result: { company_classifieds: [{ licence_plate: 'MM88888', classified_price: 90000, ca_sold_date: '2026-07-01' }] },
+            }),
+          }),
+        }),
+      },
+    }
   );
   assert.strictEqual(d.listings_ready, true);
   assert.strictEqual(d.search.km_cut, false);
   assert.strictEqual(d.search.twin_rules_locked, false);
-  assert.strictEqual(d.listings.finn_now[0].pris, 100000);
+  assert.strictEqual(d.listings.finn_now[0].pris, 199000);
   assert.strictEqual(d.listings.own_sold[0].regnr, 'MM88888');
   assert.strictEqual(d.origin.internnr, 11);
 }
 
 async function testPeasyAutoJsNeverRequired() {
-  assert.strictEqual(mini.isPeasyAutoProcess('/Users/bot/peasy-auto/peasy-auto.js'), true);
-  assert.strictEqual(mini.looksSafeToRequire('/Users/bot/peasy-auto/peasy-auto.js'), false);
+  const finnSrc = fs.readFileSync(path.join(__dirname, 'clients/finn.js'), 'utf8');
+  const ciSrc = fs.readFileSync(path.join(__dirname, 'clients/carinfo.js'), 'utf8');
+  assert.ok(!/require\(\s*['"][^'"]*peasy-auto\.js['"]\s*\)/.test(finnSrc + ciSrc));
+  assert.strictEqual(finn.FINN_ORIGIN_PATH, '/Users/bot/peasy-auto/finn-origin.js');
 }
 
 async function testLoadCars() {
@@ -292,9 +385,9 @@ async function main() {
     testPublishAppend,
     testLoadCars,
     testMissingMiniDoesNotCrash,
-    testInjectedMiniFinnSearchRaw,
-    testInjectedMiniFinnSearchExport,
-    testInjectedMiniCarinfoFetchComps,
+    testFinnRawUrlHasNoYearOrKmCut,
+    testFinnOriginFallbackFetchFinnSearch,
+    testCarinfoSoldClassifieds,
     testInjectedMiniMakesJrReady,
     testPeasyAutoJsNeverRequired,
   ];
