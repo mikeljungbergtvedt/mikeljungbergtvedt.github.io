@@ -7153,10 +7153,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
             const chef = qaLoop2Chef(r && r.evaluator);
             const rg = String((r && r.regnr) || '').toUpperCase();
             if (!chef || !rg) continue;
-            const ts = qaLoop2Ts(r);
             if (!loop2ByRegnr[rg]) loop2ByRegnr[rg] = {};
             const prev = loop2ByRegnr[rg][chef];
-            if (!prev || ts > qaLoop2Ts(prev)) loop2ByRegnr[rg][chef] = r;
+            if (!prev || (r.timestamp || '') > (prev.timestamp || '')) loop2ByRegnr[rg][chef] = r;
           }
         }
       } catch(e) { console.warn('[loop2] fetch failed:', e); }
@@ -7261,14 +7260,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (s === 'claude' || s === 'grok' || s === 'gemini') return s;
     return null;
   }
-  function qaLoop2Ts(r){
-    return String((r && (r.timestamp || r.at)) || '');
-  }
   function qaLoop2Finn(r){
     if (!r) return null;
-    var raw = (r.finn_utpris != null) ? r.finn_utpris : r.finn_pris;
-    if (r.ok === false || (r.error && !Number.isFinite(Number(raw)))) return null;
-    return qaFinnNum(raw);
+    if (r.ok===false || (r.error && !Number.isFinite(Number(r.finn_utpris)))) return null;
+    return qaFinnNum(r.finn_utpris);
   }
   function qaFinnTerrain(easyN, v3N, vgN, bot4N, loop2){
     loop2 = loop2 || {};
@@ -7658,7 +7653,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${v3KalkHtml}
         ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}
         ${vgKalkHtml}
-        ${(function(){var b=e.bot4;if(!b)return '<div style="margin-top:6px;"><b>Bot 4:</b> <i>(ingen måling)</i></div>';var txt=b.rationale||b.error||'(tom)';return '<div style="margin-top:6px;"><b>Bot 4:</b></div><pre style="white-space:pre-wrap;margin:4px 0 0;font-family:inherit;font-size:12px;line-height:1.4;">'+esc(txt)+'</pre>';})()}${(function(){var l2=e.loop2||{};var chefs=[{id:'claude',lab:'Claude'},{id:'grok',lab:'Grok'},{id:'gemini',lab:'Gemini'}];return '<div style="margin-top:8px;"><b>Ny loop</b> <span style="color:#888;font-weight:400;">(benchmark, skriver ikke ERP)</span></div>'+chefs.map(function(c){var r=l2[c.id];if(!r)return '<div style="margin-top:4px;"><b>'+c.lab+':</b> —</div>';var n=qaLoop2Finn(r);var txt=r.rationale||r.why||r.error||'';return '<div style="margin-top:4px;"><b>'+c.lab+':</b> '+(n==null?'—':fmt(n)+' kr')+(txt?'<div style="margin-top:2px;white-space:pre-wrap;color:#555;">'+esc(txt)+'</div>':'')+'</div>';}).join('');})()}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}
+        ${(function(){var b=e.bot4;if(!b)return '<div style="margin-top:6px;"><b>Bot 4:</b> <i>(ingen måling)</i></div>';var txt=b.rationale||b.error||'(tom)';return '<div style="margin-top:6px;"><b>Bot 4:</b></div><pre style="white-space:pre-wrap;margin:4px 0 0;font-family:inherit;font-size:12px;line-height:1.4;">'+esc(txt)+'</pre>';})()}${(function(){var l2=e.loop2||{};var chefs=[{id:'claude',lab:'Claude'},{id:'grok',lab:'Grok'},{id:'gemini',lab:'Gemini'}];return '<div style="margin-top:8px;"><b>Ny loop</b> <span style="color:#888;font-weight:400;">(benchmark, skriver ikke ERP)</span></div>'+chefs.map(function(c){var r=l2[c.id];if(!r)return '<div style="margin-top:4px;"><b>'+c.lab+':</b> —</div>';var n=qaLoop2Finn(r);var txt=r.rationale||r.error||'';return '<div style="margin-top:4px;"><b>'+c.lab+':</b> '+(n==null?'—':fmt(n)+' kr')+(txt?'<div style="margin-top:2px;white-space:pre-wrap;color:#555;">'+esc(txt)+'</div>':'')+'</div>';}).join('');})()}${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}
       </div>
     </div>`;
   }
