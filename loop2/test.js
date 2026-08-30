@@ -9,6 +9,9 @@ const jr = require('./jr');
 const chefs = require('./chefs');
 const publish = require('./publish');
 const run = require('./run');
+const finn = require('./clients/finn');
+const carinfo = require('./clients/carinfo');
+const mini = require('./clients/mini-load');
 
 function tmpFile(name) {
   return path.join(os.tmpdir(), 'loop2-test-' + process.pid + '-' + name);
@@ -127,7 +130,7 @@ async function testCommentStubStillParses() {
 async function testSourceGuards() {
   const files = [
     'run.js', 'jr.js', 'chefs.js', 'schema.js', 'publish.js',
-    'clients/finn.js', 'clients/carinfo.js', 'clients/erp-read.js',
+    'clients/finn.js', 'clients/carinfo.js', 'clients/erp-read.js', 'clients/mini-load.js',
   ];
   for (const rel of files) {
     const src = fs.readFileSync(path.join(__dirname, rel), 'utf8');
@@ -137,6 +140,12 @@ async function testSourceGuards() {
     assert.ok(!/\/final_estimate/.test(src), rel + ' hits /final_estimate');
     assert.ok(!/\bwrites_erp\s*=\s*true\b/.test(src), rel + ' assigns writes_erp true');
   }
+  const finnSrc = fs.readFileSync(path.join(__dirname, 'clients/finn.js'), 'utf8');
+  const ciSrc = fs.readFileSync(path.join(__dirname, 'clients/carinfo.js'), 'utf8');
+  assert.ok(!/TODO:/.test(finnSrc), 'finn.js still has TODO stub');
+  assert.ok(!/TODO:/.test(ciSrc), 'carinfo.js still has TODO stub');
+  assert.ok(finnSrc.includes('finn-origin.js') && finnSrc.includes('tryLoadFirst'));
+  assert.ok(ciSrc.includes('v3-eval.js') && ciSrc.includes('tryLoadFirst'));
   const chefsSrc = fs.readFileSync(path.join(__dirname, 'chefs.js'), 'utf8');
   assert.ok(chefsSrc.includes("'claude'") && chefsSrc.includes("'grok'") && chefsSrc.includes("'gemini'"));
   assert.strictEqual(chefs.CHEFS.join(','), 'claude,grok,gemini');
@@ -155,6 +164,109 @@ async function testPublishAppend() {
   } finally {
     try { fs.unlinkSync(out); } catch (_e) { /* ignore */ }
   }
+}
+
+async function testMissingMiniDoesNotCrash() {
+  const origin = { internnr: 26001, regnr: 'XX26001', merke: 'VOLVO', modell: 'V60', aar: 2018, km: 120000 };
+  const f = await finn.searchRaw(origin, { peasyAutoDir: path.join(os.tmpdir(), 'loop2-no-mini-' + process.pid) });
+  const c = await carinfo.searchRaw(origin, { peasyAutoDir: path.join(os.tmpdir(), 'loop2-no-mini-' + process.pid) });
+  assert.strictEqual(f.available, false);
+  assert.strictEqual(c.available, false);
+  assert.ok(!/TODO/.test(f.reason || ''));
+  assert.ok(!/TODO/.test(c.reason || ''));
+  assert.ok(Array.isArray(f.finn_now) && Array.isArray(f.sold_under_3m));
+  assert.ok(Array.isArray(c.own_sold));
+}
+
+async function testInjectedMiniFinnSearchRaw() {
+  const seen = [];
+  const fake = {
+    searchRaw: async function (origin, flags) {
+      seen.push(flags);
+      assert.strictEqual(flags.kmCut, false);
+      assert.strictEqual(flags.yearCut, false);
+      assert.strictEqual(flags.twinLock, false);
+      return {
+        finn_now: [{ regnr: 'AB11111', price: 199000, km: 80000, year: 2019, link: 'https://www.finn.no/mobility/item/1', status: 'Til salgs' }],
+        sold_under_3m: [{ licence_plate: 'CD22222', classified_price: 180000, mileage_km: 90000, ca_sold_date: new Date().toISOString(), classified_url: 'https://www.finn.no/mobility/item/2' }],
+        origin_on_finn: { regnr: origin.regnr, price: 210000, link: 'https://www.finn.no/mobility/item/9', status: 'Til salgs' },
+      };
+    },
+  };
+  const out = await finn.searchRaw({ internnr: 26001, regnr: 'XX26001' }, { mini: fake });
+  assert.strictEqual(out.available, true);
+  assert.ok(!/TODO/.test(JSON.stringify(out)));
+  assert.strictEqual(out.finn_now.length, 1);
+  assert.strictEqual(out.finn_now[0].pris, 199000);
+  assert.strictEqual(out.sold_under_3m.length, 1);
+  assert.strictEqual(out.origin_on_finn.regnr, 'XX26001');
+  assert.strictEqual(seen.length, 1);
+}
+
+async function testInjectedMiniFinnSearchExport() {
+  const fake = {
+    finnSearch: async function () {
+      return [
+        { regnr: 'EF33333', pris: 150000, km: 40000, status: 'til_salgs', url: 'https://www.finn.no/mobility/item/3' },
+        { regnr: 'GH44444', pris: 140000, km: 41000, sold_date: new Date().toISOString(), url: 'https://www.finn.no/mobility/item/4' },
+      ];
+    },
+  };
+  const out = await finn.searchRaw({ internnr: 7, regnr: 'ZZ99999' }, { mini: fake });
+  assert.strictEqual(out.available, true);
+  assert.strictEqual(out.used.export, 'finnSearch');
+  assert.strictEqual(out.finn_now.length, 1);
+  assert.strictEqual(out.sold_under_3m.length, 1);
+}
+
+async function testInjectedMiniCarinfoFetchComps() {
+  const fake = {
+    fetchComps: async function (origin, flags) {
+      assert.strictEqual(flags.kmCut, false);
+      assert.strictEqual(flags.yearCut, false);
+      assert.strictEqual(flags.twinLock, false);
+      return {
+        company_classifieds: [
+          { licence_plate: 'JJ55555', classified_price: 175000, mileage_km: 70000, ca_sold_date: '2026-08-01', classified_url: 'https://www.finn.no/mobility/item/5' },
+          { licence_plate: 'KK66666', classified_price: 190000, mileage_km: 60000, classified_url: 'https://www.finn.no/mobility/item/6' },
+        ],
+      };
+    },
+  };
+  const out = await carinfo.searchRaw({ internnr: 26002, regnr: 'YY26002' }, { mini: fake });
+  assert.strictEqual(out.available, true);
+  assert.ok(!/TODO/.test(JSON.stringify(out)));
+  assert.ok(out.own_sold.length >= 1);
+  assert.strictEqual(out.own_sold[0].pris, 175000);
+  assert.ok(out.extra.length >= 1);
+}
+
+async function testInjectedMiniMakesJrReady() {
+  const fakeFinn = {
+    search: async function () {
+      return { finn_now: [{ regnr: 'LL77777', price: 100000, km: 10000, link: 'https://www.finn.no/x' }], sold_under_3m: [], origin_on_finn: null };
+    },
+  };
+  const fakeCi = {
+    collectAllData: async function () {
+      return { own_sold: [{ regnr: 'MM88888', price: 90000, sold_date: '2026-07-01', type: 'forhandler' }] };
+    },
+  };
+  const d = await jr.gatherIdentity(
+    { internnr: 11, regnr: 'NN11111', merke: 'X', modell: 'Y', aar: 2020, km: 10000 },
+    { finnClient: { searchRaw: (o) => finn.searchRaw(o, { mini: fakeFinn }) }, carinfoClient: { searchRaw: (o) => carinfo.searchRaw(o, { mini: fakeCi }) } }
+  );
+  assert.strictEqual(d.listings_ready, true);
+  assert.strictEqual(d.search.km_cut, false);
+  assert.strictEqual(d.search.twin_rules_locked, false);
+  assert.strictEqual(d.listings.finn_now[0].pris, 100000);
+  assert.strictEqual(d.listings.own_sold[0].regnr, 'MM88888');
+  assert.strictEqual(d.origin.internnr, 11);
+}
+
+async function testPeasyAutoJsNeverRequired() {
+  assert.strictEqual(mini.isPeasyAutoProcess('/Users/bot/peasy-auto/peasy-auto.js'), true);
+  assert.strictEqual(mini.looksSafeToRequire('/Users/bot/peasy-auto/peasy-auto.js'), false);
 }
 
 async function testLoadCars() {
@@ -179,6 +291,12 @@ async function main() {
     testSourceGuards,
     testPublishAppend,
     testLoadCars,
+    testMissingMiniDoesNotCrash,
+    testInjectedMiniFinnSearchRaw,
+    testInjectedMiniFinnSearchExport,
+    testInjectedMiniCarinfoFetchComps,
+    testInjectedMiniMakesJrReady,
+    testPeasyAutoJsNeverRequired,
   ];
   for (const fn of tests) {
     await fn();
