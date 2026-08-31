@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c334</title>
+<title>Peasy Pulse v16.05.c335</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c334';</script>
+<script>document.title='Peasy Pulse v16.05.c335';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c334</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c335</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c334</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c335</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6409,7 +6409,13 @@ function kjMetrics(rows, fromMs){
   var cfg = window.peasyConfig || {prodKostUnder35k:2250, prodKostOver35k:2750, returKost:3000, marketingPerioder:[]};
   var PROD_RETUR_FLAT = cfg.returKost;
   var solgtInPeriod = enriched.filter(function(r){return r.solgtDate && r.solgtDate.getTime() >= fromMs;});
-  var returInPeriod = enriched.filter(function(r){return r.retDate && r.retDate.getTime() >= fromMs;});
+  // Same retur rule as monthly(): Returnert-på in window, else open to_be_returned on accept in window.
+  var returInPeriod = enriched.filter(function(r){
+    if(r.retDate && r.retDate.getTime() >= fromMs) return true;
+    var tbr = String(r.status||'').toLowerCase().replace(/\s+/g,'_')==='to_be_returned';
+    var acc = r.bestiltP || r.bestiltQ;
+    return !r.retDate && tbr && acc && acc.getTime() >= fromMs;
+  });
   var prisetInPeriod = enriched.filter(function(r){var d=r.prisetDate||r.evalDate;return d&&d.getTime()>=fromMs;});
   var bestiltInPeriod = enriched.filter(function(r){var d=r.bestiltP||r.bestiltQ;return d&&d.getTime()>=fromMs;});
   var evalInPeriod  = enriched.filter(function(r){return r.evalDate && r.evalDate.getTime() >= fromMs;});
@@ -6439,7 +6445,7 @@ function kjMetrics(rows, fromMs){
   var faktiskProdSnitt = nProdSolgt > 0 ? sumProdSolgt / nProdSolgt : null;
   var sumProdAuksjon = sumProdSolgt + sumProdRetur;
   var effektivProdPerSolgt = solgt > 0 ? sumProdAuksjon / solgt : null;
-  var _nowD = new Date(); _nowD.setHours(0,0,0,0); var nowMs = _nowD.getTime();
+  var nowMs = new Date().getTime();
   var marketingSum = (cfg.marketingPerioder || []).reduce(function(s, mp){
     var mpStart = new Date(mp.fra).getTime();
     var mpEnd = mp.til ? new Date(mp.til).getTime() : nowMs;
@@ -6449,8 +6455,7 @@ function kjMetrics(rows, fromMs){
     var days = Math.ceil((overlapEnd - overlapStart) / 86400000);
     return s + days * (mp.krPerDag || 0);
   }, 0);
-  var peasySolgt = solgtInPeriod.filter(function(r){return r.source==='peasy';}).length;
-  var cac = peasySolgt > 0 ? marketingSum / peasySolgt : null;
+  var cac = solgt > 0 ? marketingSum / solgt : null;
   var totalKostPerSolgt = (effektivProdPerSolgt !== null && cac !== null) ? effektivProdPerSolgt + cac : null;
   var nettoPerSolgt = (snittFee !== null && totalKostPerSolgt !== null) ? snittFee - totalKostPerSolgt : null;
   var motorPerEval = (evalAks !== null && budAks !== null && snittFee !== null) ? evalAks * budAks * snittFee : null;
@@ -6481,7 +6486,7 @@ function renderKjerne(){
     {label:'Solgt', value:kjFmtInt(m.solgt), sub:m.evaluert+' evalueringer'},
     {label:'Returnert', value:kjFmtInt(m.retur), sub:(m.solgt+m.retur)+' p\u00e5 auksjon'},
     {label:'Effektiv prod / solgt', value:kjFmtKr(m.effektivProdPerSolgt), sub:'inkl. retur-overhead'},
-    {label:'CAC per solgt', value:kjFmtKr(m.cac), sub:'Peasy-marketing \u00f7 Peasy-solgt'},
+    {label:'CAC per solgt', value:kjFmtKr(m.cac), sub:'marketing \u00f7 solgt'},
     {label:'Faktisk prod snitt', value:kjFmtKr(m.faktiskProdSnitt), sub:'kun solgte (sammenligning)'},
     {label:'Snitt h\u00f8yeste bud', value:kjFmtKr(m.snittBud), sub:'av solgte biler'}
   ];
@@ -6578,7 +6583,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c334</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c335</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7352,6 +7357,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   // c326: Finn-pris-terreng — samme fire tall som kort-gridet, kun visning.
   // c328: to spor, samme tallakse. Dagens (4) + Ny loop. To spredninger. Ikke SEND, ikke ERP.
   // c333: Ny loop er Claude+Grok (Gemini off).
+  // c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt.
   // c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned).
   function qaFinnNum(v){
     var n = Number(v);
@@ -7841,6 +7847,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
 <!-- c332: Liste-3 uten AbortSignal.timeout. Retry + localStorage peasy-qa-list3 + loop2-fallback. Aldri «Feil ved lasting: Load failed». Hist-timeout guarded. -->
