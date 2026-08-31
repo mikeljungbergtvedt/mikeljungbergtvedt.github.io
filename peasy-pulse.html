@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c335</title>
+<title>Peasy Pulse v16.05.c336</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c335';</script>
+<script>document.title='Peasy Pulse v16.05.c336';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c335</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c336</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c335</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c336</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6583,7 +6583,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c335</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c336</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7357,6 +7357,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   // c326: Finn-pris-terreng — samme fire tall som kort-gridet, kun visning.
   // c328: to spor, samme tallakse. Dagens (4) + Ny loop. To spredninger. Ikke SEND, ikke ERP.
   // c333: Ny loop er Claude+Grok (Gemini off).
+  // c336: tabell / Ny-loop-legend / polyline i stigende Finn-pris (venstre = lavest). Samme from–to begge spor.
   // c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt.
   // c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned).
   function qaFinnNum(v){
@@ -7387,6 +7388,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
     ];
     var numsA = TRACK_A.map(function(b){ return b.n; }).filter(function(n){ return n != null; });
     var numsB = TRACK_B.map(function(b){ return b.n; }).filter(function(n){ return n != null; });
+    function byFinnAsc(a, b){
+      if (a.n == null && b.n == null) return 0;
+      if (a.n == null) return 1;
+      if (b.n == null) return -1;
+      return a.n - b.n;
+    }
+    var ORDER_A = TRACK_A.slice().sort(byFinnAsc);
+    var ORDER_B = TRACK_B.slice().sort(byFinnAsc);
     var dash = '<div class="qa-finn-terrain qa-finn-terrain--empty">–</div>';
     if (numsA.length < 2 && numsB.length === 0) return {htmlCard: dash, htmlDetail: dash};
     var axis = numsA.concat(numsB);
@@ -7437,6 +7446,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
           +'<span class="qa-finn-vs" style="color:'+vsCol+';">'+vsTxt+'</span></td>';
       }).join('');
     }
+    function headsHtml(bots){
+      return bots.map(function(b){
+        return '<th style="color:'+b.color+';">'+b.label+'</th>';
+      }).join('');
+    }
     function trackRow(lab, bots, yOf, polyline, pct, extraCls){
       return '<div class="qa-finn-terrain-row'+(extraCls?' '+extraCls:'')+'">'
         +'<div class="qa-finn-row-lab">'+lab+'</div>'
@@ -7446,7 +7460,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
     var pctA = spreadHtml(numsA, 'Dagens: høyeste mot laveste av Easy, V3, V3G, Bot 4');
     var pctB = spreadHtml(numsB, 'Ny loop: høyeste mot laveste av Claude, Grok');
-    var loop2Nums = TRACK_B.map(function(b){
+    var loop2Nums = ORDER_B.map(function(b){
       var val = b.n == null ? '—' : fmt(b.n);
       return '<span><i style="background:'+b.color+';"></i>'+b.label+' <b style="color:'+(b.n==null?'var(--muted)':b.color)+';">'+val+'</b></span>';
     }).join('');
@@ -7455,14 +7469,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
       +trackRow('Ny loop', TRACK_B, function(){ return Y_CARD; }, '', pctB)
       +'</div><div class="qa-finn-loop2-nums">'+loop2Nums+'</div></div>';
     var htmlDetail = '<div class="qa-finn-terrain qa-finn-terrain--detail"><div class="qa-finn-terrain-stack">'
-      +trackRow('Dagens', TRACK_A, function(b){ return Y_DETAIL_A[b.id]; }, polylineSvg(TRACK_A, Y_DETAIL_A), pctA)
+      +trackRow('Dagens', TRACK_A, function(b){ return Y_DETAIL_A[b.id]; }, polylineSvg(ORDER_A, Y_DETAIL_A), pctA)
       +'<table class="qa-finn-table"><thead><tr>'
-      +'<th style="color:#6A1B9A;">Easy</th><th style="color:#8A8A8A;">V3</th><th style="color:#1B5E20;">V3G</th><th style="color:#1565C0;">Bot 4</th>'
-      +'</tr></thead><tbody><tr>'+cellsHtml(TRACK_A, numsA)+'</tr></tbody></table>'
-      +trackRow('Ny loop', TRACK_B, function(b){ return Y_DETAIL_B[b.id]; }, polylineSvg(TRACK_B, Y_DETAIL_B), pctB)
+      +headsHtml(ORDER_A)
+      +'</tr></thead><tbody><tr>'+cellsHtml(ORDER_A, numsA)+'</tr></tbody></table>'
+      +trackRow('Ny loop', TRACK_B, function(b){ return Y_DETAIL_B[b.id]; }, polylineSvg(ORDER_B, Y_DETAIL_B), pctB)
       +'<table class="qa-finn-table"><thead><tr>'
-      +'<th style="color:#C45C26;">Claude</th><th style="color:#37474F;">Grok</th>'
-      +'</tr></thead><tbody><tr>'+cellsHtml(TRACK_B, numsB)+'</tr></tbody></table>'
+      +headsHtml(ORDER_B)
+      +'</tr></thead><tbody><tr>'+cellsHtml(ORDER_B, numsB)+'</tr></tbody></table>'
       +'</div></div>';
     return {htmlCard: htmlCard, htmlDetail: htmlDetail};
   }
@@ -7847,6 +7861,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<!-- c336: QA Finn-terreng tabell/legend/polyline i stigende Finn-pris (venstre = lavest). Samme from–to begge spor. -->
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
