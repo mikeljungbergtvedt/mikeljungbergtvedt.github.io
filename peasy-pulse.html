@@ -6639,7 +6639,7 @@ root.innerHTML=h;
 var mo=typeof MutationObserver!=='undefined'?new MutationObserver(function(){normOgTell();}):null;
 function watch(){var tb=document.getElementById('v2bm-tbody');if(tb&&mo&&!tb._v2aW){tb._v2aW=true;mo.observe(tb,{childList:true});}}
 function monthly(){var rows=window._lastRows||[];var M={};function mk(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);}function get(k){return M[k]=M[k]||{leads:0,aksept:0,solgt:0,retur:0,gapS:[],gapR:[]};}
-rows.slice(1).forEach(function(r){var lead=pd(r[14]);if(lead)get(mk(lead)).leads++;var acc=pd(r[15]||r[16]);if(acc)get(mk(acc)).aksept++;var sold=pd(r[18]);var ret=pd(r[21]);var dl=parseInt(String(r[3]||'').split('-')[0].replace(/\D/g,''),10)||null;var hb=parseInt(String(r[4]||'').replace(/\D/g,''),10)||null;if(sold){var o=get(mk(sold));o.solgt++;if(dl&&hb)o.gapS.push((hb-dl)/dl);}if(ret){var o=get(mk(ret));o.retur++;if(dl&&hb)o.gapR.push((hb-dl)/dl);}});return M;}
+rows.slice(1).forEach(function(r){var lead=pd(r[14]);if(lead)get(mk(lead)).leads++;var acc=pd(r[15]||r[16]);if(acc)get(mk(acc)).aksept++;var sold=pd(r[18]);var ret=pd(r[21]);var tbr=String(r[12]||'').toLowerCase().replace(/\s+/g,'_')==='to_be_returned';var dl=parseInt(String(r[3]||'').split('-')[0].replace(/\D/g,''),10)||null;var hb=parseInt(String(r[4]||'').replace(/\D/g,''),10)||null;if(sold){var o=get(mk(sold));o.solgt++;if(dl&&hb)o.gapS.push((hb-dl)/dl);}if(ret){var o=get(mk(ret));o.retur++;if(dl&&hb)o.gapR.push((hb-dl)/dl);}else if(tbr&&acc){var o=get(mk(acc));o.retur++;if(dl&&hb)o.gapR.push((hb-dl)/dl);}});return M;}
 function renderKJ(){var sec=document.getElementById('kjerne-section');if(!sec)return;var rows=window._lastRows;if(!rows||rows.length<2)return;
 var card=document.getElementById('kj-pvr');if(!card){card=document.createElement('div');card.id='kj-pvr';card.style.cssText='margin:14px 0 18px;background:rgba(255,255,255,0.97);border:1px solid rgba(0,66,37,0.08);border-radius:20px;padding:18px 20px;box-shadow:0 4px 24px rgba(0,66,37,0.07)';var pbtn=document.getElementById('kj-period-30d');var ank=pbtn?pbtn.parentElement:null;var rad=ank&&ank.parentElement?ank.parentElement:null;if(rad&&rad.parentNode){rad.parentNode.insertBefore(card,rad.nextSibling);}else{sec.insertBefore(card,sec.firstChild);}}
 var M=monthly();var now=new Date();var cur=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
@@ -7352,7 +7352,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   // c326: Finn-pris-terreng — samme fire tall som kort-gridet, kun visning.
   // c328: to spor, samme tallakse. Dagens (4) + Ny loop. To spredninger. Ikke SEND, ikke ERP.
   // c333: Ny loop er Claude+Grok (Gemini off).
-  // c334: Kjernen månedstabell viser Retur-antall.
+  // c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned).
   function qaFinnNum(v){
     var n = Number(v);
     return (Number.isFinite(n) && n > 0) ? n : null;
@@ -7841,7 +7841,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
-<!-- c334: Kjernen månedstabell viser Retur-antall. -->
+<!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
 <!-- c332: Liste-3 uten AbortSignal.timeout. Retry + localStorage peasy-qa-list3 + loop2-fallback. Aldri «Feil ved lasting: Load failed». Hist-timeout guarded. -->
 <!-- c331: QA-kort vises alltid. setMode window.loadQA + try/catch. paintQACards per-kort try/catch + fallback uten rethrow. #qa-cards «Åpner kort …». -->
