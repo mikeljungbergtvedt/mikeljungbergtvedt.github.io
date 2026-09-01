@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c345</title>
+<title>Peasy Pulse v16.05.c346</title>
 <meta http-equiv="Cache-Control" content="max-age=120">
 <script>
 (function(){
@@ -19,7 +19,7 @@
 })();
 </script>
 <style>html.pulse-authed #auth-gate{display:none!important}html.pulse-authed,html.pulse-authed body{overflow:auto}</style>
-<script>document.title='Peasy Pulse v16.05.c345';</script>
+<script>document.title='Peasy Pulse v16.05.c346';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -241,7 +241,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c345</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c346</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -301,7 +301,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c345</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c346</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6674,7 +6674,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c345</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c346</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7466,6 +7466,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       } catch(e) { console.warn('[loop2] fetch failed:', e); }
 
+      try {
+        var _aiFrom = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+        var _aiUrl = PA_PROXY_ERP.replace('/list/','/ai-usage') + '?from=' + encodeURIComponent(_aiFrom) + '&t=' + Date.now();
+        var _aiR = await fetch(_aiUrl);
+        var _aiJ = _aiR && _aiR.ok ? await _aiR.json() : null;
+        window._qaAiByRegnr = {};
+        if (_aiJ && _aiJ.ok && _aiJ.cars) {
+          _aiJ.cars.forEach(function(c){
+            window._qaAiByRegnr[String(c.regnr || '').toUpperCase()] = c;
+          });
+        }
+        paintQACards();
+      } catch (eAi) { console.warn('[qa] ai-usage:', eAi); }
+
       // [qa-hist] Master-XLSX for ERP-historikk per regnr (cache, ikke Autoringen-generate)
       try {
         var _hRows = window._lastRows;
@@ -7843,7 +7857,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     return `<div class="qa-card ${scope||!allPriced||noUtpris?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         <div>
-          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId,(typeof sourceForErp==='function'?sourceForErp(e.erpId,e):e.source)) : ''}</div>
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId,(typeof sourceForErp==='function'?sourceForErp(e.erpId,e):e.source)) : ''}${(function(){var m=typeof window.peasyAiPlateMeta==='function'?window.peasyAiPlateMeta(e.regnr):'';if(!m)return '';return ' <span style="margin-left:8px;font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0;color:'+(m.rounds>1?'#E65100':'var(--muted)')+';">'+m.text+'</span>';})()}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(variant).slice(0,40)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km · ${(typeof srcLabel==='function'?srcLabel(e.source||((typeof sourceForErp==='function')?sourceForErp(e.erpId,e):'')):'')} · ${(typeof pulseBotLabel==='function'?pulseBotLabel(e.erpId, (typeof sourceForErp==='function'?sourceForErp(e.erpId,e):(e.source||''))):'')}</div>
         </div>
@@ -8079,6 +8093,25 @@ setTimeout(tick,1500);setInterval(tick,5000);
   function botCalls(obj, id){
     return obj && obj[id] ? Number(obj[id].calls) || 0 : 0;
   }
+  window.peasyAiPlateMeta = function(regnr, car){
+    var c = car;
+    if (!c) {
+      var map = window._qaAiByRegnr || {};
+      c = map[String(regnr || '').toUpperCase()];
+    }
+    if (!c) return null;
+    var usd = Number(c.usd) || 0;
+    var calls = c.calls || 0;
+    var steps = c.steps || [];
+    var times = steps.map(function(s){ return Date.parse(s.ts) || 0; }).filter(Boolean).sort(function(a,b){ return a-b; });
+    var rounds = 1;
+    for (var i = 1; i < times.length; i++) if (times[i] - times[i-1] > 12 * 60 * 1000) rounds++;
+    var usdS = (!usd) ? '$0.00' : (usd < 0.01 ? '$' + usd.toFixed(4) : '$' + usd.toFixed(2));
+    var text = usdS + ' · ' + calls + ' kall';
+    if (rounds > 1) text += ' · ' + rounds + ' runder';
+    return { text: text, rounds: rounds, usd: usd, calls: calls };
+  };
+
   function botCarCount(cars, id){
     var n = 0;
     (cars || []).forEach(function(c){
@@ -8150,7 +8183,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
     cars.forEach(function(c, i){
       var key = String(c.regnr||'')+'|'+i;
       rows += '<tr class="ai-regn-car" onclick="toggleAiRegnCar(\''+esc(key)+'\')">';
-      rows += '<td style="font-weight:700;font-family:monospace;letter-spacing:.04em;">'+esc(c.regnr||'—')+'</td>';
+      var meta = (typeof window.peasyAiPlateMeta==='function') ? window.peasyAiPlateMeta(c.regnr, c) : null;
+      rows += '<td style="font-weight:700;font-family:monospace;letter-spacing:.04em;">'+esc(c.regnr||'—');
+      if (meta && meta.text) rows += '<div style="font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0;margin-top:2px;color:'+(meta.rounds>1?'#E65100':'var(--muted)')+';">'+esc(meta.text)+'</div>';
+      rows += '</td>';
       rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'easy'))+'</td>';
       rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'v3'))+'</td>';
       rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'v3g'))+'</td>';
@@ -8185,6 +8221,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var j = await r.json();
       if (!j || !j.ok) throw new Error((j && j.err) || ('HTTP '+r.status));
       _aiData = j;
+      window._qaAiByRegnr = {};
+      (j.cars || []).forEach(function(c){
+        window._qaAiByRegnr[String(c.regnr || '').toUpperCase()] = c;
+      });
       if (upd) upd.textContent = 'Sist oppdatert ' + new Date().toLocaleTimeString('nb-NO', {hour:'2-digit', minute:'2-digit'});
       paintAiRegn();
     } catch (e) {
@@ -8196,6 +8236,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c346: AI-kost + kall ved skiltet (QA-kort og AI-regnskap). Flere runder i oransje. -->
 <!-- c345: Ikke hvit-flash ved app-bytte: auth før paint, behold fane, nav-layout hopper ikke. -->
 <!-- c344: AI regnskap: biler + ca. $ per priset bil, totalt og per bot. -->
 <!-- c343: AI regnskap: synlig kontekst — hva vi måler, hva vi får, hva som er utenfor. -->
