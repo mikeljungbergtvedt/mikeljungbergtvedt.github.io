@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c340</title>
+<title>Peasy Pulse v16.05.c341</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c340';</script>
+<script>document.title='Peasy Pulse v16.05.c341';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c340</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c341</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c340</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c341</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6597,7 +6597,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c340</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c341</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7933,13 +7933,33 @@ setTimeout(tick,1500);setInterval(tick,5000);
       });
       const j = await r.json().catch(()=>({}));
       if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP '+r.status));
-      btn.textContent = j.queued ? 'Kø-lagt ✓' : (j.ok ? 'OK ✓' : 'Feil');
-      btn.style.background = '#0F6E66';
       const sent = loadSent();
       sent[key] = new Date().toISOString();
       saveSent(sent);
       window._sentEvalCells = sent;
-      setTimeout(window.loadQA, 800);
+      const now = new Date();
+      const p = function(n){ return (n<10?'0':'')+n; };
+      const stamp = p(now.getHours())+':'+p(now.getMinutes());
+      btn.textContent = '✅ Sendt '+stamp;
+      btn.style.background = '#0F6E66';
+      btn.style.cursor = 'default';
+      if (card) {
+        var ankerRow = card.querySelector('.qa-anker-input');
+        if (ankerRow && ankerRow.parentNode) ankerRow.parentNode.style.display = 'none';
+        var clearBtn = card.querySelector('.qa-clear-btn');
+        if (clearBtn) clearBtn.remove();
+        setTimeout(function(){
+          card.style.transition = 'opacity .22s ease, transform .22s ease';
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(-8px)';
+          setTimeout(function(){
+            card.remove();
+            var left = document.querySelectorAll('#qa-cards .qa-card').length;
+            var sumEl = document.getElementById('qa-summary');
+            if (sumEl) sumEl.textContent = left + ' biler på liste 3 (usendte, eldste øverst)';
+          }, 240);
+        }, 450);
+      }
     }catch(e){
       btn.textContent = 'Feil'; btn.style.background = '#A8221C'; btn.title = e.message; btn.disabled = false;
       setTimeout(() => { btn.textContent = orig; btn.style.background = '#2E7D32'; }, 3000);
@@ -7957,6 +7977,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c331-base: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
 <!-- c328: QA Finn-pris to spor — Dagens (Easy/V3/V3G/Bot 4) + Ny loop (Claude/Grok/Gemini). Samme akse, to spredninger. loop2-measurements.jsonl. Ikke SEND, ikke ERP. -->
 <!-- c326: QA-kort Finn-spredning-stripe + ℹ️-fjell (polyline) og bot-tabell. Kun visning. -->
+<!-- c341: QA SEND: kort blir Sendt og fjernes, ingen full reload/blink. -->
 <!-- c340: Pulse laster master-XLSX fra Mini-cache, ikke Autoringen-generate. -->
 <!-- c339: QA Easy kalkyle V7 — skalert påkost + T/E. -->
 <!-- c338: QA Easy kalkyle = kostnadsstakk Finn→margin/omreg/klarg/fee→lav/høy. -->
