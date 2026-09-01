@@ -5,10 +5,21 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c344</title>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c344';</script>
+<title>Peasy Pulse v16.05.c345</title>
+<meta http-equiv="Cache-Control" content="max-age=120">
+<script>
+(function(){
+  try{
+    var raw=localStorage.getItem('peasy-pulse-auth');
+    if(!raw) return;
+    var o=JSON.parse(raw);
+    if(o&&o.h==='92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1'&&o.t&&(Date.now()-o.t)<2592000000)
+      document.documentElement.classList.add('pulse-authed');
+  }catch(e){}
+})();
+</script>
+<style>html.pulse-authed #auth-gate{display:none!important}html.pulse-authed,html.pulse-authed body{overflow:auto}</style>
+<script>document.title='Peasy Pulse v16.05.c345';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +241,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c344</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c345</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +301,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c344</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c345</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2071,7 +2082,7 @@ var BRACKETS=[
 
 function _v22badge(r){return (r&&r.v2&&r.v2.version==='v22.0')?' <span style="background:#1565C0;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;letter-spacing:0.5px;vertical-align:1px;font-weight:700">V22</span>':'';}
 var TILTAK_DATO = '2026-06-01'; // Endre denne datoen og commit for a oppdatere for alle
-var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
+var currentMode='ops';try{var _savedMode=localStorage.getItem('peasy-mode');if(_savedMode)currentMode=_savedMode;}catch(e){}
 
 var PULSE_NAV=[
   {id:'ops',group:'Drift'},
@@ -2167,7 +2178,9 @@ function toggleNavMore(ev){
   document.getElementById('btn-more')?.setAttribute('aria-expanded',open?'true':'false');
   document.querySelector('.mode-toggle')?.classList.remove('open');
 }
-function layoutPulseNav(){
+var _navLayoutSig='';
+function layoutPulseNav(force){
+  if(document.hidden) return;
   var header=document.querySelector('header');
   var toggle=document.getElementById('mode-toggle');
   var moreWrap=document.getElementById('nav-more');
@@ -2176,6 +2189,10 @@ function layoutPulseNav(){
   var logo=header&&header.querySelector('.logo');
   var right=header&&header.querySelector('.header-right');
   if(!header||!toggle||!moreWrap||!moreMenu) return;
+  var mobile=window.matchMedia('(max-width:768px)').matches;
+  var sig=Math.round(window.innerWidth)+'|'+(mobile?'m':'d')+'|'+PULSE_NAV.length+'|'+(toggle.classList.contains('open')?'o':'');
+  if(!force && sig===_navLayoutSig) return;
+  _navLayoutSig=sig;
   var keepMoreOpen=moreWrap.classList.contains('open');
   moreMenu.querySelectorAll('.nav-logout,.nav-more-sep').forEach(function(el){el.remove();});
   restorePulseNavBtns();
@@ -2283,9 +2300,9 @@ function setMode(m){
   if(m==='kjerne')setTimeout(function(){renderKjerne();},100);
   if(m==='ordna')setTimeout(function(){try{renderOrdnaDashboard();}catch(e){}},50);
 }
-layoutPulseNav();
-if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){layoutPulseNav();}).catch(function(){});
-window.addEventListener('load',layoutPulseNav);
+layoutPulseNav(true);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){layoutPulseNav(true);}).catch(function(){});
+window.addEventListener('load',function(){layoutPulseNav(true);});
 
 function parseDLow(val){if(!val||val==='-')return null;var s=String(val).replace(/\s|\u00a0/g,'');var n=parseInt(s.split('-')[0]);return isNaN(n)?null:n;}
 function parseDate(val){if(!val)return null;var s=String(val).trim().slice(0,10);var parts=s.split('.');if(parts.length===3)return new Date(parts[2]+'-'+parts[1]+'-'+parts[0]);return null;}
@@ -3375,7 +3392,7 @@ function loadConfig(){return fetch('peasy-config.json?cb='+Date.now()).then(func
 // Beregn marketing spend over en periode (fraDate, tilDate)
 function beregneSpend(fraDate,tilDate){var sum=0;(peasyConfig.marketingPerioder||[]).forEach(function(p){var pFra=new Date(p.fra);var pTil=p.til?new Date(p.til):new Date();var overlapFra=fraDate>pFra?fraDate:pFra;var overlapTil=tilDate<pTil?tilDate:pTil;if(overlapTil>overlapFra){var dager=Math.ceil((overlapTil-overlapFra)/86400000);sum+=dager*p.krPerDag;}});return sum;}
 window.beregneSpend=beregneSpend;
-loadConfig().then(function(){return loadData();}).then(function(rows){render(processData(rows),rows);}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
+loadConfig().then(function(){return loadData();}).then(function(rows){render(processData(rows),rows);if(currentMode&&currentMode!=='ops'){try{setMode(currentMode);}catch(eM){}}}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 
 function _kartDefaultRegioner(){
   return [
@@ -6657,7 +6674,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c344</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c345</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8179,6 +8196,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c345: Ikke hvit-flash ved app-bytte: auth før paint, behold fane, nav-layout hopper ikke. -->
 <!-- c344: AI regnskap: biler + ca. $ per priset bil, totalt og per bot. -->
 <!-- c343: AI regnskap: synlig kontekst — hva vi måler, hva vi får, hva som er utenfor. -->
 <!-- c342: AI regnskap-fane. Per bot og per bil fra Mini /ai-usage. -->
