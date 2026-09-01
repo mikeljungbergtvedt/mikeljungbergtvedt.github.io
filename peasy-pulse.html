@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c337</title>
+<title>Peasy Pulse v16.05.c338</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c337';</script>
+<script>document.title='Peasy Pulse v16.05.c338';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c337</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c338</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c337</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c338</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6583,7 +6583,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c337</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c338</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6932,30 +6932,72 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (haircut && haircut.mult) pr = qaApplyHaircut(pr, haircut.mult, haircut.kind);
     return qaApplyVrakpant(pr);
   }
+  function qaEasyCostCalc(anker, info){
+    var M = { marginPct: 0.08, klargjoring: 5000, paakoztHoy: 30000, vrakpantGulv: 5000, vrakpantLavPct: 0.50, vrakpantHoyPct: 0.75, minSpread: 5000 };
+    var a = Number(anker);
+    var year = Number(info && info.year) || 2020;
+    var vekt = Number(info && info.egenvekt) || 1500;
+    var isVarebil = !!(info && (info.isVarebil || /varebil|lastebil|kombinert|campingbil/i.test(info.biltype || '')));
+    var omreg;
+    if (isVarebil) omreg = year >= 2023 ? 2459 : (year >= 2015 ? 1553 : 1296);
+    else if (vekt <= 1200) omreg = year >= 2023 ? 4918 : (year >= 2015 ? 3236 : 1942);
+    else omreg = year >= 2023 ? 7505 : (year >= 2015 ? 4532 : 1942);
+    var margin = Math.round(a * M.marginPct);
+    var prelim = a - margin - omreg - M.klargjoring;
+    var fee = prelim <= 35000 ? 5900 : (prelim <= 75000 ? 8900 : (prelim <= 150000 ? 9900 : 11900));
+    var sumTrekk = margin + fee + omreg + M.klargjoring;
+    var calcLav = a - sumTrekk - M.paakoztHoy;
+    var vrakpant = calcLav < M.vrakpantGulv;
+    var dLav, dHoy;
+    if (vrakpant) {
+      dLav = Math.max(M.vrakpantGulv, a * M.vrakpantLavPct);
+      dHoy = a * M.vrakpantHoyPct;
+    } else {
+      dLav = calcLav;
+      dHoy = a - sumTrekk;
+    }
+    if (!vrakpant && dHoy - dLav < M.minSpread) dHoy = dLav + M.minSpread;
+    return {
+      margin: margin, omreg: omreg, klargjoring: M.klargjoring, fee: fee, sumTrekk: sumTrekk,
+      vrakpant: vrakpant,
+      dLav: Math.round(dLav / 1000) * 1000,
+      dHoy: Math.round(dHoy / 1000) * 1000
+    };
+  }
   function qaEasyTableHtml(pr){
     if (!pr) return '';
     var a = Number(pr.anchorPrice);
+    var kr = function(n){ return Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('nb-NO') : '–'; };
+    var bd = pr.breakdown;
+    var vrak = !!pr.vrakpant;
     var dLav = Number(pr.dLav);
     var dHoy = Number(pr.dHoy);
+    if ((!bd || bd.margin == null) && Number.isFinite(a) && a > 0) {
+      bd = qaEasyCostCalc(a, { year: pr.year, egenvekt: pr.egenvekt, isVarebil: pr.isVarebil, biltype: pr.biltype });
+      vrak = bd.vrakpant;
+      if (!Number.isFinite(dLav)) dLav = bd.dLav;
+      if (!Number.isFinite(dHoy)) dHoy = bd.dHoy;
+    }
     if (!Number.isFinite(dLav) && !Number.isFinite(dHoy) && !Number.isFinite(a)) return '';
-    var kr = function(n){ return Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('nb-NO') : '–'; };
-    var slope = 0.9169, intercept = -15747, lavOff = -12000, gulv = 3000;
     var lines = [];
-    if (Number.isFinite(a) && a > 0) {
-      var med = a * slope + intercept;
-      var vrak = (med + lavOff) < gulv;
+    if (Number.isFinite(a) && a > 0 && bd) {
       lines.push('Finn-pris: ' + kr(a) + ' kr');
-      lines.push('Median: ' + kr(med) + ' kr  (Finn × 0,9169 − 15 747)');
+      lines.push('Margin 8 %:      −' + kr(bd.margin) + ' kr');
+      lines.push('Omreg:           −' + kr(bd.omreg) + ' kr');
+      lines.push('Klargjøring:     −' + kr(bd.klargjoring) + ' kr');
+      lines.push('Peasy-fee:       −' + kr(bd.fee) + ' kr');
+      lines.push('Trekk totalt:    −' + kr(bd.sumTrekk) + ' kr');
       lines.push(vrak
         ? ('Lav: ' + kr(dLav) + ' kr  (vrakpant)')
-        : ('Lav: ' + kr(dLav) + ' kr  (median − 12 000)'));
+        : ('Lav: ' + kr(dLav) + ' kr  (trekk + påkost 30 000)'));
       lines.push(vrak
         ? ('Høy: ' + kr(dHoy) + ' kr  (vrakpant)')
-        : ('Høy: ' + kr(dHoy) + ' kr  (median + 12 000)'));
+        : ('Høy: ' + kr(dHoy) + ' kr  (trekk, uten påkost)'));
     } else {
-      lines.push('Lav: ' + kr(dLav) + ' kr');
-      lines.push('Høy: ' + kr(dHoy) + ' kr');
+      if (Number.isFinite(dLav)) lines.push('Lav: ' + kr(dLav) + ' kr');
+      if (Number.isFinite(dHoy)) lines.push('Høy: ' + kr(dHoy) + ' kr');
     }
+    if (!lines.length) return '';
     return '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;"><b>Easy kalkyle</b><pre style="display:block;margin:4px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.45;white-space:pre-wrap;">'+esc(lines.join('\n'))+'</pre></div>';
   }
   function qaKalkyleHtml(title, pr){
@@ -7608,9 +7650,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const yearQa = Number(id.model_year) || Number(e.v3g && e.v3g.modelYear) || 0;
     const easyHasEval = !!(e.easy && (Number.isFinite(Number(easy.dLav)) || easy.anker != null || easy.finn_price != null || easy.confidence != null || easy.anker_kilde || easy.begrunnelse_kort || easy.pricing || Number.isFinite(Number(easy.margin))));
     const easyPr = (easyHasEval || Number.isFinite(Number(easy.dLav)) || Number.isFinite(Number(easy.dHoy))) ? {
-      anchorPrice: Number(easy.anker || easy.finn_price || easy.anchorPrice),
+      anchorPrice: Number(easy.anker || easy.finn_utpris || easy.finn_price || easy.anchorPrice),
       dLav: Number(easy.dLav),
-      dHoy: Number(easy.dHoy)
+      dHoy: Number(easy.dHoy),
+      breakdown: easy.breakdown || null,
+      vrakpant: !!easy.vrakpant,
+      year: yearQa,
+      egenvekt: easy.egenvekt,
+      isVarebil: !!(e.rawErp && (/varebil/i.test(String((e.rawErp.drive_no_car_data&&e.rawErp.drive_no_car_data.body_type)||e.rawErp.body_type||'')) || (e.rawErp.drive_no_car_data&&e.rawErp.drive_no_car_data.vehicle_class))),
+      biltype: (e.rawErp && e.rawErp.drive_no_car_data && (e.rawErp.drive_no_car_data.body_type || e.rawErp.drive_no_car_data.chassis)) || ''
     } : null;
     const easyKalkHtml = easyPr
       ? (qaEasyTableHtml(easyPr) || '<div style="margin-top:8px;color:var(--muted);">Easy kalkyle: ingen eval</div>')
@@ -7900,7 +7948,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c331-base: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
 <!-- c328: QA Finn-pris to spor — Dagens (Easy/V3/V3G/Bot 4) + Ny loop (Claude/Grok/Gemini). Samme akse, to spredninger. loop2-measurements.jsonl. Ikke SEND, ikke ERP. -->
 <!-- c326: QA-kort Finn-spredning-stripe + ℹ️-fjell (polyline) og bot-tabell. Kun visning. -->
-<!-- c337: QA Easy kalkyle = tabell (Finn/median/lav/høy). ERP D slår stale meas. V3/V3G uendret. -->
+<!-- c338: QA Easy kalkyle = kostnadsstakk Finn→margin/omreg/klarg/fee→lav/høy. -->\n<!-- c337: QA Easy kalkyle = tabell (Finn/median/lav/høy). ERP D slår stale meas. V3/V3G uendret. -->
 <!-- c325: QA ℹ️: Easy kalkyle (lagret eval) foran V3/V3G. Tom slot «ingen eval». Alle kort. -->
 <!-- c323: QA-kort: fjern rød ℹ️-prikk, ERP-historikk under selgerkommentar, bot-kalkyle i V3/V3G begrunnelse. -->
 <!-- c317: Bot 4 rad + rasjonale i ℹ️. Ikke i SEND-gate. -->
