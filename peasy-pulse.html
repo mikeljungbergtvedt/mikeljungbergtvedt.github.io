@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c339</title>
+<title>Peasy Pulse v16.05.c340</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c339';</script>
+<script>document.title='Peasy Pulse v16.05.c340';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c339</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c340</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,7 +290,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c339</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c340</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2662,9 +2662,21 @@ function countReturAvvistBudToday(rows, prevKeys, todayDate, pdOps){
   });
   return n;
 }
-async function loadData(){
+async function fetchMasterXlsx(){
+  var mini=(window.PA_PROXY_ERP||'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/').replace(/\/list\/?$/,'')+'/xlsx?t='+Date.now();
+  try{
+    var r=await fetch(mini,{signal:AbortSignal.timeout(4000)});
+    if(r&&r.ok){
+      var b=await r.arrayBuffer();
+      if(b&&b.byteLength>1000) return b;
+    }
+  }catch(eMini){}
   var res=await fetch(API);
-  var buf=await res.arrayBuffer();
+  if(!res||!res.ok) throw new Error('XLSX HTTP '+(res&&res.status));
+  return await res.arrayBuffer();
+}
+async function loadData(){
+  var buf=await fetchMasterXlsx();
   var wb=XLSX.read(buf,{type:'array'});
   var ws=wb.Sheets[wb.SheetNames[0]];
   var rows=XLSX.utils.sheet_to_json(ws,{header:1});
@@ -4061,10 +4073,12 @@ async function initKart(){
   _kartMap=L.map('peasy-map',{zoomControl:true}).setView([63.5,15.0],5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:18}).addTo(_kartMap);
   document.getElementById('kart-subtitle').textContent='Laster data…';
-  var resp=await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx');
-  var ab=await resp.arrayBuffer();
-  var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
-  var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  var rows=window._lastRows;
+  if(!rows||!rows.length){
+    var ab=await fetchMasterXlsx();
+    var wb=XLSX.read(new Uint8Array(ab),{type:'array'});
+    rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  }
   _kartRowsAll=rows;
   _kartGEO=GEO;
   var posMap={};
@@ -6583,7 +6597,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c339</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c340</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7375,14 +7389,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       } catch(e) { console.warn('[loop2] fetch failed:', e); }
 
-      // [qa-hist] Fetch master-XLSX for ERP-historikk per regnr
+      // [qa-hist] Master-XLSX for ERP-historikk per regnr (cache, ikke Autoringen-generate)
       try {
-        var _to = (typeof AbortSignal!=='undefined' && AbortSignal.timeout) ? AbortSignal.timeout(4000) : undefined;
-        var _hRes = await fetch('https://api.biladministrasjon.no/public/reports/peasy/dhqui7Hkl54?output=xlsx&t='+Date.now(), _to ? {signal: _to} : {});
-        if (_hRes.ok) {
-          var _hBuf = new Uint8Array(await _hRes.arrayBuffer());
+        var _hRows = window._lastRows;
+        if (!_hRows || !_hRows.length) {
+          var _hBuf = new Uint8Array(await fetchMasterXlsx());
           var _hWb = XLSX.read(_hBuf, {type:'array'});
-          var _hRows = XLSX.utils.sheet_to_json(_hWb.Sheets[_hWb.SheetNames[0]], {header:1});
+          _hRows = XLSX.utils.sheet_to_json(_hWb.Sheets[_hWb.SheetNames[0]], {header:1});
+        }
+        if (_hRows && _hRows.length) {
           var _hH = _hRows[0] || [];
           var _hI = function(k){return _hH.indexOf(k);};
           for (var _i=1; _i<_hRows.length; _i++) {
@@ -7942,6 +7957,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c331-base: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
 <!-- c328: QA Finn-pris to spor — Dagens (Easy/V3/V3G/Bot 4) + Ny loop (Claude/Grok/Gemini). Samme akse, to spredninger. loop2-measurements.jsonl. Ikke SEND, ikke ERP. -->
 <!-- c326: QA-kort Finn-spredning-stripe + ℹ️-fjell (polyline) og bot-tabell. Kun visning. -->
+<!-- c340: Pulse laster master-XLSX fra Mini-cache, ikke Autoringen-generate. -->
 <!-- c339: QA Easy kalkyle V7 — skalert påkost + T/E. -->
 <!-- c338: QA Easy kalkyle = kostnadsstakk Finn→margin/omreg/klarg/fee→lav/høy. -->
 <!-- c337: QA Easy kalkyle = tabell (Finn/median/lav/høy). ERP D slår stale meas. V3/V3G uendret. -->
