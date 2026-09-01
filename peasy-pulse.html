@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c341</title>
+<title>Peasy Pulse v16.05.c342</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<script>document.title='Peasy Pulse v16.05.c341';</script>
+<script>document.title='Peasy Pulse v16.05.c342';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -230,7 +230,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c341</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c342</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -290,11 +290,12 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c341</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c342</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
       <button class="mode-btn" data-mode="qa" id="btn-qa" onclick="setMode('qa')">QA / Send</button>
+      <button class="mode-btn" data-mode="airegnskap" id="btn-airegnskap" onclick="setMode('airegnskap')">AI regnskap</button>
       <button class="mode-btn" data-mode="utpris" id="btn-utpris" onclick="setMode('utpris')">Finn-utpris</button>
       <button class="mode-btn" data-mode="pipe" id="btn-pipe" onclick="setMode('pipe')">Pipe</button>
       <button class="mode-btn" data-mode="eval" id="btn-eval" onclick="setMode('eval')">Evaluert</button>
@@ -1911,6 +1912,57 @@ window.MARK_V16_04 = (function(){
     </div>
   </section>
 
+  <section class="mode-section" data-mode="airegnskap" id="airegnskap-section" style="display:none;">
+    <h1 class="page" style="margin-bottom:4px">AI regnskap</h1>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Kostnad per evaluering — per bot og per bil. Mini-kall-logg fra i dag. Claude Console kan ikke splitte én nøkkel. Bot 4 har ingen LLM.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">
+      <div style="display:inline-flex;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;">
+        <button type="button" class="ai-regn-period" data-period="today" onclick="setAiRegnPeriod('today')">I dag</button>
+        <button type="button" class="ai-regn-period" data-period="7" onclick="setAiRegnPeriod('7')">7 dager</button>
+        <button type="button" class="ai-regn-period" data-period="14" onclick="setAiRegnPeriod('14')">14 dager</button>
+        <button type="button" class="ai-regn-period" data-period="31" onclick="setAiRegnPeriod('31')">31 dager</button>
+      </div>
+      <input id="ai-regn-search" type="search" placeholder="Søk regnr…" oninput="filterAiRegn(this.value)" style="flex:1;min-width:180px;max-width:280px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--card);color:var(--text);">
+      <span id="ai-regn-updated" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
+      <a href="#" onclick="window.loadAiRegnskap&&window.loadAiRegnskap();return false;" style="color:var(--green);text-decoration:none;font-size:11px;">Last på nytt</a>
+    </div>
+    <style>
+      .ai-regn-period{padding:6px 12px;border:none;background:transparent;border-radius:7px;cursor:pointer;font-size:12px;color:var(--muted);font-family:inherit;}
+      .ai-regn-period.active{background:var(--green);color:#fff;font-weight:600;}
+      .ai-regn-kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;min-width:118px;}
+      .ai-regn-kpi .lab{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+      .ai-regn-kpi .val{font-size:22px;font-weight:800;letter-spacing:-0.03em;color:var(--text);font-variant-numeric:tabular-nums;}
+      .ai-regn-kpi .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+      #ai-regn-table{width:100%;border-collapse:collapse;font-size:12px;}
+      #ai-regn-table th{text-align:right;padding:8px 10px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;}
+      #ai-regn-table th:first-child,#ai-regn-table td:first-child{text-align:left;}
+      #ai-regn-table td{padding:8px 10px;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border);vertical-align:top;}
+      #ai-regn-table tbody tr.ai-regn-car{cursor:pointer;}
+      #ai-regn-table tbody tr.ai-regn-car:hover{background:rgba(0,66,37,0.04);}
+      #ai-regn-table .ai-regn-steps td{background:#FBF8EE;font-size:11px;color:#334;}
+    </style>
+    <div id="ai-regn-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;"></div>
+    <div id="ai-regn-status" style="font-size:13px;color:var(--muted);margin-bottom:12px;">Åpner …</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px var(--shadow);">
+      <div style="overflow-x:auto;">
+        <table id="ai-regn-table">
+          <thead>
+            <tr>
+              <th>Regnr</th>
+              <th>Easy</th>
+              <th>V3</th>
+              <th>V3G</th>
+              <th>Ny loop</th>
+              <th>Sum</th>
+              <th>Kall</th>
+            </tr>
+          </thead>
+          <tbody id="ai-regn-tbody"><tr><td colspan="7" style="padding:20px;color:var(--muted);">Ingen data ennå.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
 <section class="mode-section" data-mode="v2bm" id="v2bm-section" style="display:none;">
   <div class="page-sub" style="margin-bottom:14px">V3 Benchmark — funnel og bot-avvik (fra <span id="v2bm-start">2026-06-03</span>)</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px;">
@@ -2018,6 +2070,7 @@ var currentMode='ops';try{localStorage.setItem('peasy-mode','ops');}catch(e){}
 var PULSE_NAV=[
   {id:'ops',group:'Drift'},
   {id:'qa',group:'Drift'},
+  {id:'airegnskap',group:'Drift'},
   {id:'utpris',group:'Drift'},
   {id:'pipe',group:'Drift'},
   {id:'eval',group:'Drift'},
@@ -2197,7 +2250,7 @@ function setMode(m){
   var moreBtn=document.getElementById('btn-more');
   if(moreBtn) moreBtn.classList.toggle('active', !!document.querySelector('#nav-more-menu .mode-btn.active'));
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
-  document.body.classList.toggle('skip-dials', m==='qa'||m==='sosial'||m==='uke'||m==='utpris');
+  document.body.classList.toggle('skip-dials', m==='qa'||m==='sosial'||m==='uke'||m==='utpris'||m==='airegnskap');
   if(m==='qa'||m==='sosial'){
     var sec=document.getElementById(m==='qa'?'qa-section':'sosial-section');
     requestAnimationFrame(function(){
@@ -2213,6 +2266,7 @@ function setMode(m){
   if(m==='pipe'){try{loadPipe();}catch(e){}}
       if(m==='score'){try{loadScoreboard();}catch(e){}}
       if(m==='qa'){ try{ if (typeof window.loadQA==='function') window.loadQA(); }catch(e){ var c=document.getElementById('qa-cards'); if(c) c.innerHTML='<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">QA-feil: '+String(e&&e.message||e)+'</div>'; } }
+      if(m==='airegnskap'){ try{ if (typeof window.loadAiRegnskap==='function') window.loadAiRegnskap(); }catch(e){} }
       if(m==='utpris'){ var _ur=document.getElementById('utpris-regnr'); if(_ur) setTimeout(function(){ _ur.focus(); }, 40); }
       if(m==='v2bm'){loadV2Benchmark();}
       if(m==='ab'){loadAbTab();}
@@ -6597,7 +6651,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c341</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c342</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7968,6 +8022,141 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 
+<script>
+(function(){
+  var AI_USAGE_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/ai-usage';
+  var BOTS = [
+    {id:'easy', label:'Easy'},
+    {id:'v3', label:'V3'},
+    {id:'v3g', label:'V3G'},
+    {id:'loop2', label:'Ny loop'},
+    {id:'bot4', label:'Bot 4'}
+  ];
+  var _aiPeriod = 'today';
+  var _aiData = null;
+  var _aiQ = '';
+  var _aiOpen = {};
+
+  function osloYmd(){
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+  }
+  function fmtUsd(n){
+    var x = Number(n);
+    if (!isFinite(x) || x === 0) return '$0.00';
+    if (x < 0.01) return '$' + x.toFixed(4);
+    return '$' + x.toFixed(2);
+  }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function botUsd(obj, id){
+    if (id === 'bot4') return 0;
+    return obj && obj[id] ? Number(obj[id].usd) || 0 : 0;
+  }
+  function botCalls(obj, id){
+    return obj && obj[id] ? Number(obj[id].calls) || 0 : 0;
+  }
+
+  window.setAiRegnPeriod = function(p){
+    _aiPeriod = p;
+    document.querySelectorAll('.ai-regn-period').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-period') === p);
+    });
+    window.loadAiRegnskap();
+  };
+
+  window.filterAiRegn = function(q){
+    _aiQ = String(q || '').trim().toUpperCase();
+    paintAiRegn();
+  };
+
+  window.toggleAiRegnCar = function(key){
+    _aiOpen[key] = !_aiOpen[key];
+    paintAiRegn();
+  };
+
+  function kpi(lab, val, sub){
+    return '<div class="ai-regn-kpi"><div class="lab">'+esc(lab)+'</div><div class="val">'+val+'</div>'+(sub?'<div class="sub">'+esc(sub)+'</div>':'')+'</div>';
+  }
+
+  function paintAiRegn(){
+    var box = document.getElementById('ai-regn-kpis');
+    var body = document.getElementById('ai-regn-tbody');
+    var st = document.getElementById('ai-regn-status');
+    if (!box || !body) return;
+    var d = _aiData;
+    if (!d){
+      box.innerHTML = '';
+      return;
+    }
+    var bots = d.bots || {};
+    var html = kpi('Totalt', fmtUsd(d.usd), (d.calls||0)+' kall · '+(d.cars||[]).length+' biler');
+    BOTS.forEach(function(b){
+      var sub = b.id === 'bot4' ? 'ingen LLM' : (botCalls(bots, b.id)+' kall');
+      html += kpi(b.label, fmtUsd(botUsd(bots, b.id)), sub);
+    });
+    box.innerHTML = html;
+
+    var cars = (d.cars || []).slice();
+    if (_aiQ){
+      cars = cars.filter(function(c){ return String(c.regnr||'').toUpperCase().indexOf(_aiQ) >= 0; });
+    }
+    if (!cars.length){
+      body.innerHTML = '<tr><td colspan="7" style="padding:20px;color:var(--muted);">'+(d.n ? 'Ingen treff.' : 'Ingen kall logget i perioden. Teller fra i dag.')+'</td></tr>';
+      if (st) st.textContent = d.n ? (d.n+' kall') : 'Tom logg — første ekte kall vises her.';
+      return;
+    }
+    var rows = '';
+    cars.forEach(function(c, i){
+      var key = String(c.regnr||'')+'|'+i;
+      rows += '<tr class="ai-regn-car" onclick="toggleAiRegnCar(\''+esc(key)+'\')">';
+      rows += '<td style="font-weight:700;font-family:monospace;letter-spacing:.04em;">'+esc(c.regnr||'—')+'</td>';
+      rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'easy'))+'</td>';
+      rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'v3'))+'</td>';
+      rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'v3g'))+'</td>';
+      rows += '<td style="text-align:right;">'+fmtUsd(botUsd(c.bots, 'loop2'))+'</td>';
+      rows += '<td style="text-align:right;font-weight:700;">'+fmtUsd(c.usd)+'</td>';
+      rows += '<td style="text-align:right;">'+(c.calls||0)+'</td>';
+      rows += '</tr>';
+      if (_aiOpen[key] && c.steps && c.steps.length){
+        rows += '<tr class="ai-regn-steps"><td colspan="7">';
+        rows += c.steps.map(function(s){
+          return esc((s.ts||'').replace('T',' ').slice(0,19))+' · '+esc(s.bot||'')+' / '+esc(s.step||'—')+' · '+esc(s.model||'')+' · '+fmtUsd(s.usd)+' · in '+(s.in||0)+' / out '+(s.out||0);
+        }).join('<br>');
+        rows += '</td></tr>';
+      }
+    });
+    body.innerHTML = rows;
+    if (st) st.textContent = cars.length+' biler · '+(d.calls||0)+' kall · '+fmtUsd(d.usd);
+  }
+
+  window.loadAiRegnskap = async function(){
+    var st = document.getElementById('ai-regn-status');
+    var upd = document.getElementById('ai-regn-updated');
+    document.querySelectorAll('.ai-regn-period').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-period') === _aiPeriod);
+    });
+    if (st) st.textContent = 'Henter …';
+    var url = AI_USAGE_URL;
+    if (_aiPeriod === 'today') url += '?from=' + encodeURIComponent(osloYmd());
+    else url += '?days=' + encodeURIComponent(_aiPeriod);
+    try {
+      var r = await fetch(url + (url.indexOf('?')>=0?'&':'?') + 't=' + Date.now());
+      var j = await r.json();
+      if (!j || !j.ok) throw new Error((j && j.err) || ('HTTP '+r.status));
+      _aiData = j;
+      if (upd) upd.textContent = 'Sist oppdatert ' + new Date().toLocaleTimeString('nb-NO', {hour:'2-digit', minute:'2-digit'});
+      paintAiRegn();
+    } catch (e) {
+      _aiData = null;
+      if (st) st.textContent = 'Kunne ikke hente Mini /ai-usage: ' + String(e && e.message || e);
+      var box = document.getElementById('ai-regn-kpis');
+      if (box) box.innerHTML = '';
+    }
+  };
+})();
+</script>
+<!-- c342: AI regnskap-fane. Per bot og per bil fra Mini /ai-usage. -->
 <!-- c336: QA Finn-terreng tabell/legend/polyline i stigende Finn-pris (venstre = lavest). Samme from–to begge spor. -->
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
