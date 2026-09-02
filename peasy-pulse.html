@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Peasy Pulse v16.05.c348</title>
+<title>Peasy Pulse v16.05.c349</title>
 <meta http-equiv="Cache-Control" content="max-age=120">
 <script>
 (function(){
@@ -19,7 +19,7 @@
 })();
 </script>
 <style>html.pulse-authed #auth-gate{display:none!important}html.pulse-authed,html.pulse-authed body{overflow:auto}</style>
-<script>document.title='Peasy Pulse v16.05.c348';</script>
+<script>document.title='Peasy Pulse v16.05.c349';</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -241,7 +241,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F5F7F5;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans','Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c348</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c349</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -301,7 +301,7 @@ function authLogout(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c348</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c349</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6674,7 +6674,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c348</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c349</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -6903,6 +6903,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         var sp = countListe3Split(biler);
         applyListe3Split(sp.ready, sp.wait, sp.total);
       } catch (eSplit) {}
+      try { if (typeof window.qaSyncFromListe3 === 'function') window.qaSyncFromListe3(biler); } catch (eSync) {}
       scheduleInject();
     }catch(e){ /* mute */ }
   }
@@ -7493,16 +7494,26 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
   };
 
+  window.qaSyncFromListe3 = function(biler){
+    if (!Array.isArray(biler) || window._qaLoading) return;
+    var sent = window._sentEvalCells || loadSent();
+    var ids = biler.filter(function(b){
+      return !sent[String(b.registration_number || '').toUpperCase() + '__' + String(b.id || '')];
+    }).map(function(b){ return String(b.id); }).sort().join(',');
+    var box = document.getElementById('qa-cards');
+    var staleSent = !!(box && /Sendt /.test(box.textContent || ''));
+    if (staleSent || ids !== (window._qaUnsentIds || '')) {
+      window._qaReady = false;
+      window.loadQA(true);
+    }
+  };
+
   window.qaEnterTab = function(){
     if (window._qaLoading) return;
     var box = document.getElementById('qa-cards');
-    if (box && /Sendt /.test(box.textContent || '')) {
+    if (!window._qaReady || !box || !box.querySelector('.qa-card') || /Sendt /.test(box.textContent || '')) {
       window._qaReady = false;
       window.loadQA(true);
-      return;
-    }
-    if (!window._qaReady || !box || !box.querySelector('.qa-card')) {
-      window.loadQA(false);
       return;
     }
     var PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
@@ -7512,18 +7523,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
       .then(function(j){
         if (!j) return;
         var biler = j.biler || [];
-        var sent = window._sentEvalCells || loadSent();
-        var ids = biler.filter(function(b){
-          return !sent[String(b.registration_number || '').toUpperCase() + '__' + String(b.id || '')];
-        }).map(function(b){ return String(b.id); }).sort().join(',');
         try {
           var sp = countListe3Split(biler);
           applyListe3Split(sp.ready, sp.wait, sp.total);
         } catch (eSp) {}
-        if (ids !== (window._qaUnsentIds || '')) {
-          window._qaReady = false;
-          window.loadQA(true);
-        }
+        window.qaSyncFromListe3(biler);
       }).catch(function(){});
   };
 
@@ -8241,6 +8245,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c349: Liste 3 (ERP) er sannhet for QA-kort og header. 60s-poll synker begge. -->
 <!-- c348: QA viser bare usendte. Sendt-kort fjernes. Ny bil på liste 3 kommer inn uten full reset-loop. -->
 <!-- c347: QA-kort caches ved fanebytte. Hent bot-data parallelt. Ingen XLSX-omvei. -->
 <!-- c346: AI-kost + kall ved skiltet (QA-kort og AI-regnskap). Flere runder i oransje. -->
