@@ -1801,7 +1801,8 @@ window.MARK_V16_04 = (function(){
 </section>
 <section class="mode-section" data-mode="score" id="score-section" style="display:none;">
   <h1 class="page" style="margin-bottom:4px">Scoreboard</h1>
-  <div class="page-sub" style="margin-bottom:14px">Easy vs V3 vs V3G — Lav mot realisert høyeste bud (alle med bud, fra 2026-06-01). A/B (Easy vs V3G live) fra 18.8.2026 — historiske rader er ikke A/B-merket.</div>
+  <div class="page-sub" style="margin-bottom:8px">Easy vs V3 vs V3G — Lav mot realisert høyeste bud (alle med bud, fra 2026-06-01). A/B (Easy vs V3G live) fra 18.8.2026 — historiske rader er ikke A/B-merket.</div>
+  <div style="font-size:12px;color:#667;margin:0 0 14px;line-height:1.45"><b>Vinner</b> = lav nærmest høyeste bud. <span style="color:#C62828;font-weight:700">Under alle</span> = bud under alle lav. <span style="color:#5D6D7E;font-weight:700">Mellom</span> = mellom lavene. <span style="color:#2E7D32;font-weight:700">Over alle</span> = bud over alle lav.</div>
   <div id="score-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px"></div>
   <div id="score-ordna" style="display:none"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
@@ -1823,6 +1824,7 @@ window.MARK_V16_04 = (function(){
             <th style="padding:10px 12px;text-align:right;color:#fff">V3 Lav</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">V3G Lav</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">Høyeste bud</th>
+            <th style="padding:10px 12px;text-align:center;color:#fff">Bud vs lav</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">Easy gap %</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">V3 gap %</th>
             <th style="padding:10px 12px;text-align:right;color:#fff">V3G gap %</th>
@@ -1833,7 +1835,7 @@ window.MARK_V16_04 = (function(){
             <th style="padding:10px 12px;text-align:center;color:#fff">Vinner</th>
           </tr>
         </thead>
-        <tbody id="score-tbody"><tr><td colspan="18" style="padding:30px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>
+        <tbody id="score-tbody"><tr><td colspan="19" style="padding:30px;text-align:center;color:var(--muted)">Laster ...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -5463,7 +5465,7 @@ async function loadScoreboard(){
   var tbody=document.getElementById('score-tbody');
   var summ=document.getElementById('score-summary');
   if(!tbody)return;
-  tbody.innerHTML='<tr><td colspan="18" style="padding:30px;text-align:center;color:var(--muted)">Henter data ...</td></tr>';
+  tbody.innerHTML='<tr><td colspan="19" style="padding:30px;text-align:center;color:var(--muted)">Henter data ...</td></tr>';
   try{
     var t=Date.now();
     // c192: primær kilde = Mac Mini /measurements (live), fallback jsdelivr (stale)
@@ -5507,7 +5509,7 @@ async function loadScoreboard(){
       if(easyGap!==null)stats.easyAbs.push(Math.abs(easyGap));
       if(v2Gap!==null)stats.v2Abs.push(Math.abs(v2Gap));
       if(v3gGap!==null)stats.v3gAbs.push(Math.abs(v3gGap));
-      var winner='—',winnerCol='#667';
+      var winnerNames=[];
       var cands=[];
       if(easyGap!==null)cands.push({name:'Easy',gap:Math.abs(easyGap),col:'#7B1FA2',stat:'winsEasy'});
       if(v2Gap!==null)cands.push({name:'V3',gap:Math.abs(v2Gap),col:'#1565C0',stat:'winsV3'});
@@ -5515,8 +5517,16 @@ async function loadScoreboard(){
       if(cands.length){
         cands.sort(function(a,b){return a.gap-b.gap;});
         var best=cands.filter(function(c){return Math.abs(c.gap-cands[0].gap)<0.05;});
-        if(best.length===1){winner=best[0].name;winnerCol=best[0].col;stats[best[0].stat]++;}
-        else{winner=best.map(function(c){return c.name;}).join('/');}
+        winnerNames=best.map(function(c){return c.name;});
+        if(best.length===1)stats[best[0].stat]++;
+      }
+      var lavs=[easy,v2,v3g].filter(function(n){return n>0;});
+      var bvl={lab:'—',fg:'#667',bg:'#F4F4F4'};
+      if(lavs.length&&bud>0){
+        var mn=Math.min.apply(null,lavs),mx=Math.max.apply(null,lavs);
+        if(bud<mn)bvl={lab:'Under alle',fg:'#C62828',bg:'#FDECEA'};
+        else if(bud>mx)bvl={lab:'Over alle',fg:'#2E7D32',bg:'#E8F5E9'};
+        else bvl={lab:'Mellom',fg:'#5D6D7E',bg:'#EEF1F3'};
       }
       function pdt(s){if(!s)return null;var p=String(s).split(' ')[0].split('.');if(p.length<3)return null;return new Date(parseInt(p[2],10),parseInt(p[1],10)-1,parseInt(p[0],10));}
       var evalRaw=esCol>=0?String(erpRow[esCol]||''):'';
@@ -5541,7 +5551,13 @@ async function loadScoreboard(){
       var botLab=(typeof pulseBotLabel==='function')?pulseBotLabel(r.erpId,srcLive):'';
       var kildeLab=(typeof srcLabel==='function')?srcLabel({kilde:srcLive,source:srcLive}):srcLive;
       var armHay=armLive==='O'?'o ordna':(armLive==='B'?'b v3g':(armLive==='A'?'a easy':'før a/b'));
-      var hay=[r.regnr,r.erpId,variantFull,variant,srcLive,kildeLab,botLab,armHay,armLive||''].join(' ').toLowerCase();
+      var hay=[r.regnr,r.erpId,variantFull,variant,srcLive,kildeLab,botLab,armHay,armLive||'',bvl.lab,winnerNames.join(' ')].join(' ').toLowerCase();
+      function gapWt(name){return winnerNames.indexOf(name)>=0?'font-weight:900;':'font-weight:600;';}
+      var winMap={Easy:{bg:'#F3E5F5',fg:'#7B1FA2'},V3:{bg:'#E3F2FD',fg:'#1565C0'},V3G:{bg:'#E8F5E9',fg:'#00875A'}};
+      var winnerHtml=winnerNames.length
+        ?winnerNames.map(function(n){var s=winMap[n]||{bg:'#EEE',fg:'#667'};return '<span style="display:inline-block;padding:3px 8px;border-radius:99px;background:'+s.bg+';color:'+s.fg+';font-size:11px;font-weight:800;letter-spacing:0.03em;margin:0 2px">'+n+'</span>';}).join('')
+        :'<span style="display:inline-block;padding:3px 8px;border-radius:99px;background:#EEE;color:#667;font-size:11px;font-weight:800">—</span>';
+      var bvlHtml='<span style="display:inline-block;padding:3px 8px;border-radius:99px;background:'+bvl.bg+';color:'+bvl.fg+';font-size:10px;font-weight:800;letter-spacing:0.03em;white-space:nowrap">'+bvl.lab+'</span>';
       var rowHtml='<tr style="border-top:1px solid var(--border)">'+
         '<td style="padding:8px 12px;font-weight:600">'+r.regnr+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted);font-size:11px;font-family:monospace">'+(r.erpId||'—')+'</td>'+
@@ -5552,39 +5568,48 @@ async function loadScoreboard(){
         '<td style="padding:8px 12px;text-align:right">'+fmtKr(v2)+_v22badge(r)+'</td>'+
         '<td style="padding:8px 12px;text-align:right;'+v3gBg+'">'+fmtKr(v3g)+'</td>'+
         '<td style="padding:8px 12px;text-align:right;font-weight:600">'+fmtKr(bud)+'</td>'+
-        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(easyGap)+';font-weight:600">'+fmtPct(easyGap)+'</td>'+
-        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v2Gap)+';font-weight:600">'+fmtPct(v2Gap)+'</td>'+
-        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v3gGap)+';font-weight:600">'+fmtPct(v3gGap)+'</td>'+
+        '<td style="padding:8px 12px;text-align:center">'+bvlHtml+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(easyGap)+';'+gapWt('Easy')+'">'+fmtPct(easyGap)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v2Gap)+';'+gapWt('V3')+'">'+fmtPct(v2Gap)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;color:'+gapCol(v3gGap)+';'+gapWt('V3G')+'">'+fmtPct(v3gGap)+'</td>'+
         '<td style="padding:8px 12px;color:var(--muted);font-size:11px">'+evalShort+'</td>'+
         '<td style="padding:8px 12px;color:'+(solgtRaw?'#2E7D32':'var(--muted)')+';font-weight:'+(solgtRaw?'600':'400')+';font-size:11px">'+(solgtRaw?solgtRaw.split(' ')[0]:'—')+'</td>'+
         '<td style="padding:8px 12px;color:'+(retRaw?'#C62828':'var(--muted)')+';font-weight:'+(retRaw?'600':'400')+';font-size:11px">'+(retRaw?retRaw.split(' ')[0]:'—')+'</td>'+
         '<td style="padding:8px 12px;text-align:right;font-weight:600">'+(dager!==null?dager+' d':'—')+'</td>'+
-        '<td style="padding:8px 12px;text-align:center;color:'+winnerCol+';font-weight:700">'+winner+'</td>'+
+        '<td style="padding:8px 12px;text-align:center;white-space:nowrap">'+winnerHtml+'</td>'+
         '</tr>';
       built.push({live:abIsLive(r.timestamp),hay:hay,html:rowHtml});
     });
     window._scoreBuilt=built;
     renderScoreboard();
-    function chip(lbl,val,sub,col){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:10px;padding:10px 14px"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#667">'+lbl+'</div><div style="font-size:22px;font-weight:800;color:'+(col||'#004225')+'">'+val+'</div><div style="font-size:10px;color:#667">'+(sub||'')+'</div></div>';}
+    function chip(lbl,val,sub,col){return '<div style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:12px;padding:12px 16px"><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#667;font-weight:700">'+lbl+'</div><div style="font-size:26px;font-weight:900;color:'+(col||'#004225')+';line-height:1.15;margin:4px 0">'+val+'</div><div style="font-size:11px;color:#667">'+(sub||'')+'</div></div>';}
     function median(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y});return b[Math.floor(b.length/2)];}
     function avg(a){if(!a.length)return null;return a.reduce(function(s,x){return s+x;},0)/a.length;}
+    function fmtMed(n){return n!=null?(Math.round(n*10)/10+' %'):'—';}
     var easyMed=median(stats.easyAbs),v2Med=median(stats.v2Abs),v3gMed=median(stats.v3gAbs);
     var easyAvg=avg(stats.easyAbs),v2Avg=avg(stats.v2Abs),v3gAvg=avg(stats.v3gAbs);
     var acceptRate=stats.total?(stats.n/stats.total*100):0;
-    var sh='';
-    sh+=chip('I scoreboard',stats.n,'biler med høyeste bud i ERP');
-    sh+=chip('Eval-aksept-rate',Math.round(acceptRate*10)/10+' %',stats.n+' av '+stats.total+' målte');
-    if(stats.n>0){
-      sh+=chip('Easy abs gap',(easyMed!=null?Math.round(easyMed*10)/10+' %':'—'),'median - snitt '+(easyAvg!=null?Math.round(easyAvg*10)/10+' %':'—'),'#7B1FA2');
-      sh+=chip('V3 abs gap',(v2Med!=null?Math.round(v2Med*10)/10+' %':'—'),'median - snitt '+(v2Avg!=null?Math.round(v2Avg*10)/10+' %':'—'),'#1565C0');
-      sh+=chip('V3G abs gap',(v3gMed!=null?Math.round(v3gMed*10)/10+' %':'—'),'median - snitt '+(v3gAvg!=null?Math.round(v3gAvg*10)/10+' %':'—'),'#00875A');
-      sh+=chip('Vinnere',stats.winsEasy+' / '+stats.winsV3+' / '+stats.winsV3G,'Easy / V3 / V3G','#004225');
+    var winMax=Math.max(stats.winsEasy,stats.winsV3,stats.winsV3G);
+    var winLead=[],winCol='#004225';
+    if(winMax>0){
+      if(stats.winsEasy===winMax){winLead.push('Easy');winCol='#7B1FA2';}
+      if(stats.winsV3===winMax){winLead.push('V3');if(winLead.length===1)winCol='#1565C0';}
+      if(stats.winsV3G===winMax){winLead.push('V3G');if(winLead.length===1)winCol='#00875A';}
     }
+    var sh='';
+    sh+=chip('Biler med bud',stats.n,'høyeste bud i ERP · fra 2026-06-01');
+    sh+=chip('Vinner flest',winLead.length?winLead.join('/'):'—',stats.winsEasy+' Easy · '+stats.winsV3+' V3 · '+stats.winsV3G+' V3G',winCol);
+    if(stats.n>0){
+      sh+=chip('Easy median |gap|',fmtMed(easyMed),'snitt '+fmtMed(easyAvg),'#7B1FA2');
+      sh+=chip('V3 median |gap|',fmtMed(v2Med),'snitt '+fmtMed(v2Avg),'#1565C0');
+      sh+=chip('V3G median |gap|',fmtMed(v3gMed),'snitt '+fmtMed(v3gAvg),'#00875A');
+    }
+    sh+=chip('Eval-aksept-rate',Math.round(acceptRate*10)/10+' %',stats.n+' av '+stats.total+' målte');
     summ.innerHTML=sh;
     try{renderOrdnaCohort();}catch(eOrd){}
     var upd=document.getElementById('score-updated');if(upd)upd.textContent=new Date().toLocaleString('nb-NO');
   }catch(e){
-    tbody.innerHTML='<tr><td colspan="18" style="padding:30px;text-align:center;color:var(--red)">Kunne ikke laste: '+e.message+'</td></tr>';
+    tbody.innerHTML='<tr><td colspan="19" style="padding:30px;text-align:center;color:var(--red)">Kunne ikke laste: '+e.message+'</td></tr>';
   }
 }
 function renderScoreboard(){
@@ -5595,15 +5620,15 @@ function renderScoreboard(){
   var rows=q?built.filter(function(x){return String(x.hay||'').indexOf(q)>=0;}):built;
   var html='';
   var abDivShown=false;
-  if(rows.length&&!rows.some(function(x){return x.live;})){html+=abDividerRow(16);abDivShown=true;}
+  if(rows.length&&!rows.some(function(x){return x.live;})){html+=abDividerRow(19);abDivShown=true;}
   rows.forEach(function(x){
-    if(!abDivShown&&!x.live){html+=abDividerRow(16);abDivShown=true;}
+    if(!abDivShown&&!x.live){html+=abDividerRow(19);abDivShown=true;}
     html+=x.html;
   });
   if(!rows.length){
     html=q
-      ?'<tr><td colspan="18" style="padding:30px;text-align:center;color:var(--muted)">Ingen treff</td></tr>'
-      :'<tr><td colspan="18" style="padding:30px;text-align:center;color:var(--muted)">Ingen biler har høyeste bud i ERP ennå - venter på auksjon.</td></tr>';
+      ?'<tr><td colspan="19" style="padding:30px;text-align:center;color:var(--muted)">Ingen treff</td></tr>'
+      :'<tr><td colspan="19" style="padding:30px;text-align:center;color:var(--muted)">Ingen biler har høyeste bud i ERP ennå - venter på auksjon.</td></tr>';
   }
   tbody.innerHTML=html;
 }
@@ -8563,7 +8588,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
-<!-- c354: Scoreboard viser alle V2-målinger fra 2026-06-01 med Høyeste bud > 0. Ingen 30d-vindu. Latest per regnr+erpId. Solgt/retur/status er ikke gate. Søk (score-search) filterer tabellen live på regnr/internnr/bil/kilde/bot/arm. -->
+<!-- c354: Scoreboard viser alle V2-målinger fra 2026-06-01 med Høyeste bud > 0. Ingen 30d-vindu. Latest per regnr+erpId. Solgt/retur/status er ikke gate. Søk live. Vinner-merke, Bud vs lav (Under alle/Mellom/Over alle), vinner-gap extra bold. -->
 <!-- c353: Ikke hvit-flash: mal bakgrunn før CDN-script, defer xlsx/chart, pageshow gjenoppretter auth. -->
 <!-- c352: Origin-CV km er ERP only. Ingen EU-km / avvik-banner / car.info-km på QA-kort. jr/ beholdt. -->
 <!-- c351: QA-kort jr/-merke når delt Jr origin-CV finnes (origin_cv / jr / jr_dossier / dossier / listings / origin.jr). Mangler = ingen merke. Easy V7 urørt. Gemini off. -->
