@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c357</title>
+<title>Peasy Pulse v16.05.c358</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c357';</script>
+<script>document.title='Peasy Pulse v16.05.c358';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -249,7 +249,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c357</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c358</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -326,7 +326,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c357</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c358</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1801,7 +1801,7 @@ window.MARK_V16_04 = (function(){
 </section>
 <section class="mode-section" data-mode="score" id="score-section" style="display:none;">
   <h1 class="page" style="margin-bottom:4px">Scoreboard</h1>
-  <div class="page-sub" style="margin-bottom:8px">Easy vs V3 vs V3G — % avvik mot høyeste bud (alle med bud, fra 2026-06-01). A/B (Easy vs V3G live) fra 18.8.2026 — historiske rader er ikke A/B-merket.</div>
+  <div class="page-sub" style="margin-bottom:8px">Easy vs V3 vs V3G — % avvik mot høyeste bud (alle med bud, fra 2026-06-01). Sortert på auksjonsdato (da kunden valgte auksjon), nyest øverst. Åpne bud uten ferdig dato øverst. A/B (Easy vs V3G live) fra 18.8.2026 — historiske rader er ikke A/B-merket.</div>
   <div style="font-size:12px;color:#667;margin:0 0 14px;line-height:1.45"><b>Vinner</b> = lav nærmest høyeste bud. <span style="color:#C62828;font-weight:700">Under alle</span> = bud under alle lav. <span style="color:#5D6D7E;font-weight:700">Mellom</span> = mellom lavene. <span style="color:#2E7D32;font-weight:700">Over alle</span> = bud over alle lav.</div>
   <div id="score-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px"></div>
   <div id="score-ordna" style="display:none"></div>
@@ -5471,9 +5471,18 @@ async function loadScoreboard(){
     // c192: primær kilde = Mac Mini /measurements (live), fallback jsdelivr (stale)
     var mUrl=(window.PA_PROXY_ERP||'').replace('/list/','/measurements')+'?t='+t;
     var mFallback='https://mikeljungbergtvedt.github.io/v2-measurements.jsonl?t='+t;
-    if((!window._lastRows||!window._lastRows.length)&&typeof loadData==='function'){
+    if(typeof loadData==='function'){
       try{var xrows=await loadData();if(xrows&&xrows.length)window._lastRows=xrows;}catch(e){}
     }
+    var aukDates={};
+    try{
+      var adUrl=(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'')+'/auction-dates?t='+t;
+      var adRes=await fetch(adUrl,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+      if(adRes&&adRes.ok){
+        var adJ=await adRes.json();
+        aukDates=(adJ&&adJ.dates)||{};
+      }
+    }catch(eAd){}
     var mRes=await fetch(mUrl).catch(function(){return{ok:false};});
     if(!mRes.ok){mRes=await fetch(mFallback);}
     var mText=mRes.ok?await mRes.text():'';
@@ -5495,7 +5504,20 @@ async function loadScoreboard(){
     if(idCol>=0)for(var j=1;j<lr.length;j++){var id=lr[j][idCol];if(id!=null)erpById[String(id)]=lr[j];}
     var withBud=allRows.filter(function(r){var er=erpById[String(r.erpId||'')];if(!er||budCol<0)return false;var b=Number(er[budCol]||0);return b>0;});
     var stats={n:withBud.length,total:totalMeasurements,easyAbs:[],v2Abs:[],v3gAbs:[],winsV3:0,winsEasy:0,winsV3G:0};
-    var scoreRows=withBud.sort(function(a,b){return new Date(b.timestamp)-new Date(a.timestamp);});
+    function pdt(s){if(!s)return null;var p=String(s).split(' ')[0].split('.');if(p.length<3)return null;var dt=new Date(parseInt(p[2],10),parseInt(p[1],10)-1,parseInt(p[0],10));return isNaN(dt.getTime())?null:dt;}
+    function auctionSortMs(r){
+      var id=String(r.erpId||'');
+      var fromErp=pdt(aukDates[id]||aukDates[String(r.regnr||'').toUpperCase()]);
+      if(fromErp) return fromErp.getTime();
+      var er=erpById[id];
+      var solgt=er&&sCol>=0?pdt(er[sCol]):null;
+      var ret=er&&rCol>=0?pdt(er[rCol]):null;
+      if(solgt&&ret) return Math.max(solgt.getTime(),ret.getTime());
+      if(solgt) return solgt.getTime();
+      if(ret) return ret.getTime();
+      return Date.now();
+    }
+    var scoreRows=withBud.sort(function(a,b){return auctionSortMs(b)-auctionSortMs(a);});
     var built=[];
     scoreRows.forEach(function(r){
       var easy=r.easy&&r.easy.dLav||0;
@@ -5624,12 +5646,7 @@ function renderScoreboard(){
   var q=((document.getElementById('score-search')||{}).value||'').trim().toLowerCase();
   var rows=q?built.filter(function(x){return String(x.hay||'').indexOf(q)>=0;}):built;
   var html='';
-  var abDivShown=false;
-  if(rows.length&&!rows.some(function(x){return x.live;})){html+=abDividerRow(19);abDivShown=true;}
-  rows.forEach(function(x){
-    if(!abDivShown&&!x.live){html+=abDividerRow(19);abDivShown=true;}
-    html+=x.html;
-  });
+  rows.forEach(function(x){ html+=x.html; });
   if(!rows.length){
     html=q
       ?'<tr><td colspan="19" style="padding:30px;text-align:center;color:var(--muted)">Ingen treff</td></tr>'
@@ -6772,7 +6789,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c357</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c358</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8593,6 +8610,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c358: Scoreboard sortert på auksjonsdato (kunden valgte). Åpne bud øverst. Cache-bump. -->
 <!-- c357: Scoreboard: % gap først (ved Høyeste bud), stor/mono/signert, vinner-% extra bold + merke. Lav kr sekundær. Sammendrag leder med median |gap| og vinner flest. -->
 <!-- c356: Scoreboard teaching: vinner-merke (Easy/V3/V3G), Bud vs lav Under alle/Mellom/Over alle, vinner-gap extra bold, sammendrag N/vinner flest/median |gap|. -->
 <!-- c355: Scoreboard-søk (score-search) filterer tabellen live på regnr/internnr/bil/kilde/bot/arm. -->
