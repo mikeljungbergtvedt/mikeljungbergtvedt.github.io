@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c358</title>
+<title>Peasy Pulse v16.05.c359</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c358';</script>
+<script>document.title='Peasy Pulse v16.05.c359';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -249,7 +249,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c358</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c359</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -326,7 +326,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c358</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c359</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2689,6 +2689,17 @@ function renderEvalCharts(rows,data){
 function fmtK(n){return n?Math.round(n/1000).toLocaleString('nb-NO')+'k':'-';}
 function fmtPct(n){if(n===null||n===undefined)return '-';return(n>0?'+':'')+n.toFixed(1)+'%';}
 function fmtDate(val){if(!val)return '-';var d=parseDate(val);if(!d||isNaN(d))return '-';return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short'});}
+function parseRejectedAt(iso){
+  if(!iso) return null;
+  var d=new Date(iso);
+  if(isNaN(d.getTime())) d=new Date(String(iso).replace(' ','T'));
+  return isNaN(d.getTime())?null:d;
+}
+function fmtRejectedAtOslo(iso){
+  var d=parseRejectedAt(iso);
+  if(!d) return '-';
+  return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short',timeZone:'Europe/Oslo'});
+}
 function pct(n,of){return of?Math.round(n/of*100):0;}
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:null;}
 
@@ -2930,13 +2941,14 @@ function buildEvalHtml(data,rows){
     var sdVal=r[13]?String(r[13]).trim():'';var sdDisplay=sdVal?sdVal.slice(0,16):fmtDate(r[13]);
     var slaPct=whm?Math.min(whm.total/4*100,100):0;var slaColor=whm&&whm.total<3?'#4CAF50':whm&&whm.total<4?'#E65100':'#C62828';
   */
-  var avvistRows=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var nDate=parseDate(r[13]);if(nDate&&nDate<CUTOFF)return false;return String(r[12]||'').toLowerCase().includes('avvist by customer');}).sort(function(a,b){return(parseDate(b[13])||0)-(parseDate(a[13])||0);});
+  var avvistXlsx=(rows||[]).slice(1).filter(function(r){if(!r[1])return false;var nDate=parseDate(r[13]);if(nDate&&nDate<CUTOFF)return false;return String(r[12]||'').toLowerCase().includes('avvist by customer');});
+  var avvistRows=(typeof window.liste16AvvistRecent==='function')?window.liste16AvvistRecent():[];
   var totalPriset=(rows||[]).slice(1).filter(function(r){if(!r[1]||!parseDLow(r[3]))return false;var nd=parseDate(r[31])||parseDate(r[13]);return nd&&nd>=CUTOFF;}).length;
-  var avvistPct=totalPriset?Math.round(avvistRows.length/totalPriset*100):0;
+  var avvistPct=totalPriset?Math.round(avvistXlsx.length/totalPriset*100):0;
   h+='<div class="section-label">Avvist av selger &mdash; siste 10 ('+avvistPct+'% av priset fra 1.11.25)</div>';
   h+='<div class="table-card" style="margin-bottom:24px"><table><thead><tr>'+srcTh()+'<th>RegNr</th><th>Bil</th><th>KM</th><th>Lav – Høy</th><th>Dato</th></tr></thead><tbody>';
   var last10=avvistRows.slice(0,10);if(!last10.length)h+='<tr><td colspan="7" style="color:var(--muted);padding:16px">Ingen avviste biler</td></tr>';
-  for(var j=0;j<last10.length;j++){var rc=last10[j],arc=String(rc[3]||'').trim(),ps2='-';if(arc&&arc!=='-'){var p2=arc.replace(/[\s\u00a0]/g,'').split('-');ps2=parseInt(p2[0]).toLocaleString('nb-NO')+' kr &ndash; '+parseInt(p2[1]||p2[0]).toLocaleString('nb-NO')+' kr';}var lbl2=[rc[6]||'',rc[7]||'',rc[8]||''].filter(Boolean).join(' ');var km2=rc[22]?parseInt(rc[22]).toLocaleString('nb-NO')+' km':'-';h+=srcTrOpen(rc)+srcTd(rc)+'<td><span class="regnr">'+rc[1]+'</span></td><td style="font-size:11px">'+lbl2+'</td><td style="font-size:11px">'+km2+'</td><td>'+ps2+'</td><td style="color:var(--muted);font-size:11px">'+fmtDate(rc[13])+'</td></tr>';}
+  for(var j=0;j<last10.length;j++){var rc=last10[j],arc=String(rc[3]||'').trim(),ps2='-';if(arc&&arc!=='-'){var p2=arc.replace(/[\s\u00a0]/g,'').split('-');ps2=parseInt(p2[0]).toLocaleString('nb-NO')+' kr &ndash; '+parseInt(p2[1]||p2[0]).toLocaleString('nb-NO')+' kr';}var lbl2=[rc[6]||'',rc[7]||'',rc[8]||''].filter(Boolean).join(' ');var km2=rc[22]?parseInt(rc[22]).toLocaleString('nb-NO')+' km':'-';h+=srcTrOpen(rc)+srcTd(rc)+'<td><span class="regnr">'+rc[1]+'</span></td><td style="font-size:11px">'+lbl2+'</td><td style="font-size:11px">'+km2+'</td><td>'+ps2+'</td><td style="color:var(--muted);font-size:11px">'+fmtRejectedAtOslo(rc._rejectedAt||rc[13])+'</td></tr>';}
   h+='</tbody></table></div>';
   h+='<div class="table-card"><div class="th"><div class="th-title">Bestilt henting / levering &mdash; siste 10</div><div class="th-badge" id="aksept-badge"></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:rgba(0,66,37,0.04)">'+srcTh()+'<th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">RegNr</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bil</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Evaluert</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Bestilt</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Dager</th><th style="padding:8px 12px;text-align:left;color:#667A72;font-size:10px;font-weight:700;text-transform:uppercase">Type</th></tr></thead><tbody id="aksept-tbody"></tbody></table></div>';
   return h;
@@ -4239,30 +4251,39 @@ async function initKart(){
 
 function fmtK(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':Math.round(n/1000)+'k';}
 function fmtKm(v){if(!v&&v!==0)return '—';var n=parseInt(String(v).replace(/[^\d]/g,''));return isNaN(n)?'—':n.toLocaleString('nb-NO')+' km';}
-window.liste16AvvistToday=function(){
-  var list=window._liste16Recent||[];
-  var today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
-  function dayOf(iso){
+function liste16RejectedDayOf(iso){
+  var d=typeof parseRejectedAt==='function'?parseRejectedAt(iso):null;
+  if(!d){
     if(!iso) return '';
-    var d=new Date(iso);
+    d=new Date(iso);
     if(isNaN(d.getTime())) d=new Date(String(iso).replace(' ','T'));
     if(isNaN(d.getTime())) return String(iso).slice(0,10);
-    return d.toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
   }
+  return d.toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+}
+function liste16MapRejectedCar(b){
+  var dd=b.drive_no_car_data||{};
+  var mil=b.process_milestones||{};
+  var arsak=b.reject_reason||'—';
+  var min=b.price_final_min, max=b.price_final_max;
+  var band=(min!=null&&max!=null)?(min+'-'+max):'';
+  var km=dd.mileage||dd.km||b.mileage||null;
+  return {0:b.id,1:b.registration_number,3:band,6:dd.manufacturer_name||b.manufacturer||'',7:dd.model_series||'',8:dd.model_year||'',11:b.source,12:'Avvist by customer',13:mil.rejected_at||'',22:km,_arsak:arsak,_rejectedAt:mil.rejected_at||'',internnr:b.id,id:b.id};
+}
+window.liste16AvvistRecent=function(){
+  var list=window._liste16Recent||[];
   return list.filter(function(b){
     var st=(b.status_entity&&b.status_entity.status)||'';
-    if(st!=='REJECTED_BY_CUSTOMER') return false;
-    var iso=(b.process_milestones&&b.process_milestones.rejected_at)||'';
-    return dayOf(iso)===today;
-  }).map(function(b){
-    var dd=b.drive_no_car_data||{};
-    var mil=b.process_milestones||{};
-    var st=(b.status_entity&&b.status_entity.status)||'';
-    var arsak=b.reject_reason||'—';
-    var min=b.price_final_min, max=b.price_final_max;
-    var band=(min!=null&&max!=null)?(min+'-'+max):'';
-    var km=dd.mileage||dd.km||b.mileage||null;
-    return {0:b.id,1:b.registration_number,3:band,6:dd.manufacturer_name||b.manufacturer||'',7:dd.model_series||'',8:dd.model_year||'',11:b.source,12:'Avvist by customer',13:mil.rejected_at||'',22:km,_arsak:arsak,_rejectedAt:mil.rejected_at||'',internnr:b.id,id:b.id};
+    return st==='REJECTED_BY_CUSTOMER';
+  }).map(liste16MapRejectedCar).sort(function(a,b){
+    var da=parseRejectedAt(a._rejectedAt), db=parseRejectedAt(b._rejectedAt);
+    return (db?db.getTime():0)-(da?da.getTime():0);
+  });
+};
+window.liste16AvvistToday=function(){
+  var today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+  return window.liste16AvvistRecent().filter(function(row){
+    return liste16RejectedDayOf(row._rejectedAt)===today;
   });
 };
 function buildDagsTabell(evalAll2, todayDate){
@@ -6789,7 +6810,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c358</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c359</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8610,6 +8631,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c359: Evaluert «Avvist av selger» fra /list/rejected: kun REJECTED_BY_CUSTOMER, sortert/vist på rejected_at (Oslo), siste 10. Ikke xlsx Registrert. -->
 <!-- c358: Scoreboard sortert på auksjonsdato (kunden valgte). Åpne bud øverst. Cache-bump. -->
 <!-- c357: Scoreboard: % gap først (ved Høyeste bud), stor/mono/signert, vinner-% extra bold + merke. Lav kr sekundær. Sammendrag leder med median |gap| og vinner flest. -->
 <!-- c356: Scoreboard teaching: vinner-merke (Easy/V3/V3G), Bud vs lav Under alle/Mellom/Over alle, vinner-gap extra bold, sammendrag N/vinner flest/median |gap|. -->
