@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c359</title>
+<title>Peasy Pulse v16.05.c360</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c359';</script>
+<script>document.title='Peasy Pulse v16.05.c360';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -249,7 +249,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c359</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c360</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -326,7 +326,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c359</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c360</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6226,16 +6226,26 @@ function sosialCard(th){
   var ad=th.adName||th.adId||'';
   var msgs=(th.messages&&th.messages.length)?th.messages:[{author:th.author,authorId:th.authorId,text:th.lastInboundText||th.text,ts:th.ts,fromPage:false}];
   var threadHtml=msgs.map(sosialMsgHtml).join('');
+  var hasComposer=open && !isDm;
+  var canHide=sosialCanHide(th);
+  var hideCtl=canHide
+    ?'<button type="button" onclick="sosialHide('+ix+')" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#ECEFF1;color:#37474F;font-size:12px;font-weight:600;cursor:pointer;">Skjul</button>'
+    :(sosialIsCommentThread(th)&&th.isHidden?'<span style="font-size:12px;color:#9E9E9E;">Allerede skjult</span>':'');
   var composer='';
   if(href){
-    composer+='<div style="margin-top:8px;"><a href="'+sosialEsc(href)+'" target="_blank" rel="noopener" style="display:inline-block;padding:7px 12px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">'+(isAdOpen(th)?'Åpne kommentar':'Åpne samtale')+'</a></div>';
+    composer+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><a href="'+sosialEsc(href)+'" target="_blank" rel="noopener" style="display:inline-block;padding:7px 12px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">'+(isAdOpen(th)?'Åpne kommentar':'Åpne samtale')+'</a>'
+      +(!hasComposer && hideCtl?hideCtl:'')
+      +'</div>';
+  }else if(!hasComposer && hideCtl){
+    composer+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'+hideCtl+'</div>';
   }
-  if(open && !isDm){
+  if(hasComposer){
     var draft=th._draft||'';
     composer+='<textarea class="sosial-ta" data-ix="'+ix+'" rows="4" placeholder="Skriv eller hent utkast. Du kan redigere før Publiser." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin:8px 0;">'+sosialEsc(draft)+'</textarea>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
       +'<button type="button" onclick="sosialDraft('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:#1565C0;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Foreslå utkast</button>'
       +'<button type="button" onclick="sosialPublish('+ix+')" style="padding:6px 10px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Publiser</button>'
+      +(hideCtl||'')
       +'</div>';
   }else if(isDm && th.category!=='varsel'){
     composer+='<div style="font-size:12px;color:var(--muted);margin-top:6px;">Sending fra Pulse er stengt til Meta godkjenner pages_messaging.</div>';
@@ -6255,6 +6265,14 @@ function sosialCard(th){
 }
 function isAdOpen(th){
   return th&&(th.source==='ad'||th.source==='hidden'||th.replyKind==='comment');
+}
+function sosialIsCommentThread(th){
+  if(!th) return false;
+  if(th.replyKind==='message'||th.source==='dm') return false;
+  return th.replyKind==='comment'||th.source==='ad'||th.source==='hidden'||!!th.isHidden;
+}
+function sosialCanHide(th){
+  return sosialIsCommentThread(th)&&!th.isHidden;
 }
 function sosialBlindCard(b){
   var href=b&&b.permalink?b.permalink:'';
@@ -6358,6 +6376,31 @@ async function sosialPublish(ix){
     var j=await r.json();
     alert(j.ok?'Sendt.':(j.err||'Ikke sendt.'));
     if(j.ok) loadSosial(true);
+  }catch(e){ alert('Feil: '+e.message); }
+}
+async function sosialHide(ix){
+  var it=sosialThreads()[ix];
+  if(!it || !sosialCanHide(it)) return;
+  if(!confirm('Skjule denne kommentaren på Meta? Den forsvinner for andre, men du ser den fortsatt som skjult.')) return;
+  var hideId=it.lastInboundId||it.id;
+  try{
+    var r=await fetch(sosialBase()+'/hide',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id:hideId, replyKind:it.replyKind, conversationId:it.conversationId,
+        category:it.category, author:it.author, authorId:it.authorId,
+        platform:it.platform, origText:it.lastInboundText||it.text
+      })
+    });
+    var j={};
+    try{ j=await r.json(); }catch(_){ j={err:'HTTP '+r.status}; }
+    if(j.ok){
+      alert('Skjult.');
+      loadSosial(true);
+    }else{
+      alert(j.err||'Ikke skjult.');
+    }
   }catch(e){ alert('Feil: '+e.message); }
 }
 async function updateSosialStatus(){
@@ -6810,7 +6853,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c359</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c360</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8631,6 +8674,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c360: Sosial: Skjul-knapp for ads-kommentarer (bekreft → POST /social/hide). Ikke DM. Aldri auto-skjul. -->
 <!-- c359: Evaluert «Avvist av selger» fra /list/rejected: kun REJECTED_BY_CUSTOMER, sortert/vist på rejected_at (Oslo), siste 10. Ikke xlsx Registrert. -->
 <!-- c358: Scoreboard sortert på auksjonsdato (kunden valgte). Åpne bud øverst. Cache-bump. -->
 <!-- c357: Scoreboard: % gap først (ved Høyeste bud), stor/mono/signert, vinner-% extra bold + merke. Lav kr sekundær. Sammendrag leder med median |gap| og vinner flest. -->
