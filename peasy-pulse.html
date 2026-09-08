@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c362</title>
+<title>Peasy Pulse v16.05.c363</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c362';</script>
+<script>document.title='Peasy Pulse v16.05.c363';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -249,7 +249,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c362</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c363</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -326,7 +326,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c362</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c363</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6856,7 +6856,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c362</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c363</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -7249,8 +7249,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if ((!isV7) && Number.isFinite(a) && a > 0) {
       bd = qaEasyCostCalc(a, { year: pr.year, egenvekt: pr.egenvekt, isVarebil: pr.isVarebil, biltype: pr.biltype });
       isV7 = true;
-      dLav = bd.dLav;
-      dHoy = bd.dHoy;
+    }
+    if (isV7 && bd) {
+      if (Number.isFinite(Number(bd.dLav))) dLav = Number(bd.dLav);
+      if (Number.isFinite(Number(bd.dHoy))) dHoy = Number(bd.dHoy);
     }
     if (!Number.isFinite(dLav) && !Number.isFinite(dHoy) && !Number.isFinite(a)) return '';
     var feeLav = bd && (bd.feeLav != null ? bd.feeLav : bd.fee);
@@ -7705,46 +7707,67 @@ setTimeout(tick,1500);setInterval(tick,5000);
           }
         }
       }
-      const v3ByRegnr = {};
-      const easyByRegnr = {};
-      const v3gByRegnr = {};
-      const bot4ByRegnr = {};
-      const loop2ByRegnr = {};
+      const v3ByIntern = {};
+      const easyByIntern = {};
+      const v3gByIntern = {};
+      const bot4ByIntern = {};
+      const loop2ByIntern = {};
       var histByReg = {};
+      function qaInternKey(v){ return (v==null||v==='') ? '' : String(v); }
+      function qaPutLatest(map, key, rec, ts){
+        if (!key || !rec) return;
+        var prev = map[key];
+        var t = ts || rec.timestamp || rec._ts || '';
+        if (!prev || t > (prev.timestamp || prev._ts || '')) map[key] = rec;
+      }
       function paintQACards(){
         var enriched = [];
         try {
         enriched = liste3.map(b => {
           const rg = String(b.registration_number || '').toUpperCase();
-          const v3m = v3ByRegnr[rg] || null;
-          // Km-prioritet: ERP.mileage -> V3-measurement.km -> null
-          const km = (v3m && v3m.km) ? Number(v3m.km) : (b.mileage != null ? Number(b.mileage) : null);
+          const internKey = qaInternKey(b.id);
+          const v3m = internKey ? (v3ByIntern[internKey] || null) : null;
+          const v3gM = internKey ? (v3gByIntern[internKey] || null) : null;
+          const bot4M = internKey ? (bot4ByIntern[internKey] || null) : null;
+          const loop2M = internKey ? (loop2ByIntern[internKey] || {}) : {};
+          const km = (b.mileage != null ? Number(b.mileage) : null) || (v3m && v3m.km ? Number(v3m.km) : null);
           return {
             regnr: rg,
             erpId: b.id,
             km,
             created_at: b.created_at || b.updated_at || null,
             easy: (function(){
-              var ev = easyByRegnr[rg] || (v3m && v3m.easy) || null;
-              if (ev && ev._erpId != null && String(ev._erpId) !== String(b.id)) ev = null;
-              if (v3m && v3m.erpId != null && String(v3m.erpId) !== String(b.id) && ev === (v3m.easy)) ev = null;
+              var ev = internKey ? (easyByIntern[internKey] || null) : null;
+              if (ev && ev._erpId != null && qaInternKey(ev._erpId) !== internKey) ev = null;
               var out = { dLav: null, dHoy: null, anker: null };
-              if (ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort)) {
+              if (ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort || ev.breakdown)) {
                 out = Object.assign({}, ev);
               }
-              if (Number.isFinite(Number(b.price_final_min))) out.dLav = Number(b.price_final_min);
-              if (Number.isFinite(Number(b.price_final_max))) out.dHoy = Number(b.price_final_max);
+              out.erp_dLav = Number.isFinite(Number(b.price_final_min)) ? Number(b.price_final_min) : null;
+              out.erp_dHoy = Number.isFinite(Number(b.price_final_max)) ? Number(b.price_final_max) : null;
               return out;
             })(),
             v3: v3m,
             manufacturer: b.manufacturer || null,
             finn_link: b.finn_link || null,
-            source: b.source || (v3gByRegnr[rg] && v3gByRegnr[rg].source) || null,
+            source: b.source || (v3gM && v3gM.source) || null,
             rawErp: b,
-            v3g: v3gByRegnr[rg] || null,
-            bot4: bot4ByRegnr[rg] || null,
-            loop2: loop2ByRegnr[rg] || {},
-            hist: (histByReg[rg] || []).filter(function(x){ return String(x.internnr) !== String(b.id); }),
+            v3g: v3gM,
+            bot4: bot4M,
+            loop2: loop2M,
+            hist: (histByReg[rg] || []).filter(function(x){ return qaInternKey(x.internnr) !== internKey; }).map(function(h){
+              var hk = qaInternKey(h.internnr);
+              var emptyAr = !h.ar || String(h.ar).trim()==='' || String(h.ar).trim()==='-';
+              if (emptyAr && hk) {
+                var he = easyByIntern[hk];
+                var hv = v3ByIntern[hk] && v3ByIntern[hk].v2;
+                var hg = v3gByIntern[hk] && (v3gByIntern[hk].v3g || v3gByIntern[hk]);
+                var lo = (he && he.dLav) || (hv && hv.dLav) || (hg && hg.dLav);
+                var hi = (he && he.dHoy) || (hv && hv.dHoy) || (hg && hg.dHoy);
+                if (lo != null && hi != null) h = Object.assign({}, h, { ar: lo + '-' + hi });
+              }
+              return h;
+            }),
           };
         }).filter(function(e){ return !qaIsSent(e.regnr, e.erpId); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
         window._qaUnsentIds = enriched.map(function(e){ return String(e.erpId); }).sort().join(',');
@@ -7851,34 +7874,33 @@ setTimeout(tick,1500);setInterval(tick,5000);
         return ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort;
       }
       for (const r of measRecs) {
-        const rg = String(r.regnr || '').toUpperCase();
-        if (!rg) continue;
-        if (r.evaluator === 'v3' || r.v2) {
-          if (!v3ByRegnr[rg] || (r.timestamp || '') > (v3ByRegnr[rg].timestamp || '')) v3ByRegnr[rg] = r;
-        }
+        const intern = qaInternKey(r.erpId);
+        if (!intern) continue;
+        if (r.evaluator === 'v3' || r.v2) qaPutLatest(v3ByIntern, intern, r);
         if (isRealEasy(r.easy)) {
-          if (!easyByRegnr[rg] || (r.timestamp || '') > (easyByRegnr[rg]._ts || '')) {
-            easyByRegnr[rg] = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
-          }
+          qaPutLatest(easyByIntern, intern, Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null }), r.timestamp);
         }
       }
       for (const r of v3gRecs) {
-        const rg = String(r.regnr || '').toUpperCase();
-        if (!rg) continue;
-        if (!v3gByRegnr[rg] || (r.timestamp || '') > (v3gByRegnr[rg].timestamp || '')) v3gByRegnr[rg] = r;
+        const intern = qaInternKey(r.erpId);
+        if (!intern) continue;
+        qaPutLatest(v3gByIntern, intern, r);
+        if (isRealEasy(r.easy) && !easyByIntern[intern]) {
+          qaPutLatest(easyByIntern, intern, Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null }), r.timestamp);
+        }
       }
       for (const r of bot4Recs) {
-        const rg = String(r.regnr || '').toUpperCase();
-        if (!rg) continue;
-        if (!bot4ByRegnr[rg] || (r.timestamp || '') > (bot4ByRegnr[rg].timestamp || '')) bot4ByRegnr[rg] = r;
+        const intern = qaInternKey(r.erpId);
+        if (!intern) continue;
+        qaPutLatest(bot4ByIntern, intern, r);
       }
       for (const r of loop2Recs) {
         const chef = qaLoop2Chef(r && r.evaluator);
-        const rg = String((r && r.regnr) || '').toUpperCase();
-        if (!chef || !rg) continue;
-        if (!loop2ByRegnr[rg]) loop2ByRegnr[rg] = {};
-        const prev = loop2ByRegnr[rg][chef];
-        if (!prev || (r.timestamp || '') > (prev.timestamp || '')) loop2ByRegnr[rg][chef] = r;
+        const intern = qaInternKey(r && r.erpId);
+        if (!chef || !intern) continue;
+        if (!loop2ByIntern[intern]) loop2ByIntern[intern] = {};
+        const prev = loop2ByIntern[intern][chef];
+        if (!prev || (r.timestamp || '') > (prev.timestamp || '')) loop2ByIntern[intern][chef] = r;
       }
       window._qaAiByRegnr = {};
       if (_aiJ && _aiJ.ok && _aiJ.cars) {
@@ -8330,7 +8352,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div>
           <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId,(typeof sourceForErp==='function'?sourceForErp(e.erpId,e):e.source)) : ''}${qaJrChip(e)}${(function(){var m=typeof window.peasyAiPlateMeta==='function'?window.peasyAiPlateMeta(e.regnr):'';if(!m)return '';return ' <span style="margin-left:8px;font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0;color:'+(m.rounds>1?'#E65100':'var(--muted)')+';">'+m.text+'</span>';})()}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(variant).slice(0,40)}</div>
-          <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km · ${(typeof srcLabel==='function'?srcLabel(e.source||((typeof sourceForErp==='function')?sourceForErp(e.erpId,e):'')):'')} · ${(typeof pulseBotLabel==='function'?pulseBotLabel(e.erpId, (typeof sourceForErp==='function'?sourceForErp(e.erpId,e):(e.source||''))):'')}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km · intern ${esc(String(e.erpId||'—'))} · ${(typeof srcLabel==='function'?srcLabel(e.source||((typeof sourceForErp==='function')?sourceForErp(e.erpId,e):'')):'')} · ${(typeof pulseBotLabel==='function'?pulseBotLabel(e.erpId, (typeof sourceForErp==='function'?sourceForErp(e.erpId,e):(e.source||''))):'')}</div>
         </div>
         <div style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;color:#fff;background:${color};white-space:nowrap;">${icon} ${label}</div>
       </div>
@@ -8404,7 +8426,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
          · V3G ${fmt(vg.anker)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'%)</b>':''}
          · Bot 4 ${(function(){var b=e.bot4;if(!b)return '–';if(b.ok===false||(b.error&&!Number.isFinite(Number(b.finn_utpris))))return 'feil';return fmt(b.finn_utpris);})()}
          <span style="color:#999;"> mot Easy</span></div>
-        ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
+        ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+' (det som sendes). Easy V7 er uten Ordna-kutt.</div>':''}
         ${((vg.kalkyle==='retur'||vg.retur_mult)&&vg.original_dLav!=null)?'<div style="color:#1B5E20;">Retur-kalkyle ×'+(vg.retur_mult||0.90)+': standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${(vg.origin_cap&&vg.origin_cap.originPrice)?'<div style="color:#E65100;">Origin-cap ×0.95: '+fmt(vg.origin_cap.from)+' → '+fmt(vg.origin_cap.to)+' (annonse '+fmt(vg.origin_cap.originPrice)+')</div>':''}
       </div>
@@ -8719,6 +8741,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c363: QA-kort låst på internnr (ikke skilt). Easy V7-tabell uten ERP/Ordna-overlay. -->
 <!-- c362: AI regnskap: car.info kr per bil. 70 kr før 15:00 7.sep 2026, 10 kr etter. -->
 <!-- c361: QA samlerbil: 25+ år → kort + teller. QA avviser → kverna. Ingen merkeliste. -->
 <!-- c360: Sosial: Skjul-knapp for ads-kommentarer (bekreft → POST /social/hide). Ikke DM. Aldri auto-skjul. -->
