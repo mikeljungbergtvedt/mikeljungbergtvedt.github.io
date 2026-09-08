@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c371</title>
+<title>Peasy Pulse v16.05.c372</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c371';</script>
+<script>document.title='Peasy Pulse v16.05.c372';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -256,7 +256,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c371</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c372</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -333,7 +333,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c371</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c372</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1219,9 +1219,10 @@ window.MARK_V16_04 = (function(){
 
 <h3>Gire / henting</h3>
 <p style="color:#666;font-size:13px;margin:0 0 8px">Snitt per bil vi henter (dato i kolonne P). Alle hentet i perioden × satsen, delt på solgte i perioden. Levere selv (Q) = 0 kr.</p>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
 <input type="number" id="innst-gire" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per hentet bil</span>
 </div>
+<div id="innst-motor-eksempel"></div>
 <h3>Tiltak-beskrivelse</h3>
 <p style="color:#666;font-size:13px">Teksten som vises &oslash;verst p&aring; Tiltak-fanen. Lagre til GitHub for &aring; dele p&aring; alle maskiner.</p>
 <textarea id="innst-tiltaktekst" style="width:100%;min-height:110px;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:24px"></textarea>
@@ -4995,17 +4996,85 @@ async function hideQ(qid, btn) {
   }
 }
 
-// === Innstillinger-tab ===
+function innstKr(n){n=Number(n)||0;return Math.round(n).toLocaleString('nb-NO');}
+function innstKostSats(){
+  function n(id, fb){var el=document.getElementById(id);var v=el?parseInt(el.value,10):NaN;return Number.isFinite(v)?v:fb;}
+  return {
+    u:n('innst-prod-under',2250),
+    o:n('innst-prod-over',2750),
+    r:n('innst-retur',2500),
+    g:n('innst-gire',750)
+  };
+}
+function innstSyncKost(){
+  if(!window.peasyConfig) window.peasyConfig={};
+  var s=innstKostSats();
+  window.peasyConfig.prodKostUnder35k=s.u;
+  window.peasyConfig.prodKostOver35k=s.o;
+  window.peasyConfig.returKost=s.r;
+  window.peasyConfig.gireKost=s.g;
+  var jn=document.getElementById('innst-json');
+  if(jn) jn.textContent=JSON.stringify(window.peasyConfig,null,2);
+  innstMotorEksempel();
+}
+function innstMotorEksempel(){
+  var box=document.getElementById('innst-motor-eksempel');
+  if(!box) return;
+  var s=innstKostSats();
+  var solgtSelv=s.u;
+  var solgtGire=s.o+s.g;
+  var returGire=s.r+s.g;
+  var pott=solgtSelv+solgtGire+returGire;
+  var per=Math.round(pott/2);
+  var utenGire=solgtSelv+s.o+s.r;
+  var perUten=Math.round(utenGire/2);
+  function row(lab, a,b,c, sum, note){
+    return '<tr>'
+      +'<td style="padding:8px 10px;color:#004225">'+lab+'</td>'
+      +'<td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums">'+innstKr(a)+'</td>'
+      +'<td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums">'+innstKr(b)+'</td>'
+      +'<td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums">'+innstKr(c)+'</td>'
+      +'<td style="padding:8px 10px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">'+innstKr(sum)+'</td>'
+      +'<td style="padding:8px 10px;color:#667;font-size:12px">'+note+'</td>'
+      +'</tr>';
+  }
+  box.innerHTML=
+    '<div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-left:4px solid #004225;border-radius:12px;padding:16px 18px;margin:0 0 28px;box-shadow:0 4px 18px rgba(0,66,37,0.06)">'
+    +'<div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#004225;margin-bottom:6px">Slik telles prod per solgt</div>'
+    +'<p style="margin:0 0 12px;font-size:13px;color:#445;line-height:1.5">Periode-pott, ikke faktura per bil. Hver Peasy-bil kaster kroner i potten. Kortet = <strong>pott ÷ solgte</strong> i samme vindu (i går og 30 dager bak). Levere selv (Q) = 0 i Gire. Henting (P) telles også på biler som ikke er solgt ennå.</p>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+    +'<thead><tr style="background:#F4F7F6;text-align:left">'
+    +'<th style="padding:8px 10px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">Eksempel · 2 solgt + 1 retur</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">Vask/foto</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">Retur</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">Gire</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">I pott</th>'
+    +'<th style="padding:8px 10px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667">Hvorfor</th>'
+    +'</tr></thead><tbody>'
+    +row('Solgt · Lav ≤ 35k · selv', s.u, 0, 0, solgtSelv, 'Q, ingen henting')
+    +row('Solgt · Lav > 35k · Gire', s.o, 0, s.g, solgtGire, 'P-dato i perioden')
+    +row('Retur · Gire', 0, s.r, s.g, returGire, 'ikke solgt, men hentet')
+    +'</tbody></table></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,66,37,0.08)">'
+    +'<div><div style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667;font-weight:700">Pott</div><div style="font-size:22px;font-weight:800;color:#004225">'+innstKr(pott)+' kr</div><div style="font-size:11px;color:#667">'+innstKr(solgtSelv)+' + '+innstKr(solgtGire)+' + '+innstKr(returGire)+'</div></div>'
+    +'<div><div style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667;font-weight:700">Prod per solgt</div><div style="font-size:22px;font-weight:800;color:#004225">'+innstKr(per)+' kr</div><div style="font-size:11px;color:#667">'+innstKr(pott)+' ÷ 2 solgte</div></div>'
+    +'<div><div style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#667;font-weight:700">Uten Gire</div><div style="font-size:22px;font-weight:800;color:#667">'+innstKr(perUten)+' kr</div><div style="font-size:11px;color:#667">samme tre biler, 0 i Gire-kolonnen</div></div>'
+    +'</div>'
+    +'<p style="margin:12px 0 0;font-size:12px;color:#667;line-height:1.45">Netto-kortet: snitt fee − prod per solgt − marked per solgt. Marked er kr/dag fra periodene under, ikke Gire. Tallene over følger feltene her og oppdateres mens du skriver.</p>'
+    +'</div>';
+}
 function innstRender(){
   var c=window.peasyConfig||{returKost:3000,prodKostUnder35k:2250,prodKostOver35k:2750,gireKost:750,marketingPerioder:[]};
   document.getElementById('innst-retur').value=c.returKost;
   document.getElementById('innst-prod-under').value=c.prodKostUnder35k||2250;
   document.getElementById('innst-prod-over').value=c.prodKostOver35k||2750;
   var gireEl=document.getElementById('innst-gire');
-  if(gireEl){
-    gireEl.value=c.gireKost!=null?c.gireKost:750;
-    gireEl.onchange=function(){window.peasyConfig.gireKost=parseInt(this.value,10)||0;document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);};
-  }
+  if(gireEl) gireEl.value=c.gireKost!=null?c.gireKost:750;
+  ['innst-retur','innst-prod-under','innst-prod-over','innst-gire'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ el.oninput=innstSyncKost; el.onchange=innstSyncKost; }
+  });
+  innstMotorEksempel();
   var tbody=document.querySelector('#innst-perioder-tbl tbody');
   tbody.innerHTML='';
   (c.marketingPerioder||[]).forEach(function(p,i){
@@ -5039,7 +5108,6 @@ function innstUpdate(el){
   if(k==='krPerDag')v=parseInt(v)||0;
   if(k==='til'&&!v)v=null;
   window.peasyConfig.marketingPerioder[i][k]=v;
-  document.getElementById('innst-retur').onchange=function(){window.peasyConfig.returKost=parseInt(this.value)||0;innstRender();};
   document.getElementById('innst-json').textContent=JSON.stringify(window.peasyConfig,null,2);
 }
 function innstAddPeriode(){
@@ -7038,7 +7106,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c371</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c372</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8932,6 +9000,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c372: Innstillinger: live eksempel prod/retur/Gire (2 solgt + 1 retur). -->
 <!-- c371: Gire-henting 750 kr snitt i innstillinger. Alle hentet (P) × sats ÷ solgt i perioden. -->
 <!-- c370: Nøkkeltall 30d øverst igjen (én stripe, ikke Nå over 30d). -->
 <!-- c369: Nøkkeltall Peasy-motor: fee − prod(solgt+retur) − marked, 30d t.o.m. i går. Retur telles én gang. -->
