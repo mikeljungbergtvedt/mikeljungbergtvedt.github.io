@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c391</title>
+<title>Peasy Pulse v16.05.c392</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c391';</script>
+<script>document.title='Peasy Pulse v16.05.c392';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -293,7 +293,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c391</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c392</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -370,7 +370,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c391</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c392</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -385,7 +385,7 @@ window.addEventListener('pageshow',function(e){
       <button class="mode-btn" data-mode="sosial" id="btn-sosial" onclick="setMode('sosial')">Sosial</button>
       <button class="mode-btn" data-mode="mark" id="btn-mark" onclick="setMode('mark')">Marked</button>
       <button class="mode-btn" data-mode="airegnskap" id="btn-airegnskap" onclick="setMode('airegnskap')" hidden>AI regnskap</button>
-      <button class="mode-btn" data-mode="utpris" id="btn-utpris" onclick="setMode('utpris')" hidden>Finn-utpris</button>
+      <button class="mode-btn" data-mode="utpris" id="btn-utpris" onclick="setMode('utpris')">Finn-utpris</button>
       <button class="mode-btn" data-mode="v2bm" id="btn-v2bm" onclick="setMode('v2bm')" hidden>V3 BM</button>
       <button class="mode-btn" data-mode="ab" id="btn-ab" onclick="setMode('ab')">A/B</button>
       <button class="mode-btn" data-mode="tiltak" id="btn-tiltak" onclick="setMode('tiltak')" hidden>Tiltak</button>
@@ -2293,13 +2293,14 @@ var PULSE_NAV=[
   {id:'fin',group:'Tall'},
   {id:'score',group:'Tall'},
   {id:'mark',group:'Tall'},
+  {id:'utpris',group:'Analyse'},
   {id:'ab',group:'Analyse'},
   {id:'sosial',group:'Annet'},
   {id:'kart',group:'Annet'},
   {id:'sporsmal',group:'Annet'},
   {id:'innst',group:'Annet'}
 ];
-var PULSE_NAV_HIDE={kjerne:'fin',airegnskap:'ops',utpris:'ops',v2bm:'score',tiltak:'uke'};
+var PULSE_NAV_HIDE={kjerne:'fin',airegnskap:'ops',v2bm:'score',tiltak:'uke'};
 if(PULSE_NAV_HIDE[currentMode]) currentMode=PULSE_NAV_HIDE[currentMode];
 function restorePulseNavBtns(){
   var toggle=document.getElementById('mode-toggle');
@@ -6224,7 +6225,8 @@ function renderScoreboard(){
   var sub=document.getElementById('score-sub');
   if(sub){
     var cohortLab=ui.cohort==='ab'?'A/B live (fra 18.8)':(ui.cohort==='pre'?'før A/B':'Peasy/Drive');
-    var perLab=ui.period==='all'?'siden 1.6.2026':('fra '+scoreFmtDay(from));
+    var perFrom=win&&win.from;
+    var perLab=ui.period==='all'?'siden 1.6.2026':('fra '+scoreFmtDay(perFrom)+(win&&win.to!=null?' t.o.m. '+scoreFmtDay(win.to):''));
     var abDays=Math.round((Date.now()-(typeof AB_START_MS==='number'?AB_START_MS:Date.parse('2026-08-18T11:00:00Z')))/86400000);
     var note='';
     if(ui.cohort==='ab' && abDays<30) note=' A/B er '+abDays+' dager — 30d/90d/alt er samme sett.';
@@ -7601,7 +7603,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c391</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c392</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8080,20 +8082,30 @@ setTimeout(tick,1500);setInterval(tick,5000);
     var hist = e.hist || [];
     if (hist.length) {
       var h0 = hist[0] || {};
-      bits.push(qaWorkBanner('TIDLIGERE PRISET', hist.length + ' tidligere internnr. Sist '+qaErpA(h0.internnr, String(h0.internnr||'—'), 'color:#E65100')+' · '+esc(displayStatus(h0.status||''))+' · Lav–Høy '+esc(String(h0.ar||'—'))+'.', 'warn'));
+      var hDato = String(h0.priset_dato||h0.reg_dato||h0.solgt||h0.ret||'').trim();
+      bits.push(qaWorkBanner('TIDLIGERE PRISET', hist.length + ' tidligere internnr. Sist '+qaErpA(h0.internnr, String(h0.internnr||'—'), 'color:#E65100')+(hDato?' · '+esc(hDato):'')+' · '+esc(displayStatus(h0.status||''))+' · Lav–Høy '+esc(String(h0.ar||'—'))+'.', 'warn'));
     }
     var orig = (v3m && v3m.origin) || (e.v3g && e.v3g.origin) || (easy && easy.origin) || null;
     var ol = e.finn_link
       || (window._finnLinks && (window._finnLinks[String(e.erpId)] || window._finnLinks[e.regnr]))
       || (v3m && v3m.easy && v3m.easy.finn_link)
+      || (easy && easy.finn_link)
       || (orig && (orig.link || orig.url || orig.classified_url)) || null;
-    var op = (orig && (orig.price != null ? orig.price : orig.ask)) || (v3m && v3m.easy && v3m.easy.finn_price) || null;
+    var op = (orig && (orig.price != null ? orig.price : orig.ask))
+      || (easy && easy.finn_price)
+      || (v3m && v3m.easy && v3m.easy.finn_price) || null;
+    var fu = Number((easy && (easy.finn_utpris != null ? easy.finn_utpris : easy.anker))
+      || (v3m && v3m.easy && (v3m.easy.finn_utpris != null ? v3m.easy.finn_utpris : v3m.easy.anker))
+      || 0);
     var ot = [orig && orig.title, orig && orig.status, orig && orig.sales_form, orig && orig.ask_source, ol].join(' ');
     var auction = !!(orig && (orig.auction === true || orig.is_auction === true)) || qaIsAuctionBlob(ot);
     if (auction && ol) {
       bits.push(qaWorkBanner('AUKSJON', 'Aktiv auksjonsannonse — ikke salgs-Finn. Lav/Høy settes likevel. <a href="'+esc(ol)+'" target="_blank" rel="noopener" style="color:#A8221C;font-weight:700;">Åpne</a>', 'bad'));
     } else if (ol) {
       bits.push(qaWorkBanner('ORIGIN PÅ FINN', 'Aktiv salgsannonse'+(op?' · '+Number(op).toLocaleString('nb-NO')+' kr':'')+'. Cap ×0,95 bare hvis ask er lavere enn vår utpris. <a href="'+esc(ol)+'" target="_blank" rel="noopener" style="color:#E65100;font-weight:700;">Åpne</a>', 'warn'));
+    }
+    if (Number(op) > 0 && fu > 0 && Number(op) >= fu * 1.35) {
+      bits.push(qaWorkBanner('FINN ASK vs UTPRIS', Number(op).toLocaleString('nb-NO')+' kr på Finn, vår utpris '+Math.round(fu).toLocaleString('nb-NO')+' kr. Comps kan være for lave.', 'bad'));
     }
     var vc = (easy && Array.isArray(easy.valgte_comps)) ? easy.valgte_comps : null;
     var nSel = vc ? vc.length : null;
@@ -8118,7 +8130,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (!hist || !hist.length) return '';
     return '<div style="margin-top:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border);border-radius:6px;font-size:12px;line-height:1.45;"><b>ERP-historikk (' + hist.length + ' tidligere):</b>' + hist.map(function(h){
       return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;font-size:11px;">'
-        + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span><b>' + qaErpA(h.internnr, String(h.internnr||'—'), 'color:#1565C0') + '</b> · ' + esc(String(h.reg_dato||'')) + '</span><span>' + esc(displayStatus(h.status||'')) + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span><b>' + qaErpA(h.internnr, String(h.internnr||'—'), 'color:#1565C0') + '</b> · ' + esc(String(h.priset_dato||h.reg_dato||'')) + '</span><span>' + esc(displayStatus(h.status||'')) + '</span></div>'
         + '<div style="margin-top:2px;">Lav – Høy ' + fmtAr(h.ar) + ' · Ret/Solgt ' + esc(String(h.ret||h.solgt||'—')) + '</div>'
         + '</div>';
     }).join('') + '</div>';
@@ -8579,6 +8591,16 @@ setTimeout(tick,1500);setInterval(tick,5000);
                 if (lo != null && hi != null) h = Object.assign({}, h, { ar: lo + '-' + hi });
               }
               return h;
+            }).sort(function(a,b){
+              function ms(h){
+                var s=String((h&&(h.priset_dato||h.reg_dato||h.solgt||h.ret))||'');
+                var d=Date.parse(s);
+                if(Number.isFinite(d)) return d;
+                var p=s.split(/[.\s]/);
+                if(p.length>=3){ var dt=new Date(+p[2], +p[1]-1, +p[0]); if(!isNaN(dt)) return dt.getTime(); }
+                return 0;
+              }
+              return ms(b)-ms(a);
             }),
           };
         }).filter(function(e){ return !qaIsSent(e.regnr, e.erpId); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
@@ -8723,18 +8745,26 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var _hRows = window._lastRows;
       if (_hRows && _hRows.length) {
         var _hH = _hRows[0] || [];
-        var _hI = function(k){return _hH.indexOf(k);};
+        var _hI = function(k){
+          var i=_hH.indexOf(k);
+          if(i>=0) return i;
+          var kl=String(k||'').toLowerCase();
+          for(var j=0;j<_hH.length;j++){ if(String(_hH[j]||'').toLowerCase().indexOf(kl)>=0) return j; }
+          return -1;
+        };
+        var _hCell=function(r,k,fb){ var i=_hI(k); if(i>=0&&r[i]!=null&&r[i]!=='') return r[i]; return fb!=null?r[fb]:''; };
         for (var _i=1; _i<_hRows.length; _i++) {
           var _r = _hRows[_i]; if (!_r) continue;
-          var _rg = String(_r[_hI('RegNr.')]||'').toUpperCase().replace(/\s+/g,'');
+          var _rg = String(_hCell(_r,'RegNr',1)||'').toUpperCase().replace(/\s+/g,'');
           if (!_rg) continue;
           (histByReg[_rg] = histByReg[_rg] || []).push({
-            internnr: String(_r[_hI('Internnr.')]||''),
-            reg_dato: _r[_hI('Registrert')]||'',
-            status: _r[_hI('Status')]||'',
-            ar: _r[_hI('Endelig AR verdi')] || _r[3] || '',
-            ret: _r[_hI('Returnert på')]||'',
-            solgt: _r[_hI('Solgt på')]||''
+            internnr: String(_hCell(_r,'Internnr',0)||''),
+            reg_dato: _hCell(_r,'Registrert',13)||'',
+            priset_dato: _hCell(_r,'Estimering',31)||'',
+            status: _hCell(_r,'Status',12)||'',
+            ar: _hCell(_r,'Endelig AR verdi',3) || _r[3] || '',
+            ret: _hCell(_r,'Returnert',21)||'',
+            solgt: _hCell(_r,'Solgt',18)||''
           });
         }
       }
@@ -9509,6 +9539,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c392: Scoreboard fra-bug. Finn-utpris tilbake. QA tidl.priset-dato + Finn ask vs utpris. -->
 <!-- c391: Uke 30d-stripe = samme funksjoner som nøkkeltall. Finansielt igjen per solgt. A/B merket som test. -->
 <!-- c390: Uke-ordbok, 4 penger, A/B 4 tall, Marked UTM bak detaljer. -->
 <!-- c389: Nøkkeltall: markedskost per lead + per kontrakt. -->
