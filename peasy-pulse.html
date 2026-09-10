@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c398</title>
+<title>Peasy Pulse v16.05.c399</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c398';</script>
+<script>document.title='Peasy Pulse v16.05.c399';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -293,7 +293,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c398</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c399</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -370,7 +370,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c398</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c399</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7607,7 +7607,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c398</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c399</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8215,6 +8215,33 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }).join('') + '</div>';
   }
 
+  function qaAuctionHit(e){
+    var rg = String((e && e.regnr) || '').toUpperCase().replace(/\s+/g,'');
+    var data = window._qaAuksjon || {};
+    if (data.bypass && data.bypass[rg]) return null;
+    if (data.blocks && data.blocks[rg]) return data.blocks[rg];
+    var hist = (e && e.hist) || [];
+    var cutoff = Date.now() - 90*24*60*60*1000;
+    var best = null;
+    for (var i = 0; i < hist.length; i++) {
+      var h = hist[i]; if (!h || !h.ret) continue;
+      var hb = Number(h.hbud) || 0;
+      if (hb <= 0) continue;
+      var d = 0;
+      var m = String(h.ret).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if (m) d = new Date(+m[3], +m[2]-1, +m[1]).getTime();
+      else d = Date.parse(h.ret) || 0;
+      if (d && d >= cutoff && (!best || d > best._d)) best = { dato: h.ret, hbud: hb, tag: 'returnert', ret: h.ret, internnr: h.internnr, _d: d };
+    }
+    return best;
+  }
+  function qaAuctionBanner(hit){
+    if (!hit) return '';
+    var dato = qaFmtDatoNb(hit.dato || hit.ret) || String(hit.dato || hit.ret || '');
+    var bud = Number(hit.hbud || hit.bud || 0);
+    var budTxt = bud > 0 ? Math.round(bud).toLocaleString('nb-NO') + ' kr' : 'ukjent';
+    return '<div style="margin-bottom:8px;padding:8px 10px;background:#FDECEA;border:1px solid #E57373;border-radius:6px;font-size:12px;color:#A8221C;line-height:1.45;"><b>PÅ AUKJSON — PRISES IKKE</b><div style="margin-top:3px;font-weight:400;">Bilen har vært på auksjon'+(dato?' '+esc(dato):'')+'. Høyeste bud '+esc(budTxt)+'. Avvist. Ny runde bare hvis avtalt med kunden.</div></div>';
+  }
   function qaKmBlock(e){
     var v3m = (e && e.v3) || {};
     var v2 = v3m.v2 || {};
@@ -8734,6 +8761,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         container.querySelectorAll('.qa-anker-btn').forEach(b => b.onclick = () => qaSetAnker(b));
         container.querySelectorAll('.qa-clear-btn').forEach(b => b.onclick = () => qaClearCache(b));
         container.querySelectorAll('.qa-samler-avvis').forEach(function(b){ b.onclick = function(){ if (!window.confirm('Avvis samlerbil-flagg for '+ (b.dataset.key||'') +'? Bilen går gjennom kverna (Easy/V3 som vanlig).')) return; qaSamlerAvvis(b.dataset.key); window.loadQA && window.loadQA(true); }; });
+        container.querySelectorAll('.qa-auksjon-ok').forEach(function(b){ b.onclick = function(){ qaAuksjonOk(b); }; });
         qaPainted = true;
         } catch (ePaint) {
           console.warn('[qa] paint failed:', ePaint);
@@ -8777,7 +8805,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
         qaJsonl(miniBase+'/loop2-measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/loop2-measurements.jsonl'),
         qaJsonAuth('/finn-links'),
         qaJsonAuth('/signaler'),
-        fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; })
+        fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; }),
+        qaJsonAuth('/qa/auksjon')
       ]);
       var measRecs = pack[0] || [];
       var v3gRecs = pack[1] || [];
@@ -8786,6 +8815,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var flJ = pack[4];
       var sigJ = pack[5];
       var _aiJ = pack[6];
+      window._qaAuksjon = (pack[7] && pack[7].ok) ? pack[7] : {blocks:{}, bypass:{}};
       if (flJ && flJ.finn) window._finnLinks = flJ.finn;
       if (sigJ && sigJ.signaler) {
         var raw = sigJ.signaler;
@@ -8860,7 +8890,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
             status: _hCell(_r,'Status',12)||'',
             ar: _hCell(_r,'Endelig AR verdi',3) || _r[3] || '',
             ret: _hCell(_r,'Returnert',21)||'',
-            solgt: _hCell(_r,'Solgt',18)||''
+            solgt: _hCell(_r,'Solgt',18)||'',
+            hbud: Number(_hCell(_r,'Høyeste bud',4)||_r[4]||0)||0
           });
         }
       }
@@ -9126,6 +9157,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const noUtpris = !scope && (!hasN(writingFu) || !hasN(writingD));
     const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
     const kmBlock = qaKmBlock(e);
+    const auctionHit = qaAuctionHit(e);
     const krV3 = (dV3==null||easyAnker==null)?null:Math.abs(Number(v3.anker)-Number(easyAnker));
     const krVg = (dVg==null||easyAnker==null)?null:Math.abs(Number(vg.anker)-Number(easyAnker));
     const maxKr = krVg||0;
@@ -9143,6 +9175,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       label='QA'; color='#A8221C'; icon='🔴';
     }
     if (kmBlock && !scope) { label='QA'; color='#A8221C'; icon='🔴'; }
+    if (auctionHit && !scope) { label='IKKE PRISET'; color='#A8221C'; icon='⛔'; }
     const sellerCmt = String(
       e.kundeComment
       || (e.v3g && e.v3g.kundeComment)
@@ -9241,6 +9274,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else if (scope) {
       const fant = (e.v3g && e.v3g.biltype && e.v3g.biltype.fant) || (e.v3 && e.v3.biltype && e.v3.biltype.fant) || 'ikke personbil/varebil';
       actionHtml = '<div style="flex:1;min-width:100px;padding:10px 12px;background:#EFEBE9;color:#6D4C41;border:1px solid #D7CCC8;border-radius:6px;font-weight:600;font-size:13px;text-align:center;">⛔ UTENFOR SCOPE — '+esc(fant)+'</div>';
+    } else if (auctionHit) {
+      actionHtml = '<button type="button" class="qa-auksjon-ok" data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId||''))+'" title="Kunden har avtalt ny runde — Peasy priser likevel" style="flex:1;min-width:100px;padding:10px 12px;background:#fff;color:#A8221C;border:1px solid #E57373;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Ny runde avtalt</button>';
     } else if (kmBlock) {
       actionHtml = '<div style="flex:1;min-width:100px;padding:10px 12px;background:#FDECEA;color:#A8221C;border:1px solid #E57373;border-radius:6px;font-weight:600;font-size:13px;text-align:center;">⛔ Innhent km-bekreftelse</div>';
     } else if (noUtpris) {
@@ -9288,6 +9323,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         return '';
       })()}
       ${samlerHold ? '<div style="margin-bottom:8px;padding:8px 10px;background:#EFEBE9;border:1px solid #A1887F;border-radius:6px;font-size:12px;color:#4E342E;"><b>SAMLERBIL</b> — '+esc(String(qaSamlerbilYear(e)||modelYear))+' (25+ år). Easy V7 er bruktbil-kalkyle. Avvis hvis det er en vanlig bruktbil, så går den gjennom kverna. Behold og sett Finn-pris hvis det er samler/entusiast.</div>' : ''}
+      ${qaAuctionBanner(auctionHit)}
       ${qaWorkBanners(e, v3m, vg, easy)}
       <div style="margin-bottom:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border);border-radius:6px;font-size:12px;line-height:1.45;">
         <b>${esc(sellerLabel)}</b>
@@ -9331,7 +9367,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${qaErpUrl(e.erpId) ? '<a href="'+esc(qaErpUrl(e.erpId))+'" target="_blank" rel="noopener" style="padding:10px 12px;background:#fff;color:#1565C0;border:1px solid #90CAF9;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">Åpne i ERP</a>' : ''}
         <button data-key="${key}" class="qa-detail-btn" style="padding:10px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">ℹ️</button>
       </div>
-      ${(!sentTime && !scope && !kmBlock) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
+      ${(!sentTime && !scope && !kmBlock && !auctionHit) ? `<div style="display:flex;gap:6px;margin-top:8px;width:100%;align-items:center;">
         <input class="qa-anker-input" type="number" step="1000" min="5000" placeholder="Nytt Finn-pris (${ankerWho})" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId))}" data-source="${esc(srcLive)}" data-km="${e.km||0}" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
         <button type="button" class="qa-anker-btn" data-key="${key}" style="padding:8px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;">Sett Finn-pris</button>
       </div>` : ''}
@@ -9344,6 +9380,34 @@ setTimeout(tick,1500);setInterval(tick,5000);
         ${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}
       </div>
     </div>`;
+  }
+
+  async function qaAuksjonOk(btn){
+    const regnr = btn.dataset.regnr, erpId = btn.dataset.erpid;
+    if (!regnr) return;
+    if (!window.confirm('Ny runde avtalt med kunden for '+regnr+'? Peasy priser bilen likevel.')) return;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Slipper …';
+    try{
+      const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/auksjon-ok'), {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        body: JSON.stringify({regnr, internnr: erpId})
+      });
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP '+r.status));
+      try {
+        window._qaAuksjon = window._qaAuksjon || {blocks:{}, bypass:{}};
+        window._qaAuksjon.bypass = window._qaAuksjon.bypass || {};
+        window._qaAuksjon.bypass[String(regnr).toUpperCase()] = true;
+        if (window._qaAuksjon.blocks) delete window._qaAuksjon.blocks[String(regnr).toUpperCase()];
+      } catch(eB){}
+      btn.textContent = 'Ny runde';
+      window._qaReady = false;
+      setTimeout(function(){ window.loadQA(true); }, 800);
+    }catch(e){
+      btn.textContent = 'Feil'; btn.title = e.message; btn.disabled = false;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3500);
+    }
   }
 
   async function qaClearCache(btn){
@@ -9644,6 +9708,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c399: QA auksjon+avvist: vises, prises ikke, knapp Ny runde avtalt. -->
 <!-- c398: Søster-thumb via Mini og-image (Finn/car.info). -->
 <!-- c397: Finn-utpris i QA Send. Klikkbar søster-thumb på kort. -->
 <!-- c396: QA IDENT+COMPS store. Twin-port origin-comps (Mini). -->
