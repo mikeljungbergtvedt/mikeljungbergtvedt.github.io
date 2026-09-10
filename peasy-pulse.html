@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c407</title>
+<title>Peasy Pulse v16.05.c408</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c407';</script>
+<script>document.title='Peasy Pulse v16.05.c408';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -293,7 +293,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c407</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c408</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -370,7 +370,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c407</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c408</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -5644,7 +5644,8 @@ function pickV3gBand(rec){
   var score=inner.score!=null?inner.score:(rec.score!=null?rec.score:(inner.confidence!=null?inner.confidence:null));
   return {
     dLav:num(inner.dLav,rec.dLav,pr.dLav),
-    anker:num(inner.anker,rec.anker,pr.anchorPrice),
+    anker:num(inner.finn_utpris,inner.anker,rec.finn_utpris,rec.anker,pr.anchorPrice),
+    finn_utpris:num(inner.finn_utpris,rec.finn_utpris,inner.anker,rec.anker,pr.anchorPrice),
     dHoy:num(inner.dHoy,rec.dHoy,pr.dHoy),
     score:score,
     begrunnelse:inner.begrunnelse||rec.begrunnelse||null,
@@ -5674,6 +5675,9 @@ async function fetchV3gMaps(){
       if(!rec)return;
       var rg=String(rec.regnr||'').toUpperCase();
       if(!rg)return;
+      var inner=rec.v3g||{};
+      var priced=Number(inner.dLav)>0||Number(inner.anker)>0||Number(inner.finn_utpris)>0||Number(rec.finn_utpris)>0||Number(rec.anker)>0;
+      if(!priced)return;
       var k=rg+'|'+(rec.erpId!=null?String(rec.erpId):'');
       if(!byKey[k]||(rec.timestamp||'')>(byKey[k].timestamp||''))byKey[k]=rec;
       if(!byReg[rg]||(rec.timestamp||'')>(byReg[rg].timestamp||''))byReg[rg]=rec;
@@ -5687,7 +5691,6 @@ function findV3gFor(regnr,erpId,maps){
   if(erpId!=null&&erpId!==''){
     var hit=maps.byKey[rg+'|'+String(erpId)];
     if(hit) return hit;
-    return null;
   }
   return maps.byReg[rg]||null;
 }
@@ -6556,17 +6559,30 @@ function abParseBud(row){
   var n=parseInt(String(row[4]||'').replace(/[^\d]/g,''),10);
   return (Number.isFinite(n)&&n>0)?n:null;
 }
+function abOriginFu(r){
+  var easy=r&&r.easy||{};
+  var vg=pickV3gBand(r&&r._v3g);
+  function chefs(o){
+    if(!o||typeof o!=='object'||Array.isArray(o)) return null;
+    if(o.merge||o.claude||o.grok) return o;
+    return null;
+  }
+  var rec=r&&r._v3g;
+  var ch=chefs(easy.chefs)||chefs(vg.chefs)||chefs(r&&r.chefs)||chefs(rec&&rec.chefs)||chefs(rec&&rec.v3g&&rec.v3g.chefs);
+  var m=ch&&ch.merge?Number(ch.merge.finn_utpris):NaN;
+  if(Number.isFinite(m)&&m>0) return m;
+  function num(){for(var i=0;i<arguments.length;i++){var n=Number(arguments[i]);if(Number.isFinite(n)&&n>0)return n;}return null;}
+  return num(easy.finn_utpris,vg.finn_utpris,vg.anker,easy.anker);
+}
 function abEasyAnker(r){
-  var n=r&&r.easy?Number(r.easy.anker):NaN;
-  return Number.isFinite(n)&&n>0?n:null;
+  return abOriginFu(r);
 }
 function abEasyD(r){
   var n=r&&r.easy?Number(r.easy.dLav):NaN;
   return Number.isFinite(n)&&n!==0?n:null;
 }
 function abV3gAnker(r){
-  var n=pickV3gBand(r&&r._v3g).anker;
-  return Number.isFinite(n)&&n>0?n:null;
+  return abOriginFu(r);
 }
 function abV3gD(r){
   var n=pickV3gBand(r&&r._v3g).dLav;
@@ -7640,7 +7656,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c407</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c408</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8678,6 +8694,28 @@ setTimeout(tick,1500);setInterval(tick,5000);
       || qaChefObj(easy && easy.origin_comps)
       || null;
   }
+  function qaOriginFu(e, easy, vg){
+    var ch = qaPickChefs(e, easy, vg);
+    var m = ch && ch.merge ? Number(ch.merge.finn_utpris) : NaN;
+    if (Number.isFinite(m) && m > 0) return m;
+    function n(){
+      for (var i = 0; i < arguments.length; i++) {
+        var x = Number(arguments[i]);
+        if (Number.isFinite(x) && x > 0) return x;
+      }
+      return null;
+    }
+    var inner = e && e.v3g && e.v3g.v3g;
+    return n(
+      easy && easy.finn_utpris,
+      vg && vg.finn_utpris,
+      vg && vg.anker,
+      e && e.v3g && e.v3g.finn_utpris,
+      inner && inner.finn_utpris,
+      inner && inner.anker,
+      easy && easy.anker
+    );
+  }
   function qaChefPillsHtml(e, easy, vg){
     var ch = qaPickChefs(e, easy, vg);
     if (!ch) return '';
@@ -8858,10 +8896,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const v3ByIntern = {};
       const easyByIntern = {};
       const v3gByIntern = {};
+      const v3gByReg = {};
       const bot4ByIntern = {};
       const loop2ByIntern = {};
       var histByReg = {};
-      function qaInternKey(v){ return (v==null||v==='') ? '' : String(v); }
+      function qaInternKey(v){
+        if (v==null || v==='') return '';
+        var s = String(v).trim();
+        var n = Number(s);
+        if (Number.isFinite(n) && n > 0 && String(Math.trunc(n)) === s) return String(Math.trunc(n));
+        return s;
+      }
       function qaPutLatest(map, key, rec, ts){
         if (!key || !rec) return;
         var prev = map[key];
@@ -8875,7 +8920,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           const rg = String(b.registration_number || '').toUpperCase();
           const internKey = qaInternKey(b.id);
           const v3m = internKey ? (v3ByIntern[internKey] || null) : null;
-          const v3gM = internKey ? (v3gByIntern[internKey] || null) : null;
+          const v3gM = (internKey && v3gByIntern[internKey]) || v3gByReg[rg] || null;
           const bot4M = internKey ? (bot4ByIntern[internKey] || null) : null;
           const loop2M = internKey ? (loop2ByIntern[internKey] || {}) : {};
           const km = (b.mileage != null ? Number(b.mileage) : null) || (v3m && v3m.km ? Number(v3m.km) : null);
@@ -9076,11 +9121,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
           qaPutLatest(easyByIntern, intern, easyPut, r.timestamp);
         }
       }
+      function qaV3gPriced(r){
+        if (!r) return false;
+        var inner = r.v3g || {};
+        function pos(v){ var n=Number(v); return Number.isFinite(n) && n > 0; }
+        return pos(inner.dLav) || pos(inner.anker) || pos(inner.finn_utpris) || pos(r.finn_utpris) || pos(r.anker);
+      }
       for (const r of v3gRecs) {
         const intern = qaInternKey(r.erpId);
         if (!intern) continue;
+        if (!qaV3gPriced(r)) continue;
         qaPutLatest(v3gByIntern, intern, r);
-        if (isRealEasy(r.easy) && !easyByIntern[intern]) {
+        var rgV = String(r.regnr || '').toUpperCase();
+        if (rgV) qaPutLatest(v3gByReg, rgV, r);
+        if (isRealEasy(r.easy) && (r.easy.finn_utpris || r.easy.anker_kilde || r.easy.chefs) && !easyByIntern[intern]) {
           var easyPutG = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPutG.chefs) && qaChefObj(r.chefs)) easyPutG.chefs = r.chefs;
           qaPutLatest(easyByIntern, intern, easyPutG, r.timestamp);
@@ -9276,8 +9330,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
   function renderCardListe3(e){
     const easy = e.easy || {}, v3m = e.v3 || {}, v3 = (v3m.v2) || {}, id = (v3m.identifikasjon) || {};
-    const vg = (typeof window.pickV3gBand==='function') ? window.pickV3gBand(e.v3g) : {dLav:e.v3g?.dLav ?? e.v3g?.v3g?.dLav ?? null, anker:e.v3g?.anker ?? e.v3g?.v3g?.anker ?? null, dHoy:e.v3g?.dHoy ?? e.v3g?.v3g?.dHoy ?? null, score:e.v3g ? (e.v3g.score ?? e.v3g.v3g?.score ?? e.v3g.confidence ?? null) : null, begrunnelse:e.v3g?.v3g?.begrunnelse || e.v3g?.begrunnelse || null};
-    const easyAnker = (v3m && v3m.easy && v3m.easy.anker != null) ? v3m.easy.anker : easy.anker;
+    const vg = (typeof window.pickV3gBand==='function') ? window.pickV3gBand(e.v3g) : {dLav:e.v3g?.dLav ?? e.v3g?.v3g?.dLav ?? null, anker:e.v3g?.finn_utpris ?? e.v3g?.anker ?? e.v3g?.v3g?.finn_utpris ?? e.v3g?.v3g?.anker ?? null, dHoy:e.v3g?.dHoy ?? e.v3g?.v3g?.dHoy ?? null, score:e.v3g ? (e.v3g.score ?? e.v3g.v3g?.score ?? e.v3g.confidence ?? null) : null, begrunnelse:e.v3g?.v3g?.begrunnelse || e.v3g?.begrunnelse || null};
+    const originFu = qaOriginFu(e, easy, vg);
+    const easyAnker = originFu;
     const dV3 = qaPct(v3.anker, easyAnker);
     const dVg = qaPct(vg.anker, easyAnker);
     const maxAbs = dVg==null?0:Math.abs(dVg);
@@ -9318,9 +9373,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const writingEasy = (v3m && v3m.easy) || easy;
     const chefsLive = qaPickChefs(e, easy, vg);
     const chefFu = chefsLive && chefsLive.merge ? qaNum(chefsLive.merge.finn_utpris) : null;
-    const writingFu = (armGate==='B'||armGate==='O')
+    const writingFu = originFu != null ? originFu : ((armGate==='B'||armGate==='O')
       ? (vg.finn_utpris!=null?vg.finn_utpris:vg.anker)
-      : (writingEasy.finn_utpris!=null?writingEasy.finn_utpris:writingEasy.anker);
+      : (writingEasy.finn_utpris!=null?writingEasy.finn_utpris:writingEasy.anker));
     const writingD = (armGate==='B'||armGate==='O') ? vg.dLav : writingEasy.dLav;
     const noUtpris = !scope && missing.length===0 && ((!hasN(writingFu) && !hasN(chefFu)) || !hasN(writingD));
     const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
@@ -9460,7 +9515,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const sendTxt = kjorbar==='nei' ? 'QA — IKKE KJØRBAR' : ('📤 SEND '+sendWho);
       actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">'+sendTxt+'</button>';
     }
-    const easyFinn = (qaFinnNum(easyAnker) != null) ? easyAnker : ((qaFinnNum(easy.anker) != null) ? easy.anker : easy.finn_price);
+    const easyFinn = qaFinnNum(originFu) != null ? originFu : ((qaFinnNum(easy.anker) != null) ? easy.anker : easy.finn_price);
     const v3Finn = (v3.confidence===0 || v3.anker===0) ? null : v3.anker;
     const bot4Finn = (function(){
       var b = e.bot4;
@@ -9472,7 +9527,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var l2 = e.loop2 || {};
       return {claude: qaLoop2Finn(l2.claude), grok: qaLoop2Finn(l2.grok)};
     })();
-    const finnTerrain = qaFinnTerrain(easyFinn, v3Finn, vg.anker, bot4Finn, loop2Finn);
+    const finnTerrain = qaFinnTerrain(easyFinn, v3Finn, originFu, bot4Finn, loop2Finn);
     return `<div class="qa-card ${scope||!allPriced||noUtpris||samlerHold?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         ${qaSisterHtml(e)}
@@ -9512,20 +9567,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="color:var(--muted);font-size:10px;text-align:right;" title="Solgte tvillinger · usolgte i biblioteket. Under 3 solgte = tynt. 0 solgte = bare ask.">Solgt·u</div>
         <div style="color:var(--muted);">Easy</div>
         <div style="text-align:right;font-weight:700;">${fmt(easy.dLav)}</div>
-        <div style="text-align:right;font-weight:600;">${fmt(easyAnker)}</div>
+        <div style="text-align:right;font-weight:600;">${fmt(originFu)}</div>
         <div style="text-align:right;">${fmt(easy.dHoy)}</div>
         <div style="text-align:right;font-weight:800;">${qaIdent('easy')}</div>
         <div style="text-align:right;font-weight:800;">${qaComps('easy')}</div>
         <div style="color:var(--muted);">V3G</div>
         <div style="text-align:right;">${fmt(vg.dLav)}</div>
-        <div style="text-align:right;font-weight:600;">${fmt(vg.anker)}${vg.override?' <span style="font-size:9px;font-weight:800;color:#1B5E20;">QA</span>':''}</div>
+        <div style="text-align:right;font-weight:600;">${fmt(originFu)}${vg.override?' <span style="font-size:9px;font-weight:800;color:#1B5E20;">QA</span>':''}</div>
         <div style="text-align:right;">${fmt(vg.dHoy)}</div>
         <div style="text-align:right;font-weight:800;">${qaIdent('v3g')}</div>
         <div style="text-align:right;font-weight:800;">${qaComps('v3g')}</div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
         <div>${(function(){if(auctionHit)return '<b style="color:#A8221C;">Har vært på auksjon — estimatet sendes ikke</b> før ny runde er avtalt.';var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O')return '<b style="color:#E65100;">V3G Ordna</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter margin og fee).';if(a==='B')return '<b style="color:#1B5E20;">B V3G</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.90 etter margin og fee).';return '<b style="color:#6A1B9A;">A Easy</b> Lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
-        <div>Finn-pris Easy ${fmt(easyAnker)} · V3G ${fmt(vg.anker)}${dVg!=null?' <b style="color:'+(Math.abs(dVg)>15?'#A8221C':'var(--text)')+'">('+(dVg>=0?'+':'')+dVg+'% mot Easy)</b>':''}</div>
+        <div>Finn-pris ${fmt(originFu)}</div>
         ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+' (det som sendes). Easy V7 er uten Ordna-kutt.</div>':''}
         ${((vg.kalkyle==='retur'||vg.retur_mult)&&vg.original_dLav!=null)?'<div style="color:#1B5E20;">Retur-kalkyle ×'+(vg.retur_mult||0.90)+': standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${(vg.origin_cap&&vg.origin_cap.originPrice)?'<div style="color:#E65100;">Origin-cap ×0.95: '+fmt(vg.origin_cap.from)+' → '+fmt(vg.origin_cap.to)+' (annonse '+fmt(vg.origin_cap.originPrice)+')</div>':''}
@@ -9879,6 +9934,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c408: 1 felles Finn-utpris = origin merge. Aldri V3-anker. V3G-treff på plate om intern misser. -->
 <!-- c407: QA Comps = solgte·usolgte i biblioteket. Ident = car.info. Parser-score vekk. -->
 <!-- c406: QA søster-thumb: bare Finn-bilbilde (finncdn/dynamic). Aldri logo, aldri og-image. -->
 <!-- c405: QA Send: V3G-margin oppskrift. Finn-graf Easy+V3G+diff. Kokker enige står. Tom historikk skjules. -->
