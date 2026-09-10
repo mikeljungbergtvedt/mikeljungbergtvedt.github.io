@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c405</title>
+<title>Peasy Pulse v16.05.c406</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c405';</script>
+<script>document.title='Peasy Pulse v16.05.c406';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -293,7 +293,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c405</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c406</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -370,7 +370,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c405</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c406</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7640,7 +7640,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c405</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c406</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8178,11 +8178,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (vg0 && (nSel == null || nSel < 3)) bits.push(qaWorkBanner('V3G 0 COMPS', 'car.info-søstre tomme eller bare origin. Ikke bruk V3G-anker uten å sjekke.', 'warn'));
     return bits.join('');
   }
+  function qaCarPhotoUrl(u){
+    var s = String(u || '').trim();
+    if (!s) return '';
+    if (/^https:\/\/images\.finncdn\.no\/dynamic\//i.test(s)) return s;
+    return '';
+  }
   function qaSisterHtml(e){
     var origin = String((e && e.regnr) || '').toUpperCase().replace(/[\s-]/g,'');
+    var g = (e && e.v3g) || {};
+    var sis = g.sister || {};
     var bags = [];
+    if (Array.isArray(sis.listings)) bags.push(sis.listings);
+    if (Array.isArray(sis.comps)) bags.push(sis.comps);
     if (e && e.easy && Array.isArray(e.easy.valgte_comps)) bags.push(e.easy.valgte_comps);
-    var g = e && e.v3g || {};
     if (Array.isArray(g.valgte_comps)) bags.push(g.valgte_comps);
     if (g.v3g && Array.isArray(g.v3g.valgte_comps)) bags.push(g.v3g.valgte_comps);
     var best = null;
@@ -8190,24 +8199,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var arr = bags[i];
       for (var j = 0; j < arr.length; j++) {
         var c = arr[j]; if (!c) continue;
-        var p = String(c.licence_plate || c.skilt || '').toUpperCase().replace(/[\s-]/g,'');
+        var p = String(c.licence_plate || c.skilt || c.plate || '').toUpperCase().replace(/[\s-]/g,'');
         if (p && origin && p === origin) continue;
-        var url = c.finn_url || c.url || c.link || '';
-        var img = c.image || c.img || c.image_url || c.classified_image || '';
-        if (!url && p) url = 'https://www.car.info/no-no/license-plate/N/' + encodeURIComponent(p);
-        if (!url && !img) continue;
-        if (!img && url && /finn\.no|car\.info/.test(String(url))) {
-          var base = String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/, '');
-          if (base) img = base + '/og-image?url=' + encodeURIComponent(url) + '&auth=' + encodeURIComponent(window.PA_TOKEN_ERP || '');
-        }
-        var sc = (img ? 2 : 0) + (/solgt/i.test(String(c.status || '')) ? 1 : 0);
+        var img = qaCarPhotoUrl(c.image || c.img || c.image_url || c.classified_image || '');
+        if (!img) continue;
+        var url = c.finn_url || c.url || c.link || img;
+        var st = String(c.status || '');
+        var sc = /solgt/i.test(st) ? 2 : 1;
         if (!best || sc > best.sc) best = { url: url, img: img, plate: p, sc: sc };
       }
     }
-    if (!best || !best.url) return '';
+    if (!best || !best.img) return '';
     var lab = best.plate ? best.plate : 'Søster';
-    return '<a class="qa-sister" href="'+esc(best.url)+'" target="_blank" rel="noopener" title="Søsterbil '+esc(lab)+' — car.info / Finn">'
-      + (best.img ? '<img src="'+esc(best.img)+'" alt="'+esc(lab)+'" onerror="this.style.display=\'none\'">' : '')
+    return '<a class="qa-sister" href="'+esc(best.url)+'" target="_blank" rel="noopener" title="Søsterbil '+esc(lab)+'">'
+      + '<img src="'+esc(best.img)+'" alt="'+esc(lab)+'" onerror="var a=this.closest&&this.closest(\'.qa-sister\');if(a)a.remove();else this.style.display=\'none\';">'
       + '<span>Søster</span></a>';
   }
   function qaTwinScoreHtml(e, easy){
@@ -9855,6 +9860,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c406: QA søster-thumb: bare Finn-bilbilde (finncdn/dynamic). Aldri logo, aldri og-image. -->
 <!-- c405: QA Send: V3G-margin oppskrift. Finn-graf Easy+V3G+diff. Kokker enige står. Tom historikk skjules. -->
 <!-- c404: QA Send: Venter før «ingen utpris». Kokk-piller tåler Jr-liste. -->
 <!-- c403: Sosial Foreslå utkast: svar på kommentaren eller pass. Ingen maler. -->
