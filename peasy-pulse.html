@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c412</title>
+<title>Peasy Pulse v16.05.c413</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c412';</script>
+<script>document.title='Peasy Pulse v16.05.c413';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -293,7 +293,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c412</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c413</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -370,7 +370,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c412</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c413</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7671,7 +7671,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c412</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c413</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8443,7 +8443,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
   function qaCvStr(v){
     if (v == null || v === false) return '';
     var s = String(v).trim();
-    return (s && s !== 'null' && s !== 'undefined' && s !== '—') ? s : '';
+    if (!s || s === 'null' || s === 'undefined' || s === '—' || s === '?') return '';
+    if (/^ukjent$/i.test(s)) return '';
+    return s;
   }
   function qaCvFirst(){
     for (var i = 0; i < arguments.length; i++) {
@@ -9505,8 +9507,16 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const ankerWho = armLive==='O' ? 'V3G Ordna' : (armLive==='B' ? 'V3G' : 'Easy');
     const km = e.km ? Math.round(e.km/1000)+'k' : '?';
     const bpConfLine = [bp!=null?'BP '+bp:'', conf!=null?'Conf '+conf:''].filter(Boolean).join(' · ');
-    const variant = id.variant || (e.manufacturer ? (e.manufacturer.charAt(0) + e.manufacturer.slice(1).toLowerCase()) : '?');
-    const modelYear = id.model_year || '?';
+    const cvHead = (typeof qaPickOriginCv==='function') ? (qaPickOriginCv(e)||{}) : {};
+    const variant = qaCvStr(id.variant)
+      || [cvHead.merke, cvHead.modell].filter(Boolean).join(' ')
+      || qaCvStr(e.manufacturer)
+      || [e.v3g && e.v3g.make, e.v3g && e.v3g.model].filter(Boolean).join(' ')
+      || '?';
+    const modelYear = (Number(id.model_year)>1900 ? id.model_year : null)
+      || cvHead.aar
+      || (e.v3g && Number(e.v3g.modelYear)>1900 ? e.v3g.modelYear : null)
+      || '?';
     // c193: timestamps
     function fmtTime(dt){ if(!dt) return null; try{ const d = new Date(dt); if(isNaN(d)) return null; const p=n=>(n<10?'0':'')+n; const sameDay = d.toDateString()===new Date().toDateString(); return sameDay ? p(d.getHours())+':'+p(d.getMinutes()) : p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){return null;} }
     const komInn = fmtTime(e.created_at);
@@ -9986,6 +9996,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c410: Skjul tom selgerkommentar. Merge = snitt av kokker, mekanisk stemmer ikke. -->
 <!-- c409: QA-graf: Claude og Grok + avstand %. Merge på samme linje. Ikke to merge-prikker. -->
 <!-- c408: 1 felles Finn-utpris = origin merge. Aldri V3-anker. V3G-treff på plate om intern misser. -->
+<!-- c413: QA-korttittel: ikke vis V3 identifikasjon «Ukjent» / manglende år. Bruk origin-CV / V3G. -->
 <!-- c412: Kjernen tilbake. 30d = nøkkeltall. Tabell fra 1.1.2026. Igjen, ikke netto. -->
 <!-- c407: QA Comps = solgte·usolgte i biblioteket. Ident = car.info. Parser-score vekk. -->
 <!-- c406: QA søster-thumb: bare Finn-bilbilde (finncdn/dynamic). Aldri logo, aldri og-image. -->
