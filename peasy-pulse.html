@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c416</title>
+<title>Peasy Pulse v16.05.c417</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c416';</script>
+<script>document.title='Peasy Pulse v16.05.c417';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -294,7 +294,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c416</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c417</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -371,7 +371,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c416</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c417</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -3577,7 +3577,7 @@ function render(data,rows){
     +'<div class="plot-card" style="margin-bottom:24px">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
     +'<div><div class="plot-title" style="margin:0">Dekningsbidrag før opex</div>'
-    +'<div class="plot-explain" style="margin-top:4px">Avgift på solgte minus vask/foto, henting og retur. Marked og lønn er ikke med. Peasy.</div></div>'
+    +'<div class="plot-explain" style="margin-top:4px">Avgjort auksjon: inntekt og kost bookes når kunden tar stilling til høyeste bud (solgt eller retur). Vask/foto på solgte, returkost på retur. Ingen hent-kost. 0 solgt og 0 retur = 0 kr. Marked og lønn er ikke med. Peasy.</div></div>'
     +'<div id="fin-period" style="display:flex;background:#F0F4F2;border-radius:99px;padding:3px;gap:2px">'
     +'<button type="button" id="fin-p-ytd" onclick="setFinPeriod(\'ytd\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">YTD</button>'
     +'<button type="button" id="fin-p-30d" onclick="setFinPeriod(\'30d\')" style="border:0;border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer">30d</button>'
@@ -3709,8 +3709,6 @@ function renderFinMoney(){
   var cfg=window.peasyConfig||{};
   var rk=Number(cfg.returKost);
   if(!Number.isFinite(rk)) rk=3000;
-  var gk=Number(cfg.gireKost);
-  if(!Number.isFinite(gk)) gk=750;
   ['ytd','30d','90d','all'].forEach(function(k){
     var b=document.getElementById('fin-p-'+k);
     if(!b) return;
@@ -3728,13 +3726,12 @@ function renderFinMoney(){
   }
   if(!months.length) months=[finMonthKey(range.to)];
   var tot=pulseMotorRange(rows, range.from, range.to);
-  var nSold=tot.sold||0, nRet=tot.retur||0, nHent=tot.hent||0;
-  var sumI=tot.sumInntekt||0, sumR=tot.sumRet||0, sumP=tot.sumProdSold||0, sumG=tot.sumGire||0;
-  var db=(tot.db!=null)?tot.db:(sumI-sumR-sumP-sumG);
+  var nSold=tot.sold||0, nRet=tot.retur||0;
+  var sumI=tot.sumInntekt||0, sumR=tot.sumRet||0, sumP=tot.sumProdSold||0;
+  var db=(tot.db!=null)?tot.db:(sumI-sumR-sumP);
   var inntekt=months.map(function(){return 0;});
   var retur=months.map(function(){return 0;});
   var prod=months.map(function(){return 0;});
-  var gire=months.map(function(){return 0;});
   months.forEach(function(key,i){
     var p=key.split('-');
     var y=+p[0], m=+p[1];
@@ -3749,7 +3746,6 @@ function renderFinMoney(){
     inntekt[i]=mot.sumInntekt||0;
     retur[i]=mot.sumRet||0;
     prod[i]=mot.sumProdSold||0;
-    gire[i]=mot.sumGire||0;
   });
   function kpi(label, val, sub, color){
     return '<div style="background:#F8F8F5;border-radius:10px;padding:12px 14px">'
@@ -3759,10 +3755,10 @@ function renderFinMoney(){
   }
   var avsluttet=nSold+nRet;
   var retPct=avsluttet>0?Math.round(nRet/avsluttet*100):null;
-  box.innerHTML=kpi('Inntekt solgt', sumI, nSold+' biler · kolonne U','#0F6E66')
+  box.innerHTML=kpi('Inntekt solgt', sumI, nSold+' biler · kolonne U · avgjort auksjon','#0F6E66')
     +kpi('Kost retur', sumR, nRet+' biler'+(retPct!=null?' · '+retPct+' %':'')+' · '+rk.toLocaleString('nb-NO')+' kr/stk','#A8221C')
-    +kpi('Vask/foto + hent', sumP+sumG, Math.round(sumP).toLocaleString('nb-NO')+' kr vask/foto · '+nHent+' hent × '+gk.toLocaleString('nb-NO'),'#E65100')
-    +kpi('Dekningsbidrag', db, 'før marked og lønn · Peasy', db>=0?'#004225':'#A8221C')
+    +kpi('Vask/foto', sumP, nSold+' solgt · prod på avgjort auksjon','#E65100')
+    +kpi('Dekningsbidrag', db, 'inntekt − vask/foto − retur · Peasy', db>=0?'#004225':'#A8221C')
     +kpi('Igjen per solgt', tot.netto||0, 'inntekt − prod − marked · Peasy'+(period==='30d'?' · samme tall som nøkkeltall':''), (tot.netto||0)>=0?'#004225':'#A8221C');
   if(typeof Chart==='undefined') return;
   var ex=Chart.getChart(canvas);
@@ -3774,8 +3770,7 @@ function renderFinMoney(){
       datasets:[
         {label:'Inntekt solgt', data:inntekt, backgroundColor:'rgba(15,110,102,0.75)', borderRadius:4, stack:'inn'},
         {label:'Kost retur', data:retur, backgroundColor:'rgba(168,34,28,0.7)', borderRadius:4, stack:'kost'},
-        {label:'Vask/foto', data:prod, backgroundColor:'rgba(230,81,0,0.55)', borderRadius:4, stack:'kost'},
-        {label:'Henting', data:gire, backgroundColor:'rgba(21,101,192,0.55)', borderRadius:4, stack:'kost'}
+        {label:'Vask/foto', data:prod, backgroundColor:'rgba(230,81,0,0.55)', borderRadius:4, stack:'kost'}
       ]
     },
     options:{
@@ -3840,16 +3835,7 @@ function pulseMotorRange(rows, from, to){
   peasy.forEach(function(r){
     var id=internOf(r);
     if(id&&seenSold[id]) return;
-    var retD=parseDate(r[21]);
-    var isRet=false;
-    if(inW(retD)) isRet=true;
-    else if(!retD){
-      var st=String(r[12]||'').toLowerCase().replace(/\s+/g,'_');
-      var tbr=st==='to_be_returned'||/til.?retur/.test(st);
-      var acc=parseDate(r[15])||parseDate(r[16]);
-      if(tbr&&inW(acc)) isRet=true;
-    }
-    if(!isRet) return;
+    if(!inW(parseDate(r[21]))) return;
     if(id&&seenRet[id]) return;
     if(id) seenRet[id]=true;
     retur.push(r);
@@ -3876,8 +3862,8 @@ function pulseMotorRange(rows, from, to){
   });
   var nS=sold.length, nR=retur.length, nH=hent.length;
   var sumRet=nR*rk;
-  var sumGire=nH*gk;
-  var sumProd=sumProdSold+sumRet+sumGire;
+  var sumGire=0;
+  var sumProd=sumProdSold+sumRet;
   var prodPer=nS>0?Math.round(sumProd/nS):null;
   var snittFee=nS>0?Math.round(sumInntekt/nS):(nFee>0?Math.round(sumFee/nFee):null);
   var spend=beregneSpend(w.from,w.to);
@@ -4877,7 +4863,7 @@ function buildUkeHtml(){
   h+='<div><strong>Lav</strong> — tilbudet til selger</div>';
   h+='<div><strong>Pris-aksept</strong> — bestilt / priset i perioden</div>';
   h+='<div><strong>Bud-aksept</strong> — solgt / (solgt + retur)</div>';
-  h+='<div><strong>Igjen etter marked</strong> — inntekt − vask/foto − hent − retur − annonser. Før kontor og lønn. Peasy.</div>';
+  h+='<div><strong>Igjen etter marked</strong> — inntekt − vask/foto − retur − annonser. Avgjort auksjon. Før kontor og lønn. Peasy.</div>';
   h+='</div>';
   h+='<div style="margin-top:10px;font-size:12px;color:#667">Nøkkeltall på de andre fanene = siste 30 dager t.o.m. i går. Tallene under = valgt uke.</div>';
   h+='</div>';
@@ -5093,7 +5079,7 @@ function renderUkesrapport(){
     svg+='<text x="1110" y="143" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">DEKNINGSBIDRAG</text>';
     svg+='<text x="1110" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="16" font-weight="900" fill="'+nettoCol+'">'+fmtKr1(dbFlyt)+'</text>';
     svg+='</svg>';
-    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Leads = SD mottatt. MOTTATT / LEADS er ikke pris-aksept. Bud-aksept = solgt / (solgt + retur). Penger = Peasy, samme motor som Finansielt (kolonne U &minus; vask/foto &minus; hent &minus; retur). Drive '+(cur.leadsDrive||0)+' og Ordna '+(cur.leadsOrdna||0)+' i leads, ikke i penger. Pipeline ('+pipeline+' biler) = bestilt og ikke ferdig.</div>';
+    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Leads = SD mottatt. MOTTATT / LEADS er ikke pris-aksept. Bud-aksept = solgt / (solgt + retur). Penger = Peasy, samme motor som Finansielt (kolonne U &minus; vask/foto &minus; retur, avgjort auksjon). Drive '+(cur.leadsDrive||0)+' og Ordna '+(cur.leadsOrdna||0)+' i leads, ikke i penger. Pipeline ('+pipeline+' biler) = bestilt og ikke ferdig.</div>';
     flowEl.innerHTML=svg+footnote;
   }
   var ep90flow=roll90T.pr>0?Math.round(roll90T.bs/roll90T.pr*100):0;
@@ -5213,12 +5199,12 @@ function renderUkesrapport(){
     var deltaColEcon=function(c,b,inv){var d=c-b;if(inv)d=-d;return d>0?'#2E7D32':d<0?'#C62828':'#888';};
     var inntektUke=motUke?motUke.sumInntekt:(cur.peasyFee||0);
     var retKostUke=motUke?motUke.sumRet:(cur.ret*rkUke);
-    var prodUke=motUke?((motUke.sumProdSold||0)+(motUke.sumGire||0)):0;
+    var prodUke=motUke?(motUke.sumProdSold||0):0;
     var econ=[
       {label:'Inntekt',val:fmtKr(inntektUke),sub:cur.solgt+' solgt · Peasy',col:'#00875A'},
       {label:'Retur-kost',val:'-'+fmtKr(retKostUke),sub:(motUke?motUke.retur:cur.ret)+' biler',col:'#C62828'},
       {label:'Annonser',val:'-'+fmtKr(spendUke),sub:'Peasy-marked uka',col:'#E65100'},
-      {label:'Igjen etter marked',val:fmtKr(igjenEtterMark),sub:'Inntekt − vask/foto − hent − retur − annonser',col:igjenEtterMark>=0?'#2E7D32':'#C62828',bold:true}
+      {label:'Igjen etter marked',val:fmtKr(igjenEtterMark),sub:'Inntekt − vask/foto − retur − annonser',col:igjenEtterMark>=0?'#2E7D32':'#C62828',bold:true}
     ];
     econEl.innerHTML=econ.map(function(c){return '<div style="background:#fff;border:'+(c.bold?'2px solid '+c.col:'1px solid rgba(0,66,37,0.08)')+';border-radius:12px;padding:14px 12px;box-shadow:0 2px 12px rgba(0,66,37,0.05)"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72;margin-bottom:8px">'+c.label+'</div><div style="font-size:20px;font-weight:900;line-height:1;color:'+c.col+'">'+c.val+'</div>'+(c.sub?'<div style="font-size:10px;color:#aaa;margin-top:8px">'+c.sub+'</div>':'')+'</div>';}).join('');
   }
@@ -7718,7 +7704,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c416</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c417</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -10086,7 +10072,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c378: Scoreboard-periode på solgt/retur-dato. Default Alle (ikke A/B). Åpne bud i alle perioder. -->
 <!-- c377: Scoreboard: Åpne/Solgt/Retur-knapper, 8 kolonner, A/B live 90d default, V3 bak knapp. -->
 <!-- c376: QA-kort: heft, bilder, tidligere priset, origin-Finn / auksjon, tynt/0 comps. SEND/ERP uendret. -->
-<!-- c375: Finansielt = dekningsbidrag før opex (avgift − vask/foto − hent − retur). Ikke netto. -->
+<!-- c375: Finansielt = dekningsbidrag før opex (avgift − vask/foto − retur). Ikke netto. c417: ingen hent-kost. -->
 <!-- c374: A/B-tekst: Easy er V7, ikke Finn-pris × 0,60. -->
 <!-- c373: Kjernen = samme Peasy-motor som forsiden (Gire, t.o.m. i går) for 30d/YTD/1.11.2025. -->
 <!-- c372: Innstillinger: live eksempel prod/retur/Gire (2 solgt + 1 retur). -->
@@ -10140,6 +10126,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c316: table-layout:auto på .mode-section table, «Bil» får innholdsbredde. -->
 <!-- c315: Operasjonelt-kort class=table-card, :has() overflow-x !important. -->
 <!-- c314: tabeller fyller bredden under 1500px (scroll på wrapper); hamburger synlig på mobil. -->
+<!-- c417: Finansielt = avgjort auksjon. Inntekt/kost på solgt+retur. Ingen hent-kost. 0/0=0. -->
 <!-- c416: GB-testfane. Skilt → Finn-utpris uten kvernas 90d/samme-år. Ingen ERP. -->
 <!-- c313: Finn-utpris-fane. Egen motor, ikke bot, ikke send. -->
 <script>
