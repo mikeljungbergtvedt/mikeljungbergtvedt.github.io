@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c423</title>
+<title>Peasy Pulse v16.05.c424</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c423';</script>
+<script>document.title='Peasy Pulse v16.05.c424';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -296,7 +296,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c423</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c424</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -373,7 +373,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c423</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c424</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2743,19 +2743,50 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){la
 window.addEventListener('load',function(){layoutPulseNav(true);});
 
 function parseDLow(val){if(!val||val==='-')return null;var s=String(val).replace(/\s|\u00a0/g,'');var n=parseInt(s.split('-')[0]);return isNaN(n)?null:n;}
-function parseDate(val){if(!val)return null;var s=String(val).trim().slice(0,10);var parts=s.split('.');if(parts.length===3)return new Date(parts[2]+'-'+parts[1]+'-'+parts[0]);return null;}
+/* c424: ERP-datoer er norsk vegg-klokke. Bygg LOKAL midnatt (Y,M-1,D) i stedet for
+   new Date('YYYY-MM-DD'), som ISO-parses som UTC og forskyver dagen i negative tidssoner. */
+function parseDate(val){if(!val)return null;var s=String(val).trim().slice(0,10);var parts=s.split('.');if(parts.length!==3)return null;var d=new Date(parseInt(parts[2],10),parseInt(parts[1],10)-1,parseInt(parts[0],10));return isNaN(d.getTime())?null:d;}
 function pulseTodayYmd(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});}
 function pulseCellYmd(v){
   if(v==null||v==='') return null;
-  var d=parseDate(v);
+  var s=String(v).trim();
+  /* c424: DD.MM.YYYY leses som ren kalenderverdi. Ingen Date-rundtur, ingen tidssone. */
+  var m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  var d=parseDate(s);
   if(d&&!isNaN(d.getTime())){
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
-  var s=String(v).trim();
-  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
   return null;
 }
 function pulseIsToday(v){return pulseCellYmd(v)===pulseTodayYmd();}
+/* ---- c424: FELLES SOLGT-DEFINISJON (Operasjonelt, Kart, Kjopere) ----
+   For c424 hadde hver fane sin egen variant: Operasjonelt sa kun pa datoen i kolonne 18,
+   kart-markorene gjorde en case-SENSITIV ['sold','sold_and_paid'].indexOf(status), mens
+   lead-filteret og kjoper-visningen gjorde en bredere lowercase-sjekk. En rad med status
+   'Solgt' eller 'SOLD' talte derfor med ett sted og forsvant et annet. Na en kilde. */
+var PULSE_SOLD_STATUS=['sold','sold_and_paid'];
+function pulseIsSoldStatus(st){
+  var s=String(st==null?'':st).trim().toLowerCase();
+  if(!s) return false;
+  return PULSE_SOLD_STATUS.indexOf(s)!==-1 || s.indexOf('solgt')!==-1;
+}
+function pulseSoldDate(r){ return r?parseDate(r[18]):null; }
+/* Solgt = ERP-status sier solgt, ELLER "Solgt pa" (kolonne 18) er satt. */
+function pulseIsSoldRow(r){
+  if(!r) return false;
+  return pulseIsSoldStatus(r[12]) || !!pulseSoldDate(r);
+}
+/* Solgt i dag = "Solgt pa" er i dag (norsk dag) OG raden regnes som solgt. */
+function pulseIsSoldToday(r){
+  if(!r) return false;
+  return pulseIsToday(r[18]) && pulseIsSoldRow(r);
+}
+window.pulseIsSoldStatus=pulseIsSoldStatus;
+window.pulseSoldDate=pulseSoldDate;
+window.pulseIsSoldRow=pulseIsSoldRow;
+window.pulseIsSoldToday=pulseIsSoldToday;
 function opsIDag(rows){
   var all=(rows||[]).slice(1).filter(function(r){return r&&String(r[1]||'').trim();});
   function k(r){return srcKey(r);}
@@ -2772,7 +2803,7 @@ function opsIDag(rows){
   }
   var bestilt=all.filter(function(r){return pulseIsToday(r[15])||pulseIsToday(r[16]);});
   var mottatt=all.filter(function(r){return pulseIsToday(r[17]);});
-  var solgt=all.filter(function(r){return pulseIsToday(r[18]);});
+  var solgt=all.filter(function(r){return pulseIsSoldToday(r);});
   var retur=all.filter(function(r){return pulseIsToday(r[21]);});
   var estimat=all.filter(function(r){return pulseIsToday(r[31]);});
   return {peasy:peasy,drive:drive,ordna:ordna,autodb:autodb,avvist:avvist,bestilt:bestilt,mottatt:mottatt,solgt:solgt,retur:retur,estimat:estimat};
@@ -2881,7 +2912,7 @@ function buildVenterPaSvarHtml(rows){
   for(var i=0;i<evalRows.length;i++){
     var r=evalRows[i];var reg=r[1],merke=r[6]||'',modell=r[7]||'',year=r[8]||'';var lbl=[merke,modell,year].filter(Boolean).join(' ');
     var km=r[22]?parseInt(r[22]).toLocaleString('nb-NO')+' km':'-';var sdRaw=r[13]?String(r[13]).trim():null;
-    var regDate=sdRaw?(function(s){var p=s.split(' '),dp=p[0].split('.'),tp=p[1]?p[1].split(':'):['0','0'];var d=new Date(dp[2]+'-'+dp[1]+'-'+dp[0]);d.setHours(parseInt(tp[0]),parseInt(tp[1]),0,0);return isNaN(d)?parseDate(r[13]):d;})(sdRaw):parseDate(r[13]);
+    var regDate=sdRaw?(function(s){var p=s.split(' '),dp=p[0].split('.'),tp=p[1]?p[1].split(':'):['0','0'];var d=new Date(parseInt(dp[2],10),parseInt(dp[1],10)-1,parseInt(dp[0],10));d.setHours(parseInt(tp[0]),parseInt(tp[1]),0,0);return isNaN(d)?parseDate(r[13]):d;})(sdRaw):parseDate(r[13]);
     var whm=regDate?workHoursElapsed(regDate):null;var whmStr=whm===null?'-':whm.h+'h '+String(whm.m).padStart(2,'0')+'m';
     var daysCol=whm===null?'':whm.total<=4?'color:#2E7D32':whm.total<=8?'color:var(--orange)':'color:var(--red)';
     var ar=String(r[3]||'').trim(),ps;
@@ -4274,7 +4305,7 @@ function buildKartTabell(posMap,filter,pnrAllowed){
     var pass=filter==='alle'?true
       :filter==='akseptert'?_AKSEPTERT.indexOf(status)!==-1
       :filter==='avvist'?_AVVIST.indexOf(status)!==-1
-      :filter==='solgt'?((status||'').toLowerCase()==='sold'||(status||'').toLowerCase()==='sold_and_paid'||String(status).toLowerCase().indexOf('solgt')!==-1)
+      :filter==='solgt'?pulseIsSoldStatus(status)
       :true;
     var eOk=_kartENeiNull(r[4]);
     leads.push({
@@ -4473,12 +4504,15 @@ function _kartPeriodeStart(){
   return {start:start,slutt:slutt};
 }
 function _kartParseDate(s){
+  /* c424: samme lokaltid-parser som resten av Pulse */
   if(!s)return null;
+  var d=parseDate(s);
+  if(d) return d;
   var t=String(s).trim().slice(0,10);
-  var p=t.split('.');
-  if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);
-  var d=new Date(t);
-  return isNaN(d)?null:d;
+  var iso=t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return new Date(parseInt(iso[1],10),parseInt(iso[2],10)-1,parseInt(iso[3],10));
+  var f=new Date(t);
+  return isNaN(f.getTime())?null:f;
 }
 function kartFilter(f){
   _kartFilter=f;
@@ -4535,7 +4569,7 @@ function _kartRender(){
     var statusOK = f==='alle'?true
       : f==='akseptert'?_AKSEPTERT.indexOf(item.status)!==-1
       : f==='avvist'?_AVVIST.indexOf(item.status)!==-1
-      : f==='solgt'?['sold','sold_and_paid'].indexOf(item.status)!==-1
+      : f==='solgt'?pulseIsSoldStatus(item.status)
       : true;
     var periodOK = !pnrAllowed || pnrAllowed[item.pnr];
     var show=statusOK && periodOK;
@@ -4611,8 +4645,7 @@ function _kartRenderKjopere(){
   var p=_kartPeriodeStart();
   var biler=[]; // én entry per solgt bil med kjent kjøper-pnr
   _kartRowsAll.forEach(function(r){
-    var status=String(r[12]||'').toLowerCase();
-    if(status!=='sold' && status!=='sold_and_paid' && status.indexOf('solgt')===-1)return;
+    if(!pulseIsSoldStatus(r[12]))return;
     var sDate=_kartParseDate(r[18]);
     if(!sDate)return;
     if(!_kartInPeriod(sDate,p))return;
@@ -7961,7 +7994,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c423</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c424</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -10554,6 +10587,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c385: Pipe: I omløp, ikke Hentet. -->
 <!-- c384: Pipe hentet: på vei + på anlegg. På anlegg = Operasjonelt i produksjon. -->
 <!-- c383: Nav: Sosial under Mer. Ukesrapport i baren. Pipe: Snitt lav (est bud). -->
+<!-- c424: Felles solgt-def (pulseIsSoldStatus/Row/Today) delt av Operasjonelt+Kart. ERP-datoer parses som lokal midnatt, ikke UTC. -->
 <!-- c382: Nav: I dag = Operasjonelt/QA/Pipe/Priset/Sosial. Resten under Mer. Korte fanetekster. -->
 <!-- c381: Operasjonelt: kort og tabell samme sett. Returnert = returdato i dag. Korte tekster. -->
 <!-- c380: Scoreboard over-% grønn. QA: Åpne i ERP-lenke. V3/Bot 4/Ny loop ut av QA-kort. SEND venter ikke på V3. -->
