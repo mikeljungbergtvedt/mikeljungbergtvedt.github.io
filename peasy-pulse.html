@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.05.c428</title>
+<title>Peasy Pulse v16.05.c429</title>
 <meta http-equiv="Cache-Control" content="max-age=300">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.05.c428';</script>
+<script>document.title='Peasy Pulse v16.05.c429';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -296,7 +296,7 @@ canvas{width:100%;border-radius:8px;}
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c428</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.05.c429</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -373,7 +373,7 @@ window.addEventListener('pageshow',function(e){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c428</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.05.c429</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7684,7 +7684,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c428</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.05.c429</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9138,13 +9138,36 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaIsJrSharedCv = qaIsJrSharedCv;
   window.qaJrChip = qaJrChip;
 
+  var QA_LIST3_LS = 'peasy-qa-list3';
+  function qaFetchFinalEstimate(proxy, token){
+    function once(){
+      var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+      var timer = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch (eA) {} }, 18000);
+      var opts = { headers: { Authorization: 'Bearer ' + token } };
+      if (ctrl) opts.signal = ctrl.signal;
+      return fetch(proxy + 'final_estimate', opts).then(function(r){
+        if (!r || !r.ok) throw new Error('list not ok');
+        return r.json();
+      }).finally(function(){ clearTimeout(timer); });
+    }
+    return once().catch(function(){ return once(); }).catch(function(){ return null; });
+  }
+
   window.loadQA = async function(force){
     if (window._qaLoading) return;
-    if (!force && window._qaReady && document.querySelector('#qa-cards .qa-card')) {
+    if (!force && window._qaReady && window._qaListOk && document.querySelector('#qa-cards .qa-card')) {
       var _box = document.getElementById('qa-cards');
       if (_box && !/Sendt /.test(_box.textContent || '')) return;
     }
     window._qaLoading = true;
+    if (window._qaLoadWatch) clearTimeout(window._qaLoadWatch);
+    window._qaLoadWatch = setTimeout(function(){
+      if (window._qaLoading) {
+        window._qaLoading = false;
+        window._qaListOk = false;
+        window._qaReady = false;
+      }
+    }, 40000);
     const upd = document.getElementById('qa-updated'); if (upd) upd.textContent = 'Laster …';
     var qaPainted = false;
     var liste3 = [];
@@ -9152,26 +9175,31 @@ setTimeout(tick,1500);setInterval(tick,5000);
       // 1) Fetch liste 3 (final_estimate) fra ERP. Ingen AbortSignal.timeout — Safari «Load failed» ved treg Tailscale.
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
       const PA_TOKEN_ERP = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
-      var listJ = null;
-      try {
-        var listR = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}});
-        if (!listR || !listR.ok) throw new Error('list not ok');
-        listJ = await listR.json();
-      } catch (eList1) {
-        try {
-          var listR2 = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}});
-          if (!listR2 || !listR2.ok) throw new Error('list retry not ok');
-          listJ = await listR2.json();
-        } catch (eList2) {
-          listJ = null;
-        }
-      }
+      var qaKeepCards = false;
+      var listJ = await qaFetchFinalEstimate(PA_PROXY_ERP, PA_TOKEN_ERP);
       var listErr = null;
       if (listJ) {
+        window._qaListOk = true;
         liste3 = listJ.biler || [];
+        try { localStorage.setItem(QA_LIST3_LS, JSON.stringify({t:Date.now(), biler:liste3})); } catch (eC) {}
       } else {
-        liste3 = [];
-        listErr = 'Får ikke tak i liste 3. QA viser bare biler som ligger i ERP nå.';
+        window._qaListOk = false;
+        if (document.querySelector('#qa-cards .qa-card')) {
+          qaKeepCards = true;
+          listErr = 'Mini uåpnåelig. Viser kortene som allerede er lastet. Trykk Last på nytt.';
+          var sumKeep = document.getElementById('qa-summary');
+          if (sumKeep) sumKeep.textContent = listErr;
+        } else {
+          var cached = null;
+          try { cached = JSON.parse(localStorage.getItem(QA_LIST3_LS) || 'null'); } catch (eC2) { cached = null; }
+          if (cached && Array.isArray(cached.biler) && cached.biler.length) {
+            liste3 = cached.biler;
+            listErr = 'Mini uåpnåelig. Viser siste lagrede liste 3. Trykk Last på nytt.';
+          } else {
+            liste3 = [];
+            listErr = 'Får ikke tak i liste 3. Mini er uåpnåelig — QA kan ikke hente biler.';
+          }
+        }
       }
       const v3ByIntern = {};
       const easyByIntern = {};
@@ -9338,10 +9366,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
         }
       }
       try {
-        var qaSp = countListe3Split(liste3);
-        applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
+        if (!qaKeepCards) {
+          var qaSp = countListe3Split(liste3);
+          applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
+        }
       } catch (eQaSp) {}
-      if (!document.querySelector('#qa-cards .qa-card')) paintQACards();
+      if (!qaKeepCards && !document.querySelector('#qa-cards .qa-card')) paintQACards();
 
       var miniBase = PA_PROXY_ERP.replace(/\/list\/?$/,'');
       var tFetch = Date.now();
@@ -9467,18 +9497,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
           });
         }
       }
-      paintQACards();
-      window._qaReady = true;
+      if (!qaKeepCards) paintQACards();
+      window._qaReady = !!window._qaListOk;
     } catch(e) {
       console.warn('[qa] loadQA:', e);
-      if (qaPainted) window._qaReady = true;
+      window._qaListOk = false;
+      window._qaReady = false;
       var c = document.getElementById('qa-cards');
       if (c && c.querySelector('.qa-card')) { /* behold eksisterende kort */ }
       else if (c) {
-        c.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Får ikke tak i liste 3. QA viser bare biler som ligger i ERP nå.</div>';
+        c.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Får ikke tak i liste 3. Mini er uåpnåelig — QA kan ikke hente biler.</div>';
       }
     } finally {
       window._qaLoading = false;
+      if (window._qaLoadWatch) { clearTimeout(window._qaLoadWatch); window._qaLoadWatch = null; }
     }
   };
 
@@ -9499,7 +9531,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaEnterTab = function(){
     if (window._qaLoading) return;
     var box = document.getElementById('qa-cards');
-    if (!window._qaReady || !box || !box.querySelector('.qa-card') || /Sendt /.test(box.textContent || '')) {
+    if (!window._qaListOk || !window._qaReady || !box || !box.querySelector('.qa-card') || /Sendt /.test(box.textContent || '')) {
       window._qaReady = false;
       window.loadQA(true);
       return;
@@ -9509,14 +9541,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
     fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}})
       .then(function(r){ return r && r.ok ? r.json() : null; })
       .then(function(j){
-        if (!j) return;
+        if (!j) { window._qaListOk = false; return; }
         var biler = j.biler || [];
         try {
           var sp = countListe3Split(biler);
           applyListe3Split(sp.ready, sp.wait, sp.total);
         } catch (eSp) {}
         window.qaSyncFromListe3(biler);
-      }).catch(function(){});
+      }).catch(function(){ window._qaListOk = false; });
   };
 
   function qaPct(a, base){
@@ -10294,6 +10326,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c429: QA Mini-nede: ikke _qaReady uten live liste 3, behold kort, peasy-qa-list3-cache, AbortController 18s, fanebytte laster på nytt. -->
 <!-- c332: Liste-3 uten AbortSignal.timeout. Retry + localStorage peasy-qa-list3 + loop2-fallback. Aldri «Feil ved lasting: Load failed». Hist-timeout guarded. -->
 <!-- c331: QA-kort vises alltid. setMode window.loadQA + try/catch. paintQACards per-kort try/catch + fallback uten rethrow. #qa-cards «Åpner kort …». -->
 <!-- c331-base: QA-kort vises etter liste 3. measurements/v3g/bot4/loop2/hist hver i try/catch + re-render. Hist AbortSignal.timeout(4000). -->
