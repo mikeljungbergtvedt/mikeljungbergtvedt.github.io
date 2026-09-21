@@ -12,7 +12,7 @@
     { id: 'plan', name: 'Selger ikke nå / annen plan', keys: ['senere', 'vente', 'solgt', 'auksjon'] }
   ];
   var TI = ['null', 'én', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti'];
-  var lrState = { period: '90', src: '', agg: null, comments: null, commentsErr: false, charts: [] };
+  var lrState = { period: '90', src: '', agg: null, comments: null, commentsErr: false, commentsErrMsg: '', charts: [] };
 
   function nb(n) { return Math.round(n).toLocaleString('nb-NO'); }
   function pct0(n, d) { return d ? Math.round(n / d * 100) : 0; }
@@ -263,7 +263,7 @@
 
   function renderComments(from, to, src) {
     if (lrState.commentsErr) {
-      return '<div class="lr-card"><div class="lr-cn">Ikke tilgjengelig — Mini svarer ikke</div></div>';
+      return '<div class="lr-card"><div class="lr-cn">Kundens egne ord utilgjengelig — ' + (lrState.commentsErrMsg || '') + '</div></div>';
     }
     if (!lrState.comments) {
       return '<div class="lr-card"><div class="lr-cn">Henter kundetekst …</div></div>';
@@ -510,23 +510,54 @@
     throw new Error(lastErr || 'ingen agg');
   }
 
-  async function fetchComments() {
+  async function fetchCommentsOnce() {
     var base = String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/, '');
-    if (!base) { lrState.commentsErr = true; return; }
+    if (!base) throw new Error('ingen proxy');
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = ctrl ? setTimeout(function () { ctrl.abort(); }, 18000) : null;
     try {
-      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var t = ctrl ? setTimeout(function () { ctrl.abort(); }, 8000) : null;
       var r = await fetch(base + '/laering-cars?t=' + Date.now(), {
         headers: { Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') },
         signal: ctrl ? ctrl.signal : undefined
       });
-      if (t) clearTimeout(t);
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      lrState.comments = await r.json();
+      return await r.json();
+    } finally {
+      if (t) clearTimeout(t);
+    }
+  }
+
+  function commentsErrText(e) {
+    if (e && e.name === 'AbortError') return 'tidsavbrudd etter 18 s';
+    var msg = e && e.message ? String(e.message) : '';
+    if (msg.indexOf('HTTP ') === 0) return msg;
+    return msg || 'nettverksfeil';
+  }
+
+  function commentsShouldRetry(e) {
+    var msg = e && e.message ? String(e.message) : '';
+    if (msg === 'HTTP 401' || msg === 'HTTP 404') return false;
+    return (e && e.name === 'AbortError') || msg.indexOf('HTTP ') !== 0;
+  }
+
+  async function fetchComments() {
+    try {
+      lrState.comments = await fetchCommentsOnce();
       lrState.commentsErr = false;
+      lrState.commentsErrMsg = '';
     } catch (e) {
+      if (commentsShouldRetry(e)) {
+        try {
+          lrState.comments = await fetchCommentsOnce();
+          lrState.commentsErr = false;
+          lrState.commentsErrMsg = '';
+          return;
+        } catch (e2) { e = e2; }
+      }
       lrState.commentsErr = true;
+      lrState.commentsErrMsg = commentsErrText(e);
       lrState.comments = null;
+      console.warn('[laering]', lrState.commentsErrMsg);
     }
   }
 
