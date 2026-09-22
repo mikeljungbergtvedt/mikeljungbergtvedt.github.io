@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c432</title>
+<title>Peasy Pulse v16.08.c433</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c432';</script>
+<script>document.title='Peasy Pulse v16.08.c433';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -355,7 +355,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c432</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c433</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -446,7 +446,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c432</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c433</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7836,7 +7836,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c432</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c433</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9139,6 +9139,44 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaFmtKmChip = qaFmtKmChip;
   window.qaOriginCvHtml = qaOriginCvHtml;
 
+  // c433: origin_cv.carinfo fra måleraden når Easy har 0 comps (v2 null) eller V3G ikke er priset. Ingen ny car.info-HTTP. Ikke lav/høy.
+  function qaMeasOriginCv(r){
+    if (!r || typeof r !== 'object') return null;
+    var cv = r.origin_cv || (r.v2 && r.v2.origin_cv) || (r.v3g && r.v3g.origin_cv) || (r.easy && r.easy.origin_cv) || null;
+    return (cv && typeof cv === 'object') ? cv : null;
+  }
+  function qaAttachParentOriginCv(easyPut, r){
+    if (!easyPut || typeof easyPut !== 'object' || !r) return easyPut;
+    var parent = (r.origin_cv && typeof r.origin_cv === 'object') ? r.origin_cv
+      : ((r.v2 && r.v2.origin_cv) || (r.v3g && r.v3g.origin_cv) || null);
+    if (!parent || typeof parent !== 'object') return easyPut;
+    if (!easyPut.origin_cv) easyPut.origin_cv = parent;
+    else easyPut.origin_cv = qaCvMerge(parent, easyPut.origin_cv) || parent;
+    return easyPut;
+  }
+  function qaRememberOriginCv(map, key, r){
+    if (!map || !key) return;
+    var cv = qaMeasOriginCv(r);
+    if (!cv) return;
+    var prev = map[key];
+    var ts = (r && (r.timestamp || r._ts)) || '';
+    if (!prev) {
+      map[key] = { origin_cv: cv, timestamp: ts };
+      return;
+    }
+    if (!prev.timestamp || ts >= prev.timestamp) {
+      prev.origin_cv = qaCvMerge(cv, prev.origin_cv) || cv;
+      prev.timestamp = ts || prev.timestamp;
+    } else {
+      prev.origin_cv = qaCvMerge(prev.origin_cv, cv) || prev.origin_cv;
+    }
+  }
+  function qaMergedOriginCv(cvByIntern, cvByReg, internKey, rg){
+    var cvI = internKey && cvByIntern && cvByIntern[internKey] && cvByIntern[internKey].origin_cv;
+    var cvR = rg && cvByReg && cvByReg[rg] && cvByReg[rg].origin_cv;
+    return qaCvMerge(cvI || null, cvR || null);
+  }
+
   function qaChefShort(model){
     var m = String(model || '');
     if (/sonnet-4-6/i.test(m)) return 'Claude 4.6';
@@ -9384,6 +9422,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const easyByIntern = {};
       const v3gByIntern = {};
       const v3gByReg = {};
+      const cvByIntern = {};
+      const cvByReg = {};
       const bot4ByIntern = {};
       const loop2ByIntern = {};
       var histByReg = {};
@@ -9476,6 +9516,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
               });
             })(),
           };
+          var cvMeas = qaMergedOriginCv(cvByIntern, cvByReg, internKey, rg);
+          if (cvMeas) row.origin_cv = cvMeas;
           row.km = qaPickErpKm(row);
           return row;
         }).filter(function(e){ return !qaIsSent(e.regnr, e.erpId); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
@@ -9605,10 +9647,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
       for (const r of measRecs) {
         const intern = qaInternKey(r.erpId);
         if (!intern) continue;
+        qaRememberOriginCv(cvByIntern, intern, r);
+        var rgM = String(r.regnr || '').toUpperCase();
+        if (rgM) qaRememberOriginCv(cvByReg, rgM, r);
         if (r.evaluator === 'v3' || r.v2) qaPutLatest(v3ByIntern, intern, r);
         if (isRealEasy(r.easy)) {
           var easyPut = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPut.chefs) && qaChefObj(r.chefs)) easyPut.chefs = r.chefs;
+          if (!easyPut.origin_cv && r.origin_cv) easyPut.origin_cv = r.origin_cv;
+          qaAttachParentOriginCv(easyPut, r);
           qaPutLatest(easyByIntern, intern, easyPut, r.timestamp);
         }
       }
@@ -9621,13 +9668,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
       for (const r of v3gRecs) {
         const intern = qaInternKey(r.erpId);
         if (!intern) continue;
+        qaRememberOriginCv(cvByIntern, intern, r);
+        var rgV = String(r.regnr || '').toUpperCase();
+        if (rgV) qaRememberOriginCv(cvByReg, rgV, r);
         if (!qaV3gPriced(r)) continue;
         qaPutLatest(v3gByIntern, intern, r);
-        var rgV = String(r.regnr || '').toUpperCase();
         if (rgV) qaPutLatest(v3gByReg, rgV, r);
         if (isRealEasy(r.easy) && (r.easy.finn_utpris || r.easy.anker_kilde || r.easy.chefs) && !easyByIntern[intern]) {
           var easyPutG = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPutG.chefs) && qaChefObj(r.chefs)) easyPutG.chefs = r.chefs;
+          if (!easyPutG.origin_cv && r.origin_cv) easyPutG.origin_cv = r.origin_cv;
+          qaAttachParentOriginCv(easyPutG, r);
           qaPutLatest(easyByIntern, intern, easyPutG, r.timestamp);
         }
       }
@@ -10522,6 +10573,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c433: QA ORIGIN-CV + car.info fra måling når Easy har 0 comps / V3G ikke er priset. Ingen ny car.info-HTTP. SEND uendret. -->
 <!-- c432: Læring /laering-cars 18s timeout, ett retry ved tidsavbrudd/nettverk, vis faktisk feil. -->
 <!-- c431: Ny fane Læring. Aggregat fra laering-agg.json, kundetekst via Mini /laering-cars. Ikke Ordna. Fast læringsregler, ikke LLM. -->
 <!-- c429: QA Mini-nede: ikke _qaReady uten live liste 3, behold kort, peasy-qa-list3-cache, AbortController 18s, fanebytte laster på nytt. -->
