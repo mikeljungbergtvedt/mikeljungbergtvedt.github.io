@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c438</title>
+<title>Peasy Pulse v16.08.c439</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c438';</script>
+<script>document.title='Peasy Pulse v16.08.c439';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -370,7 +370,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c438</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c439</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -461,7 +461,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c438</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c439</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7905,7 +7905,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c438</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c439</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9686,17 +9686,29 @@ setTimeout(tick,1500);setInterval(tick,5000);
               if (ev && (Number.isFinite(Number(ev.dLav)) || ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort || ev.breakdown)) {
                 out = Object.assign({}, ev);
               }
-              out.erp_dLav = Number.isFinite(Number(b.price_final_min)) ? Number(b.price_final_min) : null;
-              out.erp_dHoy = Number.isFinite(Number(b.price_final_max)) ? Number(b.price_final_max) : null;
+              out.erp_dLav = Number.isFinite(Number(b.price_final_min)) && Number(b.price_final_min) > 0 ? Number(b.price_final_min) : null;
+              out.erp_dHoy = Number.isFinite(Number(b.price_final_max)) && Number(b.price_final_max) > 0 ? Number(b.price_final_max) : null;
               out.erp_fu = Number.isFinite(Number(b.price_temp_min)) && Number(b.price_temp_min) > 0 ? Number(b.price_temp_min) : null;
               return out;
             })(),
-            erp_dLav: Number.isFinite(Number(b.price_final_min)) ? Number(b.price_final_min) : null,
-            erp_dHoy: Number.isFinite(Number(b.price_final_max)) ? Number(b.price_final_max) : null,
+            erp_dLav: (function(){
+              var n = Number(b.price_final_min);
+              if (Number.isFinite(n) && n > 0) return n;
+              n = Number(b.price_temp_min);
+              return (Number.isFinite(n) && n > 0) ? n : null;
+            })(),
+            erp_dHoy: (function(){
+              var n = Number(b.price_final_max);
+              if (Number.isFinite(n) && n > 0) return n;
+              n = Number(b.price_temp_max);
+              return (Number.isFinite(n) && n > 0) ? n : null;
+            })(),
             estimat_sendt: (function(){
-              var mn = Number(b.price_final_min), mx = Number(b.price_final_max);
-              if (!Number.isFinite(mn) && !Number.isFinite(mx)) return null;
-              return { min: Number.isFinite(mn) ? mn : null, max: Number.isFinite(mx) ? mx : null };
+              function pos(v){ var n=Number(v); return (Number.isFinite(n) && n>0) ? n : null; }
+              var mn = pos(b.price_final_min); if (mn == null) mn = pos(b.price_temp_min);
+              var mx = pos(b.price_final_max); if (mx == null) mx = pos(b.price_temp_max);
+              if (mn == null && mx == null) return null;
+              return { min: mn, max: mx };
             })(),
             v3: v3m,
             manufacturer: b.manufacturer || null,
@@ -10141,6 +10153,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
     return false; // c421: av. 25+ år ≠ samlerbil.
   }
 
+  /* c439: ERP lav/høy = samme kilde som Mini /bil estimat_sendt (ikke easy.erp_dLav). */
+  function qaErpEstimatBand(e){
+    var b = (e && e.rawErp) || e || {};
+    function pos(v){ var n=Number(v); return (Number.isFinite(n) && n>0) ? n : null; }
+    var mn = pos(b.price_final_min);
+    var mx = pos(b.price_final_max);
+    if (mn == null) mn = pos(b.price_temp_min);
+    if (mx == null) mx = pos(b.price_temp_max);
+    return { min: mn, max: mx, ok: mn != null && mx != null };
+  }
+
   function renderCardListe3(e){
     if (typeof qaPickErpKm === 'function') {
       var resolvedKm = qaPickErpKm(e);
@@ -10171,6 +10194,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const easyOk = hasN(easy.dLav);
     const v3Ok = hasN(v3.dLav);
     const v3gOk = hasN(vg.dLav);
+    const botPriced = easyOk || v3Ok || v3gOk;
     const scope = !!(e.v3g && e.v3g.utenfor_scope) || !!(e.v3 && e.v3.utenfor_scope);
     const srcGate = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
     const armGate = (typeof abArm==='function') ? abArm(e.erpId, srcGate) : 'A';
@@ -10180,14 +10204,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const writingFu = originFu != null ? originFu : ((armGate==='B'||armGate==='O')
       ? (vg.finn_utpris!=null?vg.finn_utpris:vg.anker)
       : (writingEasy.finn_utpris!=null?writingEasy.finn_utpris:writingEasy.anker));
-    const writingD = hasN(easy.erp_dLav) ? Number(easy.erp_dLav) : null;
+    const erpBand = qaErpEstimatBand(e);
+    const writingD = erpBand.ok ? erpBand.min : null;
     const missing = [];
     if (!scope) {
-      if (!hasN(writingD)) missing.push('ERP');
+      if (!erpBand.ok) missing.push('ERP');
       if (!hasN(writingFu) && !hasN(chefFu)) missing.push('utpris');
     }
-    const allPriced = !scope && hasN(writingD);
-    const noUtpris = !scope && hasN(writingD) && !hasN(writingFu) && !hasN(chefFu);
+    const allPriced = !scope && erpBand.ok;
+    const noUtpris = !scope && erpBand.ok && !hasN(writingFu) && !hasN(chefFu);
     const identGate = armGate==='A' ? qaNum(easy.ident_score) : qaNum((e.v3g&&e.v3g.ident_score)!=null?e.v3g.ident_score:(e.v3g&&e.v3g.v3g&&e.v3g.v3g.ident_score));
     const kmBlock = qaKmBlock(e);
     const auctionHit = qaAuctionHit(e);
@@ -10199,7 +10224,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (scope) {
       label='UTENFOR SCOPE'; color='#6D4C41'; icon='⛔';
     } else if (!allPriced) {
-      label='VENTER ERP'; color='#8A8A8A'; icon='◌';
+      if (!botPriced) {
+        label='Ikke priset'; color='#8A8A8A'; icon='◌';
+      } else {
+        label='VENTER ERP'; color='#8A8A8A'; icon='◌';
+      }
     } else if (noUtpris) {
       label='QA'; color='#A8221C'; icon='🔴';
     } else if (identGate != null && identGate < 70) {
@@ -10232,20 +10261,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const armLive = (typeof abArm==='function') ? abArm(e.erpId, srcLive) : 'A';
     const ankerWho = armLive==='O' ? 'Ordna' : (armLive==='B' ? 'B' : 'A');
     var ff = e.fossefall || (e.easy && e.easy.fossefall) || (e.v3g && e.v3g.fossefall) || null;
-    var sentLavFf = (function(){
-      var v = e.erp_dLav;
-      if (v == null && e.easy) v = e.easy.erp_dLav;
-      if (v == null && e.estimat_sendt) v = e.estimat_sendt.min;
-      var n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    })();
-    var sentHoyFf = (function(){
-      var v = e.erp_dHoy;
-      if (v == null && e.easy) v = e.easy.erp_dHoy;
-      if (v == null && e.estimat_sendt) v = e.estimat_sendt.max;
-      var n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    })();
+    var sentLavFf = erpBand.min;
+    var sentHoyFf = erpBand.max;
     const fossefallHtml = qaFossefallHtml(ff, sentLavFf, sentHoyFf);
     const cvHead = (typeof qaPickOriginCv==='function') ? (qaPickOriginCv(e)||{}) : {};
     const kmNum = (typeof qaPickErpKm==='function') ? qaPickErpKm(e) : (cvHead.erpKm != null ? cvHead.erpKm : e.km);
@@ -10810,6 +10827,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
 <!-- c438: QA fossefall skyggekolonne A + ståtid (a_statid), muted; manuell-merke ved statid_manuell. SEND uendret. -->
 <!-- c437: QA fossefall highlight følger ERP estimat_sendt (ikke abArm) -->
 <!-- c436: QA fossefall-tabell A/B/Ordna fra measurements -->
