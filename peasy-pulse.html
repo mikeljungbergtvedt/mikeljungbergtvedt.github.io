@@ -8686,6 +8686,92 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (!u) return esc(lab);
     return '<a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline;'+(extraStyle||'')+'">'+esc(lab)+'</a>';
   }
+  /* c442: Finn-utpris only from the customer's own ad. Display only. */
+  function qaKunMeasNodes(e, v3m, vg, easy){
+    var g = (e && e.v3g) || {};
+    var inner = (g && g.v3g) || {};
+    var nodes = [e, g, inner, easy, v3m, vg, g && g.easy, inner && inner.easy, v3m && v3m.easy, v3m && v3m.v3g, easy && easy.v3g];
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] && typeof nodes[i] === 'object') out.push(nodes[i]);
+    }
+    return out;
+  }
+  function qaKunPick(nodes, names){
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      for (var j = 0; j < nodes.length; j++) {
+        var o = nodes[j];
+        if (Object.prototype.hasOwnProperty.call(o, name) && o[name] != null && o[name] !== '') return o[name];
+      }
+    }
+    return undefined;
+  }
+  function qaKunAnnonseFlag(v){
+    if (v === true || v === 1 || v === '1' || v === 'true') return true;
+    if (v == null || v === false || v === 0 || v === '0' || v === 'false') return false;
+    if (typeof v === 'object') {
+      if (v.kun_kundens_annonse === true) return true;
+      if (v.grunn != null && qaKunAnnonseFlag(v.grunn)) return true;
+      if (v.kilde != null && qaKunAnnonseFlag(v.kilde)) return true;
+      return false;
+    }
+    var s = String(v).toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (s === 'kun kundens annonse') return true;
+    if (s.indexOf('kun kundens annonse') === 0 && s.length < 80) return true;
+    return false;
+  }
+  function qaKunFlagOn(nodes){
+    var names = ['kun_kundens_annonse', 'finn_kun_kundens_annonse', 'finn_utpris_kun_annonse', 'finn_utpris_grunn', 'finn_utpris_kilde', 'anker_kilde'];
+    for (var i = 0; i < names.length; i++) {
+      for (var j = 0; j < nodes.length; j++) {
+        if (!Object.prototype.hasOwnProperty.call(nodes[j], names[i])) continue;
+        if (qaKunAnnonseFlag(nodes[j][names[i]])) return true;
+      }
+    }
+    return false;
+  }
+  function qaKunPos(v){
+    if (v && typeof v === 'object') {
+      v = v.pris != null ? v.pris : (v.price != null ? v.price : (v.ask != null ? v.ask : v.annonsepris));
+    }
+    var n = Number(v);
+    return (Number.isFinite(n) && n > 0) ? n : null;
+  }
+  function qaKunAnnonseKr(nodes){
+    var named = qaKunPos(qaKunPick(nodes, ['annonsepris', 'kundens_annonsepris', 'annonse_pris', 'finn_annonsepris', 'origin_ask', 'finn_price', 'finn_ask']));
+    if (named) return named;
+    for (var i = 0; i < nodes.length; i++) {
+      var o = nodes[i] && nodes[i].origin;
+      if (!o || typeof o !== 'object') continue;
+      var n = qaKunPos(o.annonsepris != null ? o.annonsepris : (o.price != null ? o.price : o.ask));
+      if (n) return n;
+    }
+    return null;
+  }
+  function qaKunFinnKr(nodes){
+    return qaKunPos(qaKunPick(nodes, ['finn_utpris', 'anker']));
+  }
+  function qaKunFaktorLabel(nodes){
+    var n = Number(qaKunPick(nodes, ['annonse_faktor', 'finn_utpris_faktor', 'kun_annonse_faktor']));
+    if (!Number.isFinite(n) || n <= 0 || n >= 1) n = 0.95;
+    var s = String(Math.round(n * 1000) / 1000);
+    if (s.indexOf('.') < 0) s += '.0';
+    return s.replace('.', ',');
+  }
+  function qaKunKr(n){
+    return Math.round(n).toLocaleString('nb-NO');
+  }
+  function qaKunKundensAnnonseBanner(e, v3m, vg, easy){
+    var nodes = qaKunMeasNodes(e, v3m, vg, easy);
+    if (!qaKunFlagOn(nodes)) return '';
+    var ann = qaKunAnnonseKr(nodes);
+    var finn = qaKunFinnKr(nodes);
+    var detail = '';
+    if (ann) detail = ' (' + qaKunKr(ann) + ' × ' + qaKunFaktorLabel(nodes) + ')';
+    else if (finn) detail = ' (Finn ' + qaKunKr(finn) + ')';
+    return qaWorkBanner('FINN-UTPRIS', '⚠ Finn-utpris kun fra kundens annonse' + detail, 'warn');
+  }
   function qaWorkBanner(kind, text, tone){
     var t = tone || 'warn';
     var bg = t==='bad' ? '#FDECEA' : (t==='info' ? '#E3F2FD' : '#FFF8E1');
@@ -8695,6 +8781,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
   }
   function qaWorkBanners(e, v3m, vg, easy){
     var bits = [];
+    var kunAnnonse = qaKunKundensAnnonseBanner(e, v3m, vg, easy);
+    if (kunAnnonse) bits.push(kunAnnonse);
     var erp = e.rawErp || {};
     var enc = erp.encumbrance || {};
     if (enc.any_debts === true || enc.any_debts === 1 || enc.any_debts === '1') {
@@ -11104,7 +11192,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
-<!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Tall/formler og SEND/fe_created_at uendret. -->
+<!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Varsel på QA-kort når finn_utpris_grunn er «kun kundens annonse» (eller flagg kun_kundens_annonse): annonsepris × 0,95, fallback finn-tall. Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c441: QA/Send viser bare final_estimate uten fe_created_at. order_delivery-id droppes. Ikke zombie fra peasy-qa-list3, behold-kort eller measurements. -->
 <!-- c440: QA fossefall Del 4 — fjern X-faktor/skygge; Spenn/Returtrekk/Ordna-trekk/Vrakpant-gulv/Avrunding; Origin-cap med chefs_foer_cap→origin_cap_tak; ståtid=statid live i A; skjul null-rader; statid_manuell. SEND uendret. -->
 <!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
