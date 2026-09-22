@@ -8716,13 +8716,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (v.kilde != null && qaKunAnnonseFlag(v.kilde)) return true;
       return false;
     }
-    var s = String(v).toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    var raw = String(v).toLowerCase().trim();
+    if (raw === 'kun kundens annonse' || raw === 'kun_kundens_annonse') return true;
+    var s = raw.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (s === 'kun kundens annonse') return true;
-    if (s.indexOf('kun kundens annonse') === 0 && s.length < 80) return true;
     return false;
   }
   function qaKunFlagOn(nodes){
-    var names = ['kun_kundens_annonse', 'finn_kun_kundens_annonse', 'finn_utpris_kun_annonse', 'finn_utpris_grunn', 'finn_utpris_kilde', 'anker_kilde'];
+    /* Same yellow warning: grunn "kun kundens annonse" | "kun_kundens_annonse", or kilde "kun_kundens_annonse". */
+    var names = ['finn_utpris_grunn', 'finn_utpris_kilde', 'kun_kundens_annonse', 'anker_kilde'];
     for (var i = 0; i < names.length; i++) {
       for (var j = 0; j < nodes.length; j++) {
         if (!Object.prototype.hasOwnProperty.call(nodes[j], names[i])) continue;
@@ -8770,7 +8772,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     var detail = '';
     if (ann) detail = ' (' + qaKunKr(ann) + ' × ' + qaKunFaktorLabel(nodes) + ')';
     else if (finn) detail = ' (Finn ' + qaKunKr(finn) + ')';
-    return qaWorkBanner('FINN-UTPRIS', '⚠ Finn-utpris kun fra kundens annonse' + detail, 'warn');
+    return '<div style="margin-bottom:6px;padding:7px 10px;background:#FFF8E1;border:1px solid #FFE082;border-radius:6px;font-size:12px;line-height:1.4;color:#E65100;font-weight:700;">⚠ Finn-utpris kun fra kundens annonse'+detail+'</div>';
   }
   function qaWorkBanner(kind, text, tone){
     var t = tone || 'warn';
@@ -11192,7 +11194,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
-<!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Varsel på QA-kort når finn_utpris_grunn er «kun kundens annonse» (eller flagg kun_kundens_annonse): annonsepris × 0,95, fallback finn-tall. Tall/formler og SEND/fe_created_at uendret. -->
+<!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c441: QA/Send viser bare final_estimate uten fe_created_at. order_delivery-id droppes. Ikke zombie fra peasy-qa-list3, behold-kort eller measurements. -->
 <!-- c440: QA fossefall Del 4 — fjern X-faktor/skygge; Spenn/Returtrekk/Ordna-trekk/Vrakpant-gulv/Avrunding; Origin-cap med chefs_foer_cap→origin_cap_tak; ståtid=statid live i A; skjul null-rader; statid_manuell. SEND uendret. -->
 <!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
