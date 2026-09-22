@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c440</title>
+<title>Peasy Pulse v16.08.c441</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c440';</script>
+<script>document.title='Peasy Pulse v16.08.c441';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -370,7 +370,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c440</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c441</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -461,7 +461,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c440</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c441</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7905,7 +7905,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c440</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c441</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8152,7 +8152,19 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const PA_TOKEN_ERP = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
       const r = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
       const j = await r.json();
-      const biler = j.biler || [];
+      var raw = j.biler || [];
+      var odOk = false;
+      var odBiler = [];
+      try {
+        const od = await fetch(PA_PROXY_ERP + 'order_delivery', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
+        if (od.ok) {
+          const oj = await od.json();
+          odBiler = oj.biler || [];
+          odOk = true;
+        }
+      } catch (eOd) {}
+      var biler = raw;
+      if (typeof window.qaInstallSentGate === 'function') biler = window.qaInstallSentGate(raw, odBiler, odOk);
       const set = new Set();
       for (const b of biler) { const rg = String(b.registration_number||'').toUpperCase().replace(/\s/g,''); if (rg) set.add(rg); }
       window._liste3Regnrs = set;
@@ -8161,10 +8173,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
         var sp = countListe3Split(biler);
         applyListe3Split(sp.ready, sp.wait, sp.total);
       } catch (eSplit) {}
-      try { if (typeof window.qaSyncFromListe3 === 'function') window.qaSyncFromListe3(biler); } catch (eSync) {}
+      try { if (typeof window.qaSyncFromListe3 === 'function') window.qaSyncFromListe3(raw); } catch (eSync) {}
       scheduleInject();
     }catch(e){ /* mute */ }
   }
+  window.refreshListe3 = refreshListe3;
   refreshListe3();
   setInterval(refreshListe3, 60000);
 
@@ -9618,25 +9631,134 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaJrChip = qaJrChip;
 
   var QA_LIST3_LS = 'peasy-qa-list3';
-  function qaFetchFinalEstimate(proxy, token){
+  function qaFetchList(proxy, token, endpoint){
     function once(){
       var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
       var timer = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch (eA) {} }, 18000);
       var opts = { headers: { Authorization: 'Bearer ' + token } };
       if (ctrl) opts.signal = ctrl.signal;
-      return fetch(proxy + 'final_estimate', opts).then(function(r){
+      return fetch(proxy + endpoint, opts).then(function(r){
         if (!r || !r.ok) throw new Error('list not ok');
         return r.json();
       }).finally(function(){ clearTimeout(timer); });
     }
     return once().catch(function(){ return once(); }).catch(function(){ return null; });
   }
+  function qaStampSet(v){
+    if (v == null || v === false) return false;
+    if (typeof v === 'number') return Number.isFinite(v) && v > 0;
+    var s = String(v).trim();
+    if (!s) return false;
+    var low = s.toLowerCase();
+    if (low === 'null' || low === 'undefined' || low === '0' || low === 'false' || low === 'none') return false;
+    if (/^0{4}-0{2}-0{2}/.test(s)) return false;
+    return true;
+  }
+  function qaErpId(b){
+    if (!b || typeof b !== 'object') return '';
+    var id = b.id != null ? b.id : (b.erpId != null ? b.erpId : b.car_id);
+    if (id == null || id === '') return '';
+    return String(id);
+  }
+  /* c441: sendt = fe_created_at (topp eller process_milestones) eller ordre/henting. */
+  function qaFeCreatedAtSet(b){
+    if (!b || typeof b !== 'object') return false;
+    var mil = b.process_milestones || b.milestones || {};
+    var car = (b.car && typeof b.car === 'object') ? b.car : null;
+    var carMil = (car && (car.process_milestones || car.milestones)) || {};
+    if (qaStampSet(b.fe_created_at) || qaStampSet(mil.fe_created_at)) return true;
+    if (car && (qaStampSet(car.fe_created_at) || qaStampSet(carMil.fe_created_at))) return true;
+    if (qaStampSet(b.order_delivery) || qaStampSet(mil.order_delivery) || qaStampSet(mil.order_delivery_at)) return true;
+    if (car && (qaStampSet(car.order_delivery) || qaStampSet(carMil.order_delivery) || qaStampSet(carMil.order_delivery_at))) return true;
+    var st = String((b.status_entity && b.status_entity.status) || b.status || (car && car.status) || '').toLowerCase();
+    if (st === 'order_delivery') return true;
+    return false;
+  }
+  function qaIdDropped(id){
+    var s = String(id == null ? '' : id);
+    return !!(s && window._qaDropIds && window._qaDropIds[s]);
+  }
+  function qaCarOpen(b){
+    if (!b || typeof b !== 'object') return false;
+    if (qaFeCreatedAtSet(b)) return false;
+    var id = qaErpId(b);
+    if (qaIdDropped(id)) return false;
+    if (qaIsSent(b.registration_number || b.regnr, id)) return false;
+    return true;
+  }
+  function qaOpenListe3(biler){
+    return (biler || []).filter(qaCarOpen);
+  }
+  function qaInstallSentGate(feBiler, odBiler, odOk){
+    var next = {};
+    function add(id){ if (id != null && String(id) !== '') next[String(id)] = 1; }
+    if (odOk) (odBiler || []).forEach(function(b){ add(qaErpId(b)); });
+    else if (window._qaDropIds) Object.keys(window._qaDropIds).forEach(function(k){ next[k] = 1; });
+    (feBiler || []).forEach(function(b){ if (qaFeCreatedAtSet(b)) add(qaErpId(b)); });
+    window._qaDropIds = next;
+    return qaOpenListe3(feBiler);
+  }
+  function qaNoteMeasSent(recs){
+    window._qaDropIds = window._qaDropIds || {};
+    (recs || []).forEach(function(r){
+      if (!qaFeCreatedAtSet(r)) return;
+      var id = qaErpId(r);
+      if (id) window._qaDropIds[id] = 1;
+    });
+  }
+  function qaCardIdReg(card){
+    var id = card.getAttribute('data-erpid') || '';
+    var reg = card.getAttribute('data-regnr') || '';
+    if (!id) {
+      var btn = card.querySelector('[data-erpid]');
+      if (btn) {
+        id = btn.getAttribute('data-erpid') || '';
+        if (!reg) reg = btn.getAttribute('data-regnr') || '';
+      }
+    }
+    return { id: id, reg: reg };
+  }
+  function qaDomHasZombie(openIds){
+    var cards = document.querySelectorAll('#qa-cards .qa-card');
+    for (var i = 0; i < cards.length; i++) {
+      var ir = qaCardIdReg(cards[i]);
+      if (!ir.id && !ir.reg) continue;
+      if (qaIdDropped(ir.id) || qaIsSent(ir.reg, ir.id)) return true;
+      if (openIds && ir.id && !openIds[ir.id]) return true;
+    }
+    return false;
+  }
+  function qaStripZombieCards(openIds){
+    var cards = document.querySelectorAll('#qa-cards .qa-card');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var ir = qaCardIdReg(card);
+      if (!ir.id && !ir.reg) continue;
+      if (qaIdDropped(ir.id) || qaIsSent(ir.reg, ir.id) || (openIds && ir.id && !openIds[ir.id])) card.remove();
+    }
+  }
+  function qaStripCachedSent(rawIds, openIds){
+    if (!rawIds || !openIds) return;
+    var cards = document.querySelectorAll('#qa-cards .qa-card');
+    for (var i = 0; i < cards.length; i++) {
+      var ir = qaCardIdReg(cards[i]);
+      if (ir.id && rawIds[ir.id] && !openIds[ir.id]) cards[i].remove();
+    }
+  }
+  function qaIdMap(biler){
+    var m = {};
+    (biler || []).forEach(function(b){ var id = qaErpId(b); if (id) m[id] = 1; });
+    return m;
+  }
+  window.qaFeCreatedAtSet = qaFeCreatedAtSet;
+  window.qaOpenListe3 = qaOpenListe3;
+  window.qaInstallSentGate = qaInstallSentGate;
 
   window.loadQA = async function(force){
     if (window._qaLoading) return;
     if (!force && window._qaReady && window._qaListOk && document.querySelector('#qa-cards .qa-card')) {
       var _box = document.getElementById('qa-cards');
-      if (_box && !/Sendt /.test(_box.textContent || '')) return;
+      if (_box && !/Sendt /.test(_box.textContent || '') && !qaDomHasZombie()) return;
     }
     window._qaLoading = true;
     if (window._qaLoadWatch) clearTimeout(window._qaLoadWatch);
@@ -9655,29 +9777,53 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
       const PA_TOKEN_ERP = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
       var qaKeepCards = false;
-      var listJ = await qaFetchFinalEstimate(PA_PROXY_ERP, PA_TOKEN_ERP);
+      var fetched = await Promise.all([
+        qaFetchList(PA_PROXY_ERP, PA_TOKEN_ERP, 'final_estimate'),
+        qaFetchList(PA_PROXY_ERP, PA_TOKEN_ERP, 'order_delivery')
+      ]);
+      var listJ = fetched[0];
+      var odJ = fetched[1];
+      var odOk = !!(odJ && Array.isArray(odJ.biler));
       var listErr = null;
       if (listJ) {
         window._qaListOk = true;
-        liste3 = listJ.biler || [];
+        liste3 = qaInstallSentGate(listJ.biler || [], odOk ? odJ.biler : [], odOk);
         try { localStorage.setItem(QA_LIST3_LS, JSON.stringify({t:Date.now(), biler:liste3})); } catch (eC) {}
       } else {
         window._qaListOk = false;
-        if (document.querySelector('#qa-cards .qa-card')) {
+        if (odOk) qaInstallSentGate([], odJ.biler, true);
+        var cached = null;
+        try { cached = JSON.parse(localStorage.getItem(QA_LIST3_LS) || 'null'); } catch (eC2) { cached = null; }
+        var cachedRaw = (cached && Array.isArray(cached.biler)) ? cached.biler : null;
+        if (cachedRaw) {
+          var cachedOpen = qaOpenListe3(cachedRaw);
+          try { localStorage.setItem(QA_LIST3_LS, JSON.stringify({t: cached.t || Date.now(), biler: cachedOpen})); } catch (eW) {}
+          liste3 = cachedOpen;
+          if (document.querySelector('#qa-cards .qa-card')) {
+            qaStripZombieCards();
+            qaStripCachedSent(qaIdMap(cachedRaw), qaIdMap(cachedOpen));
+            if (document.querySelector('#qa-cards .qa-card')) {
+              qaKeepCards = true;
+              listErr = 'Mini uåpnåelig. Viser kortene som allerede er lastet. Trykk Last på nytt.';
+              var sumCache = document.getElementById('qa-summary');
+              if (sumCache) sumCache.textContent = listErr;
+            } else {
+              qaKeepCards = false;
+              listErr = cachedOpen.length ? 'Mini uåpnåelig. Viser siste lagrede liste 3. Trykk Last på nytt.' : null;
+            }
+          } else {
+            qaKeepCards = false;
+            listErr = cachedOpen.length ? 'Mini uåpnåelig. Viser siste lagrede liste 3. Trykk Last på nytt.' : null;
+          }
+        } else if (document.querySelector('#qa-cards .qa-card')) {
           qaKeepCards = true;
+          qaStripZombieCards();
           listErr = 'Mini uåpnåelig. Viser kortene som allerede er lastet. Trykk Last på nytt.';
           var sumKeep = document.getElementById('qa-summary');
           if (sumKeep) sumKeep.textContent = listErr;
         } else {
-          var cached = null;
-          try { cached = JSON.parse(localStorage.getItem(QA_LIST3_LS) || 'null'); } catch (eC2) { cached = null; }
-          if (cached && Array.isArray(cached.biler) && cached.biler.length) {
-            liste3 = cached.biler;
-            listErr = 'Mini uåpnåelig. Viser siste lagrede liste 3. Trykk Last på nytt.';
-          } else {
-            liste3 = [];
-            listErr = 'Får ikke tak i liste 3. Mini er uåpnåelig — QA kan ikke hente biler.';
-          }
+          liste3 = [];
+          listErr = 'Får ikke tak i liste 3. Mini er uåpnåelig — QA kan ikke hente biler.';
         }
       }
       const v3ByIntern = {};
@@ -9710,6 +9856,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         qaPutLatest(fossefallByIntern, intern, { fossefall: ff, timestamp: r.timestamp || '', _ts: r.timestamp || '' }, r.timestamp);
       }
       function paintQACards(){
+        liste3 = qaOpenListe3(liste3);
         var enriched = [];
         try {
         enriched = liste3.map(b => {
@@ -9814,7 +9961,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           if (ffCard) row.fossefall = ffCard;
           row.km = qaPickErpKm(row);
           return row;
-        }).filter(function(e){ return !qaIsSent(e.regnr, e.erpId); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+        }).filter(function(e){ return qaCarOpen(e.rawErp || e); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
         window._qaUnsentIds = enriched.map(function(e){ return String(e.erpId); }).sort().join(',');
 
         if (upd) upd.textContent = new Date().toLocaleString('nb-NO');
@@ -9845,7 +9992,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         container.innerHTML = enriched.length ? enriched.map(function(e){
           try { return renderCardListe3(e); }
           catch (eCard) {
-            return '<div class="qa-card" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;"><div style="font-family:monospace;font-weight:700;font-size:14px;">'+esc((e&&e.regnr)||'')+'</div><div style="font-size:11px;color:var(--muted);">'+esc(String((e&&e.erpId)||''))+'</div></div>';
+            return '<div class="qa-card" data-regnr="'+esc((e&&e.regnr)||'')+'" data-erpid="'+esc(String((e&&e.erpId)||''))+'" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;"><div style="font-family:monospace;font-weight:700;font-size:14px;">'+esc((e&&e.regnr)||'')+'</div><div style="font-size:11px;color:var(--muted);">'+esc(String((e&&e.erpId)||''))+'</div></div>';
           }
         }).join('') : '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">'+(listErr ? esc(listErr) : 'Ingen biler på liste 3')+'</div>';
         container.querySelectorAll('.qa-detail-btn').forEach(b => b.onclick = () => { const el = document.getElementById('qa-detail-' + b.dataset.key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
@@ -9872,7 +10019,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
             var cPaint = document.getElementById('qa-cards');
             if (cPaint && enriched && enriched.length) {
               cPaint.innerHTML = enriched.map(function(e){
-                return '<div class="qa-card" style="padding:8px 12px;font-size:13px;">'+esc((e&&e.regnr)||'')+' · '+esc(String((e&&e.erpId)||''))+'</div>';
+                return '<div class="qa-card" data-regnr="'+esc((e&&e.regnr)||'')+'" data-erpid="'+esc(String((e&&e.erpId)||''))+'" style="padding:8px 12px;font-size:13px;">'+esc((e&&e.regnr)||'')+' · '+esc(String((e&&e.erpId)||''))+'</div>';
               }).join('');
             } else if (cPaint) {
               cPaint.innerHTML = '<div style="padding:30px;text-align:center;color:#A8221C;grid-column:1/-1;">QA-feil: '+String(ePaint&&ePaint.message||ePaint)+'</div>';
@@ -9887,6 +10034,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
           applyListe3Split(qaSp.ready, qaSp.wait, qaSp.total);
         }
       } catch (eQaSp) {}
+      if (!qaKeepCards && window._qaListOk) {
+        try { qaStripZombieCards(qaIdMap(liste3)); } catch (eStrip0) {}
+      }
       if (!qaKeepCards && !document.querySelector('#qa-cards .qa-card')) paintQACards();
 
       var miniBase = PA_PROXY_ERP.replace(/\/list\/?$/,'');
@@ -9938,9 +10088,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
         if (Number.isFinite(Number(ev.dLav))) return true;
         return ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort;
       }
+      qaNoteMeasSent(measRecs);
+      qaNoteMeasSent(v3gRecs);
+      qaNoteMeasSent(bot4Recs);
+      qaNoteMeasSent(loop2Recs);
+      liste3 = qaOpenListe3(liste3);
+      if (window._qaListOk) {
+        try { localStorage.setItem(QA_LIST3_LS, JSON.stringify({t:Date.now(), biler: liste3})); } catch (eC3) {}
+      }
       for (const r of measRecs) {
         const intern = qaInternKey(r.erpId);
-        if (!intern) continue;
+        if (!intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
         qaRememberOriginCv(cvByIntern, intern, r);
         var rgM = String(r.regnr || '').toUpperCase();
         if (rgM) qaRememberOriginCv(cvByReg, rgM, r);
@@ -9963,7 +10121,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       }
       for (const r of v3gRecs) {
         const intern = qaInternKey(r.erpId);
-        if (!intern) continue;
+        if (!intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
         qaRememberOriginCv(cvByIntern, intern, r);
         var rgV = String(r.regnr || '').toUpperCase();
         if (rgV) qaRememberOriginCv(cvByReg, rgV, r);
@@ -9982,13 +10140,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
       }
       for (const r of bot4Recs) {
         const intern = qaInternKey(r.erpId);
-        if (!intern) continue;
+        if (!intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
         qaPutLatest(bot4ByIntern, intern, r);
       }
       for (const r of loop2Recs) {
         const chef = qaLoop2Chef(r && r.evaluator);
         const intern = qaInternKey(r && r.erpId);
-        if (!chef || !intern) continue;
+        if (!chef || !intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
         if (!loop2ByIntern[intern]) loop2ByIntern[intern] = {};
         const prev = loop2ByIntern[intern][chef];
         if (!prev || (r.timestamp || '') > (prev.timestamp || '')) loop2ByIntern[intern][chef] = r;
@@ -10026,14 +10184,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
           });
         }
       }
-      if (!qaKeepCards) paintQACards();
+      if (!qaKeepCards) {
+        try {
+          var qaSp2 = countListe3Split(liste3);
+          applyListe3Split(qaSp2.ready, qaSp2.wait, qaSp2.total);
+        } catch (eQaSp2) {}
+        paintQACards();
+      }
       window._qaReady = !!window._qaListOk;
     } catch(e) {
       console.warn('[qa] loadQA:', e);
       window._qaListOk = false;
       window._qaReady = false;
       var c = document.getElementById('qa-cards');
-      if (c && c.querySelector('.qa-card')) { /* behold eksisterende kort */ }
+      if (c && c.querySelector('.qa-card')) { try { qaStripZombieCards(); } catch (eZ) {} }
       else if (c) {
         c.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);grid-column:1/-1;">Får ikke tak i liste 3. Mini er uåpnåelig — QA kan ikke hente biler.</div>';
       }
@@ -10045,12 +10209,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
   window.qaSyncFromListe3 = function(biler){
     if (!Array.isArray(biler) || window._qaLoading) return;
-    var sent = window._sentEvalCells || loadSent();
-    var ids = biler.filter(function(b){
-      return !sent[String(b.registration_number || '').toUpperCase() + '__' + String(b.id || '')];
-    }).map(function(b){ return String(b.id); }).sort().join(',');
+    var open = qaOpenListe3(biler);
+    var ids = open.map(function(b){ return String(b.id); }).sort().join(',');
     var box = document.getElementById('qa-cards');
-    var staleSent = !!(box && /Sendt /.test(box.textContent || ''));
+    var staleSent = !!(box && (/Sendt /.test(box.textContent || '') || qaDomHasZombie(qaIdMap(open))));
     if (staleSent || ids !== (window._qaUnsentIds || '')) {
       window._qaReady = false;
       window.loadQA(true);
@@ -10060,23 +10222,28 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaEnterTab = function(){
     if (window._qaLoading) return;
     var box = document.getElementById('qa-cards');
-    if (!window._qaListOk || !window._qaReady || !box || !box.querySelector('.qa-card') || /Sendt /.test(box.textContent || '')) {
+    if (!window._qaListOk || !window._qaReady || !box || !box.querySelector('.qa-card') || /Sendt /.test(box.textContent || '') || qaDomHasZombie()) {
       window._qaReady = false;
       window.loadQA(true);
       return;
     }
     var PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
     var PA_TOKEN_ERP = 'da9df6e858f0cdc5c0baa090a0f2c7c76f12cd3967488257';
-    fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}})
-      .then(function(r){ return r && r.ok ? r.json() : null; })
-      .then(function(j){
+    Promise.all([
+      fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; }),
+      fetch(PA_PROXY_ERP + 'order_delivery', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; })
+    ]).then(function(pair){
+        var j = pair[0];
+        var od = pair[1];
         if (!j) { window._qaListOk = false; return; }
-        var biler = j.biler || [];
+        var raw = j.biler || [];
+        var odOk = !!(od && Array.isArray(od.biler));
+        var biler = qaInstallSentGate(raw, odOk ? od.biler : [], odOk);
         try {
           var sp = countListe3Split(biler);
           applyListe3Split(sp.ready, sp.wait, sp.total);
         } catch (eSp) {}
-        window.qaSyncFromListe3(biler);
+        window.qaSyncFromListe3(raw);
       }).catch(function(){ window._qaListOk = false; });
   };
 
@@ -10393,7 +10560,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(kmNum||e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">'+sendTxt+'</button>';
     }
     const finnTerrain = qaFinnTerrain(qaPickChefs(e, easy, vg), originFu);
-    return `<div class="qa-card ${scope||!allPriced||noUtpris||samlerHold?'qa-nopop':''}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
+    return `<div class="qa-card ${scope||!allPriced||noUtpris||samlerHold?'qa-nopop':''}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId||''))}" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         ${qaSisterHtml(e)}
         <div style="flex:1;min-width:0;">
@@ -10871,6 +11038,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c441: QA/Send viser bare final_estimate uten fe_created_at. order_delivery-id droppes. Ikke zombie fra peasy-qa-list3, behold-kort eller measurements. -->
 <!-- c440: QA fossefall Del 4 — fjern X-faktor/skygge; Spenn/Returtrekk/Ordna-trekk/Vrakpant-gulv/Avrunding; Origin-cap med chefs_foer_cap→origin_cap_tak; ståtid=statid live i A; skjul null-rader; statid_manuell. SEND uendret. -->
 <!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
 <!-- c438: QA fossefall skyggekolonne A + ståtid (a_statid) — erstattet i c440 (ståtid live i A via statid). -->
