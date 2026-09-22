@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c439</title>
+<title>Peasy Pulse v16.08.c440</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c439';</script>
+<script>document.title='Peasy Pulse v16.08.c440';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -370,7 +370,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c439</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c440</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -461,7 +461,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c439</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c440</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7905,7 +7905,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c439</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c440</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8424,12 +8424,53 @@ setTimeout(tick,1500);setInterval(tick,5000);
       return qaFfKr(v, signedPlus);
     }
     var deltaKeys = {
-      forhandlermargin: 1, staotid: 1, omregistrering: 1, transport: 1,
-      klargjoring: 1, x_faktor: 1, peasy_avgift: 1
+      forhandlermargin: 1, origin_cap: 1, statid: 1, omregistrering: 1, transport: 1,
+      klargjoring: 1, spenn: 1, returtrekk: 1, ordna_trekk: 1,
+      vrakpant_gulv: 1, avrunding: 1, peasy_avgift: 1
     };
     function qaFfLayer(arm, key){
       if (!arm || typeof arm !== 'object') return '–';
       return qaFfCellVal(arm[key], !!deltaKeys[key]);
+    }
+    /* c440: Origin-cap = trekk + «foer → tak» (chefs_foer_cap / origin_cap_tak) */
+    function qaFfOriginCap(arm){
+      if (!arm || typeof arm !== 'object') return '–';
+      var trekk = arm.origin_cap;
+      var trekkTxt = qaFfCellVal(trekk, true);
+      var foer = Number(arm.chefs_foer_cap != null ? arm.chefs_foer_cap : ff.chefs_foer_cap);
+      var tak = Number(arm.origin_cap_tak != null ? arm.origin_cap_tak : ff.origin_cap_tak);
+      var oc = Number(typeof trekk === 'object' && trekk ? (trekk.lav != null ? trekk.lav : trekk.hoy) : trekk);
+      if (!Number.isFinite(foer) && Number.isFinite(tak) && Number.isFinite(oc) && oc < 0) {
+        foer = tak - oc;
+      }
+      if (!Number.isFinite(tak) && Number.isFinite(foer) && Number.isFinite(oc) && oc < 0) {
+        tak = foer + oc;
+      }
+      var arrow = '';
+      if (Number.isFinite(foer) && Number.isFinite(tak)) {
+        arrow = qaFfKr(foer) + ' \u2192 ' + qaFfKr(tak);
+      }
+      if (trekkTxt === '–' && !arrow) return '–';
+      if (trekkTxt === '–') return arrow;
+      if (!arrow) {
+        var ocN = Number(typeof trekk === 'object' && trekk ? (trekk.lav != null ? trekk.lav : trekk.hoy) : trekk);
+        if (Number.isFinite(ocN) && ocN === 0) return '–';
+        return trekkTxt;
+      }
+      return trekkTxt + ' \u00b7 ' + arrow;
+    }
+    function qaFfLayerIsZero(arm, key){
+      if (!arm || typeof arm !== 'object') return true;
+      var v = arm[key];
+      if (v == null) return true;
+      if (typeof v === 'object' && (v.lav != null || v.hoy != null)) {
+        var lav = Number(v.lav), hoy = Number(v.hoy);
+        var lav0 = !Number.isFinite(lav) || lav === 0;
+        var hoy0 = !Number.isFinite(hoy) || hoy === 0;
+        return lav0 && hoy0;
+      }
+      var n = Number(v);
+      return !Number.isFinite(n) || n === 0;
     }
     function qaFfLavHoy(arm){
       if (!arm || typeof arm !== 'object') return '–';
@@ -8457,16 +8498,25 @@ setTimeout(tick,1500);setInterval(tick,5000);
       { key: 'b', label: 'B', code: 'B' },
       { key: 'ordna', label: 'Ordna', code: 'O' }
     ];
+    /* c440: X-faktor erstattet; Origin-cap under Finn med foer→tak; skygge fjernet; ståtid=statid */
     var layers = [
       { key: 'finn_utpris', label: 'Finn-utpris' },
+      { key: 'origin_cap', label: 'Origin-cap' },
       { key: 'forhandlermargin', label: 'Forhandlermargin' },
-      { key: 'staotid', label: 'Ståtid' },
+      { key: 'statid', label: 'Ståtid' },
       { key: 'omregistrering', label: 'Omregistrering' },
       { key: 'transport', label: 'Transport' },
       { key: 'klargjoring', label: 'Klargjøring' },
-      { key: 'x_faktor', label: 'X-faktor' },
+      { key: 'spenn', label: 'Spenn' },
+      { key: 'returtrekk', label: 'Returtrekk' },
+      { key: 'ordna_trekk', label: 'Ordna-trekk' },
+      { key: 'vrakpant_gulv', label: 'Vrakpant-gulv' },
+      { key: 'avrunding', label: 'Avrunding' },
       { key: 'peasy_avgift', label: 'Peasy-avgift' }
     ];
+    function qaFfLayerAllZero(key){
+      return cols.every(function(c){ return qaFfLayerIsZero(ff[c.key], key); });
+    }
     var sLav = Number(sentLav), sHoy = Number(sentHoy);
     var hasSent = Number.isFinite(sLav) && Number.isFinite(sHoy);
     var matchCodes = [];
@@ -8495,11 +8545,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!hi(code)) return base;
       return base + 'background:#F1F8F4;border-left:3px solid #1B5E20;';
     }
-    /* c438: skyggekolonne a_statid — alltid muted, aldri «Skrives» */
-    var shadowArm = (ff.a_statid && typeof ff.a_statid === 'object') ? ff.a_statid : null;
-    var shadowTh = 'padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:#9AA5A0;';
-    var shadowTd = 'padding:5px 8px;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap;color:#9AA5A0;';
-    var shadowTdBold = shadowTd + 'font-weight:700;';
     var html = '<div style="margin-top:8px;">';
     if (skrivesLabel) {
       html += '<div style="margin-bottom:6px;"><span style="display:inline-block;padding:2px 8px;border-radius:99px;background:#E8F5E9;color:#1B5E20;font-size:11px;font-weight:800;letter-spacing:0.02em;">Skrives: '+esc(skrivesLabel)+'</span></div>';
@@ -8508,15 +8553,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
     html += '<thead><tr>';
     html += '<th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);">Lag</th>';
     cols.forEach(function(c){ html += '<th style="'+thStyle(c.code)+'">'+esc(c.label)+'</th>'; });
-    html += '<th style="'+shadowTh+'">A + st\u00e5tid (skygge)</th>';
     html += '</tr></thead><tbody>';
     layers.forEach(function(layer){
+      if (qaFfLayerAllZero(layer.key)) return;
       html += '<tr>';
       html += '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">'+esc(layer.label)+'</td>';
       cols.forEach(function(c){
-        html += '<td style="'+tdStyle(c.code)+'">'+qaFfLayer(ff[c.key], layer.key)+'</td>';
+        var cell = (layer.key === 'origin_cap')
+          ? qaFfOriginCap(ff[c.key])
+          : qaFfLayer(ff[c.key], layer.key);
+        html += '<td style="'+tdStyle(c.code)+'">'+cell+'</td>';
       });
-      html += '<td style="'+shadowTd+'">'+qaFfLayer(shadowArm, layer.key)+'</td>';
       html += '</tr>';
     });
     html += '<tr>';
@@ -8524,21 +8571,19 @@ setTimeout(tick,1500);setInterval(tick,5000);
     cols.forEach(function(c){
       html += '<td style="'+tdStyle(c.code, true)+'">'+qaFfLavHoy(ff[c.key])+'</td>';
     });
-    html += '<td style="'+shadowTdBold+'">'+qaFfLavHoy(shadowArm)+'</td>';
     html += '</tr>';
     var avCells = cols.map(function(c){ return qaFfAvvik(ff[c.key]); });
-    var shadowAv = qaFfAvvik(shadowArm);
-    if (avCells.some(function(s){ return !!s; }) || shadowAv) {
+    if (avCells.some(function(s){ return !!s; })) {
       html += '<tr>';
       html += '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">Avvik</td>';
       cols.forEach(function(c, i){
         html += '<td style="'+tdStyle(c.code)+'">'+(avCells[i] || '–')+'</td>';
       });
-      html += '<td style="'+shadowTd+'">'+(shadowAv || '–')+'</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
-    if (ff.statid_manuell) {
+    var statidManuell = !!(ff.statid_manuell || (ff.a && ff.a.statid_manuell));
+    if (statidManuell) {
       html += '<div style="margin-top:6px;font-size:11px;color:#9AA5A0;">St\u00e5tid over 60 d, vurder manuelt</div>';
     }
     if (hasSent && !hiCode && matchCodes.length === 0) {
@@ -10826,8 +10871,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c440: QA fossefall Del 4 — fjern X-faktor/skygge; Spenn/Returtrekk/Ordna-trekk/Vrakpant-gulv/Avrunding; Origin-cap med chefs_foer_cap→origin_cap_tak; ståtid=statid live i A; skjul null-rader; statid_manuell. SEND uendret. -->
 <!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
-<!-- c438: QA fossefall skyggekolonne A + ståtid (a_statid), muted; manuell-merke ved statid_manuell. SEND uendret. -->
+<!-- c438: QA fossefall skyggekolonne A + ståtid (a_statid) — erstattet i c440 (ståtid live i A via statid). -->
 <!-- c437: QA fossefall highlight følger ERP estimat_sendt (ikke abArm) -->
 <!-- c436: QA fossefall-tabell A/B/Ordna fra measurements -->
 <!-- c435: GB beslutning først. Comps i pris · origin uten signaler · match kun car.info/i_pris · bibliotek bak Vis. -->
