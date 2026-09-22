@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c435</title>
+<title>Peasy Pulse v16.08.c436</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c435';</script>
+<script>document.title='Peasy Pulse v16.08.c436';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -370,7 +370,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c435</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c436</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -461,7 +461,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c435</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c436</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7905,7 +7905,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c435</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c436</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8399,6 +8399,113 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
     if (pr.vrakpant_override) lines.push('Vrakpant-gulv 5 000 / 10 000');
     return '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;"><b>'+esc(title)+'</b><pre style="display:block;margin:4px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.45;white-space:pre-wrap;">'+esc(lines.join('\n'))+'</pre></div>';
+  }
+  function qaFossefallHtml(ff, sendArm){
+    if (!ff || typeof ff !== 'object') {
+      return '<div style="margin-top:8px;color:var(--muted);font-size:12px;">Fossefall mangler i measurements</div>';
+    }
+    function qaFfKr(n, signedPlus){
+      var x = Number(n);
+      if (!Number.isFinite(x)) return '–';
+      var abs = Math.abs(Math.round(x)).toLocaleString('nb-NO');
+      if (x < 0) return '−' + abs;
+      if (signedPlus && x > 0) return '+' + abs;
+      return abs;
+    }
+    function qaFfCellVal(v){
+      if (v == null) return '–';
+      if (typeof v === 'object' && (v.lav != null || v.hoy != null)) {
+        var lav = Number(v.lav), hoy = Number(v.hoy);
+        if (!Number.isFinite(lav) && !Number.isFinite(hoy)) return '–';
+        if (!Number.isFinite(hoy) || lav === hoy) return qaFfKr(Number.isFinite(lav) ? lav : hoy);
+        if (!Number.isFinite(lav)) return qaFfKr(hoy);
+        return qaFfKr(lav) + ' / ' + qaFfKr(hoy);
+      }
+      return qaFfKr(v);
+    }
+    function qaFfLayer(arm, key){
+      if (!arm || typeof arm !== 'object') return '–';
+      return qaFfCellVal(arm[key]);
+    }
+    function qaFfLavHoy(arm){
+      if (!arm || typeof arm !== 'object') return '–';
+      var lav = Number(arm.lav), hoy = Number(arm.hoy);
+      if (!Number.isFinite(lav) && !Number.isFinite(hoy)) return '–';
+      if (!Number.isFinite(hoy)) return qaFfKr(lav);
+      if (!Number.isFinite(lav)) return qaFfKr(hoy);
+      return qaFfKr(lav) + ' – ' + qaFfKr(hoy);
+    }
+    function qaFfAvvik(arm){
+      if (!arm || !arm.avvik_kr || typeof arm.avvik_kr !== 'object') return '';
+      var av = arm.avvik_kr;
+      var lav = Number(av.lav), hoy = Number(av.hoy);
+      var hasLav = Number.isFinite(lav) && lav !== 0;
+      var hasHoy = Number.isFinite(hoy) && hoy !== 0;
+      if (!hasLav && !hasHoy) return '';
+      var nums;
+      if (hasLav && hasHoy && lav !== hoy) nums = qaFfKr(lav, true) + ' / ' + qaFfKr(hoy, true);
+      else nums = qaFfKr(hasLav ? lav : hoy, true);
+      var aarsak = av.aarsak ? (' · ' + esc(String(av.aarsak))) : '';
+      return nums + aarsak;
+    }
+    var cols = [
+      { key: 'a', label: 'A', code: 'A' },
+      { key: 'b', label: 'B', code: 'B' },
+      { key: 'ordna', label: 'Ordna', code: 'O' }
+    ];
+    var layers = [
+      { key: 'finn_utpris', label: 'Finn-utpris' },
+      { key: 'forhandlermargin', label: 'Forhandlermargin' },
+      { key: 'staotid', label: 'Ståtid' },
+      { key: 'omregistrering', label: 'Omregistrering' },
+      { key: 'transport', label: 'Transport' },
+      { key: 'klargjoring', label: 'Klargjøring' },
+      { key: 'x_faktor', label: 'X-faktor' },
+      { key: 'peasy_avgift', label: 'Peasy-avgift' }
+    ];
+    function hi(code){
+      return sendArm && sendArm === code;
+    }
+    function thStyle(code){
+      var base = 'padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);';
+      if (!hi(code)) return base;
+      return base + 'background:#E8F5E9;color:#1B5E20;border-left:3px solid #1B5E20;';
+    }
+    function tdStyle(code, bold){
+      var base = 'padding:5px 8px;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap;' + (bold ? 'font-weight:700;' : '');
+      if (!hi(code)) return base;
+      return base + 'background:#F1F8F4;border-left:3px solid #1B5E20;';
+    }
+    var html = '<div style="margin-top:8px;overflow-x:auto;"><table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:6px;">';
+    html += '<thead><tr>';
+    html += '<th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);">Lag</th>';
+    cols.forEach(function(c){ html += '<th style="'+thStyle(c.code)+'">'+esc(c.label)+'</th>'; });
+    html += '</tr></thead><tbody>';
+    layers.forEach(function(layer){
+      html += '<tr>';
+      html += '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">'+esc(layer.label)+'</td>';
+      cols.forEach(function(c){
+        html += '<td style="'+tdStyle(c.code)+'">'+qaFfLayer(ff[c.key], layer.key)+'</td>';
+      });
+      html += '</tr>';
+    });
+    html += '<tr>';
+    html += '<td style="padding:6px 8px;font-size:11px;font-weight:700;">Lav – høy</td>';
+    cols.forEach(function(c){
+      html += '<td style="'+tdStyle(c.code, true)+'">'+qaFfLavHoy(ff[c.key])+'</td>';
+    });
+    html += '</tr>';
+    var avCells = cols.map(function(c){ return qaFfAvvik(ff[c.key]); });
+    if (avCells.some(function(s){ return !!s; })) {
+      html += '<tr>';
+      html += '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">Avvik</td>';
+      cols.forEach(function(c, i){
+        html += '<td style="'+tdStyle(c.code)+'">'+(avCells[i] || '–')+'</td>';
+      });
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
   }
   function qaIsAuctionBlob(s){
     return /auksjon|\bauction\b|salgsform\s*[=:]?\s*2|sales_form['\":\s]*2/i.test(String(s||''));
@@ -9495,6 +9602,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const cvByReg = {};
       const bot4ByIntern = {};
       const loop2ByIntern = {};
+      const fossefallByIntern = {};
       var histByReg = {};
       function qaInternKey(v){
         if (v==null || v==='') return '';
@@ -9508,6 +9616,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
         var prev = map[key];
         var t = ts || rec.timestamp || rec._ts || '';
         if (!prev || t > (prev.timestamp || prev._ts || '')) map[key] = rec;
+      }
+      function qaRememberFossefall(intern, r){
+        if (!intern || !r) return;
+        var ff = r.fossefall || (r.easy && r.easy.fossefall) || (r.v3g && r.v3g.fossefall) || null;
+        if (!ff) return;
+        qaPutLatest(fossefallByIntern, intern, { fossefall: ff, timestamp: r.timestamp || '', _ts: r.timestamp || '' }, r.timestamp);
       }
       function paintQACards(){
         var enriched = [];
@@ -9587,6 +9701,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
           };
           var cvMeas = qaMergedOriginCv(cvByIntern, cvByReg, internKey, rg);
           if (cvMeas) row.origin_cv = cvMeas;
+          var ffRec = internKey ? fossefallByIntern[internKey] : null;
+          var ffCard = (ffRec && ffRec.fossefall)
+            || (row.easy && row.easy.fossefall)
+            || (row.v3g && row.v3g.fossefall)
+            || null;
+          if (ffCard) row.fossefall = ffCard;
           row.km = qaPickErpKm(row);
           return row;
         }).filter(function(e){ return !qaIsSent(e.regnr, e.erpId); }).sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
@@ -9720,10 +9840,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
         var rgM = String(r.regnr || '').toUpperCase();
         if (rgM) qaRememberOriginCv(cvByReg, rgM, r);
         if (r.evaluator === 'v3' || r.v2) qaPutLatest(v3ByIntern, intern, r);
+        qaRememberFossefall(intern, r);
         if (isRealEasy(r.easy)) {
           var easyPut = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPut.chefs) && qaChefObj(r.chefs)) easyPut.chefs = r.chefs;
           if (!easyPut.origin_cv && r.origin_cv) easyPut.origin_cv = r.origin_cv;
+          if (!easyPut.fossefall && r.fossefall) easyPut.fossefall = r.fossefall;
           qaAttachParentOriginCv(easyPut, r);
           qaPutLatest(easyByIntern, intern, easyPut, r.timestamp);
         }
@@ -9740,6 +9862,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         qaRememberOriginCv(cvByIntern, intern, r);
         var rgV = String(r.regnr || '').toUpperCase();
         if (rgV) qaRememberOriginCv(cvByReg, rgV, r);
+        qaRememberFossefall(intern, r);
         if (!qaV3gPriced(r)) continue;
         qaPutLatest(v3gByIntern, intern, r);
         if (rgV) qaPutLatest(v3gByReg, rgV, r);
@@ -9747,6 +9870,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           var easyPutG = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPutG.chefs) && qaChefObj(r.chefs)) easyPutG.chefs = r.chefs;
           if (!easyPutG.origin_cv && r.origin_cv) easyPutG.origin_cv = r.origin_cv;
+          if (!easyPutG.fossefall && r.fossefall) easyPutG.fossefall = r.fossefall;
           qaAttachParentOriginCv(easyPutG, r);
           qaPutLatest(easyByIntern, intern, easyPutG, r.timestamp);
         }
@@ -10055,29 +10179,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const samlerHold = qaIsSamlerbilCandidate(e) && !qaSamlerIsAvvist(key) && !scope;
     if (samlerHold) { label='SAMLERBIL'; color='#6D4C41'; icon='◆'; }
     const sellerLabel = (String(e.source||'').toLowerCase()==='driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
-    const yearQa = Number(id.model_year) || Number(e.v3g && e.v3g.modelYear) || 0;
-    const easyHasEval = !!(e.easy && (Number.isFinite(Number(easy.dLav)) || easy.anker != null || easy.finn_price != null || easy.confidence != null || easy.anker_kilde || easy.begrunnelse_kort || easy.pricing || Number.isFinite(Number(easy.margin))));
-    const easyPr = (easyHasEval || Number.isFinite(Number(easy.dLav)) || Number.isFinite(Number(easy.dHoy))) ? {
-      anchorPrice: Number(easy.anker || easy.finn_utpris || easy.finn_price || easy.anchorPrice),
-      dLav: Number(easy.dLav),
-      dHoy: Number(easy.dHoy),
-      breakdown: easy.breakdown || null,
-      vrakpant: !!easy.vrakpant,
-      year: yearQa,
-      egenvekt: easy.egenvekt,
-      isVarebil: !!(e.rawErp && (/varebil/i.test(String((e.rawErp.drive_no_car_data&&e.rawErp.drive_no_car_data.body_type)||e.rawErp.body_type||'')) || (e.rawErp.drive_no_car_data&&e.rawErp.drive_no_car_data.vehicle_class))),
-      biltype: (e.rawErp && e.rawErp.drive_no_car_data && (e.rawErp.drive_no_car_data.body_type || e.rawErp.drive_no_car_data.chassis)) || ''
-    } : null;
-    const easyKalkHtml = easyPr
-      ? (qaEasyTableHtml(easyPr) || '<div style="margin-top:8px;color:var(--muted);">Easy kalkyle: ingen eval</div>')
-      : '<div style="margin-top:8px;color:var(--muted);">Easy kalkyle: ingen eval</div>';
-    const v3KalkHtml = qaKalkyleHtml('V3 kalkyle', qaPickPricing((v3m && v3m.pricing) || v3.pricing, v3.anker, e.km, yearQa, null));
-    const vgHair = (vg.kalkyle==='ordna' || vg.ordna_mult) ? {mult: vg.ordna_mult || 0.75, kind: 'ordna'} : ((vg.kalkyle==='retur' || vg.retur_mult) ? {mult: vg.retur_mult || 0.90, kind: 'retur'} : null);
-    const vgKalkHtml = qaKalkyleHtml('V3G kalkyle', qaPickPricing(e.v3g && e.v3g.pricing, vg.anker, e.km, yearQa, vgHair));
     const histHtml = qaHistHtml(e.hist);
     const srcLive = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
     const armLive = (typeof abArm==='function') ? abArm(e.erpId, srcLive) : 'A';
-    const ankerWho = armLive==='O' ? 'V3G Ordna' : (armLive==='B' ? 'V3G' : 'Easy');
+    const ankerWho = armLive==='O' ? 'Ordna' : (armLive==='B' ? 'B' : 'A');
+    var ff = e.fossefall || (e.easy && e.easy.fossefall) || (e.v3g && e.v3g.fossefall) || null;
+    const fossefallHtml = qaFossefallHtml(ff, armLive);
     const cvHead = (typeof qaPickOriginCv==='function') ? (qaPickOriginCv(e)||{}) : {};
     const kmNum = (typeof qaPickErpKm==='function') ? qaPickErpKm(e) : (cvHead.erpKm != null ? cvHead.erpKm : e.km);
     const km = (typeof qaFmtKmChip==='function') ? qaFmtKmChip(kmNum) : (kmNum ? Math.round(kmNum/1000)+'k' : '?');
@@ -10157,7 +10264,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     } else {
       const src = (typeof sourceForErp==='function') ? sourceForErp(e.erpId,e) : (e.source||'');
       const arm = (typeof abArm==='function') ? abArm(e.erpId, src) : 'A';
-      const sendWho = arm==='O' ? 'V3G ORDNA' : (arm==='B' ? 'V3G' : 'Easy');
+      const sendWho = arm==='O' ? 'ORDNA' : (arm==='B' ? 'B' : 'A');
       const sendBg = kjorbar==='nei' ? '#A8221C' : (arm==='O' ? '#E65100' : (arm==='B' ? '#1B5E20' : '#6A1B9A'));
       const sendTxt = kjorbar==='nei' ? 'QA — IKKE KJØRBAR' : ('📤 SEND '+sendWho);
       actionHtml = '<button data-key="'+key+'" data-regnr="'+esc(e.regnr)+'" data-erpid="'+esc(String(e.erpId))+'" data-km="'+(kmNum||e.km||0)+'" class="qa-send-btn" style="flex:1;min-width:100px;padding:10px 12px;background:'+sendBg+';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">'+sendTxt+'</button>';
@@ -10167,7 +10274,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px;">
         ${qaSisterHtml(e)}
         <div style="flex:1;min-width:0;">
-          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(typeof abBadge==='function')?abBadge(e.erpId,(typeof sourceForErp==='function'?sourceForErp(e.erpId,e):e.source)) : ''}${qaJrChip(e)}${(function(){var m=typeof window.peasyAiPlateMeta==='function'?window.peasyAiPlateMeta(e.regnr):'';if(!m)return '';return ' <span style="margin-left:8px;font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0;color:'+(m.rounds>1?'#E65100':'var(--muted)')+';">'+m.text+'</span>';})()}</div>
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:var(--text);">${esc(e.regnr)} ${(function(){var srcB=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var aB=(typeof abArm==='function')?abArm(e.erpId,srcB):'A';if(!aB)return '';if(aB==='O'){var sk=(typeof srcKey==='function')?srcKey(srcB):String(srcB||'').toLowerCase();if(sk==='autodb')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#EDE7F6;color:#4527A0;font-size:10px;font-weight:800;letter-spacing:0.04em;">AUTODB</span>';return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#FFF3E0;color:#E65100;font-size:10px;font-weight:800;letter-spacing:0.04em;">ORDNA</span>';}if(aB==='B')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:800;letter-spacing:0.04em;">B</span>';return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#F3E5F5;color:#6A1B9A;font-size:10px;font-weight:800;letter-spacing:0.04em;">A</span>';})()}${qaJrChip(e)}${(function(){var m=typeof window.peasyAiPlateMeta==='function'?window.peasyAiPlateMeta(e.regnr):'';if(!m)return '';return ' <span style="margin-left:8px;font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0;color:'+(m.rounds>1?'#E65100':'var(--muted)')+';">'+m.text+'</span>';})()}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(variant).slice(0,40)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(modelYear)} · ${km} km · intern ${qaErpA(e.erpId, String(e.erpId||'—'), 'color:#1565C0')} · ${(typeof srcLabel==='function'?srcLabel(e.source||((typeof sourceForErp==='function')?sourceForErp(e.erpId,e):'')):'')} · ${(typeof pulseBotLabel==='function'?pulseBotLabel(e.erpId, (typeof sourceForErp==='function'?sourceForErp(e.erpId,e):(e.source||''))):'')}</div>
         </div>
@@ -10196,12 +10303,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
         <div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div>
         <div style="color:var(--muted);font-size:10px;text-align:right;" title="car.info-ident 0–100. 100 = origin matcher. Ellers felt-dekning (typisk 70–90).">Ident</div>
-        <div style="color:var(--muted);">Easy</div>
+        <div style="color:var(--muted);">A</div>
         <div style="text-align:right;font-weight:700;">${fmt(easy.dLav)}${qaSharePctHtml(easy.dLav,originFu)}</div>
         <div style="text-align:right;font-weight:600;">${fmt(originFu)}</div>
         <div style="text-align:right;">${fmt(easy.dHoy)}${qaSharePctHtml(easy.dHoy,originFu)}</div>
         <div style="text-align:right;font-weight:800;">${qaIdent('easy')}</div>
-        <div style="color:var(--muted);">V3G</div>
+        <div style="color:var(--muted);">B</div>
         <div style="text-align:right;">${fmt(vg.dLav)}${qaSharePctHtml(vg.dLav,originFu)}</div>
         <div style="text-align:right;font-weight:600;">${fmt(originFu)}${vg.override?' <span style="font-size:9px;font-weight:800;color:#1B5E20;">QA</span>':''}</div>
         <div style="text-align:right;">${fmt(vg.dHoy)}${qaSharePctHtml(vg.dHoy,originFu)}</div>
@@ -10209,12 +10316,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
       </div>
       ${(function(){var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';var lav=(a==='B'||a==='O')?vg.dLav:easy.dLav;var hoy=(a==='B'||a==='O')?vg.dHoy:easy.dHoy;return qaKundeSerHtml(lav,hoy,originFu);})()}
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45;">
-        <div>${(function(){if(auctionHit)return '<b style="color:#A8221C;">Har vært på auksjon — estimatet sendes ikke</b> før ny runde er avtalt.';var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O'&&(typeof isAutodbSource==='function'?isAutodbSource(src):src==='autodb'))return '<b style="color:#5E35B1;">V3G AutoDB</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (ingen Ordna-kutt).';if(a==='O')return '<b style="color:#E65100;">V3G Ordna</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter margin og fee).';if(a==='B')return '<b style="color:#1B5E20;">B V3G</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.90 etter margin og fee).';return '<b style="color:#6A1B9A;">A Easy</b> Lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
+        <div>${(function(){if(auctionHit)return '<b style="color:#A8221C;">Har vært på auksjon — estimatet sendes ikke</b> før ny runde er avtalt.';var src=(typeof sourceForErp==='function')?sourceForErp(e.erpId,e):(e.source||'');var a=(typeof abArm==='function')?abArm(e.erpId,src):'A';if(a==='O'&&(typeof isAutodbSource==='function'?isAutodbSource(src):src==='autodb'))return '<b style="color:#5E35B1;">Ordna</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (ingen Ordna-kutt).';if(a==='O')return '<b style="color:#E65100;">Ordna</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.75 etter margin og fee).';if(a==='B')return '<b style="color:#1B5E20;">B</b> Lav <b style="color:var(--text);">'+fmt(vg.dLav)+'</b> sendes til kunden (×0.90 etter margin og fee).';return '<b style="color:#6A1B9A;">A</b> Lav <b style="color:var(--text);">'+fmt(easy.dLav)+'</b> sendes til kunden.';})()}</div>
         <div>Finn-pris ${fmt(originFu)}</div>
-        ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+' (det som sendes). Easy V7 er uten Ordna-kutt.</div>':''}
+        ${(vg.kalkyle==='ordna'&&vg.original_dLav!=null)?'<div style="color:#E65100;">Ordna-kalkyle ×0.75: standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+' (det som sendes). A er uten Ordna-kutt.</div>':''}
         ${((vg.kalkyle==='retur'||vg.retur_mult)&&vg.original_dLav!=null)?'<div style="color:#1B5E20;">Retur-kalkyle ×'+(vg.retur_mult||0.90)+': standard '+fmt(vg.original_dLav)+' → '+fmt(vg.dLav)+'</div>':''}
         ${qaOriginCapHtml(e, easy, vg, originFu)}
       </div>
+      ${fossefallHtml}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${actionHtml}
         ${!sentTime ? `<button type="button" class="qa-clear-btn" data-key="${key}" data-regnr="${esc(e.regnr)}" data-erpid="${esc(String(e.erpId||''))}" title="Slett all eval-cache. Easy, V3 og V3G priser på blankt ark med km fra ERP." style="padding:10px 12px;background:#fff;color:#A8221C;border:1px solid #E57373;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Slett cache</button>` : ''}
@@ -10228,9 +10336,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       <div id="qa-detail-${key}" style="display:none;margin-top:10px;padding:10px;background:#F8F8F5;border-radius:6px;font-size:12px;line-height:1.4;">
         ${finnTerrain.htmlDetail}
         ${sellerCmt ? '<div><b>'+esc(sellerLabel)+':</b> <i>'+esc(sellerCmt)+'</i></div>' : ''}
-        ${easyKalkHtml}
         ${vg.begrunnelse?'<div style="margin-top:6px;"><b>V3G begrunnelse:</b> '+esc(vg.begrunnelse)+'</div>':''}
-        ${vgKalkHtml}
         ${(function(){var s=vg.sister||(e.v3g&&e.v3g.sister)||null;var u=s&&(s.url||s.link);if(!u)return '';var n=(s.hitsExOrigin!=null)?s.hitsExOrigin:s.hits;var lab=s.label?esc(s.label):'';var why=s.note||s.why||'';if(!why&&s.widened){var w=String(s.widened);if(w==='km40')why='For få treff på km ±25 % / samme år. Utvidet km til ±40 %.';else if(w==='km60')why='For få treff. Utvidet km til ±60 %.';else if(w==='year2')why='For få treff etter km-utvidelse. Utvidet årsmodell ±2.';else if(w==='year3')why='For få treff etter km-utvidelse. Utvidet årsmodell ±3.';}return '<div style="margin-top:6px;"><b>Søsterbiler:</b> <a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:#0F6E66;font-weight:600;">Åpne Finn-søk</a>'+(n!=null?' <span style="color:#666;">('+n+' treff)</span>':'')+(lab?'<div style="color:#666;margin-top:2px;">'+lab+'</div>':'')+(why?'<div style="margin-top:4px;color:#555;font-style:italic;">'+esc(why)+'</div>':'')+'</div>';})()}
       </div>
     </div>`;
@@ -10642,6 +10748,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c436: QA fossefall-tabell A/B/Ordna fra measurements -->
 <!-- c435: GB beslutning først. Comps i pris · origin uten signaler · match kun car.info/i_pris · bibliotek bak Vis. -->
 <!-- c434: GB-fane viser origin_attrs og match-tabell fra Mini /gb-utpris. Skyggesti. Ikke Easy/V3/V3G. -->
 <!-- c433: QA ORIGIN-CV + car.info fra måling når Easy har 0 comps / V3G ikke er priset. Ingen ny car.info-HTTP. SEND uendret. -->
