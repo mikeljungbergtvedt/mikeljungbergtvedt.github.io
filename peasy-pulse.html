@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c443</title>
+<title>Peasy Pulse v16.08.c444</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c443';</script>
+<script>document.title='Peasy Pulse v16.08.c444';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -449,7 +449,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c443</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c444</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -540,7 +540,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c443</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c444</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7984,7 +7984,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c443</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c444</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8525,6 +8525,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     var deltaKeys = {
       forhandlermargin: 1, origin_cap: 1, statid: 1, omregistrering: 1, transport: 1,
       klargjoring: 1, spenn: 1, usikkerhet_takst: 1, returtrekk: 1,
+      forhandlermargin_pct: 1, forhandlermargin_tak_gulv: 1, forhandlermargin_segment: 1,
       forhandlermargin_tillegg_bud: 1, ordna_trekk: 1,
       vrakpant_gulv: 1, avrunding: 1, peasy_avgift: 1
     };
@@ -8563,8 +8564,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (lav != null && hoy != null && lav === hoy) return lav;
       return { lav: lav, hoy: hoy };
     }
-    function qaFfValOf(arm, layer){
-      if (layer && layer.val) return layer.val(arm);
+    function qaFfValOf(arm, layer, col){
+      if (layer && layer.arms && col && !layer.arms[col.key]) return undefined;
+      if (layer && layer.val) return layer.val(arm, col);
       if (!arm || typeof arm !== 'object' || !layer) return undefined;
       return arm[layer.key];
     }
@@ -8579,10 +8581,17 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var n = Number(v);
       return !Number.isFinite(n) || n === 0;
     }
-    function qaFfLayerCell(arm, layer){
+    function qaFfLayerCell(arm, layer, col){
+      if (layer && layer.arms && col && !layer.arms[col.key]) return '–';
       if (layer && layer.key === 'origin_cap' && !layer.val) return qaFfOriginCap(arm);
       var signed = layer && layer.signed != null ? layer.signed : !!(layer && deltaKeys[layer.key]);
-      return qaFfCellVal(qaFfValOf(arm, layer), signed);
+      var val = qaFfValOf(arm, layer, col);
+      var html = qaFfCellVal(val, signed);
+      var note = (layer && layer.note) ? String(layer.note(arm, col) || '').trim() : '';
+      if (note && !qaFfValIsZero(val)) {
+        html = '<span class="qa-ff-txt">' + esc(note) + ' =</span> ' + html;
+      }
+      return html;
     }
     /* c440: Origin-cap = trekk + «foer → tak» (chefs_foer_cap / origin_cap_tak) */
     function qaFfOriginCap(arm){
@@ -8637,6 +8646,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
       { key: 'b', label: 'B', code: 'B' },
       { key: 'ordna', label: 'Ordna', code: 'O' }
     ];
+    /* c444: herav-rader under Forhandlermargin. Total = base + tillegg, som c442. */
+    function qaFfSegmentRegel(arm){
+      if (!arm || typeof arm !== 'object') return '';
+      var r = arm.forhandlermargin_segment_regel;
+      if (r == null) return '';
+      return String(r).trim();
+    }
     /* c442: Spenn → Usikkerhet takst; Returtrekk under Forhandlermargin. Ordna-trekk egen rad. */
     var layers = [
       { key: 'finn_utpris', label: 'Finn-utpris' },
@@ -8647,12 +8663,49 @@ setTimeout(tick,1500);setInterval(tick,5000);
         val: function(arm){
           return qaFfSum(arm && arm.forhandlermargin, qaFfPick(arm, 'forhandlermargin_tillegg_bud', 'returtrekk'));
         },
-        sub: {
-          key: 'forhandlermargin_tillegg_bud',
-          label: 'Tillegg for å treffe bud (midlertidig)',
-          signed: true,
-          val: function(arm){ return qaFfPick(arm, 'forhandlermargin_tillegg_bud', 'returtrekk'); }
-        }
+        subs: [
+          {
+            key: 'forhandlermargin_pct',
+            label: 'herav 8 % av Finn',
+            signed: true,
+            arms: { a: 1 },
+            val: function(arm){ return arm && arm.forhandlermargin_pct; }
+          },
+          {
+            key: 'forhandlermargin_pct',
+            label: 'herav 12 % av Finn',
+            signed: true,
+            arms: { b: 1, ordna: 1 },
+            val: function(arm){ return arm && arm.forhandlermargin_pct; }
+          },
+          {
+            key: 'forhandlermargin_tak_gulv',
+            label: 'herav Min-margin',
+            signed: true,
+            arms: { a: 1 },
+            val: function(arm){ return arm && arm.forhandlermargin_tak_gulv; }
+          },
+          {
+            key: 'forhandlermargin_tak_gulv',
+            label: 'herav Tak/gulv prisklasse',
+            signed: true,
+            arms: { b: 1, ordna: 1 },
+            val: function(arm){ return arm && arm.forhandlermargin_tak_gulv; }
+          },
+          {
+            key: 'forhandlermargin_segment',
+            label: 'herav Segmentfaktor',
+            signed: true,
+            val: function(arm){ return arm && arm.forhandlermargin_segment; },
+            note: function(arm){ return qaFfSegmentRegel(arm); }
+          },
+          {
+            key: 'forhandlermargin_tillegg_bud',
+            label: 'herav Tillegg for å treffe bud (midlertidig)',
+            signed: true,
+            val: function(arm){ return qaFfPick(arm, 'forhandlermargin_tillegg_bud', 'returtrekk'); }
+          }
+        ]
       },
       { key: 'statid', label: 'Ståtid' },
       { key: 'omregistrering', label: 'Omregistrering' },
@@ -8669,13 +8722,18 @@ setTimeout(tick,1500);setInterval(tick,5000);
       { key: 'avrunding', label: 'Avrunding' },
       { key: 'peasy_avgift', label: 'Peasy-avgift' }
     ];
+    function qaFfSubsOf(layer){
+      if (!layer) return [];
+      if (Array.isArray(layer.subs)) return layer.subs;
+      if (layer.sub) return [layer.sub];
+      return [];
+    }
     function qaFfLayerAllZero(layer){
-      return cols.every(function(c){ return qaFfValIsZero(qaFfValOf(ff[c.key], layer)); });
+      return cols.every(function(c){ return qaFfValIsZero(qaFfValOf(ff[c.key], layer, c)); });
     }
     function qaFfShowLayer(layer){
       if (!qaFfLayerAllZero(layer)) return true;
-      if (layer.sub && !qaFfLayerAllZero(layer.sub)) return true;
-      return false;
+      return qaFfSubsOf(layer).some(function(sub){ return !qaFfLayerAllZero(sub); });
     }
     var sLav = Number(sentLav), sHoy = Number(sentHoy);
     var hasSent = Number.isFinite(sLav) && Number.isFinite(sHoy);
@@ -8719,17 +8777,18 @@ setTimeout(tick,1500);setInterval(tick,5000);
       html += '<tr>';
       html += '<td class="qa-ff-lag" style="color:var(--muted);">'+esc(layer.label)+'</td>';
       cols.forEach(function(c){
-        html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer)+'</td>';
+        html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer, c)+'</td>';
       });
       html += '</tr>';
-      if (layer.sub && !qaFfLayerAllZero(layer.sub)) {
+      qaFfSubsOf(layer).forEach(function(sub){
+        if (qaFfLayerAllZero(sub)) return;
         html += '<tr>';
-        html += '<td class="qa-ff-lag qa-ff-sub">'+esc(layer.sub.label)+'</td>';
+        html += '<td class="qa-ff-lag qa-ff-sub">'+esc(sub.label)+'</td>';
         cols.forEach(function(c){
-          html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer.sub)+'</td>';
+          html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], sub, c)+'</td>';
         });
         html += '</tr>';
-      }
+      });
     });
     html += '<tr>';
     html += '<td class="qa-ff-lag" style="font-weight:700;color:var(--text);">Lav – høy</td>';
@@ -11280,6 +11339,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c444: QA fossefall — under Forhandlermargin, ikke-null deler som innrykkede herav-rader på A/B/Ordna: herav 8 % av Finn (A, forhandlermargin_pct) / herav 12 % av Finn (B/Ordna), herav Min-margin (A) / herav Tak/gulv prisklasse (B/Ordna, forhandlermargin_tak_gulv), herav Segmentfaktor + forhandlermargin_segment_regel, herav Tillegg for å treffe bud (midlertidig). Totalraden er fortsatt base + tillegg. Null-herav skjules. Usikkerhet takst, Ordna-trekk og Vrakpant-gulv forblir egne rader. c443-layout uendret. SEND/filtre uendret. -->
 <!-- c443: QA fossefall uten horisontal scroll. Tabellen fyller kortbredden (fast layout). Lag-tekst brytes. Tallpar (lav/høy, Origin-cap, Lav – høy) kan brekke mellom verdiene, ikke midt i et tall. A/B/Ordna, hvilke lag som vises, og Skrives-markering uendret. Tall/SEND/filtre uendret. -->
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c441: QA/Send viser bare final_estimate uten fe_created_at. order_delivery-id droppes. Ikke zombie fra peasy-qa-list3, behold-kort eller measurements. -->
