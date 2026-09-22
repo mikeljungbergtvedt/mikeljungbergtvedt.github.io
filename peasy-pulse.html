@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c441</title>
+<title>Peasy Pulse v16.08.c442</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c441';</script>
+<script>document.title='Peasy Pulse v16.08.c442';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -370,7 +370,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c441</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c442</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -461,7 +461,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c441</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c442</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -7905,7 +7905,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c441</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c442</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -8438,12 +8438,65 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
     var deltaKeys = {
       forhandlermargin: 1, origin_cap: 1, statid: 1, omregistrering: 1, transport: 1,
-      klargjoring: 1, spenn: 1, returtrekk: 1, ordna_trekk: 1,
+      klargjoring: 1, spenn: 1, usikkerhet_takst: 1, returtrekk: 1,
+      forhandlermargin_tillegg_bud: 1, ordna_trekk: 1,
       vrakpant_gulv: 1, avrunding: 1, peasy_avgift: 1
     };
-    function qaFfLayer(arm, key){
-      if (!arm || typeof arm !== 'object') return '–';
-      return qaFfCellVal(arm[key], !!deltaKeys[key]);
+    /* c442: new measurement names, fallback to c440 keys. Display only. */
+    function qaFfPick(arm, primary, fallback){
+      if (!arm || typeof arm !== 'object') return undefined;
+      if (Object.prototype.hasOwnProperty.call(arm, primary) && arm[primary] != null) return arm[primary];
+      if (fallback && Object.prototype.hasOwnProperty.call(arm, fallback) && arm[fallback] != null) return arm[fallback];
+      return undefined;
+    }
+    function qaFfPair(v){
+      if (v == null || v === '') return null;
+      if (typeof v === 'object') {
+        if (v.lav == null && v.hoy == null) return null;
+        var lav = Number(v.lav), hoy = Number(v.hoy);
+        return {
+          lav: Number.isFinite(lav) ? lav : null,
+          hoy: Number.isFinite(hoy) ? hoy : null
+        };
+      }
+      var n = Number(v);
+      if (!Number.isFinite(n)) return null;
+      return { lav: n, hoy: n };
+    }
+    function qaFfSum(a, b){
+      var pa = qaFfPair(a), pb = qaFfPair(b);
+      if (!pa) return b;
+      if (!pb) return a;
+      function add(x, y){
+        if (x == null) return y;
+        if (y == null) return x;
+        return x + y;
+      }
+      var lav = add(pa.lav, pb.lav);
+      var hoy = add(pa.hoy, pb.hoy);
+      if (lav != null && hoy != null && lav === hoy) return lav;
+      return { lav: lav, hoy: hoy };
+    }
+    function qaFfValOf(arm, layer){
+      if (layer && layer.val) return layer.val(arm);
+      if (!arm || typeof arm !== 'object' || !layer) return undefined;
+      return arm[layer.key];
+    }
+    function qaFfValIsZero(v){
+      if (v == null) return true;
+      if (typeof v === 'object' && (v.lav != null || v.hoy != null)) {
+        var lav = Number(v.lav), hoy = Number(v.hoy);
+        var lav0 = !Number.isFinite(lav) || lav === 0;
+        var hoy0 = !Number.isFinite(hoy) || hoy === 0;
+        return lav0 && hoy0;
+      }
+      var n = Number(v);
+      return !Number.isFinite(n) || n === 0;
+    }
+    function qaFfLayerCell(arm, layer){
+      if (layer && layer.key === 'origin_cap' && !layer.val) return qaFfOriginCap(arm);
+      var signed = layer && layer.signed != null ? layer.signed : !!(layer && deltaKeys[layer.key]);
+      return qaFfCellVal(qaFfValOf(arm, layer), signed);
     }
     /* c440: Origin-cap = trekk + «foer → tak» (chefs_foer_cap / origin_cap_tak) */
     function qaFfOriginCap(arm){
@@ -8472,19 +8525,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
       }
       return trekkTxt + ' \u00b7 ' + arrow;
     }
-    function qaFfLayerIsZero(arm, key){
-      if (!arm || typeof arm !== 'object') return true;
-      var v = arm[key];
-      if (v == null) return true;
-      if (typeof v === 'object' && (v.lav != null || v.hoy != null)) {
-        var lav = Number(v.lav), hoy = Number(v.hoy);
-        var lav0 = !Number.isFinite(lav) || lav === 0;
-        var hoy0 = !Number.isFinite(hoy) || hoy === 0;
-        return lav0 && hoy0;
-      }
-      var n = Number(v);
-      return !Number.isFinite(n) || n === 0;
-    }
     function qaFfLavHoy(arm){
       if (!arm || typeof arm !== 'object') return '–';
       var lav = Number(arm.lav), hoy = Number(arm.hoy);
@@ -8511,24 +8551,45 @@ setTimeout(tick,1500);setInterval(tick,5000);
       { key: 'b', label: 'B', code: 'B' },
       { key: 'ordna', label: 'Ordna', code: 'O' }
     ];
-    /* c440: X-faktor erstattet; Origin-cap under Finn med foer→tak; skygge fjernet; ståtid=statid */
+    /* c442: Spenn → Usikkerhet takst; Returtrekk under Forhandlermargin. Ordna-trekk egen rad. */
     var layers = [
       { key: 'finn_utpris', label: 'Finn-utpris' },
       { key: 'origin_cap', label: 'Origin-cap' },
-      { key: 'forhandlermargin', label: 'Forhandlermargin' },
+      {
+        key: 'forhandlermargin',
+        label: 'Forhandlermargin',
+        val: function(arm){
+          return qaFfSum(arm && arm.forhandlermargin, qaFfPick(arm, 'forhandlermargin_tillegg_bud', 'returtrekk'));
+        },
+        sub: {
+          key: 'forhandlermargin_tillegg_bud',
+          label: 'Tillegg for å treffe bud (midlertidig)',
+          signed: true,
+          val: function(arm){ return qaFfPick(arm, 'forhandlermargin_tillegg_bud', 'returtrekk'); }
+        }
+      },
       { key: 'statid', label: 'Ståtid' },
       { key: 'omregistrering', label: 'Omregistrering' },
       { key: 'transport', label: 'Transport' },
       { key: 'klargjoring', label: 'Klargjøring' },
-      { key: 'spenn', label: 'Spenn' },
-      { key: 'returtrekk', label: 'Returtrekk' },
+      {
+        key: 'usikkerhet_takst',
+        label: 'Usikkerhet takst',
+        signed: true,
+        val: function(arm){ return qaFfPick(arm, 'usikkerhet_takst', 'spenn'); }
+      },
       { key: 'ordna_trekk', label: 'Ordna-trekk' },
       { key: 'vrakpant_gulv', label: 'Vrakpant-gulv' },
       { key: 'avrunding', label: 'Avrunding' },
       { key: 'peasy_avgift', label: 'Peasy-avgift' }
     ];
-    function qaFfLayerAllZero(key){
-      return cols.every(function(c){ return qaFfLayerIsZero(ff[c.key], key); });
+    function qaFfLayerAllZero(layer){
+      return cols.every(function(c){ return qaFfValIsZero(qaFfValOf(ff[c.key], layer)); });
+    }
+    function qaFfShowLayer(layer){
+      if (!qaFfLayerAllZero(layer)) return true;
+      if (layer.sub && !qaFfLayerAllZero(layer.sub)) return true;
+      return false;
     }
     var sLav = Number(sentLav), sHoy = Number(sentHoy);
     var hasSent = Number.isFinite(sLav) && Number.isFinite(sHoy);
@@ -8568,16 +8629,21 @@ setTimeout(tick,1500);setInterval(tick,5000);
     cols.forEach(function(c){ html += '<th style="'+thStyle(c.code)+'">'+esc(c.label)+'</th>'; });
     html += '</tr></thead><tbody>';
     layers.forEach(function(layer){
-      if (qaFfLayerAllZero(layer.key)) return;
+      if (!qaFfShowLayer(layer)) return;
       html += '<tr>';
       html += '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">'+esc(layer.label)+'</td>';
       cols.forEach(function(c){
-        var cell = (layer.key === 'origin_cap')
-          ? qaFfOriginCap(ff[c.key])
-          : qaFfLayer(ff[c.key], layer.key);
-        html += '<td style="'+tdStyle(c.code)+'">'+cell+'</td>';
+        html += '<td style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer)+'</td>';
       });
       html += '</tr>';
+      if (layer.sub && !qaFfLayerAllZero(layer.sub)) {
+        html += '<tr>';
+        html += '<td style="padding:3px 8px 5px 22px;font-size:10px;line-height:1.35;color:var(--muted);">'+esc(layer.sub.label)+'</td>';
+        cols.forEach(function(c){
+          html += '<td style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer.sub)+'</td>';
+        });
+        html += '</tr>';
+      }
     });
     html += '<tr>';
     html += '<td style="padding:6px 8px;font-size:11px;font-weight:700;">Lav – høy</td>';
@@ -8620,6 +8686,92 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (!u) return esc(lab);
     return '<a href="'+esc(u)+'" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline;'+(extraStyle||'')+'">'+esc(lab)+'</a>';
   }
+  /* c442: Finn-utpris only from the customer's own ad. Display only. */
+  function qaKunMeasNodes(e, v3m, vg, easy){
+    var g = (e && e.v3g) || {};
+    var inner = (g && g.v3g) || {};
+    var nodes = [e, g, inner, easy, v3m, vg, g && g.easy, inner && inner.easy, v3m && v3m.easy, v3m && v3m.v3g, easy && easy.v3g];
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] && typeof nodes[i] === 'object') out.push(nodes[i]);
+    }
+    return out;
+  }
+  function qaKunPick(nodes, names){
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      for (var j = 0; j < nodes.length; j++) {
+        var o = nodes[j];
+        if (Object.prototype.hasOwnProperty.call(o, name) && o[name] != null && o[name] !== '') return o[name];
+      }
+    }
+    return undefined;
+  }
+  function qaKunAnnonseFlag(v){
+    if (v === true || v === 1 || v === '1' || v === 'true') return true;
+    if (v == null || v === false || v === 0 || v === '0' || v === 'false') return false;
+    if (typeof v === 'object') {
+      if (v.kun_kundens_annonse === true) return true;
+      if (v.grunn != null && qaKunAnnonseFlag(v.grunn)) return true;
+      if (v.kilde != null && qaKunAnnonseFlag(v.kilde)) return true;
+      return false;
+    }
+    var s = String(v).toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (s === 'kun kundens annonse') return true;
+    if (s.indexOf('kun kundens annonse') === 0 && s.length < 80) return true;
+    return false;
+  }
+  function qaKunFlagOn(nodes){
+    var names = ['kun_kundens_annonse', 'finn_kun_kundens_annonse', 'finn_utpris_kun_annonse', 'finn_utpris_grunn', 'finn_utpris_kilde', 'anker_kilde'];
+    for (var i = 0; i < names.length; i++) {
+      for (var j = 0; j < nodes.length; j++) {
+        if (!Object.prototype.hasOwnProperty.call(nodes[j], names[i])) continue;
+        if (qaKunAnnonseFlag(nodes[j][names[i]])) return true;
+      }
+    }
+    return false;
+  }
+  function qaKunPos(v){
+    if (v && typeof v === 'object') {
+      v = v.pris != null ? v.pris : (v.price != null ? v.price : (v.ask != null ? v.ask : v.annonsepris));
+    }
+    var n = Number(v);
+    return (Number.isFinite(n) && n > 0) ? n : null;
+  }
+  function qaKunAnnonseKr(nodes){
+    var named = qaKunPos(qaKunPick(nodes, ['annonsepris', 'kundens_annonsepris', 'annonse_pris', 'finn_annonsepris', 'origin_ask', 'finn_price', 'finn_ask']));
+    if (named) return named;
+    for (var i = 0; i < nodes.length; i++) {
+      var o = nodes[i] && nodes[i].origin;
+      if (!o || typeof o !== 'object') continue;
+      var n = qaKunPos(o.annonsepris != null ? o.annonsepris : (o.price != null ? o.price : o.ask));
+      if (n) return n;
+    }
+    return null;
+  }
+  function qaKunFinnKr(nodes){
+    return qaKunPos(qaKunPick(nodes, ['finn_utpris', 'anker']));
+  }
+  function qaKunFaktorLabel(nodes){
+    var n = Number(qaKunPick(nodes, ['annonse_faktor', 'finn_utpris_faktor', 'kun_annonse_faktor']));
+    if (!Number.isFinite(n) || n <= 0 || n >= 1) n = 0.95;
+    var s = String(Math.round(n * 1000) / 1000);
+    if (s.indexOf('.') < 0) s += '.0';
+    return s.replace('.', ',');
+  }
+  function qaKunKr(n){
+    return Math.round(n).toLocaleString('nb-NO');
+  }
+  function qaKunKundensAnnonseBanner(e, v3m, vg, easy){
+    var nodes = qaKunMeasNodes(e, v3m, vg, easy);
+    if (!qaKunFlagOn(nodes)) return '';
+    var ann = qaKunAnnonseKr(nodes);
+    var finn = qaKunFinnKr(nodes);
+    var detail = '';
+    if (ann) detail = ' (' + qaKunKr(ann) + ' × ' + qaKunFaktorLabel(nodes) + ')';
+    else if (finn) detail = ' (Finn ' + qaKunKr(finn) + ')';
+    return qaWorkBanner('FINN-UTPRIS', '⚠ Finn-utpris kun fra kundens annonse' + detail, 'warn');
+  }
   function qaWorkBanner(kind, text, tone){
     var t = tone || 'warn';
     var bg = t==='bad' ? '#FDECEA' : (t==='info' ? '#E3F2FD' : '#FFF8E1');
@@ -8629,6 +8781,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
   }
   function qaWorkBanners(e, v3m, vg, easy){
     var bits = [];
+    var kunAnnonse = qaKunKundensAnnonseBanner(e, v3m, vg, easy);
+    if (kunAnnonse) bits.push(kunAnnonse);
     var erp = e.rawErp || {};
     var enc = erp.encumbrance || {};
     if (enc.any_debts === true || enc.any_debts === 1 || enc.any_debts === '1') {
@@ -11038,6 +11192,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Varsel på QA-kort når finn_utpris_grunn er «kun kundens annonse» (eller flagg kun_kundens_annonse): annonsepris × 0,95, fallback finn-tall. Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c441: QA/Send viser bare final_estimate uten fe_created_at. order_delivery-id droppes. Ikke zombie fra peasy-qa-list3, behold-kort eller measurements. -->
 <!-- c440: QA fossefall Del 4 — fjern X-faktor/skygge; Spenn/Returtrekk/Ordna-trekk/Vrakpant-gulv/Avrunding; Origin-cap med chefs_foer_cap→origin_cap_tak; ståtid=statid live i A; skjul null-rader; statid_manuell. SEND uendret. -->
 <!-- c439: QA-send statuslapp leser ERP lav/høy fra price_final_min/max (temp-fallback), ikke easy.erp_dLav. -->
