@@ -8404,28 +8404,32 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (!ff || typeof ff !== 'object') {
       return '<div style="margin-top:8px;color:var(--muted);font-size:12px;">Fossefall mangler i measurements</div>';
     }
-    function qaFfKr(n){
+    function qaFfKr(n, signedPlus){
       var x = Number(n);
       if (!Number.isFinite(x)) return '–';
       var abs = Math.abs(Math.round(x)).toLocaleString('nb-NO');
       if (x < 0) return '−' + abs;
-      if (x > 0) return '+' + abs;
+      if (signedPlus && x > 0) return '+' + abs;
       return abs;
     }
-    function qaFfCellVal(v){
+    function qaFfCellVal(v, signedPlus){
       if (v == null) return '–';
       if (typeof v === 'object' && (v.lav != null || v.hoy != null)) {
         var lav = Number(v.lav), hoy = Number(v.hoy);
         if (!Number.isFinite(lav) && !Number.isFinite(hoy)) return '–';
-        if (!Number.isFinite(hoy) || lav === hoy) return qaFfKr(Number.isFinite(lav) ? lav : hoy);
-        if (!Number.isFinite(lav)) return qaFfKr(hoy);
-        return qaFfKr(lav) + ' / ' + qaFfKr(hoy);
+        if (!Number.isFinite(hoy) || lav === hoy) return qaFfKr(Number.isFinite(lav) ? lav : hoy, signedPlus);
+        if (!Number.isFinite(lav)) return qaFfKr(hoy, signedPlus);
+        return qaFfKr(lav, signedPlus) + ' / ' + qaFfKr(hoy, signedPlus);
       }
-      return qaFfKr(v);
+      return qaFfKr(v, signedPlus);
     }
+    var deltaKeys = {
+      forhandlermargin: 1, staotid: 1, omregistrering: 1, transport: 1,
+      klargjoring: 1, x_faktor: 1, peasy_avgift: 1
+    };
     function qaFfLayer(arm, key){
       if (!arm || typeof arm !== 'object') return '–';
-      return qaFfCellVal(arm[key]);
+      return qaFfCellVal(arm[key], !!deltaKeys[key]);
     }
     function qaFfLavHoy(arm){
       if (!arm || typeof arm !== 'object') return '–';
@@ -8443,8 +8447,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
       var hasHoy = Number.isFinite(hoy) && hoy !== 0;
       if (!hasLav && !hasHoy) return '';
       var nums;
-      if (hasLav && hasHoy && lav !== hoy) nums = qaFfKr(lav) + ' / ' + qaFfKr(hoy);
-      else nums = qaFfKr(hasLav ? lav : hoy);
+      if (hasLav && hasHoy && lav !== hoy) nums = qaFfKr(lav, true) + ' / ' + qaFfKr(hoy, true);
+      else nums = qaFfKr(hasLav ? lav : hoy, true);
       var aarsak = av.aarsak ? (' · ' + esc(String(av.aarsak))) : '';
       return nums + aarsak;
     }
