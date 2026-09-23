@@ -6008,6 +6008,20 @@ function innstSatserPlaceCaret(el, nonSpaceCount){
     sel.addRange(range);
   }catch(err){}
 }
+function innstSatserLiveSpenn(el){
+  if(innstSatserFormatting||!el) return;
+  var raw=String(el.textContent||'').replace(/\u00a0/g,' ').replace(/\u202f/g,' ');
+  var parsed=innstSatserParseCell('spenn', raw);
+  if(parsed==null) return;
+  var formatted=innstSatserFmtCell('spenn', parsed);
+  if(!formatted || el.textContent===formatted) return;
+  var caret=innstSatserCaretNonSpace(el);
+  if(caret==null) caret=raw.replace(/[\s\u00a0\u202f]/g,'').length;
+  innstSatserFormatting=true;
+  el.textContent=formatted;
+  innstSatserPlaceCaret(el, caret);
+  innstSatserFormatting=false;
+}
 function innstSatserLiveKr(el){
   if(innstSatserFormatting||!el) return;
   var raw=String(el.textContent||'').replace(/\u00a0/g,' ').replace(/\u202f/g,' ');
@@ -6081,12 +6095,17 @@ function innstSatserBind(box){
     edit.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();edit.blur();}});
     edit.addEventListener('input',function(){
       if(innstSatserFormatting) return;
-      if(td.getAttribute('data-kind')!=='spenn') innstSatserLiveKr(edit);
+      if(td.getAttribute('data-kind')==='spenn') innstSatserLiveSpenn(edit);
+      else innstSatserLiveKr(edit);
       innstSatserSync();
     });
+    // Format after blur, not inside the blur handler. Chrome puts the
+    // pre-blur text back if contenteditable is rewritten while it blurs.
     edit.addEventListener('blur',function(){
-      innstSatserFormatCell(td);
-      innstSatserSync();
+      setTimeout(function(){
+        innstSatserFormatCell(td);
+        innstSatserSync();
+      }, 0);
     });
     if(edit!==td){
       td.addEventListener('mousedown',function(e){
