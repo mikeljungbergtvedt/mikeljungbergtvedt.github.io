@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c450</title>
+<title>Peasy Pulse v16.08.c451</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c450';</script>
+<script>document.title='Peasy Pulse v16.08.c451';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -464,7 +464,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c450</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c451</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -555,7 +555,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c450</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c451</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -8581,7 +8581,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c450</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c451</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -10701,6 +10701,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const bot4ByIntern = {};
       const loop2ByIntern = {};
       const fossefallByIntern = {};
+      const fossefallByReg = {};
       const prisManueltByIntern = {};
       var histByReg = {};
       function qaInternKey(v){
@@ -10717,10 +10718,13 @@ setTimeout(tick,1500);setInterval(tick,5000);
         if (!prev || t > (prev.timestamp || prev._ts || '')) map[key] = rec;
       }
       function qaRememberFossefall(intern, r){
-        if (!intern || !r) return;
+        if (!r) return;
         var ff = r.fossefall || (r.easy && r.easy.fossefall) || (r.v3g && r.v3g.fossefall) || null;
-        if (!ff) return;
-        qaPutLatest(fossefallByIntern, intern, { fossefall: ff, timestamp: r.timestamp || '', _ts: r.timestamp || '' }, r.timestamp);
+        if (!ff || typeof ff !== 'object') return;
+        var rec = { fossefall: ff, timestamp: r.timestamp || '', _ts: r.timestamp || '' };
+        if (intern) qaPutLatest(fossefallByIntern, intern, rec, r.timestamp);
+        var rg = String(r.regnr || '').toUpperCase().replace(/\s+/g, '');
+        if (rg) qaPutLatest(fossefallByReg, rg, rec, r.timestamp);
       }
       function paintQACards(){
         liste3 = qaOpenListe3(liste3);
@@ -10820,7 +10824,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
           };
           var cvMeas = qaMergedOriginCv(cvByIntern, cvByReg, internKey, rg);
           if (cvMeas) row.origin_cv = cvMeas;
-          var ffRec = internKey ? fossefallByIntern[internKey] : null;
+          var ffRec = (internKey && fossefallByIntern[internKey]) || fossefallByReg[rg] || fossefallByReg[String(rg || '').replace(/\s+/g, '')] || null;
           var ffCard = (ffRec && ffRec.fossefall)
             || (row.easy && row.easy.fossefall)
             || (row.v3g && row.v3g.fossefall)
@@ -10910,17 +10914,78 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
       var miniBase = PA_PROXY_ERP.replace(/\/list\/?$/,'');
       var tFetch = Date.now();
+      function qaAbortAfter(ms){
+        var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+        if (!ctrl) return null;
+        var timer = setTimeout(function(){ try { ctrl.abort(); } catch (eA) {} }, ms);
+        if (ctrl.signal && ctrl.signal.addEventListener) ctrl.signal.addEventListener('abort', function(){ clearTimeout(timer); });
+        return ctrl.signal;
+      }
+      function qaMiniInit(ms){
+        var o = { headers: { Authorization: 'Bearer ' + PA_TOKEN_ERP } };
+        var sig = qaAbortAfter(ms);
+        if (sig) o.signal = sig;
+        return o;
+      }
+      function qaParseJsonl(text){
+        if (!text) return [];
+        return text.split('\n').filter(Boolean).map(function(l){ try { return JSON.parse(l); } catch (eL) { return null; } }).filter(Boolean);
+      }
+      function qaFetchText(u, opts){
+        return fetch(u, opts || {}).then(function(r){ return (r && r.ok) ? r.text() : Promise.reject(); });
+      }
+      /* c451: Mini measurements is ~32MB and the Tailscale tunnel can hang (ERR_TUNNEL_CONNECTION_FAILED) without rejecting. Auth + abort, then GitHub. */
       function qaJsonl(url, fb){
-        return fetch(url).then(function(r){ return (r && r.ok) ? r.text() : Promise.reject(); }).catch(function(){
-          return fb ? fetch(fb).then(function(r){ return (r && r.ok) ? r.text() : ''; }).catch(function(){ return ''; }) : '';
-        }).then(function(text){
-          if (!text) return [];
-          return text.split('\n').filter(Boolean).map(function(l){ try { return JSON.parse(l); } catch (eL) { return null; } }).filter(Boolean);
-        });
+        var fbUrl = fb ? (fb + (fb.indexOf('?') >= 0 ? '&' : '?') + 't=' + tFetch) : '';
+        function fromFallback(){
+          if (!fbUrl) return Promise.resolve([]);
+          var fbOpts = {};
+          var fbSig = qaAbortAfter(25000);
+          if (fbSig) fbOpts.signal = fbSig;
+          return qaFetchText(fbUrl, fbOpts).then(qaParseJsonl).catch(function(){ return []; });
+        }
+        return qaFetchText(url, qaMiniInit(12000)).then(function(text){
+          var rows = qaParseJsonl(text);
+          if (rows.length) return rows;
+          return fromFallback();
+        }).catch(function(){ return fromFallback(); });
       }
       function qaJsonAuth(path){
-        return fetch(miniBase + path, {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}}).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        return fetch(miniBase + path, qaMiniInit(8000)).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
       }
+      function qaPayloadFossefall(payload){
+        if (!payload || typeof payload !== 'object') return null;
+        if (payload.fossefall && typeof payload.fossefall === 'object') return payload.fossefall;
+        var car = payload.car;
+        if (car && car.fossefall && typeof car.fossefall === 'object') return car.fossefall;
+        if (payload.easy && payload.easy.fossefall && typeof payload.easy.fossefall === 'object') return payload.easy.fossefall;
+        var meas = payload.measurement || payload.measurements;
+        if (meas && meas.fossefall && typeof meas.fossefall === 'object') return meas.fossefall;
+        return null;
+      }
+      /* c451: /bil is small and already carries fossefall. Do not wait for the 32MB jsonl. */
+      function qaHydrateFossefallFromBil(cars){
+        var seen = {};
+        var jobs = [];
+        (cars || []).forEach(function(b){
+          var reg = String(b.registration_number || b.regnr || '').toUpperCase().replace(/\s+/g, '');
+          var intern = qaInternKey(b.id != null ? b.id : b.erpId);
+          if (!reg || seen[reg]) return;
+          seen[reg] = 1;
+          jobs.push(fetch(miniBase + '/bil?regnr=' + encodeURIComponent(reg), qaMiniInit(8000)).then(function(r){
+            return (r && r.ok) ? r.json() : null;
+          }).catch(function(){ return null; }).then(function(payload){
+            var ff = qaPayloadFossefall(payload);
+            if (!ff) return;
+            var ts = (payload && (payload.timestamp || payload.updated_at || payload.measured_at)) || (ff && ff.timestamp) || '';
+            qaRememberFossefall(intern, { fossefall: ff, timestamp: ts, regnr: reg, erpId: b.id });
+          }));
+        });
+        return Promise.all(jobs).then(function(){
+          if (!qaKeepCards) { try { paintQACards(); } catch (eEarly) {} }
+        }).catch(function(){});
+      }
+      var bilFfP = qaHydrateFossefallFromBil(liste3);
       var _aiFrom = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
       var pack = await Promise.all([
         qaJsonl(miniBase+'/measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl'),
@@ -10929,8 +10994,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
         Promise.resolve([]),
         qaJsonAuth('/finn-links'),
         qaJsonAuth('/signaler'),
-        fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; }),
-        qaJsonAuth('/qa/auksjon')
+        fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch, qaMiniInit(8000)).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; }),
+        qaJsonAuth('/qa/auksjon'),
+        bilFfP
       ]);
       var measRecs = pack[0] || [];
       var v3gRecs = pack[1] || [];
@@ -10957,6 +11023,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         if (Number.isFinite(Number(ev.dLav))) return true;
         return ev.anker != null || ev.confidence != null || ev.anker_kilde || ev.begrunnelse_kort;
       }
+      try {
       qaNoteMeasSent(measRecs);
       qaNoteMeasSent(v3gRecs);
       qaNoteMeasSent(bot4Recs);
@@ -10967,13 +11034,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
       }
       for (const r of measRecs) {
         const intern = qaInternKey(r.erpId);
-        if (!intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
+        if (qaFeCreatedAtSet(r)) continue;
+        if (intern && qaIdDropped(intern)) continue;
+        qaRememberFossefall(intern, r);
+        if (!intern) continue;
         qaNotePrisManuelt(prisManueltByIntern, intern, r);
         qaRememberOriginCv(cvByIntern, intern, r);
         var rgM = String(r.regnr || '').toUpperCase();
         if (rgM) qaRememberOriginCv(cvByReg, rgM, r);
         if (r.evaluator === 'v3' || r.v2) qaPutLatest(v3ByIntern, intern, r);
-        qaRememberFossefall(intern, r);
         if (isRealEasy(r.easy)) {
           var easyPut = Object.assign({}, r.easy, { _ts: r.timestamp, _erpId: r.erpId, kjorbar: r.easy.kjorbar || r.kjorbar || null });
           if (!qaChefObj(easyPut.chefs) && qaChefObj(r.chefs)) easyPut.chefs = r.chefs;
@@ -10991,12 +11060,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
       }
       for (const r of v3gRecs) {
         const intern = qaInternKey(r.erpId);
-        if (!intern || qaIdDropped(intern) || qaFeCreatedAtSet(r)) continue;
+        if (qaFeCreatedAtSet(r)) continue;
+        if (intern && qaIdDropped(intern)) continue;
+        qaRememberFossefall(intern, r);
+        if (!intern) continue;
         qaNotePrisManuelt(prisManueltByIntern, intern, r);
         qaRememberOriginCv(cvByIntern, intern, r);
         var rgV = String(r.regnr || '').toUpperCase();
         if (rgV) qaRememberOriginCv(cvByReg, rgV, r);
-        qaRememberFossefall(intern, r);
         if (!qaV3gPriced(r)) continue;
         qaPutLatest(v3gByIntern, intern, r);
         if (rgV) qaPutLatest(v3gByReg, rgV, r);
@@ -11054,6 +11125,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
             hbud: Number(_hCell(_r,'Høyeste bud',4)||_r[4]||0)||0
           });
         }
+      }
+      } catch (eMeas) {
+        console.warn('[qa] meas index:', eMeas);
       }
       if (!qaKeepCards) {
         try {
@@ -11950,6 +12024,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c451: QA fossefall når Mini /measurements henger (tunnel, ~32MB, uten auth). Hentingen får Bearer og 12s avbrudd, deretter GitHub v2-measurements.jsonl. Åpne kort uten ff fylles fra Mini /bil?regnr= og indekseres på internnr og regnr. -->
 <!-- c450: Locked model — midt A; B=A×0.9; Ordna=A×0.75; sent-lav = writing arm fossefall lav. -->
 <!-- c448: Innstillinger — Fossefall-satser leses med tusenskille (38 000) og spenn som ned | opp (20 000 | 13 000). Lagres fortsatt som heltall og 20000|13000. Celle-id prisbånd|km under hver celle (150-250|50-120). Tom celle forblir tom. Live bud uendret. -->
 <!-- c447: Innstillinger — Fossefall-satser (utkast). Tre redigerbare matriser: forhandlermargin + min/maks, avsetning takst, spenn som ned|opp. Lagres som peasy-config.fossefallSatser. Mangler nøkkelen, fylles fra satser-utkast-v0.1. Tom celle blir null. Live bud uendret. -->
