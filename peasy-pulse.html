@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c451</title>
+<title>Peasy Pulse v16.08.c452</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c451';</script>
+<script>document.title='Peasy Pulse v16.08.c452';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -464,7 +464,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c451</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c452</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -555,7 +555,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c451</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c452</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -8581,7 +8581,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c451</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c452</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9161,6 +9161,20 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (lav != null && hoy != null && lav === hoy) return lav;
       return { lav: lav, hoy: hoy };
     }
+    function qaFfOne(v){
+      if (v == null || v === '') return null;
+      if (typeof v === 'object') {
+        var lav = Number(v.lav), hoy = Number(v.hoy);
+        var hasL = Number.isFinite(lav), hasH = Number.isFinite(hoy);
+        if (hasL && hasH && lav === hoy) return lav;
+        if (hasL && !hasH) return lav;
+        if (hasH && !hasL) return hoy;
+        if (hasL && hasH) return lav;
+        return null;
+      }
+      var n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
     function qaFfValOf(arm, layer, col){
       if (layer && layer.arms && col && !layer.arms[col.key]) return undefined;
       if (layer && layer.val) return layer.val(arm, col);
@@ -9180,9 +9194,11 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
     function qaFfLayerCell(arm, layer, col){
       if (layer && layer.arms && col && !layer.arms[col.key]) return '–';
+      if (layer && layer.cell) return layer.cell(arm, col);
       if (layer && layer.key === 'origin_cap' && !layer.val) return qaFfOriginCap(arm);
       var signed = layer && layer.signed != null ? layer.signed : !!(layer && deltaKeys[layer.key]);
       var val = qaFfValOf(arm, layer, col);
+      if (layer && layer.single) val = qaFfOne(val);
       var html = qaFfCellVal(val, signed);
       var note = (layer && layer.note) ? String(layer.note(arm, col) || '').trim() : '';
       if (note && !qaFfValIsZero(val)) {
@@ -9223,7 +9239,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!Number.isFinite(lav) && !Number.isFinite(hoy)) return '–';
       if (!Number.isFinite(hoy)) return qaFfTok(qaFfKr(lav));
       if (!Number.isFinite(lav)) return qaFfTok(qaFfKr(hoy));
-      return qaFfTok(qaFfKr(lav)) + qaFfBrk('\u2013 ' + qaFfKr(hoy));
+      return qaFfTok(qaFfKr(lav) + ' \u2013 ' + qaFfKr(hoy));
     }
     function qaFfAvvik(arm){
       if (!arm || !arm.avvik_kr || typeof arm.avvik_kr !== 'object') return '';
@@ -9250,41 +9266,67 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (r == null) return '';
       return String(r).trim();
     }
-    /* c446: Ingen Returtrekk-rad. Tillegg leser bare forhandlermargin_tillegg_bud. */
+    /* c452: 11 rows. Costs only on A. Mids and spenn read from the arm. No herav, no slash pairs. */
+    var aOnly = { a: true };
     var layers = [
-      { key: 'finn_utpris', label: 'Finn-utpris' },
+      { key: 'finn_utpris', label: 'Finn-utpris', arms: aOnly, signed: false, single: true },
+      { key: 'forhandlermargin', label: 'Forhandlermargin (tabell)', arms: aOnly, signed: true, single: true },
+      { key: 'avsetning_takst', label: 'Avsetning takst (tabell)', arms: aOnly, signed: true, single: true },
+      {
+        key: 'statid',
+        label: 'Ståtid (tabell)',
+        arms: aOnly,
+        signed: true,
+        single: true,
+        val: function(arm){
+          if (!arm || typeof arm !== 'object') return null;
+          if (arm.statid != null && arm.statid !== '') return arm.statid;
+          if (arm['ståtid'] != null && arm['ståtid'] !== '') return arm['ståtid'];
+          if (arm.staotid != null && arm.staotid !== '') return arm.staotid;
+          return null;
+        }
+      },
+      { key: 'omregistrering', label: 'Omregistrering', arms: aOnly, signed: true, single: true },
+      { key: 'klargjoring', label: 'Klargjøring', arms: aOnly, signed: true, single: true },
+      { key: 'peasy_avgift', label: 'Peasy-avgift', arms: aOnly, signed: true, single: true },
       {
         key: 'peasy_bud_mid',
         label: 'Peasy-bud midt',
         signed: false,
+        single: true,
         val: function(arm){
           if (!arm || typeof arm !== 'object') return null;
-          return arm.peasy_bud_mid != null ? arm.peasy_bud_mid : arm.estimertPeasyBud;
+          if (arm.peasy_bud_mid != null && arm.peasy_bud_mid !== '') return arm.peasy_bud_mid;
+          if (arm.estimertPeasyBud != null && arm.estimertPeasyBud !== '') return arm.estimertPeasyBud;
+          return null;
         }
       },
-      { key: 'origin_cap', label: 'Origin-cap' },
       {
-        key: 'forhandlermargin',
-        label: 'Forhandlermargin',
-        val: function(arm){
-          return qaFfSum(arm && arm.forhandlermargin, arm && arm.forhandlermargin_tillegg_bud);
-        },
-        /* c450 locked: no herav 8%/12% rows */
-      },
-      { key: 'statid', label: 'Ståtid' },
-      { key: 'omregistrering', label: 'Omregistrering' },
-      { key: 'transport', label: 'Transport' },
-      { key: 'klargjoring', label: 'Klargjøring' },
-      {
-        key: 'usikkerhet_takst',
-        label: 'Usikkerhet takst',
+        key: 'spenn_lav',
+        label: 'Spenn lav',
         signed: true,
-        val: function(arm){ return qaFfPick(arm, 'usikkerhet_takst', 'spenn'); }
+        single: true,
+        val: function(arm){
+          if (!arm || !arm.spenn || typeof arm.spenn !== 'object') return null;
+          return arm.spenn.lav;
+        }
       },
-      { key: 'ordna_trekk', label: 'Ordna-trekk' },
-      { key: 'vrakpant_gulv', label: 'Vrakpant-gulv' },
-      { key: 'avrunding', label: 'Avrunding' },
-      { key: 'peasy_avgift', label: 'Peasy-avgift' }
+      {
+        key: 'spenn_hoy',
+        label: 'Spenn høy',
+        signed: true,
+        single: true,
+        val: function(arm){
+          if (!arm || !arm.spenn || typeof arm.spenn !== 'object') return null;
+          return arm.spenn.hoy;
+        }
+      },
+      {
+        key: 'lav_hoy',
+        label: 'Lav – høy',
+        bold: true,
+        cell: function(arm){ return qaFfLavHoy(arm); }
+      }
     ];
     function qaFfSubsOf(layer){
       if (!layer) return [];
@@ -9338,38 +9380,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
     cols.forEach(function(c){ html += '<th class="qa-ff-num" style="'+thStyle(c.code)+'">'+esc(c.label)+'</th>'; });
     html += '</tr></thead><tbody>';
     layers.forEach(function(layer){
-      if (!qaFfShowLayer(layer)) return;
       html += '<tr>';
-      html += '<td class="qa-ff-lag" style="color:var(--muted);">'+esc(layer.label)+'</td>';
+      var lagStyle = layer.bold ? 'font-weight:700;color:var(--text);' : 'color:var(--muted);';
+      html += '<td class="qa-ff-lag" style="'+lagStyle+'">'+esc(layer.label)+'</td>';
       cols.forEach(function(c){
-        html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], layer, c)+'</td>';
+        html += '<td class="qa-ff-num" style="'+tdStyle(c.code, !!layer.bold)+'">'+qaFfLayerCell(ff[c.key], layer, c)+'</td>';
       });
       html += '</tr>';
-      qaFfSubsOf(layer).forEach(function(sub){
-        if (qaFfLayerAllZero(sub)) return;
-        html += '<tr>';
-        html += '<td class="qa-ff-lag qa-ff-sub">'+esc(sub.label)+'</td>';
-        cols.forEach(function(c){
-          html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+qaFfLayerCell(ff[c.key], sub, c)+'</td>';
-        });
-        html += '</tr>';
-      });
     });
-    html += '<tr>';
-    html += '<td class="qa-ff-lag" style="font-weight:700;color:var(--text);">Lav – høy</td>';
-    cols.forEach(function(c){
-      html += '<td class="qa-ff-num" style="'+tdStyle(c.code, true)+'">'+qaFfLavHoy(ff[c.key])+'</td>';
-    });
-    html += '</tr>';
-    var avCells = cols.map(function(c){ return qaFfAvvik(ff[c.key]); });
-    if (avCells.some(function(s){ return !!s; })) {
-      html += '<tr>';
-      html += '<td class="qa-ff-lag" style="color:var(--muted);">Avvik</td>';
-      cols.forEach(function(c, i){
-        html += '<td class="qa-ff-num" style="'+tdStyle(c.code)+'">'+(avCells[i] || '–')+'</td>';
-      });
-      html += '</tr>';
-    }
     html += '</tbody></table></div>';
     var statidManuell = !!(ff.statid_manuell || (ff.a && ff.a.statid_manuell));
     if (statidManuell) {
@@ -12024,6 +12042,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c452: QA fossefall er 11 rader i denne rekkefølgen: Finn-utpris, Forhandlermargin (tabell), Avsetning takst (tabell), Ståtid (tabell), Omregistrering, Klargjøring og Peasy-avgift kun på A (B og Ordna er strek). Peasy-bud midt, Spenn lav, Spenn høy og Lav – høy på A, B og Ordna. Spenn lav og Spenn høy er ett tall hver, lest fra spenn.lav og spenn.hoy. Midt leses fra peasy_bud_mid på armen. Ingen Usikkerhet takst, Origin-cap, Avvik, Avrunding, Ordna-trekk, Vrakpant, herav eller flerlinjeceller. Satser og formler uendret. -->
 <!-- c451: QA fossefall når Mini /measurements henger (tunnel, ~32MB, uten auth). Hentingen får Bearer og 12s avbrudd, deretter GitHub v2-measurements.jsonl. Åpne kort uten ff fylles fra Mini /bil?regnr= og indekseres på internnr og regnr. -->
 <!-- c450: Locked model — midt A; B=A×0.9; Ordna=A×0.75; sent-lav = writing arm fossefall lav. -->
 <!-- c448: Innstillinger — Fossefall-satser leses med tusenskille (38 000) og spenn som ned | opp (20 000 | 13 000). Lagres fortsatt som heltall og 20000|13000. Celle-id prisbånd|km under hver celle (150-250|50-120). Tom celle forblir tom. Live bud uendret. -->
