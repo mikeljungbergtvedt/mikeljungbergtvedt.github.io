@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c460</title>
+<title>Peasy Pulse v16.08.c461</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c460';</script>
+<script>document.title='Peasy Pulse v16.08.c461';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -482,7 +482,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c460</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c461</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -573,7 +573,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c460</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c461</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -8654,7 +8654,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c460</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c461</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9818,6 +9818,40 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (iso) return pack(+iso[3], +iso[2], iso[1], iso[4], iso[5]);
     return str;
   }
+  function qaHistDateMs(s){
+    if (s == null || s === '') return 0;
+    var str = String(s).trim();
+    if (!str) return 0;
+    function localMs(y, mo, d, hh, mm){
+      y = +y; mo = +mo; d = +d;
+      if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return 0;
+      if (hh == null || hh === '') hh = 0; else hh = +hh;
+      if (mm == null || mm === '') mm = 0; else mm = +mm;
+      if (!(hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59)) return 0;
+      var dt = new Date(y, mo - 1, d, hh, mm, 0, 0);
+      if (isNaN(dt.getTime())) return 0;
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return 0;
+      return dt.getTime();
+    }
+    var nb = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[,\sT]+(?:kl\.?\s*)?(\d{1,2})[:.](\d{2}))?/i);
+    if (nb) return localMs(nb[3], nb[2], nb[1], nb[4], nb[5]);
+    if (/^\d{1,2}\.\d{1,2}\.\d{2,4}/.test(str)) return 0;
+    var iso = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2}))?/);
+    if (iso) return localMs(iso[1], iso[2], iso[3], iso[4], iso[5]);
+    var parsed = Date.parse(str);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  function qaHistSortMs(h){
+    if (!h) return 0;
+    function filled(v){ return v != null && String(v).trim() !== ''; }
+    if (filled(h.priset_dato)) return qaHistDateMs(h.priset_dato);
+    if (filled(h.reg_dato)) return qaHistDateMs(h.reg_dato);
+    var solgt = qaHistDateMs(h.solgt);
+    if (solgt) return solgt;
+    var ret = qaHistDateMs(h.ret);
+    if (ret) return ret;
+    return 0;
+  }
   function qaHistRowHasValue(h){
     if (!h) return false;
     var ar = fmtAr(h.ar);
@@ -10939,15 +10973,12 @@ setTimeout(tick,1500);setInterval(tick,5000);
                 }
                 return h;
               }).sort(function(a,b){
-                function ms(h){
-                  var s=String((h&&(h.priset_dato||h.reg_dato||h.solgt||h.ret))||'');
-                  var d=Date.parse(s);
-                  if(Number.isFinite(d)) return d;
-                  var p=s.split(/[.\s]/);
-                  if(p.length>=3){ var dt=new Date(+p[2], +p[1]-1, +p[0]); if(!isNaN(dt)) return dt.getTime(); }
-                  return 0;
-                }
-                return ms(b)-ms(a);
+                var dm = qaHistSortMs(b) - qaHistSortMs(a);
+                if (dm) return dm;
+                var na = Number(qaInternKey(a && a.internnr));
+                var nb = Number(qaInternKey(b && b.internnr));
+                if (Number.isFinite(na) && Number.isFinite(nb)) return nb - na;
+                return 0;
               });
               var seenH = {};
               return rows.filter(function(h){
@@ -12130,6 +12161,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
 })();
 </script>
+<!-- c461: QA ERP-historikk sortert nyeste først (dd.mm.åååå parses riktig). -->
 <!-- c430: QA-korttittel km = samme ERP-km som ORIGIN-CV (origin_cv / måling / liste-3 nested). Ikke «?» når ORIGIN-CV har km. Ikke EU/car.info. -->
 <!-- c420: QA-kort: % av Finn under lav/høy + Kunde ser X–Y % av Finn. -->
 <!-- c411: QA Enige-pille viser stående Finn-utpris, stor E, tak 0,95 × ask. Graf: én kokk-prikk når enige. -->
