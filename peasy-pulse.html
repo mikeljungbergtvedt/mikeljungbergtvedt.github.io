@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c461</title>
+<title>Peasy Pulse v16.08.c463</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c461';</script>
+<script>document.title='Peasy Pulse v16.08.c463';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -482,7 +482,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c461</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c463</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -573,7 +573,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c461</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c463</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -8654,7 +8654,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c461</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c463</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -10715,11 +10715,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
     return !!(s && window._qaDropIds && window._qaDropIds[s]);
   }
   function qaCarOpen(b){
+    /* c463: Liste 3 = ERP final_estimate. Aldri skjul pga localStorage qa_sent / OD-dropIds.
+       Kun ERP fe_created_at (faktisk sendt) tar bilen ut av QA. Ufullstendig data → kort med status, ikke hide. */
     if (!b || typeof b !== 'object') return false;
     if (qaFeCreatedAtSet(b)) return false;
-    var id = qaErpId(b);
-    if (qaIdDropped(id)) return false;
-    if (qaIsSent(b.registration_number || b.regnr, id)) return false;
     return true;
   }
   function qaOpenListe3(biler){
@@ -10755,22 +10754,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
     return { id: id, reg: reg };
   }
   function qaDomHasZombie(openIds){
+    /* c463: zombie = kort for bil som ikke lenger er i live open liste 3. qa_sent skjuler ikke. */
     var cards = document.querySelectorAll('#qa-cards .qa-card');
     for (var i = 0; i < cards.length; i++) {
       var ir = qaCardIdReg(cards[i]);
       if (!ir.id && !ir.reg) continue;
-      if (qaIdDropped(ir.id) || qaIsSent(ir.reg, ir.id)) return true;
       if (openIds && ir.id && !openIds[ir.id]) return true;
     }
     return false;
   }
   function qaStripZombieCards(openIds){
+    /* c463: fjern bare kort som ikke er i live openIds (forlatt liste 3). */
+    if (!openIds) return;
     var cards = document.querySelectorAll('#qa-cards .qa-card');
     for (var i = 0; i < cards.length; i++) {
       var card = cards[i];
       var ir = qaCardIdReg(card);
       if (!ir.id && !ir.reg) continue;
-      if (qaIdDropped(ir.id) || qaIsSent(ir.reg, ir.id) || (openIds && ir.id && !openIds[ir.id])) card.remove();
+      if (ir.id && !openIds[ir.id]) card.remove();
     }
   }
   function qaStripCachedSent(rawIds, openIds){
@@ -10897,6 +10898,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
         if (rg) qaPutLatest(fossefallByReg, rg, rec, r.timestamp);
       }
       function paintQACards(){
+        var _qaSearch = document.getElementById('qa-search-input');
+        if (_qaSearch && _qaSearch.value) { _qaSearch.value = ''; }
         liste3 = qaOpenListe3(liste3);
         var enriched = [];
         try {
@@ -11948,22 +11951,15 @@ setTimeout(tick,1500);setInterval(tick,5000);
       btn.textContent = '✅ Sendt '+stamp;
       btn.style.background = '#0F6E66';
       btn.style.cursor = 'default';
+      btn.disabled = true;
+      /* c463: ikke fjern kort — QA skal speile liste 3 til ERP har fe_created_at / bilen er borte fra final_estimate. */
       if (card) {
         var ankerRow = card.querySelector('.qa-anker-input');
         if (ankerRow && ankerRow.parentNode) ankerRow.parentNode.style.display = 'none';
         var clearBtn = card.querySelector('.qa-clear-btn');
         if (clearBtn) clearBtn.remove();
-        setTimeout(function(){
-          card.style.transition = 'opacity .22s ease, transform .22s ease';
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(-8px)';
-          setTimeout(function(){
-            card.remove();
-            var left = document.querySelectorAll('#qa-cards .qa-card').length;
-            var sumEl = document.getElementById('qa-summary');
-            if (sumEl) sumEl.textContent = left + ' biler på liste 3 (usendte, eldste øverst)';
-          }, 240);
-        }, 450);
+        var chip = card.querySelector('[style*="white-space:nowrap"]');
+        /* statuschip oppdateres ved neste loadQA fra ERP */
       }
     }catch(e){
       btn.textContent = 'Feil'; btn.style.background = '#A8221C'; btn.title = e.message; btn.disabled = false;
@@ -12248,6 +12244,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c335: Kjernen MOTOR: retur inkluderer åpen tbr, markedsføring teller i dag, CAC ÷ alle solgt. -->
 <!-- c334: Kjernen månedstabell viser Retur-antall (r[21] + åpen tbr på aksept-måned). -->
 <!-- c333: Ny loop er Claude+Grok (Gemini off). -->
+<!-- c463: QA/Send viser alltid alle biler på live final_estimate. localStorage qa_sent / OD-dropIds skjuler ikke kort. Kun ERP fe_created_at tar bil ut. SEND fjerner ikke kort. Søk nullstilles ved paint. -->
 <!-- c454: QA-kort — SEND er av når fossefall mangler eller armen som skrives har Lav 0/tom/null (PRIS MANUELT). Boksen over tabellen leser A og B lav–høy fra samme fossefall som Lav–høy-raden. Vrakpant-gulv vises bare når gulvet løftet en side (vrakpant_gulv, ellers lav 3 000 / høy 5 000). -->
 <!-- c453: QA fossefall Lav–høy er lesbar på smal bredde. Hvert intervall stables på to linjer (101 000, så – 134 000). A/B/Ordna har minstebredde, tabell-tall er nowrap med tabular-nums, og kortet scroller sidelengs i stedet for at tallene overlapper. Rader, etiketter, priser og hvilke celler som har verdi er uendret. -->
 <!-- c452: QA fossefall er 11 rader i denne rekkefølgen: Finn-utpris, Forhandlermargin (tabell), Avsetning takst (tabell), Ståtid (tabell), Omregistrering, Klargjøring og Peasy-avgift kun på A (B og Ordna er strek). Peasy-bud midt, Spenn lav, Spenn høy og Lav – høy på A, B og Ordna. Spenn lav og Spenn høy er ett tall hver, lest fra spenn.lav og spenn.hoy. Midt leses fra peasy_bud_mid på armen. Ingen Usikkerhet takst, Origin-cap, Avvik, Avrunding, Ordna-trekk, Vrakpant, herav eller flerlinjeceller. Satser og formler uendret. -->
