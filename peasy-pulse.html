@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c475</title>
+<title>Peasy Pulse v16.08.c476</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c475';</script>
+<script>document.title='Peasy Pulse v16.08.c476';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -491,7 +491,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c475</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c476</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -582,7 +582,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c475</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c476</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -864,6 +864,12 @@ window.MARK_V16_04 = (function(){
   }
 
   function dailySpendNow(){
+    // c476: snitt faktisk kost siste 7 dager (Meta + Google) når ads-spend.json finnes.
+    if(typeof adsSpendKomplett === 'function' && adsSpendKomplett()){
+      var ds = window.adsSpend.days, ks = Object.keys(ds).sort().slice(-7), sum = 0;
+      ks.forEach(function(k){ sum += (Number(ds[k].meta)||0) + (Number(ds[k].google)||0); });
+      if(ks.length) return Math.round(sum / ks.length);
+    }
     var perioder = getMarketingPerioder();
     var now = new Date();
     for(var i=perioder.length-1;i>=0;i--){
@@ -993,7 +999,7 @@ window.MARK_V16_04 = (function(){
     kpi.innerHTML = '' +
       kpiCard('CPL nå (siste 30d)', fmtKr(cpl30), p30.leads + ' Peasy-leads · ' + fmtKr(spend30) + ' spend', '#2E7D32') +
       kpiCard('CAC (30d)', fmtKr(cps30), p30.solgt + ' Peasy-solgt · konv ' + fmtPct(konv30), '#004225') +
-      kpiCard('Marginal CPL (mars-test)', '~217 kr', '+50% leads ved doblet spend (15-29.mars)', '#1565C0');
+      kpiCard('Spend per dag (snitt 7d)', fmtKr(spendDay), (typeof spendKildeTekst==='function'?spendKildeTekst():'budsjett'), '#1565C0');
 
     // Tabell
     function feeAvg(a){ return a.solgt ? a.fee / a.solgt : 0; }
@@ -1599,7 +1605,8 @@ window.MARK_V16_04 = (function(){
 <p style="color:#666;font-size:13px">Teksten som vises &oslash;verst p&aring; Tiltak-fanen. Lagre til GitHub for &aring; dele p&aring; alle maskiner.</p>
 <textarea id="innst-tiltaktekst" style="width:100%;min-height:110px;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:24px"></textarea>
 
-<h3>Markedsførings-perioder</h3>
+<h3>Markedsførings-perioder (reserve)</h3>
+<p style="color:#666;font-size:13px">Pulse bruker faktisk kost fra Meta og Google (ads-spend.json, oppdateres hver morgen kl. 06:15). Tallene her brukes bare for dager uten faktiske tall, f.eks. i dag.</p>
 <table id="innst-perioder-tbl" style="width:100%;border-collapse:collapse;margin-bottom:12px">
 <thead><tr style="background:#f5f5f5;text-align:left"><th style="padding:8px">Fra</th><th style="padding:8px">Til (tom = løpende)</th><th style="padding:8px">Kr/dag</th><th style="padding:8px">Linje</th><th style="padding:8px">Slett</th></tr></thead>
 <tbody></tbody>
@@ -8624,7 +8631,8 @@ function kjMetrics(rows, fromMs, toMs){
   var sumProdAuksjon = sumProdSolgt + sumProdRetur + sumGire;
   var effektivProdPerSolgt = solgt > 0 ? sumProdAuksjon / solgt : null;
   var nowMs = new Date().getTime();
-  var marketingSum = (cfg.marketingPerioder || []).reduce(function(s, mp){
+  // c476: samme kostmotor som nøkkelkortene (faktisk Meta + Google, budsjett bare for dager uten tall).
+  var marketingSum = (typeof window.beregneSpend === 'function') ? window.beregneSpend(new Date(fromMs), new Date(Math.min(toMs, nowMs))) : (cfg.marketingPerioder || []).reduce(function(s, mp){
     var mpStart = new Date(mp.fra).getTime();
     var mpEnd = mp.til ? new Date(mp.til).getTime() : nowMs;
     var overlapStart = Math.max(fromMs, mpStart);
@@ -8770,7 +8778,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c475</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c476</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
