@@ -286,34 +286,55 @@
     return groups.map(function (g) {
       var qs = g.items.map(function (c) {
         var d = c.fe ? c.fe.slice(8, 10) + '.' + c.fe.slice(5, 7) + '.' : '';
-        /* c466: «prisbånd», ikke «estimat» — c.band er båndet estimatet ligger i, ikke lav–høy. Internnr med. */
-        var inr = lrInternnr(c);
-        var meta = [inr ? 'internnr ' + inr : '', c.regnr, c.bil, c.band ? 'prisbånd ' + c.band : '', d].filter(Boolean).join(' · ');
+        /* c467: faktisk estimat (lav–høy, ERP kol. D) og bud (kol. E) — det kunden reagerer på. Prisbånd kun hvis estimatet mangler. Internnr lenker til bilen i ERP. */
+        var e = lrErp(c);
+        var deler = [c.regnr, c.bil,
+          e.est ? 'estimat ' + e.est : (c.band ? 'prisbånd ' + c.band : ''),
+          e.bud ? 'bud ' + e.bud : '', d].filter(Boolean).map(lrEsc);
+        if (e.inr) deler.unshift('<a href="' + lrErpHref(e.inr) + '" target="_blank" rel="noopener">internnr ' + lrEsc(e.inr) + '</a>');
+        var metaHtml = deler.join(' · ');
         var txt = String(c.comment || c.text || '');
         if (txt.length > 280) txt = txt.slice(0, 277) + '…';
-        return '<div class="lr-q"><div class="lr-qt">«' + txt.replace(/</g, '&lt;') + '»</div><div class="lr-qm">' + meta.replace(/</g, '&lt;') + '</div></div>';
+        return '<div class="lr-q"><div class="lr-qt">«' + txt.replace(/</g, '&lt;') + '»</div><div class="lr-qm">' + metaHtml + '</div></div>';
       }).join('');
       return '<div class="lr-th"><div class="lr-tt">' + g.name + ' <span>' + g.items.length + '</span></div>' + qs + '</div>';
     }).join('');
   }
 
-  /* c466: internnr fra /laering-cars hvis Mini sender det, ellers fra ERP-radene Pulse har lastet (kolonne 0 = Internnr, 1 = RegNr). */
-  var lrInnMap = null, lrInnMapLen = -1;
-  function lrInternnr(c) {
-    var direkte = c && (c.internnr != null ? c.internnr : (c.erpId != null ? c.erpId : (c.inner_number != null ? c.inner_number : null)));
-    if (direkte != null && String(direkte) !== '') return String(direkte);
+  /* c467: ERP-rad per regnr fra radene Pulse har lastet (0 Internnr, 1 RegNr, 3 Endelig AR verdi «lav-høy», 4 Høyeste bud). */
+  var lrErpMap = null, lrErpMapLen = -1;
+  function lrKr(n) { return Math.round(Number(n)).toLocaleString('nb-NO'); }
+  function lrNum(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : NaN;
+    var t = String(v == null ? '' : v).replace(/[\s\u00a0]/g, '').replace(/kr/i, '').replace(',', '.');
+    return t === '' ? NaN : Number(t);
+  }
+  function lrEst(v) {
+    var t = String(v == null ? '' : v).replace(/[\s\u00a0]/g, '');
+    var m = t.match(/^(\d+(?:[.,]\d+)?)[-–](\d+(?:[.,]\d+)?)$/);
+    if (m) return lrKr(lrNum(m[1])) + ' – ' + lrKr(lrNum(m[2]));
+    var n = lrNum(t);
+    return isFinite(n) && n > 0 ? lrKr(n) : '';
+  }
+  function lrErp(c) {
     var rows = Array.isArray(window._lastRows) ? window._lastRows : [];
-    if (!lrInnMap || lrInnMapLen !== rows.length) {
-      lrInnMap = {}; lrInnMapLen = rows.length;
+    if (!lrErpMap || lrErpMapLen !== rows.length) {
+      lrErpMap = {}; lrErpMapLen = rows.length;
       for (var i = 1; i < rows.length; i++) {
         var r = rows[i]; if (!r) continue;
         var rg = String(r[1] || '').toUpperCase().replace(/[\s-]/g, '');
-        if (rg && r[0] != null && r[0] !== '') lrInnMap[rg] = String(r[0]);
+        if (rg) lrErpMap[rg] = r;
       }
     }
     var key = String((c && c.regnr) || '').toUpperCase().replace(/[\s-]/g, '');
-    return key ? (lrInnMap[key] || '') : '';
+    var row = key ? lrErpMap[key] : null;
+    var direkte = c && (c.internnr != null ? c.internnr : (c.erpId != null ? c.erpId : (c.inner_number != null ? c.inner_number : null)));
+    var inr = direkte != null && String(direkte) !== '' ? String(direkte) : (row && row[0] != null ? String(row[0]) : '');
+    var bud = row ? lrNum(row[4]) : NaN;
+    return { inr: inr, est: row ? lrEst(row[3]) : '', bud: isFinite(bud) && bud > 0 ? lrKr(bud) : '' };
   }
+  function lrErpHref(inr) { return 'https://biladministrasjon.no/cars_driveno/processing/final_estimate/' + encodeURIComponent(inr); }
+  function lrEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   function render() {
     var body = document.getElementById('laering-body');
