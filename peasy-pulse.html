@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c478</title>
+<title>Peasy Pulse v16.08.c479</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c478';</script>
+<script>document.title='Peasy Pulse v16.08.c479';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -491,7 +491,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c478</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c479</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -582,7 +582,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c478</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c479</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -8810,7 +8810,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c478</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c479</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -11355,11 +11355,36 @@ setTimeout(tick,1500);setInterval(tick,5000);
           if (!qaKeepCards) { try { paintQACards(); } catch (eEarly) {} }
         }).catch(function(){});
       }
+      /* c479: bare målingene for bilene på liste 3 (Mini /qa/meas, noen hundre KB) i stedet for hele filene (~56 MB).
+         Svarer ikke Mini med 200, brukes de store filene som før. */
+      function qaMeasListe3(src, bigUrl, fb){
+        var ids = [], regs = [];
+        (liste3 || []).forEach(function(b){
+          var id = b && (b.id != null ? b.id : b.erpId);
+          if (id != null && /^\d{1,9}$/.test(String(id)) && ids.indexOf(String(id)) < 0) ids.push(String(id));
+          var rg = String((b && (b.registration_number || b.regnr)) || '').toUpperCase().replace(/\s+/g, '');
+          if (/^[A-Z0-9]{2,10}$/.test(rg) && regs.indexOf(rg) < 0) regs.push(rg);
+        });
+        if (!ids.length && !regs.length) return qaJsonl(bigUrl, fb);
+        var u = miniBase + '/qa/meas?src=' + src + '&ids=' + ids.join(',') + '&regs=' + regs.join(',') + '&t=' + tFetch;
+        return fetch(u, qaMiniInit(10000)).then(function(r){
+          if (!r || !r.ok) return Promise.reject();
+          return r.text();
+        }).then(function(text){
+          window._qaMeasKilde = window._qaMeasKilde || {};
+          window._qaMeasKilde[src] = 'liste3';
+          return qaParseJsonl(text);
+        }).catch(function(){
+          window._qaMeasKilde = window._qaMeasKilde || {};
+          window._qaMeasKilde[src] = 'full';
+          return qaJsonl(bigUrl, fb);
+        });
+      }
       var bilFfP = qaHydrateFossefallFromBil(liste3);
       var _aiFrom = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
       var pack = await Promise.all([
-        qaJsonl(miniBase+'/measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl'),
-        qaJsonl(miniBase+'/v3g-measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl'),
+        qaMeasListe3('v2', miniBase+'/measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl'),
+        qaMeasListe3('v3g', miniBase+'/v3g-measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl'),
         Promise.resolve([]),
         Promise.resolve([]),
         qaJsonAuth('/finn-links'),
@@ -11934,6 +11959,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (!ff && window._qaFfKlar === false) { label='Laster …'; color='#8A8A8A'; icon='◌'; }
       else { label='PRIS MANUELT'; color='#A8221C'; icon='⚠'; }
     }
+    /* c479: før målingene er lastet vet vi ikke om bilen er SEND eller QA. Vis «Laster …», ikke en foreløpig status. */
+    if (window._qaFfKlar === false && !scope && !auctionHit) { label='Laster …'; color='#8A8A8A'; icon='◌'; }
     const pmGrunnHtml = label === 'PRIS MANUELT' ? qaPmGrunnHtml(ff, armGate, e) : '';
     const sellerLabel = (String(e.source||'').toLowerCase()==='driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
     const histHtml = qaHistHtml(e.hist);
