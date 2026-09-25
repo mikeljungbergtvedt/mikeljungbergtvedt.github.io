@@ -286,13 +286,33 @@
     return groups.map(function (g) {
       var qs = g.items.map(function (c) {
         var d = c.fe ? c.fe.slice(8, 10) + '.' + c.fe.slice(5, 7) + '.' : '';
-        var meta = [c.regnr, c.bil, c.band ? 'estimat ' + c.band : '', d].filter(Boolean).join(' · ');
+        /* c466: «prisbånd», ikke «estimat» — c.band er båndet estimatet ligger i, ikke lav–høy. Internnr med. */
+        var inr = lrInternnr(c);
+        var meta = [inr ? 'internnr ' + inr : '', c.regnr, c.bil, c.band ? 'prisbånd ' + c.band : '', d].filter(Boolean).join(' · ');
         var txt = String(c.comment || c.text || '');
         if (txt.length > 280) txt = txt.slice(0, 277) + '…';
         return '<div class="lr-q"><div class="lr-qt">«' + txt.replace(/</g, '&lt;') + '»</div><div class="lr-qm">' + meta.replace(/</g, '&lt;') + '</div></div>';
       }).join('');
       return '<div class="lr-th"><div class="lr-tt">' + g.name + ' <span>' + g.items.length + '</span></div>' + qs + '</div>';
     }).join('');
+  }
+
+  /* c466: internnr fra /laering-cars hvis Mini sender det, ellers fra ERP-radene Pulse har lastet (kolonne 0 = Internnr, 1 = RegNr). */
+  var lrInnMap = null, lrInnMapLen = -1;
+  function lrInternnr(c) {
+    var direkte = c && (c.internnr != null ? c.internnr : (c.erpId != null ? c.erpId : (c.inner_number != null ? c.inner_number : null)));
+    if (direkte != null && String(direkte) !== '') return String(direkte);
+    var rows = Array.isArray(window._lastRows) ? window._lastRows : [];
+    if (!lrInnMap || lrInnMapLen !== rows.length) {
+      lrInnMap = {}; lrInnMapLen = rows.length;
+      for (var i = 1; i < rows.length; i++) {
+        var r = rows[i]; if (!r) continue;
+        var rg = String(r[1] || '').toUpperCase().replace(/[\s-]/g, '');
+        if (rg && r[0] != null && r[0] !== '') lrInnMap[rg] = String(r[0]);
+      }
+    }
+    var key = String((c && c.regnr) || '').toUpperCase().replace(/[\s-]/g, '');
+    return key ? (lrInnMap[key] || '') : '';
   }
 
   function render() {
