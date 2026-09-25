@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c470</title>
+<title>Peasy Pulse v16.08.c471</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -25,7 +25,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c470';</script>
+<script>document.title='Peasy Pulse v16.08.c471';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -491,7 +491,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c470</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c471</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -582,7 +582,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c470</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c471</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1631,6 +1631,7 @@ window.MARK_V16_04 = (function(){
 <div class="fs-grid" id="innst-satser-takst"></div>
 <h4 style="margin:0 0 4px;font-size:14px">Spenn</h4>
 <p style="color:#666;font-size:12px;margin:0 0 6px">Ned | opp. Vises som 20&nbsp;000 | 13&nbsp;000 og lagres som 20000|13000.</p>
+<p id="innst-spenn-emp-info" style="color:#666;font-size:12px;margin:0 0 6px"></p>
 <div class="fs-grid" id="innst-satser-spenn"></div>
 <h4 style="margin:16px 0 4px;font-size:14px">Salær AR</h4>
 <p style="color:#666;font-size:12px;margin:0 0 6px">Forhandleren betaler budet pluss salær til auksjonen. Trekkes i fossefallet rett før AR-bud: bud = minste av verdi ÷ (1 + sats) og verdi − minimum. Tomt felt = ikke trukket.</p>
@@ -6214,6 +6215,7 @@ function innstTakstHeat(){
         +(t.med||0)+' nye biler i median, '+(t.gammel||0)+' eldre, '+(t.raatne||0)+' råtne holdt utenfor (Peasy-bud mer enn 40 % under lav), '+(t.uten_finn||0)+' uten Finn-pris. Forslag vises ved 20 nye bud. Ramme = se her: medianen på minst 2 nye bud ligger minst 50 % og 5 000 kr over (oransje) eller under (blå) tabellen. Oppdatert '+(dato?dato.slice(8,10)+'.'+dato.slice(5,7)+'.':'')+' Hold musen over cellen for detaljer.';
     }
   }
+  innstSpennHeat();
   if(!box||!d) return;
   box.querySelectorAll('td.cell[data-kind="takst"]').forEach(function(td){
     var c=d.celler[td.getAttribute('data-cell')]||null;
@@ -6242,6 +6244,34 @@ function innstTakstHeat(){
       +(c.tabell!=null?' · tabell '+innstTakstKr(c.tabell):'')
       +(c.avvik!=null?' · avvik '+(c.avvik>0?'+':'')+innstTakstKr(c.avvik):'')
       +(c.forslag!=null?' · forslag '+innstTakstKr(c.forslag):' · forslag ved 20 nye bud')+seHer;
+  });
+}
+/* c471: spenn-tabellen — andel Peasy-bud over lav slik tabellene er i dag (A), bare nye biler.
+   Ramme når minst 3 bud og under 60 % over lav. Ned-forslag ved 20 nye bud (80 % over lav når takst = median). */
+function innstSpennHeat(){
+  var info=document.getElementById('innst-spenn-emp-info');
+  var box=document.getElementById('innst-satser-spenn');
+  var d=innstTakstCeller;
+  if(!d){ if(info) info.textContent=''; return; }
+  var tot=0, over=0;
+  Object.keys(d.celler||{}).forEach(function(k){ var sp=d.celler[k].spenn; if(sp&&sp.n){ tot+=sp.n; over+=sp.over_lav||0; } });
+  if(info) info.textContent='Grønn celle = antall nye bud. Under står andelen der Peasy-budet (ERP kolonne E) landet over lav slik tabellene er i dag. Totalt '+over+' av '+tot+' over lav'+(tot?' ('+Math.round(over/tot*100)+' %)':'')+'. Mål: 80 %. Ramme = minst 3 bud og under 60 % over lav. Forslag til ned vises ved 20 nye bud. Eldre og råtne biler er ikke med.';
+  if(!box) return;
+  box.querySelectorAll('td.cell[data-kind="spenn"]').forEach(function(td){
+    var c=d.celler[td.getAttribute('data-cell')]||null, sp=c&&c.spenn;
+    td.classList.remove('heat-0','heat-1','heat-2','heat-3','low-n','avvik-over','avvik-under');
+    var gammel=td.querySelector('.fs-emp'); if(gammel) gammel.parentNode.removeChild(gammel);
+    var n=sp?Number(sp.n)||0:0, id=td.getAttribute('data-cell')||'';
+    td.classList.add(n>=20?'heat-3':(n>=5?'heat-2':(n>0?'heat-1':'heat-0')));
+    if(!n){ td.title=id+' · ingen nye bud ennå'; return; }
+    var andel=Math.round((sp.over_lav||0)/n*100);
+    if(n>=3 && andel<60) td.classList.add('avvik-over');
+    var div=document.createElement('div'); div.className='fs-emp';
+    div.textContent=n+' bud · '+andel+' % over lav';
+    if(sp.ned_forslag!=null){ div.textContent+=' · '; var b=document.createElement('b'); b.textContent='ned '+innstTakstKr(sp.ned_forslag); div.appendChild(b); }
+    td.appendChild(div);
+    td.title=id+' · '+(sp.over_lav||0)+' av '+n+' nye bud over lav i dag · ned '+innstTakstKr(sp.ned_tabell)+' | opp '+innstTakstKr(sp.opp_tabell)
+      +(sp.ned_forslag!=null?' · ned-forslag '+innstTakstKr(sp.ned_forslag):' · ned-forslag ved 20 nye bud');
   });
 }
 function innstSatserRender(){
@@ -8721,7 +8751,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c470</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c471</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -12384,6 +12414,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c444: QA fossefall — under Forhandlermargin, ikke-null deler som innrykkede herav-rader på A/B/Ordna: herav 8 % av Finn (A, forhandlermargin_pct) / herav 12 % av Finn (B/Ordna), herav Min-margin (A) / herav Tak/gulv prisklasse (B/Ordna, forhandlermargin_tak_gulv), herav Segmentfaktor + forhandlermargin_segment_regel, herav Tillegg for å treffe bud (midlertidig). Totalraden er fortsatt base + tillegg. Null-herav skjules. Usikkerhet takst, Ordna-trekk og Vrakpant-gulv forblir egne rader. c443-layout uendret. SEND/filtre uendret. -->
 <!-- c443: QA fossefall uten horisontal scroll. Tabellen fyller kortbredden (fast layout). Lag-tekst brytes. Tallpar (lav/høy, Origin-cap, Lav – høy) kan brekke mellom verdiene, ikke midt i et tall. A/B/Ordna, hvilke lag som vises, og Skrives-markering uendret. Tall/SEND/filtre uendret. -->
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
+<!-- c471: Spenn-tabellen: andel nye bud over lav (slik tabellene er i dag), ramme under 60 % (min. 3 bud), ned-forslag ved 20 bud. Leser spenn fra peasy-cells.json. -->
 <!-- c470: Takst-heatmap: «se her»-ramme (oransje over / blå under) når medianen på minst 2 nye bud avviker minst 50 % og 5 000 kr fra tabellen. -->
 <!-- c469: Takst-heatmap: fargen følger alle bud siden 01.11.2025, også eldre biler (gammelt anker / Finn-pris fra ERP-kommentar). Eldre vises for seg og teller ikke i median eller forslag. -->
 <!-- c468: Innstillinger → Avsetning takst: heatmap fra peasy-cells.json (nattjobben takst-celler.js på Mini). Farge = antall auksjonsbud per celle, under står median implisitt påkost og forslag ved 20 bud. Bare visning, satsene røres ikke. -->
