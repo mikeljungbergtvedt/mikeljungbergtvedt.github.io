@@ -78,6 +78,49 @@
     if (!id) { var el = card.querySelector('[data-erpid]'); if (el) id = el.getAttribute('data-erpid') || ''; }
     return id;
   }
+  // Nytt QA-kort: én statusboks (poeng, rute, hovedårsak), detaljer bak +, støy samlet.
+  // Dagens bokser skjules (display:none), ingenting slettes. SEND øverst trykker den ekte SEND-knappen nederst.
+  function auHovedarsak(b) {
+    var st = (b.stopp || []).join(' | '), gr = (b.grunner || []).join(' | ');
+    if (b.ville_sendt) return { t: 'Klar for auto-send', u: '' };
+    if (/0 eksterne comps|kun kundens/.test(st)) return { t: 'Ingen sammenlignbare biler på Finn', u: 'Finn-utpris er kundens egen annonse × 0,95.' };
+    if (/km-feil/.test(st)) return { t: 'Kilometerstanden stemmer ikke', u: (st.match(/km-feil[^|]*/) || [''])[0] };
+    if (/PRIS MANUELT/.test(st)) return { t: 'Må prises manuelt', u: '' };
+    if (/vrak/.test(st)) return { t: 'Vrak eller ikke kjørbar', u: '' };
+    if (/AI svært uenige/.test(st)) return { t: 'Claude og Grok er svært uenige om Finn-utprisen', u: (st.match(/AI svært uenige[^|]*/) || [''])[0] };
+    if (/always_qa|lav sikkerhet/.test(st)) return { t: 'Lav sikkerhet i Finn-utprisen', u: '' };
+    var d = b.deler || {};
+    var svakest = [['finn', d.finn / 40], ['celle', d.celle / 30], ['data', d.data / 20], ['erp', d.erp / 10]].sort(function (x, y) { return x[1] - y[1]; })[0][0];
+    if (svakest === 'celle') { var c = gr.match(/celle ([^:]+): (\d+) bud/); return { t: 'Lite erfaring i denne prisklassen', u: c ? (c[2] + ' bud i cellen ' + c[1] + '.') : '' }; }
+    if (svakest === 'finn') { var f = (b.grunner || []).filter(function (x) { return /AI uenige|solgte|utenfor|sammenligne/.test(x); }); return { t: 'Usikker Finn-utpris', u: f.join('. ') + (f.length ? '.' : '') }; }
+    if (svakest === 'erp') return { t: 'ERP og QA-kortet har ulike tall', u: '' };
+    return { t: 'Mangler data fra selger', u: (b.grunner || []).filter(function (x) { return /kommentar|km/.test(x); }).join('. ') };
+  }
+  function auKr(n) { return n == null ? '–' : Math.round(n).toLocaleString('nb-NO'); }
+  var AU_STOY = [/^HEFT\b/, /^ORIGIN PÅ FINN/, /^⚠?\s*Finn-utpris kun fra kundens annonse/, /^0 SØSTRE/, /^B 0 COMPS/];
+  function auRyddKort(c, info) {
+    var barn = c.children;
+    for (var i = 0; i < barn.length; i++) {
+      var el = barn[i];
+      if (el.classList.contains('au-qa-poeng') || el.getAttribute('data-au-skjult')) continue;
+      var tx = (el.innerText || '').trim();
+      for (var j = 0; j < AU_STOY.length; j++) {
+        if (!AU_STOY[j].test(tx)) continue;
+        if (j === 0) info.push('Pant registrert');
+        if (j === 1) { var a = el.querySelector('a'); var pris = (tx.match(/([\d\s ]{5,}) kr/) || [])[1]; info.push('Origin på Finn' + (pris ? ' ' + pris.trim() + ' kr' : '') + (a ? ' · <a href="' + a.href + '" target="_blank" rel="noopener" style="color:#004225">Åpne</a>' : '')); }
+        el.style.display = 'none'; el.setAttribute('data-au-skjult', '1');
+        break;
+      }
+    }
+  }
+  function auHode(c, regnr) {
+    var barn = c.children;
+    for (var i = 0; i < barn.length; i++) {
+      if (barn[i].classList.contains('au-qa-poeng')) continue;
+      if ((barn[i].innerText || '').trim().indexOf(regnr) === 0) return barn[i];
+    }
+    return null;
+  }
   function auMerkQaKort() {
     var d = window._autoRute;
     if (!d || !Array.isArray(d.biler)) return;
@@ -88,17 +131,70 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      var nokkel = b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';');
+      var info = [];
+      auRyddKort(c, info);
+      if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
+      var infoAlle = JSON.parse(c.getAttribute('data-au-info') || '[]');
+      // Kostnadslinjen ved regnr ($ · kall · car.info) flyttes inn under detaljer
+      var kost = c.getAttribute('data-au-kost') || '';
+      if (!kost) {
+        var hk = auHode(c, b.regnr);
+        var spans = hk ? hk.querySelectorAll('*') : [];
+        for (var k = 0; k < spans.length; k++) {
+          var t = (spans[k].innerText || '').trim();
+          if (/^\$[\d.]+ · \d+ kall/.test(t) && spans[k].children.length === 0) { kost = t; spans[k].style.display = 'none'; c.setAttribute('data-au-kost', kost); break; }
+        }
+      }
+      // SEND øverst: gjør ekte knapp av merket, samme farge som SEND nederst
+      var ekte = c.querySelector('.qa-send-btn');
+      if (ekte && !c.querySelector('.au-send-topp')) {
+        var hode = auHode(c, b.regnr);
+        var merke = null;
+        if (hode) { var alle = hode.querySelectorAll('*'); for (var m = 0; m < alle.length; m++) { var mt = (alle[m].innerText || '').trim(); if (/SEND$/.test(mt) && mt.length <= 10 && alle[m].tagName !== 'BUTTON' && !alle[m].querySelector('button')) { merke = alle[m]; break; } } }
+        var kn = document.createElement('button');
+        kn.type = 'button'; kn.className = 'au-send-topp';
+        kn.textContent = (ekte.innerText || 'SEND').trim();
+        var cs = getComputedStyle(ekte);
+        kn.style.cssText = 'background:' + cs.backgroundColor + ';color:' + cs.color + ';border:0;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap';
+        kn.disabled = ekte.disabled;
+        kn.addEventListener('click', function (e) { e.preventDefault(); var eb = this.closest('.qa-card').querySelector('.qa-send-btn'); if (eb && !eb.disabled) eb.click(); });
+        if (merke) { merke.style.display = 'none'; merke.parentNode.insertBefore(kn, merke.nextSibling); }
+        else if (hode) hode.appendChild(kn);
+      }
+      var topp = c.querySelector('.au-send-topp');
+      if (topp && ekte) { topp.disabled = ekte.disabled; var et = (ekte.innerText || '').trim(); if (et && topp.textContent !== et) topp.textContent = et; }
+
+      var nokkel = b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
-      var farge = b.score >= 80 ? '#004225' : b.score < 50 ? '#B8452F' : '#8a6d10';
-      var hvorfor = (b.stopp || []).map(function (x) { return 'STOPP: ' + x; }).concat(b.grunner || []).join(' · ');
+      var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
+      var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
+      var bakgrunn = { g: '#E3EFE7', r: '#F8E6E1', y: '#FBF3D8' }[nivaa];
+      var ha = auHovedarsak(b);
+      var rute = b.ville_sendt ? 'AUTO' : ('QA · ' + Math.max(0, (d.grense || 80) - b.score) + ' POENG FRA AUTO');
+      var fu = b.finn_utpris != null ? 'Finn-utpris <strong style="font-variant-numeric:tabular-nums">' + auKr(b.finn_utpris) + '</strong>' : '';
+      var detaljer = (b.stopp || []).map(function (x) { return 'Stopp: ' + x; }).concat(b.grunner || []);
+      if (kost) detaljer.push('Kostnad: ' + kost);
       var el2 = document.createElement('div');
       el2.className = 'au-qa-poeng';
       el2.setAttribute('data-k', nokkel);
-      el2.style.cssText = 'margin:0 0 8px;padding:6px 10px;border-radius:8px;background:#F7F5EE;border-left:4px solid ' + farge + ';font-size:12.5px;line-height:1.4;color:#16201B';
-      el2.innerHTML = '<strong style="color:' + farge + '">' + b.score + ' poeng</strong> · ' + (b.ville_sendt ? 'AUTO' : 'QA') +
-        ' <span style="color:#5E6B62">(finn ' + b.deler.finn + '/40 · celle ' + b.deler.celle + '/30 · data ' + b.deler.data + '/20 · erp ' + b.deler.erp + '/10)</span>' +
-        (hvorfor ? '<div style="color:#5E6B62;margin-top:2px">' + esc(hvorfor) + '</div>' : '');
+      el2.style.cssText = 'margin:0 0 10px;display:grid;gap:8px';
+      el2.innerHTML =
+        '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
+          '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>' +
+          '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
+            '<span style="font-weight:700;font-size:11.5px;letter-spacing:.06em;color:' + farge + '">' + rute + '</span>' +
+            '<b style="font-size:15px">' + esc(ha.t) + '</b>' +
+            (ha.u || fu ? '<span>' + [esc(ha.u), fu].filter(Boolean).join(' ') + '</span>' : '') +
+            '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
+                [['Finn', b.deler.finn, 40], ['Celle', b.deler.celle, 30], ['Data', b.deler.data, 20], ['ERP = QA', b.deler.erp, 10]].map(function (x) {
+                  return '<span style="background:#fff;border:1px solid #DCD8CC;border-radius:6px;padding:3px 8px"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em">' + x[0] + '</span> <strong style="color:#16201B">' + x[1] + '/' + x[2] + '</strong></span>';
+                }).join('') + '</div>' +
+              (detaljer.length ? '<ul style="margin:0;padding-left:18px">' + detaljer.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+            '</details>' +
+          '</div>' +
+        '</div>' +
+        (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
     }
   }
