@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c490</title>
+<title>Peasy Pulse v16.08.c491</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c490';</script>
+<script>document.title='Peasy Pulse v16.08.c491';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -499,7 +499,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c490</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c491</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -590,7 +590,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c490</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c491</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -6149,7 +6149,16 @@ function innstSatserParseCell(kind, raw){
   }
   var t=String(raw==null?'':raw).replace(/\u00a0/g,' ').replace(/\u202f/g,' ').replace(/[\r\n]+/g,'').trim();
   if(!t || t==='—' || t==='-' || t==='–') return null;
+  if(kind==='margin'){ var mp=innstSatserMarginPct(t); if(mp!=null) return String(mp)+'%'; }
   return innstSatserNormInt(t);
+}
+/* c491: margin-celle som prosent av Finn-utpris («10 %»). Lagres som «10%»; fossefall.js v20.159 regner Finn × prosent, klemt av min/maks. */
+function innstSatserMarginPct(v){
+  if(typeof v!=='string') return null;
+  var m=v.replace(/[\s  ]/g,'').replace(',','.').match(/^(\d+(?:\.\d+)?)%$/);
+  if(!m) return null;
+  var p=Number(m[1]);
+  return (p>0 && p<=100)?p:null;
 }
 function innstSatserFmtCell(kind, val){
   if(val==null || val==='') return '';
@@ -6159,6 +6168,7 @@ function innstSatserFmtCell(kind, val){
     var bits=stored.split('|');
     return innstSatserFmtKr(bits[0])+' | '+innstSatserFmtKr(bits[1]);
   }
+  if(kind==='margin'){ var mp=innstSatserMarginPct(val); if(mp!=null) return String(mp).replace('.',',')+' %'; }
   var n=innstSatserNormInt(val);
   return n==null?'':innstSatserFmtKr(n);
 }
@@ -6169,6 +6179,7 @@ function innstSatserBandMid(priceId){
   return null;
 }
 function innstSatserFmtPct(kr, mid){
+  if(innstSatserMarginPct(typeof kr==='string'?kr:'')!=null) return 'av Finn';
   var v=innstSatserNormInt(kr);
   if(v==null || !mid) return '';
   return (Math.round(v/mid*1000)/10).toFixed(1).replace('.',',')+' %';
@@ -6323,7 +6334,8 @@ function innstSatserBind(box){
         var p=innstSatserParsePct(pct.textContent);
         var mid=Number(pct.getAttribute('data-mid'));
         if(p==null || !mid) return;
-        edit.textContent=innstSatserFmtKr(Math.round(p/100*mid));
+        /* c491: prosent her = prosent av Finn-utpris, ikke kr ved båndets midtpunkt */
+        edit.textContent=String(p).replace('.',',')+' %';
         innstSatserSync();
       });
       pct.addEventListener('blur',function(){ setTimeout(function(){ innstSatserPctFromKr(td); }, 0); });
@@ -9057,7 +9069,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c490</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c491</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -12855,6 +12867,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c444: QA fossefall — under Forhandlermargin, ikke-null deler som innrykkede herav-rader på A/B/Ordna: herav 8 % av Finn (A, forhandlermargin_pct) / herav 12 % av Finn (B/Ordna), herav Min-margin (A) / herav Tak/gulv prisklasse (B/Ordna, forhandlermargin_tak_gulv), herav Segmentfaktor + forhandlermargin_segment_regel, herav Tillegg for å treffe bud (midlertidig). Totalraden er fortsatt base + tillegg. Null-herav skjules. Usikkerhet takst, Ordna-trekk og Vrakpant-gulv forblir egne rader. c443-layout uendret. SEND/filtre uendret. -->
 <!-- c443: QA fossefall uten horisontal scroll. Tabellen fyller kortbredden (fast layout). Lag-tekst brytes. Tallpar (lav/høy, Origin-cap, Lav – høy) kan brekke mellom verdiene, ikke midt i et tall. A/B/Ordna, hvilke lag som vises, og Skrives-markering uendret. Tall/SEND/filtre uendret. -->
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
+<!-- c491: Innstillinger → margin-tabellen tar prosent av Finn-utpris («10 %», lagres «10%»). Småfeltet under cellen skriver prosent (av Finn) og viser «av Finn». Kronebeløp virker som før. Krever fossefall.js v20.159 på Mini før prosent lagres i peasy-config. -->
 <!-- c474: QA: «Laster …» i stedet for PRIS MANUELT mens målingene lastes (_qaFfKlar). PRIS MANUELT viser grunnen (tom celle, utenfor bånd, mangler Finn-utpris/km …). -->
 <!-- c473: QA-kortet: ståtid-forslag fra carinfo (Finn-annonser samme modell) med hake. Hake → qa/anker med Finn-utpris + statidKr → ny lav–høy i ERP. Automatisk ståtid er av (STATID_A_LIVE=0 på Mini). -->
 <!-- c472: Lead-grafene: siste søyle heter «i dag» og er lysere. 30d-linjen stopper dagen før, og 30d snitt = snitt av de 30 hele dagene før i dag (totalt, Peasy, Drive, Ordna, AutoDB). -->
