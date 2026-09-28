@@ -29,6 +29,49 @@
       (medTid ? '' : '<td class="au-m">finn ' + b.deler.finn + '/40 · celle ' + b.deler.celle + '/30 · data ' + b.deler.data + '/20 · erp ' + b.deler.erp + '/10</td>') +
       '<td class="au-w">' + hvorfor(b) + '</td></tr>';
   }
+  // ── Fordeling til QA send ──────────────────────────────────────────
+  // QA send viser en bil bare når boten har rutet den til «qa». «vurderes», «auto» og «sendt» skjules.
+  // Er auto-score.json eldre enn 15 min (boten står), vises alt som før.
+  var AU_STALE_MS = 15 * 60000;
+  window._autoRute = null;
+  function auRuteFersk() {
+    var d = window._autoRute;
+    return !!(d && d.ruter && d.bygget && (Date.now() - Date.parse(d.bygget)) < AU_STALE_MS);
+  }
+  window.qaAutoSkjul = function (b) {
+    if (!auRuteFersk() || !b) return false;
+    var id = b.id != null ? String(b.id) : '';
+    if (!id) return false;
+    var r = window._autoRute.ruter[id];
+    if (r === 'qa') return false;
+    return true; // vurderes / auto / sendt, eller ny bil boten ikke har rutet ennå
+
+  };
+  window.qaAutoTelling = function (biler) {
+    var t = { vurderes: 0, auto: 0 };
+    if (!auRuteFersk()) return t;
+    (biler || []).forEach(function (b) { var r = window._autoRute.ruter[String(b.id)]; if (r === 'vurderes' || r == null) t.vurderes++; else if (r === 'auto' || r === 'sendt') t.auto++; });
+    return t;
+  };
+  // Last QA på nytt bare når QA-fanen er åpen og ingen skriver i et felt der (ikke forstyrr QA-arbeid).
+  function auKanLasteQA() {
+    var sec = document.getElementById('qa-section');
+    if (!sec || sec.style.display === 'none') return false;
+    var a = document.activeElement;
+    return !(a && sec.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName));
+  }
+  function auHentRuter(forste) {
+    fetch('auto-score.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
+        window._autoRute = d;
+        if (endret || forste) { try { if (typeof window.refreshListe3 === 'function') window.refreshListe3(); } catch (e) {} if (auKanLasteQA()) { try { if (typeof window.loadQA === 'function') window.loadQA(true); } catch (e) {} } }
+      }).catch(function () {});
+  }
+  auHentRuter(true);
+  setInterval(auHentRuter, 30000);
+
   window.auToggle = function (id) {
     var el = document.getElementById(id), pl = document.getElementById(id + '-pl');
     if (!el) return;
