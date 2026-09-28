@@ -72,6 +72,38 @@
   auHentRuter(true);
   setInterval(auHentRuter, 30000);
 
+  // ── Poengsum øverst på hvert QA-kort ───────────────────────────────
+  function auKortId(card) {
+    var id = card.getAttribute('data-erpid') || '';
+    if (!id) { var el = card.querySelector('[data-erpid]'); if (el) id = el.getAttribute('data-erpid') || ''; }
+    return id;
+  }
+  function auMerkQaKort() {
+    var d = window._autoRute;
+    if (!d || !Array.isArray(d.biler)) return;
+    var byId = {};
+    d.biler.forEach(function (b) { byId[String(b.id)] = b; });
+    var kort = document.querySelectorAll('#qa-cards .qa-card');
+    for (var i = 0; i < kort.length; i++) {
+      var c = kort[i], b = byId[auKortId(c)];
+      var gammel = c.querySelector(':scope > .au-qa-poeng');
+      if (!b) { if (gammel) gammel.remove(); continue; }
+      var nokkel = b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';');
+      if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
+      var farge = b.score >= 80 ? '#004225' : b.score < 50 ? '#B8452F' : '#8a6d10';
+      var hvorfor = (b.stopp || []).map(function (x) { return 'STOPP: ' + x; }).concat(b.grunner || []).join(' · ');
+      var el2 = document.createElement('div');
+      el2.className = 'au-qa-poeng';
+      el2.setAttribute('data-k', nokkel);
+      el2.style.cssText = 'margin:0 0 8px;padding:6px 10px;border-radius:8px;background:#F7F5EE;border-left:4px solid ' + farge + ';font-size:12.5px;line-height:1.4;color:#16201B';
+      el2.innerHTML = '<strong style="color:' + farge + '">' + b.score + ' poeng</strong> · ' + (b.ville_sendt ? 'AUTO' : 'QA') +
+        ' <span style="color:#5E6B62">(finn ' + b.deler.finn + '/40 · celle ' + b.deler.celle + '/30 · data ' + b.deler.data + '/20 · erp ' + b.deler.erp + '/10)</span>' +
+        (hvorfor ? '<div style="color:#5E6B62;margin-top:2px">' + esc(hvorfor) + '</div>' : '');
+      if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
+    }
+  }
+  setInterval(auMerkQaKort, 1500);
+
   window.auToggle = function (id) {
     var el = document.getElementById(id), pl = document.getElementById(id + '-pl');
     if (!el) return;
