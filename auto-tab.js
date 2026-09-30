@@ -172,8 +172,8 @@
       var ha = auHovedarsak(b);
       var rute = b.ville_sendt ? 'AUTO' : ('QA · ' + Math.max(0, (d.grense || 80) - b.score) + ' POENG FRA AUTO');
       var fu = b.finn_utpris != null ? 'Finn-utpris <strong style="font-variant-numeric:tabular-nums">' + auKr(b.finn_utpris) + '</strong>' : '';
-      // c500: eiertid (hvor lenge nåværende eier har hatt bilen) rett i statusboksen
-      if (b.eiertid_aar != null) fu += (fu ? ' · ' : '') + 'Eiertid <strong style="font-variant-numeric:tabular-nums">' + String(b.eiertid_aar).replace('.', ',') + ' år</strong>';
+      // c501: eiertid som egen linje i statusboksen, ikke koblet til Finn-utpris
+      var eier = b.eiertid_aar != null ? '<span>Eiertid <strong style="font-variant-numeric:tabular-nums">' + String(b.eiertid_aar).replace('.', ',') + ' år</strong></span>' : '';
       var detaljer = (b.stopp || []).map(function (x) { return 'Stopp: ' + x; }).concat(b.grunner || []);
       if (kost) detaljer.push('Kostnad: ' + kost);
       var el2 = document.createElement('div');
@@ -187,6 +187,7 @@
             '<span style="font-weight:700;font-size:11.5px;letter-spacing:.06em;color:' + farge + '">' + rute + '</span>' +
             '<b style="font-size:15px">' + esc(ha.t) + '</b>' +
             (ha.u || fu ? '<span>' + [esc(ha.u), fu].filter(Boolean).join(' ') + '</span>' : '') +
+            eier +
             '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>' +
               '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
                 [['Finn', b.deler.finn, 40], ['Celle', b.deler.celle, 30], ['Data', b.deler.data, 20], ['ERP = QA', b.deler.erp, 10]].map(function (x) {
