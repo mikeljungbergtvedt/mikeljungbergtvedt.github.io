@@ -38,13 +38,15 @@ table.hm{border-collapse:separate;border-spacing:4px;min-width:660px;width:100%}
 .note{color:var(--mut);font-size:12px}
 </style></head><body>
 <div class="w">
-<div><h1>Treffkartet</h1><p class="sub">Ett spørsmål om gangen. Hver rute er biler med samme estimat og km. Bare biler med fasit teller.</p></div>
+<div><h1>Treffkartet</h1><p class="sub" id="sub">Ett spørsmål om gangen.</p></div>
 <div class="q" role="group" aria-label="Spørsmål">
 <button type="button" id="q1" aria-pressed="true">1. Er Finn-utprisen riktig?</button>
 <button type="button" id="q2" aria-pressed="false">2. Er fossefallet riktig?</button>
+<button type="button" id="q3" aria-pressed="false">3. Hvor lykkes vi?</button>
 </div>
 <div class="ctl"><label for="per">Periode</label><select id="per"><option value="30">Siste 30 dager</option><option value="90" selected>Siste 90 dager</option><option value="180">Siste 180 dager</option><option value="ytd">Hittil i år</option></select>
-<label for="kil">Kilde</label><select id="kil"><option value="alle">Alle</option><option value="peasy">Peasy</option><option value="driveno">Drive</option><option value="ordna">Ordna</option></select></div>
+<label for="kil">Kilde</label><select id="kil"><option value="alle">Alle</option><option value="peasy">Peasy</option><option value="driveno">Drive</option><option value="ordna">Ordna</option></select>
+<span id="f3" hidden><label for="kmf">Km</label> <select id="kmf"><option value="alle">Alle</option><option value="0-120">Under 120k</option><option value="120-200">120–200k</option><option value="200-">Over 200k</option></select></span></div>
 <div class="sl" id="sl">Laster …</div>
 <div class="mapc"><table class="hm" id="hm"></table><div class="leg" id="leg"></div></div>
 <div class="det" id="det"></div>
@@ -55,6 +57,7 @@ let DATA={bygget:null,b:[]};let Q=1,sel=null;
 // rad: [0 internnr,1 regnr,2 estimert,3 midt,4 km,5 utfall,6 bud,7 kilde,8 bil,9 lav,10 høy,11 vår Finn-utpris,12 Finn-fasit [pris,selger,publ]]
 const PB=[[0,25e3,'0–25k'],[25e3,50e3,'25–50k'],[50e3,100e3,'50–100k'],[100e3,150e3,'100–150k'],[150e3,250e3,'150–250k'],[250e3,400e3,'250–400k'],[400e3,1e9,'400k+']];
 const KB=[[0,50e3,'under 50k km'],[50e3,120e3,'50–120k'],[120e3,200e3,'120–200k'],[200e3,300e3,'200–300k'],[300e3,1e9,'over 300k']];
+const AB=[[0,3,'0–3 år'],[3,6,'3–6 år'],[6,10,'6–10 år'],[10,15,'10–15 år'],[15,99,'over 15 år']];
 const RATTEN=0.6; // bud under 60 % av lav = råtten takst, holdes utenfor
 const kr=n=>n==null?'–':Math.round(n).toLocaleString('nb-NO');
 const pst=x=>x==null?'–':(x>0?'+':'')+Math.round(x*100)+' %';
@@ -62,40 +65,49 @@ const med=a=>{a=[...a].sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)
 function bi(v,B){if(v==null)return -1;for(let i=0;i<B.length;i++)if(v>=B[i][0]&&v<B[i][1])return i;return -1}
 function periode(){const p=document.getElementById('per').value,k=document.getElementById('kil').value;const now=DATA.bygget?new Date(DATA.bygget):new Date();
 const from=p==='ytd'?now.getFullYear()+'-01-01':new Date(now-(+p)*864e5).toISOString().slice(0,10);return DATA.b.filter(b=>b[2]>=from&&(k==='alle'||b[7]===k))}
-function teller(b){if(Q===1)return !!(b[11]&&b[12]);return b[6]>0&&(b[5]==='solgt'||b[5]==='retur')&&b[6]>=b[9]*RATTEN}
-function stat(xs){if(Q===1){const d=xs.map(b=>b[12][0]/b[11]-1);return{n:xs.length,v:med(d)}}
+function alder(b){return b[13]?(+b[2].slice(0,4))-b[13]:null}
+function rng(v,f){if(f==='alle')return true;if(f==='ukjent')return v==null;if(v==null)return false;const[a,z]=f.split('-');return v>=+a&&(z===''||v<+z)}
+function teller(b){if(Q===3)return b[5]!=='venter'&&rng(b[4]!=null?b[4]/1000:null,document.getElementById('kmf').value);if(Q===1)return !!(b[11]&&b[12]);return b[6]>0&&(b[5]==='solgt'||b[5]==='retur')&&b[6]>=b[9]*RATTEN}
+function stat(xs){if(Q===3){const s=xs.filter(b=>b[5]==='solgt').length;return{n:xs.length,v:xs.length?s/xs.length*100:null,s}}if(Q===1){const d=xs.map(b=>b[12][0]/b[11]-1);return{n:xs.length,v:med(d)}}
 let inn=0,under=0,over=0;xs.forEach(b=>{if(b[6]<b[9])under++;else if(b[6]>b[10])over++;else inn++});return{n:xs.length,v:xs.length?inn/xs.length:null,under,over,inn}}
-function farge(s){if(!s||s.v==null)return['var(--na)','var(--ink)'];if(Q===1){const a=Math.abs(s.v);return a<=0.07?['var(--okbg)','var(--ok)']:a<=0.15?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)']}
+function farge(s){if(!s||s.v==null)return['var(--na)','var(--ink)'];if(Q===3)return s.v>=8?['var(--okbg)','var(--ok)']:s.v>=4?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)'];if(Q===1){const a=Math.abs(s.v);return a<=0.07?['var(--okbg)','var(--ok)']:a<=0.15?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)']}
 return s.v>=0.5?['var(--okbg)','var(--ok)']:s.v>=0.25?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)']}
-const MIN=()=>Q===1?3:5;
-function vis(s){return Q===1?pst(s.v):Math.round(s.v*100)+' %'}
+const MIN=()=>Q===1?3:Q===2?5:10;
+function vis(s){return Q===1?pst(s.v):Q===2?Math.round(s.v*100)+' %':s.v.toFixed(1)}
 function draw(){
-document.getElementById('q1').setAttribute('aria-pressed',Q===1);document.getElementById('q2').setAttribute('aria-pressed',Q===2);
+[1,2,3].forEach(n=>document.getElementById('q'+n).setAttribute('aria-pressed',Q===n));document.getElementById('f3').hidden=Q!==3;
+const COLS=Q===3?AB:KB;const colv=b=>Q===3?alder(b):b[4];
+document.getElementById('sub').textContent=Q===3?'Rader = estimat, kolonner = bilens alder. Tallet = solgte biler per 100 estimater (ikke medregnet de som venter på svar).':'Hver rute er biler med samme estimat og km. Bare biler med fasit teller.';
 const alle=periode();const cells={},tot={};
-alle.forEach(b=>{const i=bi(b[3],PB),j=bi(b[4],KB);if(i<0||j<0)return;const k=i+'|'+j;(tot[k]=tot[k]||[]).push(b);if(teller(b))(cells[k]=cells[k]||[]).push(b)});
+alle.forEach(b=>{const i=bi(b[3],PB),j=bi(colv(b),COLS);if(i<0||j<0)return;const k=i+'|'+j;(tot[k]=tot[k]||[]).push(b);if(teller(b))(cells[k]=cells[k]||[]).push(b)});
 const S={};for(const k in cells)S[k]=stat(cells[k]);
-let h='<tr><th></th>'+KB.map(k=>'<th>'+k[2]+'</th>').join('')+'</tr>';
-for(let i=PB.length-1;i>=0;i--){h+='<tr><th class="r">Estimat '+PB[i][2]+'</th>';for(let j=0;j<KB.length;j++){const k=i+'|'+j,s=S[k],N=(tot[k]||[]).length;const ok=s&&s.n>=MIN();const [bg,fg]=ok?farge(s):['var(--na)','var(--ink)'];
+let h='<tr><th></th>'+COLS.map(k=>'<th>'+k[2]+'</th>').join('')+'</tr>';
+for(let i=PB.length-1;i>=0;i--){h+='<tr><th class="r">Estimat '+PB[i][2]+'</th>';for(let j=0;j<COLS.length;j++){const k=i+'|'+j,s=S[k],N=(tot[k]||[]).length;const ok=s&&s.n>=MIN();const [bg,fg]=ok?farge(s):['var(--na)','var(--ink)'];
 h+='<td tabindex="0" data-k="'+k+'" class="'+(sel===k?'sel':'')+'" style="background:'+bg+'"><span class="big" style="color:'+fg+'">'+(ok?vis(s):'·')+'</span><span class="sm">'+(s?s.n:0)+' av '+N+'</span></td>'}h+='</tr>'}
 document.getElementById('hm').innerHTML=h;
 document.querySelectorAll('.hm td[data-k]').forEach(td=>{const f=()=>{sel=td.dataset.k;draw()};td.onclick=f;td.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
-document.getElementById('leg').innerHTML=Q===1
+document.getElementById('leg').innerHTML=Q===3?'<span><span class="sw" style="background:var(--okbg)"></span>8 eller flere solgt per 100</span><span><span class="sw" style="background:var(--midbg)"></span>4–8</span><span><span class="sw" style="background:var(--badbg)"></span>Under 4</span><span>Grå = under 10 biler.</span>':Q===1
 ?'<span><span class="sw" style="background:var(--okbg)"></span>Innen ±7 %: riktig</span><span><span class="sw" style="background:var(--midbg)"></span>7–15 % bom</span><span><span class="sw" style="background:var(--badbg)"></span>Over 15 % bom</span><span>+ = bilen lå ute høyere enn vår Finn-utpris (vi var for lave). «12 av 140» = biler med fasit av alle i ruta. Grå = under 3.</span>'
 :'<span><span class="sw" style="background:var(--okbg)"></span>Minst halvparten av budene mellom lav og høy</span><span><span class="sw" style="background:var(--midbg)"></span>25–50 %</span><span><span class="sw" style="background:var(--badbg)"></span>Under 25 %</span><span>Råtne takster (bud under 60 % av lav) er holdt utenfor. Grå = under 5.</span>';
-const alleT=Object.values(cells).flat();const T=alleT.length?stat(alleT):null;const nm=k=>{const[i,j]=k.split('|');return'estimat '+PB[i][2]+', '+KB[j][2]};
+const alleT=Object.values(cells).flat();const T=alleT.length?stat(alleT):null;const nm=k=>{const[i,j]=k.split('|');return'estimat '+PB[i][2]+', '+COLS[j][2]};
 const big=Object.entries(S).filter(([k,s])=>s.n>=MIN());let sl;
-if(Q===1){if(!T){sl='Ingen tapte biler med fasit i perioden ennå.'}else{const bom=big.filter(([k,s])=>Math.abs(s.v)>0.15).sort((a,b)=>b[1].n-a[1].n).slice(0,2);
+if(Q===3){if(!T){sl='Ingen biler i utvalget.'}else{const best=[...big].sort((a,b)=>b[1].v-a[1].v).slice(0,2);const verst=big.filter(([k,s])=>s.v<2).sort((a,b)=>b[1].n-a[1].n).slice(0,2);
+sl='Snitt <b>'+T.v.toFixed(1)+'</b> solgt per 100 estimater ('+T.s+' av '+T.n+'). Best: <b style="color:var(--ok)">'+(best.map(([k,s])=>nm(k)+' ('+s.v.toFixed(1)+')').join('</b> og <b style="color:var(--ok)">')||'–')+'</b>.'+(verst.length?' Mange leads, nesten ingen salg: <b style="color:var(--bad)">'+verst.map(([k,s])=>nm(k)+' ('+s.n+' biler, '+s.v.toFixed(1)+')').join('</b> og <b style="color:var(--bad)">')+'</b>.':'')}}
+else if(Q===1){if(!T){sl='Ingen tapte biler med fasit i perioden ennå.'}else{const bom=big.filter(([k,s])=>Math.abs(s.v)>0.15).sort((a,b)=>b[1].n-a[1].n).slice(0,2);
 sl='<b>'+T.n+'</b> tapte biler har dukket opp på Finn etterpå. De ligger i snitt <b>'+pst(T.v)+'</b> fra vår Finn-utpris'+(Math.abs(T.v)<=0.07?', så <b style="color:var(--ok)">Finn-utprisen treffer</b>.':'.')+(bom.length?' Størst bom: <b style="color:var(--bad)">'+bom.map(([k,s])=>nm(k)+' ('+pst(s.v)+')').join('</b> og <b style="color:var(--bad)">')+'</b>.':'')}}
 else{if(!T){sl='Ingen biler med bud i perioden.'}else{sl='<b>'+T.n+'</b> biler fikk bud. <b>'+Math.round(T.v*100)+' %</b> landet mellom lav og høy, <b style="color:var(--bad)">'+T.under+'</b> under lav og <b>'+T.over+'</b> over høy.'+(T.under>T.over*2?' Budene ligger stort sett <b style="color:var(--bad)">under lav</b>: fossefallet lover mer enn forhandlerne byr.':'')}}
 document.getElementById('sl').innerHTML=sl;
 const dx=sel&&cells[sel]?cells[sel]:null;const d=document.getElementById('det');
 if(!dx){d.innerHTML='<h2>Velg en rute</h2><p class="note">Klikk på en rute for å se bilene bak tallet.</p>'}
+else if(Q===3){const U={solgt:'Solgt',retur:'Retur etter bud',nei:'Sa nei',borte:'Svarte ikke','pågår':'Ja, pågår'};d.innerHTML='<h2>'+nm(sel)+': '+dx.length+' biler</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Estimat</th><th>Utfall</th><th class="num">Bud</th></tr>'
++[...dx].sort((a,b)=>(b[5]==='solgt')-(a[5]==='solgt')||b[2].localeCompare(a[2])).slice(0,300).map(b=>'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+kr(b[9])+'–'+kr(b[10])+'</td><td style="font-weight:600;color:'+(b[5]==='solgt'?'var(--ok)':b[5]==='retur'?'var(--bad)':'var(--mut)')+'">'+U[b[5]]+'</td><td class="num">'+kr(b[6])+'</td></tr>').join('')+'</table>'}
 else if(Q===1){d.innerHTML='<h2>'+nm(sel)+': '+dx.length+' biler med fasit</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Vår Finn-utpris</th><th class="num">Lå ute på Finn</th><th class="num">Bom</th><th>Selger</th><th>Estimat</th></tr>'
 +[...dx].sort((a,b)=>Math.abs(b[12][0]/b[11]-1)-Math.abs(a[12][0]/a[11]-1)).map(b=>{const v=b[12][0]/b[11]-1;return'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+kr(b[11])+'</td><td class="num">'+kr(b[12][0])+'</td><td class="num" style="color:'+farge({v})[1]+';font-weight:700">'+pst(v)+'</td><td>'+(b[12][1]||'')+'</td><td>'+kr(b[9])+'–'+kr(b[10])+'</td></tr>'}).join('')+'</table>'}
 else{d.innerHTML='<h2>'+nm(sel)+': '+dx.length+' biler med bud</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Lav–høy</th><th class="num">Bud</th><th>Hvor</th><th>Utfall</th></tr>'
 +[...dx].sort((a,b)=>b[2].localeCompare(a[2])).map(b=>{const w=b[6]<b[9]?['Under lav','var(--bad)']:b[6]>b[10]?['Over høy','var(--lav)']:['Mellom','var(--ok)'];return'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+kr(b[9])+'–'+kr(b[10])+'</td><td class="num">'+kr(b[6])+'</td><td style="color:'+w[1]+';font-weight:700">'+w[0]+'</td><td>'+(b[5]==='solgt'?'Solgt':'Retur')+'</td></tr>'}).join('')+'</table>'}
 document.getElementById('foot').textContent='Oppdateres hver natt kl. 00. Sist bygget '+(DATA.bygget?new Date(DATA.bygget).toLocaleString('nb-NO'):'–')+'. Kilde: ERP-eksporten, botens Finn-utpris og søk på reg.nr. på Finn (bare annonser publisert etter estimatet).'}
-document.getElementById('q1').onclick=()=>{Q=1;sel=null;draw()};document.getElementById('q2').onclick=()=>{Q=2;sel=null;draw()};
+document.getElementById('q1').onclick=()=>{Q=1;sel=null;draw()};document.getElementById('q2').onclick=()=>{Q=2;sel=null;draw()};document.getElementById('q3').onclick=()=>{Q=3;sel=null;draw()};
+document.getElementById('kmf').onchange=()=>{sel=null;draw()};
 document.getElementById('per').onchange=()=>{sel=null;draw()};document.getElementById('kil').onchange=()=>{sel=null;draw()};
 (function(){var ok=false;try{var a=JSON.parse(localStorage.getItem('peasy-pulse-auth')||'null');ok=!!(a&&a.h==='92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1'&&Date.now()-a.t<30*864e5)}catch(e){}
 if(!ok){location.replace('peasy-pulse.html');return}
