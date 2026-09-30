@@ -67,7 +67,7 @@ function periode(){const p=document.getElementById('per').value,k=document.getEl
 const from=p==='ytd'?now.getFullYear()+'-01-01':new Date(now-(+p)*864e5).toISOString().slice(0,10);return DATA.b.filter(b=>b[2]>=from&&(k==='alle'||b[7]===k))}
 function alder(b){return b[13]?(+b[2].slice(0,4))-b[13]:null}
 function rng(v,f){if(f==='alle')return true;if(f==='ukjent')return v==null;if(v==null)return false;const[a,z]=f.split('-');return v>=+a&&(z===''||v<+z)}
-function teller(b){if(Q===3)return b[5]!=='venter'&&rng(b[4]!=null?b[4]/1000:null,document.getElementById('kmf').value);if(Q===1)return !!(b[11]&&b[12]);return b[6]>0&&(b[5]==='solgt'||b[5]==='retur')&&b[6]>=b[9]*RATTEN}
+function teller(b){if(Q===3)return b[5]!=='venter'&&rng(b[4]!=null?b[4]/1000:null,document.getElementById('kmf').value);if(Q===1)return !!(b[11]&&b[12])&&(b[5]==='nei'||b[5]==='borte');return b[6]>0&&(b[5]==='solgt'||b[5]==='retur')&&b[6]>=b[9]*RATTEN}
 function stat(xs){if(Q===3){const s=xs.filter(b=>b[5]==='solgt').length;return{n:xs.length,v:xs.length?s/xs.length*100:null,s}}if(Q===1){const d=xs.map(b=>b[12][0]/b[11]-1);return{n:xs.length,v:med(d)}}
 let inn=0,under=0,over=0;xs.forEach(b=>{if(b[6]<b[9])under++;else if(b[6]>b[10])over++;else inn++});return{n:xs.length,v:xs.length?inn/xs.length:null,under,over,inn}}
 function farge(s){if(!s||s.v==null)return['var(--na)','var(--ink)'];if(Q===3)return s.v>=8?['var(--okbg)','var(--ok)']:s.v>=4?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)'];if(Q===1){const a=Math.abs(s.v);return a<=0.07?['var(--okbg)','var(--ok)']:a<=0.15?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)']}
@@ -77,7 +77,7 @@ function vis(s){return Q===1?pst(s.v):Q===2?Math.round(s.v*100)+' %':s.v.toFixed
 function draw(){
 [1,2,3].forEach(n=>document.getElementById('q'+n).setAttribute('aria-pressed',Q===n));document.getElementById('f3').hidden=Q!==3;
 const COLS=Q===3?AB:KB;const colv=b=>Q===3?alder(b):b[4];
-document.getElementById('sub').innerHTML=Q===1?'<b>Biler:</b> sa nei til estimatet (eller budet) og ble etterpå lagt ut på Finn. Tallet = hvor langt Finn-prisen lå fra vår Finn-utpris.':Q===2?'<b>Biler:</b> var på auksjon og fikk bud. Tallet = andel bud mellom lav og høy.':'<b>Biler:</b> alle som fikk estimat. Rader = estimat, kolonner = alder. Tallet = solgte biler per 100 estimater.';
+document.getElementById('sub').innerHTML=Q===1?'<b>Biler:</b> sa nei til estimatet (eller svarte ikke) og ble etterpå lagt ut på Finn. Tallet = hvor langt Finn-prisen lå fra vår Finn-utpris.':Q===2?'<b>Biler:</b> var på auksjon og fikk bud. Tallet = andel bud mellom lav og høy.':'<b>Biler:</b> alle som fikk estimat. Rader = estimat, kolonner = alder. Tallet = solgte biler per 100 estimater.';
 const alle=periode();const cells={},tot={};
 alle.forEach(b=>{const i=bi(b[3],PB),j=bi(colv(b),COLS);if(i<0||j<0)return;const k=i+'|'+j;(tot[k]=tot[k]||[]).push(b);if(teller(b))(cells[k]=cells[k]||[]).push(b)});
 const S={};for(const k in cells)S[k]=stat(cells[k]);
@@ -94,7 +94,7 @@ const big=Object.entries(S).filter(([k,s])=>s.n>=MIN());let sl;
 if(Q===3){if(!T){sl='Ingen biler i utvalget.'}else{const best=[...big].sort((a,b)=>b[1].v-a[1].v).slice(0,2);const verst=big.filter(([k,s])=>s.v<2).sort((a,b)=>b[1].n-a[1].n).slice(0,2);
 sl='Snitt <b>'+T.v.toFixed(1)+'</b> solgt per 100 estimater ('+T.s+' av '+T.n+'). Best: <b style="color:var(--ok)">'+(best.map(([k,s])=>nm(k)+' ('+s.v.toFixed(1)+')').join('</b> og <b style="color:var(--ok)">')||'–')+'</b>.'+(verst.length?' Mange leads, nesten ingen salg: <b style="color:var(--bad)">'+verst.map(([k,s])=>nm(k)+' ('+s.n+' biler, '+s.v.toFixed(1)+')').join('</b> og <b style="color:var(--bad)">')+'</b>.':'')}}
 else if(Q===1){if(!T){sl='Ingen tapte biler med fasit i perioden ennå.'}else{const bom=big.filter(([k,s])=>Math.abs(s.v)>0.15).sort((a,b)=>b[1].n-a[1].n).slice(0,2);
-sl='<b>'+T.n+'</b> tapte biler har dukket opp på Finn etterpå. De ligger i snitt <b>'+pst(T.v)+'</b> fra vår Finn-utpris'+(Math.abs(T.v)<=0.07?', så <b style="color:var(--ok)">Finn-utprisen treffer</b>.':'.')+(bom.length?' Størst bom: <b style="color:var(--bad)">'+bom.map(([k,s])=>nm(k)+' ('+pst(s.v)+')').join('</b> og <b style="color:var(--bad)">')+'</b>.':'')}}
+sl='<b>'+T.n+'</b> biler som sa nei til estimatet har dukket opp på Finn etterpå. De ligger i snitt <b>'+pst(T.v)+'</b> fra vår Finn-utpris'+(Math.abs(T.v)<=0.07?', så <b style="color:var(--ok)">Finn-utprisen treffer</b>.':'.')+(bom.length?' Størst bom: <b style="color:var(--bad)">'+bom.map(([k,s])=>nm(k)+' ('+pst(s.v)+')').join('</b> og <b style="color:var(--bad)">')+'</b>.':'')}}
 else{if(!T){sl='Ingen biler med bud i perioden.'}else{sl='<b>'+T.n+'</b> biler fikk bud. <b>'+Math.round(T.v*100)+' %</b> landet mellom lav og høy, <b style="color:var(--bad)">'+T.under+'</b> under lav og <b>'+T.over+'</b> over høy.'+(T.under>T.over*2?' Budene ligger stort sett <b style="color:var(--bad)">under lav</b>: fossefallet lover mer enn forhandlerne byr.':'')}}
 document.getElementById('sl').innerHTML=sl;
 const dx=sel&&cells[sel]?cells[sel]:null;const d=document.getElementById('det');
