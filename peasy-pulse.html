@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c496</title>
+<title>Peasy Pulse v16.08.c497</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c496';</script>
+<script>document.title='Peasy Pulse v16.08.c497';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c496</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c497</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c496</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c497</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1517,7 +1517,11 @@ window.MARK_V16_04 = (function(){
 <h4 style="margin:0 0 4px;font-size:14px">Avsetning takst (kr)</h4>
 <p id="innst-takst-emp-info" style="color:#666;font-size:12px;margin:0 0 6px"></p>
 <div class="fs-grid" id="innst-satser-takst"></div>
-<h4 style="margin:0 0 4px;font-size:14px">Spenn</h4>
+<h4 style="margin:0 0 4px;font-size:14px">Spenn opp (%) — c497</h4>
+<p style="color:#666;font-size:12px;margin:0 0 8px;max-width:80ch">Lav = Peasy-bud (forventet AR-bud − Peasy-avgift). Høy = lav + prosent av lav, per km-bånd. Samme prosent for A, B og Ordna (B = A × 0,9, Ordna = A × 0,75). Opp rundes til hele 1 000 og klemmes mellom min og maks. Tomt prosentfelt = tabellen «Spenn (ned | opp)» under brukes for det km-båndet.</p>
+<div id="innst-spennopp" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px"></div>
+<div id="innst-spennopp-regn" style="background:#F6F5F0;border:1px solid #DCD8CC;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px;overflow-x:auto"></div>
+<h4 style="margin:0 0 4px;font-size:14px">Spenn (ned | opp) — brukes bare der Spenn opp er tom</h4>
 <p style="color:#666;font-size:12px;margin:0 0 6px">Ned | opp. Vises som 20&nbsp;000 | 13&nbsp;000 og lagres som 20000|13000.</p>
 <p id="innst-spenn-emp-info" style="color:#666;font-size:12px;margin:0 0 6px"></p>
 <div class="fs-grid" id="innst-satser-spenn"></div>
@@ -6476,6 +6480,81 @@ function innstSpennHeat(){
       +(sp.ned_forslag!=null?' · ned-forslag '+innstTakstKr(sp.ned_forslag):' · ned-forslag ved 20 nye bud');
   });
 }
+
+/* c497: bare visning i utregningen. Samme trapp som peasyFee() i fossefall.js (Mini) — endres der, ikke her. */
+window.peasyFeeFor=function(bud){return bud<=35000?5900:bud<=75000?8900:bud<=150000?9900:11900;};
+/* c497: Spenn opp (%) — lav = Peasy-bud, høy = lav + % av lav. Leses av fossefall.js (v20.174) fra fossefallSatser.spennOpp. */
+function innstSpennOppRender(satser){
+  var box=document.getElementById('innst-spennopp'); if(!box) return;
+  var so=(satser&&satser.spennOpp)||{}, pct=so.pct||{};
+  var km=(satser&&satser.axes&&satser.axes.km)||[];
+  var inp='padding:6px 8px;border:1px solid #ccc;border-radius:6px;width:74px;font-size:14px';
+  var h=km.map(function(k){var v=pct[k.id];return '<label style="font-size:12px;color:#5E6B62;display:flex;flex-direction:column;gap:2px">'+innstSatserEsc(k.id)+' km<span><input type="number" step="0.5" min="0" max="50" data-spennopp-km="'+innstSatserEsc(k.id)+'" value="'+(v!=null?v:'')+'" style="'+inp+'"> %</span></label>';}).join('');
+  h+='<label style="font-size:12px;color:#5E6B62;display:flex;flex-direction:column;gap:2px">Min opp<span><input type="number" step="500" min="0" id="innst-spennopp-min" value="'+(so.min!=null?so.min:'')+'" style="'+inp+';width:96px"> kr</span></label>';
+  h+='<label style="font-size:12px;color:#5E6B62;display:flex;flex-direction:column;gap:2px">Maks opp<span><input type="number" step="1000" min="0" id="innst-spennopp-max" value="'+(so.max!=null?so.max:'')+'" style="'+inp+';width:96px"> kr</span></label>';
+  h+='<label style="font-size:12px;color:#5E6B62;display:flex;flex-direction:column;gap:2px">Regn på Finn-utpris<span><input type="number" step="1000" min="0" id="innst-spennopp-finn" value="704000" style="'+inp+';width:110px"> kr</span></label>';
+  h+='<label style="font-size:12px;color:#5E6B62;display:flex;flex-direction:column;gap:2px">km<span><input type="number" step="1000" min="0" id="innst-spennopp-kmv" value="74000" style="'+inp+';width:96px"></span></label>';
+  box.innerHTML=h;
+  box.querySelectorAll('input').forEach(function(el){el.oninput=function(){innstSatserSync();innstSpennOppRegn();};});
+  innstSpennOppRegn();
+}
+function innstSpennOppLes(){
+  var so={pct:{}}, any=false;
+  document.querySelectorAll('[data-spennopp-km]').forEach(function(el){var v=String(el.value||'').replace(',','.').trim(),n=Number(v);if(v!==''&&Number.isFinite(n)&&n>=0&&n<=50){so.pct[el.getAttribute('data-spennopp-km')]=n;any=true;}});
+  var mi=document.getElementById('innst-spennopp-min'), ma=document.getElementById('innst-spennopp-max');
+  if(mi&&String(mi.value).trim()!==''&&Number(mi.value)>=0) so.min=Math.round(Number(mi.value));
+  if(ma&&String(ma.value).trim()!==''&&Number(ma.value)>0) so.max=Math.round(Number(ma.value));
+  return any?so:null;
+}
+function innstSpennOppRegn(){
+  var box=document.getElementById('innst-spennopp-regn'); if(!box) return;
+  var cfg=window.peasyConfig||{}, s=cfg.fossefallSatser||{};
+  var so=innstSpennOppLes();
+  var finn=Number((document.getElementById('innst-spennopp-finn')||{}).value)||0;
+  var kmv=Number((document.getElementById('innst-spennopp-kmv')||{}).value)||0;
+  function band(ax,v){ax=ax||[];for(var i=0;i<ax.length;i++){var b=ax[i];if(v>=Number(b.min)&&(b.max==null||v<Number(b.max)))return b;}return v>0&&ax.length&&v>=Number(ax[ax.length-1].min)?ax[ax.length-1]:null;}
+  var pb=band(s.axes&&s.axes.price,finn), kb=band(s.axes&&s.axes.km,kmv);
+  if(!pb||!kb){box.innerHTML='Fyll inn Finn-utpris og km innenfor aksene.';return;}
+  var cell=pb.id+'|'+kb.id;
+  function kr(n){return Math.round(n).toLocaleString('nb-NO');}
+  function pctOf(v){var m=String(v==null?'':v).match(/^\s*([\d.,]+)\s*%\s*$/);return m?Number(m[1].replace(',','.')):null;}
+  var mc=s.margin&&s.margin[cell], mp=pctOf(mc), margin=mp!=null?Math.round(finn*mp/100/100)*100:Number(mc)||0;
+  var mmin=s.min&&Number(s.min[pb.id]), mmax=s.max&&Number(s.max[pb.id]);
+  if(Number.isFinite(mmin)&&margin<mmin) margin=mmin; if(Number.isFinite(mmax)&&margin>mmax) margin=mmax;
+  var takst=Number(s.takst&&s.takst[cell])||0, omreg=4532, klarg=1000;
+  var verdi=finn-margin-takst-omreg-klarg;
+  var sp=Number(s.arSalaerPct)||0, sm=Number(s.arSalaerMin)||0;
+  var sal=sp||sm?Math.max(sm, verdi-verdi/(1+sp/100)):0; sal=Math.round(sal);
+  var arBud=verdi-sal;
+  var fee=typeof window.peasyFeeFor==='function'?window.peasyFeeFor(arBud):null;
+  var h='<div style="font-weight:700;margin-bottom:4px">Utregning, celle '+innstSatserEsc(cell)+'</div><table style="border-collapse:collapse;font-variant-numeric:tabular-nums">';
+  function row(l,v,b){h+='<tr><td style="padding:2px 14px 2px 0">'+l+'</td><td style="text-align:right;padding:2px 0'+(b?';font-weight:700':'')+'">'+v+'</td></tr>';}
+  row('Finn-utpris',kr(finn));
+  row('− forhandlermargin'+(mp!=null?' '+mp+' %':''),'−'+kr(margin));
+  row('− avsetning takst','−'+kr(takst));
+  row('− omregistrering (eksempel)','−'+kr(omreg));
+  row('− klargjøring','−'+kr(klarg));
+  row('− AR-salær','−'+kr(sal));
+  row('= forventet AR-bud',kr(arBud),true);
+  var fe=window.peasyFeeFor(arBud); row('− Peasy-avgift (trapp i fossefall.js)','−'+kr(fe)); row('= Peasy-bud A (lav)',kr(Math.round((arBud-fe)/1000)*1000),true);
+  h+='</table><div style="margin-top:6px;color:#5E6B62;font-size:12px">Omregistrering avhenger av bilen; her brukt '+kr(omreg)+' kr som eksempel.</div>';
+  var feeKr=fee!=null?fee:null;
+  var midA=feeKr!=null?Math.round((arBud-feeKr)/1000)*1000:null;
+  var pct=so&&so.pct?so.pct[kb.id]:null;
+  function oppFor(mid){var o=Math.round(mid*pct/100/1000)*1000;if(so.min!=null&&o<so.min)o=so.min;if(so.max!=null&&o>so.max)o=so.max;return o;}
+  var tb=s.spenn&&s.spenn[cell], tn=String(tb||'').split('|');
+  h+='<div style="margin-top:8px"><b>Spenn '+(pct!=null?'opp '+pct+' % ('+innstSatserEsc(kb.id)+' km)':'fra tabell '+innstSatserEsc(tb||'–'))+'</b></div>';
+  if(midA==null){
+    h+='<div style="color:#5E6B62;font-size:12px">Peasy-avgiften vises ikke her. Lav = AR-bud − avgift; høy = lav + opp.</div>';
+  } else {
+    h+='<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;margin-top:4px"><tr><th style="text-align:left;padding:2px 14px 2px 0;font-size:11px;color:#5E6B62">Arm</th><th style="text-align:right;padding:2px 14px 2px 0;font-size:11px;color:#5E6B62">Lav (Peasy-bud)</th><th style="text-align:right;padding:2px 14px 2px 0;font-size:11px;color:#5E6B62">+ opp</th><th style="text-align:right;font-size:11px;color:#5E6B62">Høy</th></tr>';
+    [['A',1],['B',0.9],['Ordna',0.75]].forEach(function(a){var mid=Math.round(midA*a[1]/1000)*1000;var ned=0,opp;
+      if(pct!=null){opp=oppFor(mid);}else{ned=Number(tn[0])||0;opp=Number(tn[1])||0;}
+      h+='<tr><td style="padding:2px 14px 2px 0">'+a[0]+(a[1]!==1?' (A × '+String(a[1]).replace('.',',')+')':'')+'</td><td style="text-align:right;padding:2px 14px 2px 0">'+kr(mid-ned)+'</td><td style="text-align:right;padding:2px 14px 2px 0">+'+kr(opp)+'</td><td style="text-align:right;font-weight:700">'+kr(mid+opp)+'</td></tr>';});
+    h+='</table>';
+  }
+  box.innerHTML=h;
+}
 function innstSatserRender(){
   var cfg=window.peasyConfig||(window.peasyConfig={});
   var satser=innstSeedFossefallSatser(cfg);
@@ -6487,6 +6566,7 @@ function innstSatserRender(){
   boxT.innerHTML=innstSatserBuild('takst',satser);
   boxS.innerHTML=innstSatserBuild('spenn',satser);
   innstSatserBind(boxM); innstSatserBind(boxT); innstSatserBind(boxS);
+  innstSpennOppRender(satser); /* c497 */
   /* c468: heatmap fra faktiske bud */
   innstTakstHeat(); innstTakstCellerHent();
   /* c460: Salær AR */
@@ -6512,6 +6592,8 @@ function innstSatserSync(){
   cur.margin=data.margin;
   cur.takst=data.takst;
   cur.spenn=data.spenn;
+  /* c497: Spenn opp (%). Ingen felt utfylt → nøkkelen fjernes (tabellen brukes). */
+  if(document.getElementById('innst-spennopp')&&document.querySelector('[data-spennopp-km]')){ var so97=innstSpennOppLes(); if(so97) cur.spennOpp=so97; else delete cur.spennOpp; }
   cur.min=data.min;
   cur.max=data.max;
   /* c460: Salær AR. Tomt felt fjerner nøkkelen (ikke trukket). Utenfor 0–20 % / 0–50 000 kr skrives ikke. */
@@ -9102,7 +9184,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c496</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c497</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -12902,7 +12984,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c444: QA fossefall — under Forhandlermargin, ikke-null deler som innrykkede herav-rader på A/B/Ordna: herav 8 % av Finn (A, forhandlermargin_pct) / herav 12 % av Finn (B/Ordna), herav Min-margin (A) / herav Tak/gulv prisklasse (B/Ordna, forhandlermargin_tak_gulv), herav Segmentfaktor + forhandlermargin_segment_regel, herav Tillegg for å treffe bud (midlertidig). Totalraden er fortsatt base + tillegg. Null-herav skjules. Usikkerhet takst, Ordna-trekk og Vrakpant-gulv forblir egne rader. c443-layout uendret. SEND/filtre uendret. -->
 <!-- c443: QA fossefall uten horisontal scroll. Tabellen fyller kortbredden (fast layout). Lag-tekst brytes. Tallpar (lav/høy, Origin-cap, Lav – høy) kan brekke mellom verdiene, ikke midt i et tall. A/B/Ordna, hvilke lag som vises, og Skrives-markering uendret. Tall/SEND/filtre uendret. -->
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
-<!-- c496: Auto-fanen: «Kunden»-kolonne med status fra ERP og grunn (valg + egne ord) i stedet for «Sendt til kunde». -->
+<!-- c497: Auto-fanen: «Kunden»-kolonne med status fra ERP og grunn (valg + egne ord) i stedet for «Sendt til kunde». -->
 <!-- c495: Scoreboard: «Bud mot fossefall» (bud-tab.js, bud-fossefall.json) — Finn-utpris → estimert AR-bud → faktisk AR-bud, etter Finn-kvalitet og celle. -->
 <!-- c494: Nytt QA-kort: statusboks (poeng, rute, hovedårsak), detaljer bak +, HEFT/Origin som grå infolinje, SEND øverst = ekte SEND. Bilder gir ikke poeng. -->
 <!-- c493: QA send viser bare biler rutet til QA. Vurderes/auto skjules. auto-score.json > 15 min gammel → alt vises. -->
