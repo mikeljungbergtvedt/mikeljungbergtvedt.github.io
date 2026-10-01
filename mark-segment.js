@@ -78,20 +78,33 @@
       '<div style="margin:0 0 8px;font-size:12.5px">Periode: ' + [30, 90, 180].map(function (p) { return '<button type="button" onclick="window.msPeriode(' + p + ')" style="margin-right:4px;padding:3px 9px;border-radius:6px;border:1px solid #004225;background:' + (p === periode ? '#004225;color:#fff' : 'transparent;color:#004225') + ';cursor:pointer">' + p + ' d</button>'; }).join('') + '</div>' +
       '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:13px;min-width:720px"><tr style="background:#F5F5F0">' +
       ['Kampanje', 'Kanal', 'Leads', 'Priset', 'Bilmiks (forventet solgt per 100)', 'Solgt', 'Solgt per 100 priset', 'Kost', 'Kost per solgt'].map(function (t, i) { return '<th style="padding:6px 8px;border:1px solid #ddd;text-align:' + (i > 1 ? 'right' : 'left') + ';font-size:11.5px">' + t + '</th>'; }).join('') + '</tr>';
+    // Beste kampanje per kolonne: bare betalte kampanjer (har kost) med minst MIN_BEST prisede biler.
+    var MIN_BEST = 30, best = { bm: null, sp: null, ks: null };
     liste.forEach(function (x) {
-      var k = kost(x.kamp, fra, til); if (k != null) tot.kost += k;
+      x.k = kost(x.kamp, fra, til);
+      x.bm = x.priset ? x.forv / x.priset : null;
+      x.sp = x.priset ? x.solgt / x.priset * 100 : null;
+      x.ks = x.k != null && x.solgt ? x.k / x.solgt : null;
+      if (x.k == null || x.priset < MIN_BEST) return;
+      if (x.bm != null && (!best.bm || x.bm > best.bm.bm)) best.bm = x;
+      if (x.sp != null && (!best.sp || x.sp > best.sp.sp)) best.sp = x;
+      if (x.ks != null && (!best.ks || x.ks < best.ks.ks)) best.ks = x;
+    });
+    var BEST = ';background:#DDF0E3;font-weight:700;color:#1F7A4D';
+    liste.forEach(function (x) {
+      var k = x.k; if (k != null) tot.kost += k;
       tot.leads += x.leads; tot.priset += x.priset; tot.forv += x.forv; tot.solgt += x.solgt;
-      var bm = x.priset ? x.forv / x.priset : null;
+      var bm = x.bm;
       var farge = bm == null ? '#5E6B62' : bm >= g._snitt * 1.15 ? '#1F7A4D' : bm >= g._snitt * 0.85 ? '#8A6D10' : '#B8452F';
       h += '<tr><td style="padding:6px 8px;border:1px solid #ddd">' + esc(x.navn) + '</td><td style="padding:6px 8px;border:1px solid #ddd">' + x.kanal + '</td>' +
         '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.leads + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.priset + '</td>' +
-        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + farge + '">' + (bm == null ? '–' : bm.toFixed(1)) + '</td>' +
-        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (x.priset ? (x.solgt / x.priset * 100).toFixed(1) : '–') + '</td>' +
-        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (k == null ? '–' : kr(k)) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (k != null && x.solgt ? kr(k / x.solgt) : '–') + '</td></tr>';
+        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + farge + (best.bm === x ? BEST : '') + '">' + (bm == null ? '–' : bm.toFixed(1)) + '</td>' +
+        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right' + (best.sp === x ? BEST : '') + '">' + (x.sp == null ? '–' : x.sp.toFixed(1)) + '</td>' +
+        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (k == null ? '–' : kr(k)) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right' + (best.ks === x ? BEST : '') + '">' + (x.ks == null ? '–' : kr(x.ks)) + '</td></tr>';
     });
     h += '<tr style="background:#F5F5F0;font-weight:700"><td style="padding:6px 8px;border:1px solid #ddd">Totalt</td><td style="padding:6px 8px;border:1px solid #ddd"></td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.leads + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.priset + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.priset ? (tot.forv / tot.priset).toFixed(1) : '–') + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.priset ? (tot.solgt / tot.priset * 100).toFixed(1) : '–') + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + kr(tot.kost) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.solgt ? kr(tot.kost / tot.solgt) : '–') + '</td></tr></table></div>';
     var gl = Object.keys(g).filter(function (k) { return k !== '_snitt' && g[k].n >= MIN_N; }).sort(function (a, b) { return g[b].rate - g[a].rate; }).slice(0, 3).map(function (k) { var p = k.split('|'); return PB[p[0]][2] + ', ' + AB[p[1]][2] + ' (' + g[k].rate.toFixed(1) + ')'; });
-    h += '<p style="color:#5E6B62;font-size:12px;margin:6px 0 0">Beste ruter nå: ' + esc(gl.join(' · ')) + '. Bilmiks grønn = minst 15 % over snittet, rød = minst 15 % under.</p>';
+    h += '<p style="color:#5E6B62;font-size:12px;margin:6px 0 0">Beste ruter nå: ' + esc(gl.join(' · ')) + '. Bilmiks grønn = minst 15 % over snittet, rød = minst 15 % under. Grønn bakgrunn = beste betalte kampanje i kolonnen (minst ' + MIN_BEST + ' prisede).</p>';
     var el = document.getElementById('ms-section');
     if (!el) { el = document.createElement('div'); el.id = 'ms-section'; el.style.cssText = 'background:#fff;border:1px solid #DCD8CC;border-radius:10px;padding:14px 16px;margin:18px 0'; sec.appendChild(el); }
     el.innerHTML = h;
