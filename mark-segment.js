@@ -32,8 +32,10 @@
       var k = celle(r); if (!k) return;
       var s = st[k] || (st[k] = { n: 0, s: 0 }); s.n++; if (erSolgt(r)) s.s++;
     });
-    var g = {};
-    Object.keys(st).forEach(function (k) { if (st[k].n >= MIN_N && st[k].s / st[k].n * 100 >= GRONN) g[k] = st[k]; });
+    // Rate per rute (solgt per 100). Ruter med under MIN_N biler får snittet for alle.
+    var N = 0, S = 0; Object.keys(st).forEach(function (k) { N += st[k].n; S += st[k].s; });
+    var snitt = N ? S / N * 100 : 0, g = { _snitt: snitt };
+    Object.keys(st).forEach(function (k) { g[k] = { n: st[k].n, s: st[k].s, rate: st[k].n >= MIN_N ? st[k].s / st[k].n * 100 : snitt }; });
     return g;
   }
 
@@ -63,34 +65,33 @@
       if (String(r[C.kilde] || '').toLowerCase() !== 'peasy') return;
       var sd = iso(r[C.sd]); if (!sd || sd < fra || sd > til) return;
       var k = kampanjeAv(r);
-      var x = grupper[k.key] || (grupper[k.key] = { navn: k.navn, kanal: k.kanal, kamp: k.kamp, leads: 0, priset: 0, gronn: 0, solgt: 0 });
+      var x = grupper[k.key] || (grupper[k.key] = { navn: k.navn, kanal: k.kanal, kamp: k.kamp, leads: 0, priset: 0, forv: 0, solgt: 0 });
       x.leads++;
-      var c = celle(r); if (c) { x.priset++; if (g[c]) x.gronn++; }
+      var c = celle(r); if (c) { x.priset++; x.forv += g[c] ? g[c].rate : g._snitt; }
       if (erSolgt(r)) x.solgt++;
     });
     var liste = Object.values(grupper).sort(function (a, b) { return b.leads - a.leads; });
-    var tot = { leads: 0, priset: 0, gronn: 0, solgt: 0, kost: 0 };
-    var pst = function (a, b) { return b ? Math.round(a / b * 100) + ' %' : '–'; };
+    var tot = { leads: 0, priset: 0, forv: 0, solgt: 0, kost: 0 };
     var h = '<h3 style="margin:0 0 4px">3 · Hvilke biler gir kampanjene?</h3>' +
-      '<p style="color:#5E6B62;font-size:12.5px;margin:0 0 8px;max-width:90ch">Peasy-leads mottatt siste ' + periode + ' dager, per kampanje. <b>Andel i grønne ruter</b> = leads som havnet i ruter der vi selger 8+ per 100 i Treffkartet (estimat × alder, siste 180 dager). ' +
+      '<p style="color:#5E6B62;font-size:12.5px;margin:0 0 8px;max-width:90ch">Peasy-leads mottatt siste ' + periode + ' dager, per kampanje. <b>Bilmiks</b> = hvor mange solgt per 100 vi kan forvente ut fra hvilke biler kampanjen gir (estimat × alder), regnet fra Treffkartet siste 180 dager. Snittet for alle er ' + g._snitt.toFixed(1) + '. Høy bilmiks = kampanjen gir biler vi selger. ' +
       '<b>Solgt per 100 priset</b> = hvor mange av de prisede som er solgt så langt. Ferske leads har ikke rukket å bli solgt, så sammenlign kampanjene mot hverandre, ikke mot fasit.</p>' +
       '<div style="margin:0 0 8px;font-size:12.5px">Periode: ' + [30, 90, 180].map(function (p) { return '<button type="button" onclick="window.msPeriode(' + p + ')" style="margin-right:4px;padding:3px 9px;border-radius:6px;border:1px solid #004225;background:' + (p === periode ? '#004225;color:#fff' : 'transparent;color:#004225') + ';cursor:pointer">' + p + ' d</button>'; }).join('') + '</div>' +
       '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:13px;min-width:720px"><tr style="background:#F5F5F0">' +
-      ['Kampanje', 'Kanal', 'Leads', 'Priset', 'Andel i grønne ruter', 'Solgt', 'Solgt per 100 priset', 'Kost', 'Kost per solgt'].map(function (t, i) { return '<th style="padding:6px 8px;border:1px solid #ddd;text-align:' + (i > 1 ? 'right' : 'left') + ';font-size:11.5px">' + t + '</th>'; }).join('') + '</tr>';
+      ['Kampanje', 'Kanal', 'Leads', 'Priset', 'Bilmiks (forventet solgt per 100)', 'Solgt', 'Solgt per 100 priset', 'Kost', 'Kost per solgt'].map(function (t, i) { return '<th style="padding:6px 8px;border:1px solid #ddd;text-align:' + (i > 1 ? 'right' : 'left') + ';font-size:11.5px">' + t + '</th>'; }).join('') + '</tr>';
     liste.forEach(function (x) {
       var k = kost(x.kamp, fra, til); if (k != null) tot.kost += k;
-      tot.leads += x.leads; tot.priset += x.priset; tot.gronn += x.gronn; tot.solgt += x.solgt;
-      var andel = x.priset ? x.gronn / x.priset : null;
-      var farge = andel == null ? '#5E6B62' : andel >= 0.4 ? '#1F7A4D' : andel >= 0.25 ? '#8A6D10' : '#B8452F';
+      tot.leads += x.leads; tot.priset += x.priset; tot.forv += x.forv; tot.solgt += x.solgt;
+      var bm = x.priset ? x.forv / x.priset : null;
+      var farge = bm == null ? '#5E6B62' : bm >= g._snitt * 1.15 ? '#1F7A4D' : bm >= g._snitt * 0.85 ? '#8A6D10' : '#B8452F';
       h += '<tr><td style="padding:6px 8px;border:1px solid #ddd">' + esc(x.navn) + '</td><td style="padding:6px 8px;border:1px solid #ddd">' + x.kanal + '</td>' +
         '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.leads + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.priset + '</td>' +
-        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + farge + '">' + pst(x.gronn, x.priset) + '</td>' +
+        '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + farge + '">' + (bm == null ? '–' : bm.toFixed(1)) + '</td>' +
         '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + x.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (x.priset ? (x.solgt / x.priset * 100).toFixed(1) : '–') + '</td>' +
         '<td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (k == null ? '–' : kr(k)) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (k != null && x.solgt ? kr(k / x.solgt) : '–') + '</td></tr>';
     });
-    h += '<tr style="background:#F5F5F0;font-weight:700"><td style="padding:6px 8px;border:1px solid #ddd">Totalt</td><td style="padding:6px 8px;border:1px solid #ddd"></td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.leads + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.priset + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + pst(tot.gronn, tot.priset) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.priset ? (tot.solgt / tot.priset * 100).toFixed(1) : '–') + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + kr(tot.kost) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.solgt ? kr(tot.kost / tot.solgt) : '–') + '</td></tr></table></div>';
-    var gl = Object.keys(g).map(function (k) { var p = k.split('|'); return PB[p[0]][2] + ', ' + AB[p[1]][2] + ' (' + (g[k].s / g[k].n * 100).toFixed(1) + ')'; });
-    h += '<p style="color:#5E6B62;font-size:12px;margin:6px 0 0">Grønne ruter nå: ' + (gl.length ? esc(gl.join(' · ')) : 'ingen med nok biler') + '. Grønn ≥ 40 %, gul 25–40 %, rød under 25 % av prisede leads i grønne ruter.</p>';
+    h += '<tr style="background:#F5F5F0;font-weight:700"><td style="padding:6px 8px;border:1px solid #ddd">Totalt</td><td style="padding:6px 8px;border:1px solid #ddd"></td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.leads + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.priset + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.priset ? (tot.forv / tot.priset).toFixed(1) : '–') + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + tot.solgt + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.priset ? (tot.solgt / tot.priset * 100).toFixed(1) : '–') + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + kr(tot.kost) + '</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right">' + (tot.solgt ? kr(tot.kost / tot.solgt) : '–') + '</td></tr></table></div>';
+    var gl = Object.keys(g).filter(function (k) { return k !== '_snitt' && g[k].n >= MIN_N; }).sort(function (a, b) { return g[b].rate - g[a].rate; }).slice(0, 3).map(function (k) { var p = k.split('|'); return PB[p[0]][2] + ', ' + AB[p[1]][2] + ' (' + g[k].rate.toFixed(1) + ')'; });
+    h += '<p style="color:#5E6B62;font-size:12px;margin:6px 0 0">Beste ruter nå: ' + esc(gl.join(' · ')) + '. Bilmiks grønn = minst 15 % over snittet, rød = minst 15 % under.</p>';
     var el = document.getElementById('ms-section');
     if (!el) { el = document.createElement('div'); el.id = 'ms-section'; el.style.cssText = 'background:#fff;border:1px solid #DCD8CC;border-radius:10px;padding:14px 16px;margin:18px 0'; sec.appendChild(el); }
     el.innerHTML = h;
