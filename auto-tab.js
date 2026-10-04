@@ -60,13 +60,27 @@
     var a = document.activeElement;
     return !(a && sec.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName));
   }
+  function auQaUtAvTakt(ruter) {
+    var vist = {};
+    document.querySelectorAll('#qa-cards .qa-card').forEach(function (c) { var id = auKortId(c); if (id) vist[id] = 1; });
+    for (var id in vist) if (ruter[id] && ruter[id] !== 'qa') return true;
+    var iListe3 = (window._qaList3Raw || []).map(function (b) { return String(b.id || b.erpId || ''); });
+    for (var k in ruter) if (ruter[k] === 'qa' && !vist[k] && iListe3.indexOf(k) >= 0) return true;
+    return false;
+  }
   function auHentRuter(forste) {
     fetch('auto-score.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) return;
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
         window._autoRute = d;
-        if (endret || forste) { try { if (typeof window.refreshListe3 === 'function') window.refreshListe3(); } catch (e) {} if (auKanLasteQA()) { try { if (typeof window.loadQA === 'function') window.loadQA(true); } catch (e) {} } }
+        if (endret || forste) {
+          try { if (typeof window.refreshListe3 === 'function') window.refreshListe3(); } catch (e) {}
+          // c507: last QA på nytt bare når kortene som vises ikke lenger stemmer med rutene (ny QA-bil, eller en vist bil er
+          // ikke QA lenger). En bil som nettopp er sendt, er allerede borte fra skjermen, så da blinker ingenting.
+          if (auKanLasteQA() && (forste || auQaUtAvTakt(d.ruter))) { try { if (typeof window.loadQA === 'function') window.loadQA(true); } catch (e) {} }
+          else { try { auMerkQaKort(); } catch (e) {} }
+        }
       }).catch(function () {});
   }
   auHentRuter(true);
