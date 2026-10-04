@@ -121,6 +121,22 @@
     }
     return null;
   }
+  // Finner selgerkommentar og ERP-historikk på kortet (boksene lages av QA-kortet i peasy-pulse.html).
+  function auMerker(c) {
+    var ut = [], fant = {};
+    var alle = c.querySelectorAll('div');
+    for (var i = 0; i < alle.length; i++) {
+      var el = alle[i];
+      if (el.closest('.au-qa-poeng')) continue;
+      var tx = (el.innerText || '').trim();
+      if (!fant.k && /^Selgerkommentar/.test(tx) && el.children.length <= 3) {
+        fant.k = 1; ut.push({ t: '💬 Selgerkommentar', tittel: tx.replace(/^Selgerkommentar[^:]*:?\s*/, '').slice(0, 300), el: el });
+      }
+      var m = !fant.h && tx.match(/^ERP-historikk \((\d+) tidligere\)/);
+      if (m) { fant.h = 1; ut.push({ t: '↺ Priset før (' + m[1] + ')', tittel: 'Bilen har vært hos oss før. Klikk for historikken.', el: el }); }
+    }
+    return ut;
+  }
   function auMerkQaKort() {
     var d = window._autoRute;
     if (!d || !Array.isArray(d.biler)) return;
@@ -164,7 +180,9 @@
       var topp = c.querySelector('.au-send-topp');
       if (topp && ekte) { topp.disabled = ekte.disabled; var et = (ekte.innerText || '').trim(); if (et && topp.textContent !== et) topp.textContent = et; }
 
-      var nokkel = (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
+      var merker = auMerker(c);
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
@@ -188,6 +206,9 @@
             '<b style="font-size:15px">' + esc(ha.t) + '</b>' +
             (ha.u || fu ? '<span>' + [esc(ha.u), fu].filter(Boolean).join(' ') + '</span>' : '') +
             eier +
+            (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">' + merker.map(function (m, ix) {
+              return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
+            }).join('') + '</span>' : '') +
             '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>' +
               '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
                 [['Finn', b.deler.finn, 40], ['Celle', b.deler.celle, 30], ['Data', b.deler.data, 20], ['ERP = QA', b.deler.erp, 10]].map(function (x) {
@@ -198,6 +219,16 @@
           '</div>' +
         '</div>' +
         (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
+      el2.querySelectorAll('.au-merke').forEach(function (kn) {
+        kn.addEventListener('click', function (e) {
+          e.preventDefault();
+          var m = merker[Number(this.getAttribute('data-ix'))];
+          if (!m || !m.el) return;
+          var d = m.el.closest('details'); if (d) d.open = true;
+          m.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          var f = m.el.style.outline; m.el.style.outline = '2px solid #004225'; setTimeout(function () { m.el.style.outline = f; }, 1800);
+        });
+      });
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
     }
   }
