@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c508</title>
+<title>Peasy Pulse v16.08.c509</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c508';</script>
+<script>document.title='Peasy Pulse v16.08.c509';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c508</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c509</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c508</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c509</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -1471,7 +1471,7 @@ window.MARK_V16_04 = (function(){
 
 <h3>Retur-kost</h3>
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:24px">
-<input type="number" id="innst-retur" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per returnert bil</span>
+<input type="number" id="innst-retur" style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:140px;font-size:14px" /> <span>kr per returnert bil — dekker vask, foto og takst på returbilen. Påløper når budet avvises og bilen skal returneres. Peasy, Drive og AutoDB (ikke Ordna).</span>
 </div>
 
 <h3>Prod kost solgte biler</h3>
@@ -3380,6 +3380,10 @@ async function pulseBilfil(rows){
        Rettes bare der Excel har en verdi (fyller aldri tomme felt), så antall bestilt/mottatt/retur/bud er uendret. */
     if('bud' in b){
       [[19,'bud'],[20,'avgift'],[22,'km']].forEach(function(p){var v=b[p[1]];if(v!=null&&r[p[0]]&&Number(r[p[0]])!==v)r[p[0]]=v;});
+      /* c509: returkost påløper når budet avvises og bilen skal returneres. «Skal returneres» uten Returnert på i Excel
+         får beslutningsdatoen fra ERP-loggen (bilfila), samme regel som analysemailene. */
+      var st=String(r[12]||'').toLowerCase().replace(/\s+/g,'_');
+      if(!r[21]&&b.returnert&&(st==='to_be_returned'||st==='returned')) r[21]=b.returnert.slice(8,10)+'.'+b.returnert.slice(5,7)+'.'+b.returnert.slice(0,4);
       [[15,'gire_bestilt'],[16,'levere_selv'],[17,'mottatt'],[21,'returnert']].forEach(function(p){var v=b[p[1]];if(!v||!r[p[0]])return;var no=v.slice(8,10)+'.'+v.slice(5,7)+'.'+v.slice(0,4);if(String(r[p[0]]||'').slice(0,10)!==no)r[p[0]]=no;});
     }}
   window._pulseBilfil={bygget:d.bygget,treff:n};
@@ -9253,7 +9257,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c508</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c509</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
