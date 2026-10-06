@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c515</title>
+<title>Peasy Pulse v16.08.c516</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c515';</script>
+<script>document.title='Peasy Pulse v16.08.c516';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c515</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c516</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c515</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c516</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -4198,17 +4198,18 @@ function mkKampFraLes(){try{var v=localStorage.getItem('mk-kamp-fra')||'';return
 window.mkKampFraSett=function(v){try{if(v)localStorage.setItem('mk-kamp-fra',v);else localStorage.removeItem('mk-kamp-fra');}catch(e){}mkRenderKampanjer(window._lastRows);};
 function mkKampAgg(rows,fra,til,K){
   /* leads/bestilt/solgt per kanal|kampanje i [fra,til] + faktisk kost per kampanje i samme dager */
-  var navnGoogle={},kostMeta={},kostGoogle={};
+  var navnGoogle={},kostMeta={},kostGoogle={},navnMeta={};
   if(K){Object.keys(K).forEach(function(k){var c=K[k];if(!c)return;var sum=0;Object.keys(c.dager||{}).forEach(function(ds){var dd=new Date(ds+'T12:00:00');if(dd>=fra&&dd<=til)sum+=Number(c.dager[ds])||0;});
     if(c.kilde==='google'){navnGoogle[String(c.id)]=c.navn;kostGoogle[String(c.id)]=(kostGoogle[String(c.id)]||0)+sum;}
-    else if(c.kilde==='meta'){kostMeta[mkKampNorm(c.navn)]=(kostMeta[mkKampNorm(c.navn)]||0)+sum;}});}
+    else if(c.kilde==='meta'){kostMeta[String(c.id)]=(kostMeta[String(c.id)]||0)+sum;navnMeta[String(c.id)]=c.navn;}});}
+  var mId=pulseMetaOppslag();
   var G={};
   rows.slice(1).forEach(function(r){if(!r[1]||!isPeasyRow(r))return;var d=parseDate(r[14]);if(!d||d<fra||d>til)return;var kan=kanalAvRad(r);if(kan==='direkte')return;
-    var camp=String(r[24]||'').trim()||'(uten kampanje)';var key=kan+'|'+camp;var g=G[key]=G[key]||{kan:kan,camp:camp,l:0,b:0,s:0};g.l++;if(parseDate(r[15])||parseDate(r[16]))g.b++;if(parseDate(r[18]))g.s++;});
+    var camp=String(r[24]||'').trim()||'(uten kampanje)';if(kan==='meta')camp=mId(camp,String(r[28]||'').trim(),d)||camp;var key=kan+'|'+camp;var g=G[key]=G[key]||{kan:kan,camp:camp,l:0,b:0,s:0};g.l++;if(parseDate(r[15])||parseDate(r[16]))g.b++;if(parseDate(r[18]))g.s++;});
   Object.keys(G).forEach(function(k){var g=G[k];g.kost=null;
-    if(g.kan==='meta'&&K){var km=kostMeta[mkKampNorm(g.camp)];g.kost=km!=null?km:null;}
+    if(g.kan==='meta'&&K){var km=kostMeta[g.camp];g.kost=km!=null?km:null;}
     if(g.kan==='google'&&K){var kg=kostGoogle[g.camp];g.kost=kg!=null?kg:null;}
-    g.navn=g.kan==='google'?(navnGoogle[g.camp]||('Google-kampanje '+g.camp)):g.camp;});
+    g.navn=g.kan==='google'?(navnGoogle[g.camp]||('Google-kampanje '+g.camp)):(navnMeta[g.camp]||g.camp);});
   return G;
 }
 function mkRenderKampanjer(rows){
@@ -4280,20 +4281,35 @@ function renderKanalGraf(rows){
 /* c483: kampanje-score. 100 = snittet for betalte kampanjer. Over 100 = billigere per salg enn snittet, under = dyrere.
    score = (solgt / kost) / (sum solgt / sum kost) × 100. Dømmes bare når kampanjen har brukt minst 1,5 × snitt-kost per salg. */
 function kampanjeVindu(fraD,tilD){var i0=new Date();i0.setHours(0,0,0,0);var f=new Date(i0);f.setDate(f.getDate()-fraD);var t=new Date(i0);t.setDate(t.getDate()-tilD);t.setHours(23,59,59,999);return {fra:f,til:t};}
+/* c516: Meta-kampanje-id for en lead: annonse-id (ad-id, endrer seg aldri), ellers alle kjente navn (navn + navnHistorikk).
+   Samme navn brukt av flere kampanjer: den med forbruk den dagen, ellers mest forbruk. Samme regel som kampanje-score på Mini. */
+function pulseMetaOppslag(){
+  var A=window.adsSpend||{},K=A.kampanjer||{},ann=A.metaAnnonser||{},ids={},dager={};
+  Object.keys(K).forEach(function(k){var c=K[k];if(c.kilde!=='meta')return;var id=String(c.id);dager[id]=c.dager||{};
+    [c.navn].concat(c.navnHistorikk||[]).forEach(function(n){if(!n)return;var x=String(n).trim().toLowerCase();(ids[x]=ids[x]||[]).push(id);});});
+  var tot=function(id){var s=0;Object.keys(dager[id]||{}).forEach(function(d){s+=Number(dager[id][d])||0;});return s;};
+  return function(camp,adId,d){
+    if(adId&&ann[adId])return ann[adId];
+    var l=ids[String(camp||'').trim().toLowerCase()];if(!l||!l.length)return null;if(l.length===1)return l[0];
+    var dk=d?adsDayKey(d):null;var pa=dk?l.filter(function(id){return Number((dager[id]||{})[dk])>0;}):[];if(pa.length===1)return pa[0];
+    return (pa.length?pa:l).slice().sort(function(x,y){return tot(y)-tot(x);})[0];
+  };
+}
 function kampanjeScore(rows,fraD,tilD,maal){
   /* maal: 's' = solgt (modne leads), 'b' = bestilt (tidlig signal) */
   var K=(window.adsSpend&&window.adsSpend.kampanjer)||null;rows=rows||window._lastRows;
   if(!K||!rows)return null;
-  var w=kampanjeVindu(fraD,tilD),kostG={},kostM={},navnG={};
+  var w=kampanjeVindu(fraD,tilD),kostG={},kostM={},navnG={},navnM={};
   Object.keys(K).forEach(function(key){var c=K[key];var sum=0;Object.keys(c.dager||{}).forEach(function(ds){var dd=new Date(ds+'T12:00:00');if(dd>=w.fra&&dd<=w.til)sum+=Number(c.dager[ds])||0;});
-    if(c.kilde==='google'){kostG[String(c.id)]=(kostG[String(c.id)]||0)+sum;navnG[String(c.id)]=c.navn;}else{var n=String(c.navn||'').trim().toLowerCase();kostM[n]=(kostM[n]||0)+sum;}});
+    if(c.kilde==='google'){kostG[String(c.id)]=(kostG[String(c.id)]||0)+sum;navnG[String(c.id)]=c.navn;}else{kostM[String(c.id)]=(kostM[String(c.id)]||0)+sum;navnM[String(c.id)]=c.navn;}});
+  var mId=pulseMetaOppslag();
   var G={},kan={meta:{kost:0,n:0},google:{kost:0,n:0}};
   rows.slice(1).forEach(function(r){if(!r[1]||!isPeasyRow(r))return;var d=parseDate(r[14]);if(!d||d<w.fra||d>w.til)return;var k=kanalAvRad(r);if(k==='direkte')return;
-    var c=String(r[24]||'').trim();var key=k+'|'+c;var g=G[key]=G[key]||{kanal:k,camp:c,l:0,n:0};g.l++;
+    var c=String(r[24]||'').trim();if(k==='meta')c=mId(c,String(r[28]||'').trim(),d)||c;var key=k+'|'+c;var g=G[key]=G[key]||{kanal:k,camp:c,l:0,n:0};g.l++;
     var hit=maal==='b'?(parseDate(r[15])||parseDate(r[16])):parseDate(r[18]);if(hit){g.n++;kan[k].n++;}});
   var D=(window.adsSpend&&window.adsSpend.days)||{};
   for(var dd=new Date(w.fra);dd<=w.til;dd.setDate(dd.getDate()+1)){var a=D[adsDayKey(dd)];if(a){kan.meta.kost+=Number(a.meta)||0;kan.google.kost+=Number(a.google)||0;}}
-  var rader=Object.keys(G).map(function(key){var g=G[key];g.kost=g.kanal==='google'?(kostG[g.camp]||0):(kostM[g.camp.toLowerCase()]||0);g.navn=g.kanal==='google'?(navnG[g.camp]||('Google-kampanje '+g.camp)):(g.camp||'(uten kampanje)');return g;}).filter(function(g){return g.kost>0;});
+  var rader=Object.keys(G).map(function(key){var g=G[key];g.kost=g.kanal==='google'?(kostG[g.camp]||0):(kostM[g.camp]||0);g.navn=g.kanal==='google'?(navnG[g.camp]||('Google-kampanje '+g.camp)):(navnM[g.camp]||g.camp||'(uten kampanje)');return g;}).filter(function(g){return g.kost>0;});
   var tk=0,tn=0;rader.forEach(function(g){tk+=g.kost;tn+=g.n;});
   if(!tk||!tn)return {rader:rader,snittPer:null,kanaler:null,maal:maal,w:w};
   var snitt=tk/tn;
@@ -9308,7 +9324,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c515</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c516</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
