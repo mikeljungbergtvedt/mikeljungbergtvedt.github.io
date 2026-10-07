@@ -36,6 +36,10 @@ table.hm{border-collapse:separate;border-spacing:4px;min-width:660px;width:100%}
 .det td{padding:5px 6px;border-bottom:1px solid var(--soft)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 .note{color:var(--mut);font-size:12px}
+.lh{margin:18px 0 0;font-size:20px;color:var(--acc)}
+.lmap{display:grid;gap:6px}
+.lmap h3{margin:0;font-size:15px}
+.lmap .note{margin:0}
 </style></head><body>
 <div class="w">
 <div><h1>Treffkartet</h1><p class="sub" id="sub">Ett spørsmål om gangen.</p><p class="note" style="margin:6px 0 0">Merk: Tallene er små i starten. Spørsmål 1 og 2 blir sikrere etter hvert som flere biler går gjennom auksjon og dukker opp på Finn. Spørsmål 3 bygger allerede på alle estimater. Dataene bak siden ligger på GitHub Pages med reg.nr. og priser; passordet skjuler visningen, ikke selve datafilen.</p></div>
@@ -52,6 +56,14 @@ table.hm{border-collapse:separate;border-spacing:4px;min-width:660px;width:100%}
 <div class="mapc"><table class="hm" id="hm"></table><div class="leg" id="leg"></div></div>
 <div class="det" id="det"></div>
 <p class="note" id="foot"></p>
+<h2 class="lh" id="leads">Leads: hvem går videre?</h2>
+<p class="sub" id="lsub"></p>
+<div class="ctl"><label for="lper">Periode</label><select id="lper"><option value="30">Siste 30 dager</option><option value="90" selected>Siste 90 dager</option><option value="180">Siste 180 dager</option><option value="ytd">Hittil i år</option><option value="ff">Siden fossefallet (23.09)</option></select>
+<label for="lkil">Kilde</label><select id="lkil"><option value="peasy" selected>Peasy</option><option value="alle">Alle</option><option value="driveno">Drive</option><option value="ordna">Ordna</option></select>
+<label for="lkan">Kanal</label><select id="lkan"><option value="alle">Alle</option><option value="google">Google</option><option value="meta">Meta</option><option value="direkte">Direkte / ukjent</option></select></div>
+<div class="sl" id="lsl">Laster …</div>
+<div id="lmaps" style="display:grid;gap:14px"></div>
+<div class="det" id="ldet"></div>
 </div>
 <script>
 let DATA={bygget:null,b:[]};let Q=1,sel=null;
@@ -108,11 +120,51 @@ else if(Q===1){d.innerHTML='<h2>'+nm(sel)+': '+dx.length+' biler med fasit</h2><
 else{d.innerHTML='<h2>'+nm(sel)+': '+dx.length+' biler med bud</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Lav–høy</th><th class="num">Bud</th><th>Hvor</th><th>Utfall</th></tr>'
 +[...dx].sort((a,b)=>b[2].localeCompare(a[2])).map(b=>{const w=b[6]<b[9]?['Under lav','var(--bad)']:b[6]>b[10]?['Over høy','var(--lav)']:['Mellom','var(--ok)'];return'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+kr(b[9])+'–'+kr(b[10])+'</td><td class="num">'+kr(b[6])+'</td><td style="color:'+w[1]+';font-weight:700">'+w[0]+'</td><td>'+(b[5]==='solgt'?'Solgt':'Retur')+'</td></tr>'}).join('')+'</table>'}
 document.getElementById('foot').textContent='Oppdateres hver natt kl. 00. Sist bygget '+(DATA.bygget?new Date(DATA.bygget).toLocaleString('nb-NO'):'–')+'. Kilde: ERP-eksporten, botens Finn-utpris og søk på reg.nr. på Finn (bare annonser publisert etter estimatet).'}
+
+// Leads: hvem går videre? Rader = Finn-utpris (hva bilen er verdt i markedet). Ruta = andel som sa ja til estimatet.
+const FB=[[0,30e3,'0–30k'],[30e3,60e3,'30–60k'],[60e3,100e3,'60–100k'],[100e3,150e3,'100–150k'],[150e3,250e3,'150–250k'],[250e3,400e3,'250–400k'],[400e3,1e9,'400k+']];
+const EB=[[0,1,'under 1 år'],[1,2,'1–2 år'],[2,4,'2–4 år'],[4,8,'4–8 år'],[8,99,'over 8 år']];
+const LMAPS=[{id:'a',t:'Finn-utpris × bilens alder',c:AB,v:b=>alder(b)},{id:'k',t:'Finn-utpris × km',c:KB,v:b=>b[4]},{id:'e',t:'Finn-utpris × eiertid',c:EB,v:b=>b[14]},{id:'f',t:'Finn-utpris',c:[[-1e9,1e9,'Alle leads']],v:b=>0}];
+const videre=b=>b[5]==='pågår'||b[5]==='solgt'||b[5]==='retur';
+const pct=x=>Math.round(x)+' %';
+const KAN={google:'Google',meta:'Meta',direkte:'Direkte / ukjent',autodb:'AutoDB'};
+const KIL={peasy:'Peasy',alle:'Alle',driveno:'Drive',ordna:'Ordna'};
+let lsel=null;
+function lfarge(v){return v>=10?['var(--okbg)','var(--ok)']:v>=5?['var(--midbg)','var(--mid)']:['var(--badbg)','var(--bad)']}
+function lutvalg(){const p=document.getElementById('lper').value,k=document.getElementById('lkil').value,kn=document.getElementById('lkan').value;const now=DATA.bygget?new Date(DATA.bygget):new Date();
+const from=p==='ytd'?now.getFullYear()+'-01-01':p==='ff'?'2026-09-23':new Date(now-(+p)*864e5).toISOString().slice(0,10);
+return DATA.b.filter(b=>b[2]>=from&&(k==='alle'||b[7]===k)&&(kn==='alle'||b[15]===kn))}
+function drawLeads(){
+const kn=document.getElementById('lkan').value,kl=document.getElementById('lkil').value;
+const navn=(KIL[kl]||kl)+'-leads'+(kn!=='alle'?' fra '+KAN[kn]:'');
+document.getElementById('lkan').disabled=kl!=='peasy';if(kl!=='peasy'&&kn!=='alle'){document.getElementById('lkan').value='alle';return drawLeads()}
+document.getElementById('lsub').innerHTML='95 % av leadsene går ikke videre. Kartene viser <b>hvilke leads som går videre</b>: andelen som sa ja til estimatet (bestilte henting eller levering). Rader = <b>Finn-utpris</b>, altså hva bilen er verdt i markedet. Bare leads med Finn-utpris er med; det har vi fra midten av september. Leads som ennå ikke har svart, teller som ikke videre.';
+const alle=lutvalg();const med=alle.filter(b=>b[11]);const uten=alle.length-med.length;const v=med.filter(videre).length;
+const u30=med.filter(b=>b[11]<30e3).length;
+document.getElementById('lsl').innerHTML=med.length?'<b>'+med.length+'</b> '+navn+' med Finn-utpris. <b>'+v+'</b> gikk videre, altså <b>'+pct(v/med.length*100)+'</b>. Biler under 30k: <b>'+pct(u30/med.length*100)+'</b> av leadsene.'+(uten?' <span class="note">'+uten+' leads uten Finn-utpris er ikke med.</span>':''):'Ingen leads med Finn-utpris i utvalget.';
+let H='';const celler={};
+for(const m of LMAPS){const tot={};let mangler=0;
+med.forEach(b=>{const i=bi(b[11],FB),cv=m.v(b),j=cv==null?-1:bi(cv,m.c);if(i<0)return;if(j<0){mangler++;return}const k=m.id+'|'+i+'|'+j;(tot[k]=tot[k]||[]).push(b)});
+Object.assign(celler,tot);
+let h='<table class="hm"><tr><th></th>'+m.c.map(c=>'<th>'+c[2]+'</th>').join('')+'</tr>';
+for(let i=FB.length-1;i>=0;i--){h+='<tr><th class="r">Finn-utpris '+FB[i][2]+'</th>';for(let j=0;j<m.c.length;j++){const k=m.id+'|'+i+'|'+j,xs=tot[k]||[],N=xs.length,s=xs.filter(videre).length,ok=N>=10,val=N?s/N*100:0;const[bg,fg]=ok?lfarge(val):['var(--na)','var(--ink)'];
+h+='<td tabindex="0" data-lk="'+k+'" class="'+(lsel===k?'sel':'')+'" style="background:'+bg+'"><span class="big" style="color:'+fg+'">'+(ok?pct(val):'·')+'</span><span class="sm">'+s+' av '+N+(m.id==='f'&&med.length?' · '+pct(N/med.length*100)+' av leadsene':'')+'</span></td>'}h+='</tr>'}
+h+='</table>';
+H+='<div class="mapc lmap"><h3>'+navn+': andel som sa ja til estimatet. '+m.t+'</h3>'+(m.id==='e'?'<p class="note">Eiertid = hvor lenge eieren hadde hatt bilen da estimatet ble gitt (Vegvesen). '+(mangler?mangler+' leads mangler eiertid ennå; den fylles inn hver natt.':'')+'</p>':'')+h+'</div>'}
+H+='<div class="leg"><span><span class="sw" style="background:var(--okbg)"></span>10 % eller mer går videre</span><span><span class="sw" style="background:var(--midbg)"></span>5–10 %</span><span><span class="sw" style="background:var(--badbg)"></span>Under 5 %</span><span>«3 av 40» = gikk videre av alle leads i ruta. Grå = under 10 leads.</span></div>';
+document.getElementById('lmaps').innerHTML=H;
+document.querySelectorAll('#lmaps td[data-lk]').forEach(td=>{const f=()=>{lsel=(lsel===td.dataset.lk)?null:td.dataset.lk;drawLeads()};td.onclick=f;td.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
+const d=document.getElementById('ldet');const dx=lsel&&celler[lsel];
+if(!dx){d.innerHTML='<h2>Velg en rute</h2><p class="note">Klikk på en rute i et av kartene for å se leadsene bak tallet.</p>';return}
+const[mid,i,j]=lsel.split('|');const m=LMAPS.find(x=>x.id===mid);const U={solgt:'Solgt',retur:'Retur etter bud',nei:'Sa nei',borte:'Svarte ikke','pågår':'Ja, pågår',venter:'Har ikke svart ennå'};
+d.innerHTML='<h2>'+m.t+': Finn-utpris '+FB[i][2]+(mid==='f'?'':', '+m.c[j][2])+' · '+dx.length+' leads</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Eiertid</th><th class="num">Finn-utpris</th><th class="num">Estimat</th><th>Kanal</th><th>Utfall</th></tr>'
++[...dx].sort((a,b)=>videre(b)-videre(a)||b[2].localeCompare(a[2])).slice(0,300).map(b=>'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+(b[14]!=null?String(b[14]).replace('.',',')+' år':'–')+'</td><td class="num">'+kr(b[11])+'</td><td class="num">'+kr(b[9])+'–'+kr(b[10])+'</td><td>'+(KAN[b[15]]||'–')+'</td><td style="font-weight:600;color:'+(videre(b)?'var(--ok)':'var(--mut)')+'">'+U[b[5]]+'</td></tr>').join('')+'</table>'}
+['lper','lkil','lkan'].forEach(id=>document.getElementById(id).onchange=()=>{lsel=null;drawLeads()});
 document.getElementById('q1').onclick=()=>{Q=1;sel=null;draw()};document.getElementById('q2').onclick=()=>{Q=2;sel=null;draw()};document.getElementById('q3').onclick=()=>{Q=3;sel=null;draw()};
 document.getElementById('gr1').onchange=()=>{sel=null;draw()};document.getElementById('kmf').onchange=()=>{sel=null;draw()};
 document.getElementById('per').onchange=()=>{sel=null;draw()};document.getElementById('kil').onchange=()=>{sel=null;draw()};
 (function(){var ok=false;try{var a=JSON.parse(localStorage.getItem('peasy-pulse-auth')||'null');ok=!!(a&&a.h==='92ccdd1253fe2cdd654aaac794ad62655e883fd1c13d6c4d062833e9d00c71c1'&&Date.now()-a.t<30*864e5)}catch(e){}
 if(!ok){location.replace('peasy-pulse.html');return}
-fetch('treffkart.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{DATA={bygget:d.bygget,b:d.b};draw()}).catch(()=>{document.getElementById('sl').textContent='Fant ikke dataene (treffkart.json).'})})();
+fetch('treffkart.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{DATA={bygget:d.bygget,b:d.b};draw();drawLeads()}).catch(()=>{document.getElementById('sl').textContent='Fant ikke dataene (treffkart.json).'})})();
 </script>
 </body></html>
