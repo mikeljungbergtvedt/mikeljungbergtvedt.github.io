@@ -52,7 +52,7 @@ table.hm{border-collapse:separate;border-spacing:4px;min-width:660px;width:100%}
 <div class="ctl"><label for="per">Periode</label><select id="per"><option value="30">Siste 30 dager</option><option value="90" selected>Siste 90 dager</option><option value="180">Siste 180 dager</option><option value="ytd">Hittil i år</option><option value="ff">Siden fossefallet (23.09)</option></select>
 <label for="kil">Kilde</label><select id="kil"><option value="alle">Alle</option><option value="peasy">Peasy</option><option value="driveno">Drive</option><option value="ordna">Ordna</option></select>
 <span id="f1"><label for="gr1">Biler</label> <select id="gr1"><option value="alle">Alle</option><option value="nei">Nei til estimat</option><option value="retur">Retur etter bud</option></select></span>
-<span id="f4" hidden><label for="kan">Kanal</label> <select id="kan"><option value="alle">Alle</option><option value="google">Google</option><option value="meta">Meta</option><option value="direkte">Direkte / ukjent</option></select></span>
+<span id="f4" hidden><span class="q" role="group" aria-label="Vis" style="display:inline-flex;gap:4px;vertical-align:middle;margin-right:8px">Vis: <button type="button" id="vinn" aria-pressed="true" style="padding:5px 10px">Hva vi får inn</button><button type="button" id="vvid" aria-pressed="false" style="padding:5px 10px">Hvem går videre</button></span><label for="kan">Kanal</label> <select id="kan"><option value="alle">Alle</option><option value="google">Google</option><option value="meta">Meta</option><option value="direkte">Direkte / ukjent</option></select></span>
 <span id="f3" hidden><label for="kmf">Km</label> <select id="kmf"><option value="alle">Alle</option><option value="0-120">Under 120k</option><option value="120-200">120–200k</option><option value="200-">Over 200k</option></select></span></div>
 <div class="sl" id="sl">Laster …</div>
 <div class="mapc"><h3 class="mt" id="mt" hidden></h3><table class="hm" id="hm"></table><div class="leg" id="leg"></div></div>
@@ -61,7 +61,7 @@ table.hm{border-collapse:separate;border-spacing:4px;min-width:660px;width:100%}
 
 </div>
 <script>
-let DATA={bygget:null,b:[]};let Q=1,sel=null;
+let DATA={bygget:null,b:[]};let Q=1,sel=null,LV='inn';
 // rad: [0 internnr,1 regnr,2 estimert,3 midt,4 km,5 utfall,6 bud,7 kilde,8 bil,9 lav,10 høy,11 vår Finn-utpris,12 Finn-fasit [pris,selger,publ]]
 const PB=[[0,25e3,'0–25k'],[25e3,50e3,'25–50k'],[50e3,100e3,'50–100k'],[100e3,150e3,'100–150k'],[150e3,250e3,'150–250k'],[250e3,400e3,'250–400k'],[400e3,1e9,'400k+']];
 const KB=[[0,50e3,'under 50k km'],[50e3,120e3,'50–120k'],[120e3,200e3,'120–200k'],[200e3,300e3,'200–300k'],[300e3,1e9,'over 300k']];
@@ -131,17 +131,21 @@ function drawLeads(){
 const m=LMAPS[Q],kl=document.getElementById('kil').value,ksel=document.getElementById('kan');
 if(kl!=='peasy'&&ksel.value!=='alle')ksel.value='alle';ksel.disabled=kl!=='peasy';const kn=ksel.value;
 const navn=(KIL[kl]||kl)+'-leads'+(kn!=='alle'?' fra '+KAN[kn]:'');
-document.getElementById('sub').innerHTML='95 % av leadsene går ikke videre. Kartet viser <b>hvilke leads som går videre</b>: andelen som sa ja til estimatet (bestilte henting eller levering). Rader = <b>Finn-utpris</b>, altså hva bilen er verdt i markedet. Bare leads med Finn-utpris er med; det har vi fra midten av september. Leads som ennå ikke har svart, teller som ikke videre. Kanal gjelder bare Peasy-leads.';
-const t=document.getElementById('mt');t.hidden=false;t.textContent=navn+': andel som sa ja til estimatet. '+m.t;
+document.getElementById('vinn').setAttribute('aria-pressed',LV==='inn');document.getElementById('vvid').setAttribute('aria-pressed',LV==='videre');
+document.getElementById('sub').innerHTML='95 % av leadsene går ikke videre. <b>Hva vi får inn</b> viser hvor leadsene ligger (andel av alle leads). <b>Hvem går videre</b> viser andelen som sa ja til estimatet (bestilte henting eller levering). Rader = <b>Finn-utpris</b>, altså hva bilen er verdt i markedet. Bare leads med Finn-utpris er med; det har vi fra midten av september. Leads som ennå ikke har svart, teller som ikke videre. Kanal gjelder bare Peasy-leads.';
+const t=document.getElementById('mt');t.hidden=false;t.textContent=navn+(LV==='inn'?': hva vi får inn (andel av leadsene). ':': hvem går videre (andel som sa ja til estimatet). ')+m.t;
 const alle=periode().filter(b=>kn==='alle'||b[15]===kn);const med=alle.filter(b=>b[11]);const uten=alle.length-med.length;const v=med.filter(videre).length;const u30=med.filter(b=>b[11]<30e3).length;
 const tot={};let mangler=0;
 med.forEach(b=>{const i=bi(b[11],FB),cv=m.v(b),j=cv==null?-1:bi(cv,m.c);if(i<0)return;if(j<0){mangler++;return}const k=i+'|'+j;(tot[k]=tot[k]||[]).push(b)});
 let h='<tr><th></th>'+m.c.map(c=>'<th>'+c[2]+'</th>').join('')+'</tr>';
-for(let i=FB.length-1;i>=0;i--){h+='<tr><th class="r">Finn-utpris '+FB[i][2]+'</th>';for(let j=0;j<m.c.length;j++){const k=i+'|'+j,xs=tot[k]||[],N=xs.length,s=xs.filter(videre).length,ok=N>=10,val=N?s/N*100:0;const[bg,fg]=ok?lfarge(Math.round(val)):['var(--na)','var(--ink)'];
-h+='<td tabindex="0" data-k="'+k+'" class="'+(sel===k?'sel':'')+'" style="background:'+bg+'"><span class="big" style="color:'+fg+'">'+(ok?pct(val):'·')+'</span><span class="sm">'+s+' av '+N+(Q===7&&med.length?' · '+pct(N/med.length*100)+' av leadsene':'')+'</span></td>'}h+='</tr>'}
+for(let i=FB.length-1;i>=0;i--){h+='<tr><th class="r">Finn-utpris '+FB[i][2]+'</th>';for(let j=0;j<m.c.length;j++){const k=i+'|'+j,xs=tot[k]||[],N=xs.length,s=xs.filter(videre).length;
+if(LV==='inn'){const a=med.length?N/med.length*100:0;const bg=N?'color-mix(in srgb, var(--lav) '+Math.min(85,Math.round(10+a*6))+'%, var(--card))':'var(--na)';const fg=a>=8?'var(--card)':'var(--ink)';
+h+='<td tabindex="0" data-k="'+k+'" class="'+(sel===k?'sel':'')+'" style="background:'+bg+'"><span class="big" style="color:'+fg+'">'+(N?pct(a):'·')+'</span><span class="sm" style="color:'+fg+'">'+N+' leads</span></td>';continue}
+const ok=N>=10,val=N?s/N*100:0;const[bg,fg]=ok?lfarge(Math.round(val)):['var(--na)','var(--ink)'];
+h+='<td tabindex="0" data-k="'+k+'" class="'+(sel===k?'sel':'')+'" style="background:'+bg+'"><span class="big" style="color:'+fg+'">'+(ok?pct(val):'·')+'</span><span class="sm">'+s+' av '+N+'</span></td>'}h+='</tr>'}
 document.getElementById('hm').innerHTML=h;
 document.querySelectorAll('.hm td[data-k]').forEach(td=>{const f=()=>{sel=(sel===td.dataset.k)?null:td.dataset.k;draw()};td.onclick=f;td.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
-document.getElementById('leg').innerHTML='<span><span class="sw" style="background:var(--okbg)"></span>10 % eller mer går videre</span><span><span class="sw" style="background:var(--midbg)"></span>5–10 %</span><span><span class="sw" style="background:var(--badbg)"></span>Under 5 %</span><span>«3 av 40» = gikk videre av alle leads i ruta. Grå = under 10 leads.</span>'+(Q===6?'<span>Eiertid = hvor lenge eieren hadde hatt bilen da estimatet ble gitt. '+(mangler?mangler+' leads mangler eiertid.':'')+'</span>':'');
+document.getElementById('leg').innerHTML=LV==='inn'?'<span><span class="sw" style="background:color-mix(in srgb, var(--lav) 70%, var(--card))"></span>Mørkere = flere leads.</span><span>«12 %» = andel av alle leads med Finn-utpris i utvalget. Under: antall leads i ruta.</span>'+(Q===6&&mangler?'<span>'+mangler+' leads mangler eiertid.</span>':''):'<span><span class="sw" style="background:var(--okbg)"></span>10 % eller mer går videre</span><span><span class="sw" style="background:var(--midbg)"></span>5–10 %</span><span><span class="sw" style="background:var(--badbg)"></span>Under 5 %</span><span>«3 av 40» = gikk videre av alle leads i ruta. Grå = under 10 leads.</span>'+(Q===6?'<span>Eiertid = hvor lenge eieren hadde hatt bilen da estimatet ble gitt. '+(mangler?mangler+' leads mangler eiertid.':'')+'</span>':'');
 document.getElementById('sl').innerHTML=med.length?'<b>'+med.length+'</b> '+navn+' med Finn-utpris. <b>'+v+'</b> gikk videre, altså <b>'+pct(v/med.length*100)+'</b>. Biler under 30k: <b>'+pct(u30/med.length*100)+'</b> av leadsene.'+(uten?' <span class="note">'+uten+' leads uten Finn-utpris er ikke med.</span>':''):'Ingen leads med Finn-utpris i utvalget.';
 const d=document.getElementById('det');const dx=sel&&tot[sel];
 if(!dx){d.innerHTML='<h2>Velg en rute</h2><p class="note">Klikk på en rute for å se leadsene bak tallet.</p>';return}
@@ -149,6 +153,7 @@ const[i,j]=sel.split('|');const U={solgt:'Solgt',retur:'Retur etter bud',nei:'Sa
 d.innerHTML='<h2>Finn-utpris '+FB[i][2]+(Q===7?'':', '+m.c[j][2])+': '+dx.length+' leads</h2><table><tr><th>Reg.nr.</th><th>Bil</th><th class="num">Km</th><th class="num">Eiertid</th><th class="num">Finn-utpris</th><th class="num">Estimat</th><th>Kanal</th><th>Utfall</th></tr>'
 +[...dx].sort((a,b)=>videre(b)-videre(a)||b[2].localeCompare(a[2])).slice(0,300).map(b=>'<tr><td><b>'+b[1]+'</b></td><td>'+b[8]+'</td><td class="num">'+kr(b[4])+'</td><td class="num">'+(b[14]!=null?String(b[14]).replace('.',',')+' år':'–')+'</td><td class="num">'+kr(b[11])+'</td><td class="num">'+kr(b[9])+'–'+kr(b[10])+'</td><td>'+(KAN[b[15]]||'–')+'</td><td style="font-weight:600;color:'+(videre(b)?'var(--ok)':'var(--mut)')+'">'+U[b[5]]+'</td></tr>').join('')+'</table>'}
 document.getElementById('kan').onchange=()=>{sel=null;draw()};
+document.getElementById('vinn').onclick=()=>{LV='inn';draw()};document.getElementById('vvid').onclick=()=>{LV='videre';draw()};
 [4,5,6,7].forEach(n=>document.getElementById('q'+n).onclick=()=>{Q=n;sel=null;draw()});document.getElementById('q1').onclick=()=>{Q=1;sel=null;draw()};document.getElementById('q2').onclick=()=>{Q=2;sel=null;draw()};document.getElementById('q3').onclick=()=>{Q=3;sel=null;draw()};
 document.getElementById('gr1').onchange=()=>{sel=null;draw()};document.getElementById('kmf').onchange=()=>{sel=null;draw()};
 document.getElementById('per').onchange=()=>{sel=null;draw()};document.getElementById('kil').onchange=()=>{sel=null;draw()};
