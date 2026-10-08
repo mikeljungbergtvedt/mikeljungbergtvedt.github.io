@@ -196,7 +196,7 @@
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
       var merker = auMerker(c);
-      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
@@ -237,7 +237,12 @@
       el2.className = 'au-qa-poeng';
       el2.setAttribute('data-k', nokkel);
       el2.style.cssText = 'margin:0 0 10px;display:grid;gap:8px';
-      el2.innerHTML =
+      // c524: bilde øverst. Kundens bilde (ERP) eller forsidebildet til Groks første tvilling på Finn, merket «lignende bil».
+      var bildeSrc = '', bildeTekst = '';
+      if (b.bilde && b.bilde.lokal && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) { bildeSrc = window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP); bildeTekst = 'Kundens bilde'; }
+      else if (b.bilde && b.bilde.url) { bildeSrc = b.bilde.url; bildeTekst = b.bilde.kilde === 'lignende' ? 'Lignende bil fra Finn' + (b.bilde.finnkode ? ' (' + b.bilde.finnkode + ')' : '') + ', ikke kundens bil' : 'Kundens bilde'; }
+      var bildeHtml = bildeSrc ? '<figure style="margin:0;display:grid;gap:4px"><img src="' + esc(bildeSrc) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:100%;max-height:240px;object-fit:cover;border-radius:10px;background:#E7E4DA' + (b.bilde.kilde === 'lignende' ? ';opacity:.85' : '') + '"><figcaption style="font-size:11.5px;color:' + (b.bilde.kilde === 'lignende' ? '#8A6D10' : '#5E6B62') + '">' + esc(bildeTekst) + '</figcaption></figure>' : '';
+      el2.innerHTML = bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
           '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>' +
           '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
