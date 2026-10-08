@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c522</title>
+<title>Peasy Pulse v16.08.c523</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c522';</script>
+<script>document.title='Peasy Pulse v16.08.c523';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c522</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c523</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c522</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c523</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2791,6 +2791,7 @@ function setMode(m){
   }
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
+  /* c523: «Bruk Grok» på QA-kortet: Groks Finn-utpris inn i Finn-pris-feltet, samme skriving som «Sett Finn-pris», kilde=grok i loggen. */
   /* c522: QA-kortet har «+ Groks tvillinger» med Finn-lenker, justert pris og begrunnelse. */
   /* c521: QA-kortet viser Grok-skyggeprisen (Finn-utpris, tvillinger, avvik mot vår, spenn) fra auto-score v3. */
   /* c520: Treffkart 4–7 har bryter «Hva vi får inn» (andel av leadsene) / «Hvem går videre» (andel som sa ja). */
@@ -9330,7 +9331,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c522</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c523</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -12727,17 +12728,23 @@ setTimeout(tick,1500);setInterval(tick,5000);
     const anker = parseInt(String(input.value||'').replace(/\s/g,''), 10);
     const regnr = input.dataset.regnr, erpId = input.dataset.erpid, km = Number(input.dataset.km||0);
     if (!Number.isFinite(anker) || anker < 5000) { input.focus(); return; }
-    if (!window.confirm('Sett Finn-pris '+anker.toLocaleString('nb-NO')+' kr på '+regnr+'? Skriver Lav/Høy til ERP. Sender ikke til kunden.')) return;
+    // c523: kilde (manuell | grok) og forrige Finn-utpris følger med til loggen på Mini
+    const kilde = input.dataset.kilde || 'manuell', fra = Number(input.dataset.fra || 0) || null;
+    const spm = kilde === 'grok'
+      ? 'Bruk Groks Finn-utpris '+anker.toLocaleString('nb-NO')+' kr på '+regnr+(fra ? ' (auto: '+fra.toLocaleString('nb-NO')+' kr)' : '')+'? Skriver Lav/Høy til ERP og logger endringen. Sender ikke til kunden.'
+      : 'Sett Finn-pris '+anker.toLocaleString('nb-NO')+' kr på '+regnr+'? Skriver Lav/Høy til ERP. Sender ikke til kunden.';
+    if (!window.confirm(spm)) { delete input.dataset.kilde; delete input.dataset.fra; return; }
     btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Skriver …';
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
-        body: JSON.stringify({regnr, internnr: erpId, anker, km, source: input.dataset.source||''})
+        body: JSON.stringify({regnr, internnr: erpId, anker, km, source: input.dataset.source||'', kilde, fra})
       });
+      delete input.dataset.kilde; delete input.dataset.fra;
       const j = await r.json().catch(()=>({}));
       if (!r.ok || !j.ok) throw new Error(j.err || j.error || ('HTTP '+r.status));
-      btn.textContent = 'OK '+Number(j.dLav).toLocaleString('nb-NO')+'–'+Number(j.dHoy).toLocaleString('nb-NO');
+      btn.textContent = (kilde === 'grok' ? 'Grok OK ' : 'OK ')+Number(j.dLav).toLocaleString('nb-NO')+'–'+Number(j.dHoy).toLocaleString('nb-NO');
       window._qaReady = false;
       setTimeout(function(){ window.loadQA(true); }, 600);
     }catch(e){
@@ -13623,7 +13630,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
 <script src="laering-tab.js?v=c467"></script>
 <script src="gb-ml-tab.js?v=c492"></script>
-<script src="auto-tab.js?v=202610081330"></script>
+<script src="auto-tab.js?v=202610081400"></script>
 <script src="bud-tab.js?v=202609291753"></script>
 </body>
 </html>

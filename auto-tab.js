@@ -212,6 +212,9 @@
         var gAv = g.avvik_pst != null ? Math.abs(g.avvik_pst) : null;
         var gFarge = gAv == null ? '#16201B' : gAv > 20 ? '#B8452F' : gAv > 10 ? '#8A6D10' : '#004225';
         grok = '<span>Grok <strong style="font-variant-numeric:tabular-nums">' + auKr(g.finn_utpris) + '</strong>' + (g.n != null ? ' · ' + g.n + ' tvillinger' : '') + (gAv != null ? ' · <strong style="color:' + gFarge + '">avvik ' + (g.avvik_pst > 0 ? '+' : '') + g.avvik_pst + ' %</strong>' : '') + (g.p25 && g.p75 ? ' · spenn ' + auKr(g.p25) + '–' + auKr(g.p75) : '') + '</span>';
+        if (c.querySelector('.qa-anker-input')) {
+          grok += ' <button type="button" class="au-bruk-grok" data-fu="' + Math.round(g.finn_utpris / 1000) * 1000 + '" data-fra="' + (b.finn_utpris || '') + '" title="Sett Groks Finn-utpris i Finn-pris-feltet og skriv Lav/Høy til ERP. Logges som kilde Grok." style="font-size:12px;font-weight:700;border:1px solid #004225;background:#fff;color:#004225;border-radius:6px;padding:2px 9px;cursor:pointer;margin-left:4px">Bruk Grok</button>';
+        }
         if ((g.tvillinger && g.tvillinger.length) || g.begrunnelse) {
           grok += '<details style="font-size:12.5px;color:#5E6B62"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ Groks tvillinger</summary>' +
             (g.begrunnelse ? '<div style="margin:6px 0">' + esc(g.begrunnelse) + '</div>' : '') +
@@ -256,6 +259,19 @@
           '</div>' +
         '</div>' +
         (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
+      el2.querySelectorAll('.au-bruk-grok').forEach(function (kn) {
+        kn.addEventListener('click', function (e) {
+          e.preventDefault();
+          var kort = this.closest('.qa-card');
+          var inp = kort && kort.querySelector('.qa-anker-input');
+          var sett = kort && kort.querySelector('.qa-anker-btn');
+          if (!inp || !sett) return;
+          inp.value = this.getAttribute('data-fu');
+          inp.dataset.kilde = 'grok';
+          inp.dataset.fra = this.getAttribute('data-fra') || '';
+          sett.click();
+        });
+      });
       el2.querySelectorAll('.au-merke').forEach(function (kn) {
         kn.addEventListener('click', function (e) {
           e.preventDefault();
