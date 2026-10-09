@@ -238,10 +238,25 @@
       el2.setAttribute('data-k', nokkel);
       el2.style.cssText = 'margin:0 0 10px;display:grid;gap:8px';
       // c524: bilde øverst. Kundens bilde (ERP) eller forsidebildet til Groks første tvilling på Finn, merket «lignende bil».
-      var bildeSrc = '', bildeTekst = '';
-      if (b.bilde && b.bilde.lokal && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) { bildeSrc = window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP); bildeTekst = 'Kundens bilde'; }
-      else if (b.bilde && b.bilde.url) { bildeSrc = b.bilde.url; bildeTekst = b.bilde.kilde === 'lignende' ? 'Lignende bil fra Finn' + (b.bilde.finnkode ? ' (' + b.bilde.finnkode + ')' : '') + ', ikke kundens bil' : 'Kundens bilde'; }
-      var bildeHtml = bildeSrc ? '<figure style="margin:0;display:grid;gap:4px;justify-items:start"><img src="' + esc(bildeSrc) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:30%;min-width:140px;height:auto;object-fit:contain;border-radius:8px;background:#E7E4DA' + (b.bilde.kilde === 'lignende' ? ';opacity:.85' : '') + '"><figcaption style="font-size:11.5px;color:' + (b.bilde.kilde === 'lignende' ? '#8A6D10' : '#5E6B62') + '">' + esc(bildeTekst) + '</figcaption></figure>' : '';
+      var bildeHtml = '';
+      var bildeListe = [];
+      if (b.bilde && Array.isArray(b.bilde.bilder)) {
+        bildeListe = b.bilde.bilder.map(function (x) {
+          if (x.url) return x.url;
+          if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+          return null;
+        }).filter(Boolean);
+      }
+      if (bildeListe.length) {
+        var lign = b.bilde.kilde === 'lignende';
+        var bildeTekst = lign ? 'Lignende bil fra Finn' + (b.bilde.finnkode ? ' (' + b.bilde.finnkode + ')' : '') + ', ikke kundens bil' : 'Kundens bilde';
+        var pilStil = 'border:1px solid #DCD8CC;background:#fff;color:#16201B;border-radius:6px;width:28px;height:28px;font-size:16px;line-height:1;cursor:pointer';
+        bildeHtml = '<figure class="au-bilder" data-bilder="' + esc(JSON.stringify(bildeListe)) + '" data-ix="0" style="margin:0;display:grid;gap:4px;justify-items:start">' +
+          '<img src="' + esc(bildeListe[0]) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:30%;min-width:140px;height:auto;object-fit:contain;border-radius:8px;background:#E7E4DA' + (lign ? ';opacity:.85' : '') + '">' +
+          '<figcaption style="display:flex;gap:8px;align-items:center;font-size:11.5px;color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' +
+            (bildeListe.length > 1 ? '<button type="button" class="au-bilde-forrige" aria-label="Forrige bilde" style="' + pilStil + '">‹</button><span class="au-bilde-nr" style="font-variant-numeric:tabular-nums">1 / ' + bildeListe.length + '</span><button type="button" class="au-bilde-neste" aria-label="Neste bilde" style="' + pilStil + '">›</button>' : '') +
+            '<span>' + esc(bildeTekst) + '</span></figcaption></figure>';
+      }
       el2.innerHTML = bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
           '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>' +
@@ -264,6 +279,19 @@
           '</div>' +
         '</div>' +
         (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
+      el2.querySelectorAll('.au-bilder').forEach(function (fig) {
+        var liste = []; try { liste = JSON.parse(fig.getAttribute('data-bilder') || '[]'); } catch (e) {}
+        function vis(d) {
+          if (!liste.length) return;
+          var ix = (Number(fig.getAttribute('data-ix')) + d + liste.length) % liste.length;
+          fig.setAttribute('data-ix', ix);
+          fig.querySelector('img').src = liste[ix];
+          var nr = fig.querySelector('.au-bilde-nr'); if (nr) nr.textContent = (ix + 1) + ' / ' + liste.length;
+        }
+        var f = fig.querySelector('.au-bilde-forrige'), n = fig.querySelector('.au-bilde-neste');
+        if (f) f.addEventListener('click', function (e) { e.preventDefault(); vis(-1); });
+        if (n) n.addEventListener('click', function (e) { e.preventDefault(); vis(1); });
+      });
       el2.querySelectorAll('.au-bruk-grok').forEach(function (kn) {
         kn.addEventListener('click', function (e) {
           e.preventDefault();
