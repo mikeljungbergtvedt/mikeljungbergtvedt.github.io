@@ -284,7 +284,7 @@
         var bildeTekst = lign ? 'Lignende bil fra Finn' + (b.bilde.finnkode ? ' (' + b.bilde.finnkode + ')' : '') + ', ikke kundens bil' : 'Kundens bilde';
         var pilStil = 'border:1px solid #DCD8CC;background:#fff;color:#16201B;border-radius:6px;width:28px;height:28px;font-size:16px;line-height:1;cursor:pointer';
         bildeHtml = '<figure class="au-bilder" data-bilder="' + esc(JSON.stringify(bildeListe)) + '" data-ix="0" style="margin:0;display:grid;gap:4px;justify-items:start">' +
-          '<img src="' + esc(bildeListe[0]) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:30%;min-width:140px;height:auto;object-fit:contain;border-radius:8px;background:#E7E4DA' + (lign ? ';opacity:.85' : '') + '">' +
+          '<img src="' + esc(bildeListe[0]) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:auto;max-width:30%;max-height:180px;min-width:120px;object-fit:contain;border-radius:8px;background:#E7E4DA' + (lign ? ';opacity:.85' : '') + '">' +
           '<figcaption style="display:flex;gap:8px;align-items:center;font-size:11.5px;color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' +
             (bildeListe.length > 1 ? '<button type="button" class="au-bilde-forrige" aria-label="Forrige bilde" style="' + pilStil + '">‹</button><span class="au-bilde-nr" style="font-variant-numeric:tabular-nums">1 / ' + bildeListe.length + '</span><button type="button" class="au-bilde-neste" aria-label="Neste bilde" style="' + pilStil + '">›</button>' : '') +
             '<span>' + esc(bildeTekst) + '</span></figcaption></figure>';
