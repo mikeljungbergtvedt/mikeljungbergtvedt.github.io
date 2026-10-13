@@ -186,6 +186,27 @@
   }
   // c540: QA-kort for FSD (Grok) + Benchmark (Claude), etter Mikes oppsett 13.10: identitet, to priser, flagg, tvillinger med lenker,
   // forkastet, begrunnelse. Bare data fra modellenes JSON (auto-score.json b.agent). Det gamle kortet ligger bak «Vis alt».
+  // c545: bildevisning i siden (ikke ny fane). Piler, Esc og klikk utenfor lukker.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a.au-lb');
+    if (!a) return;
+    e.preventDefault();
+    var liste = []; try { liste = JSON.parse(a.getAttribute('data-bilder') || '[]'); } catch (_) {}
+    var ix = Number(a.getAttribute('data-ix')) || 0;
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center';
+    var img = document.createElement('img'); img.style.cssText = 'max-width:92vw;max-height:86vh;object-fit:contain';
+    var nr = document.createElement('div'); nr.style.cssText = 'position:absolute;top:14px;left:0;right:0;text-align:center;color:#fff;font:14px -apple-system,Helvetica,Arial,sans-serif';
+    var knapp = function (t, css) { var k = document.createElement('button'); k.type = 'button'; k.textContent = t; k.style.cssText = 'position:absolute;background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:4px;font-size:28px;width:48px;height:48px;cursor:pointer;' + css; return k; };
+    var forr = knapp('‹', 'left:12px;top:50%;transform:translateY(-50%)'), nest = knapp('›', 'right:12px;top:50%;transform:translateY(-50%)'), lukk = knapp('×', 'right:12px;top:12px');
+    var vis = function (d) { ix = (ix + d + liste.length) % liste.length; img.src = liste[ix]; nr.textContent = (ix + 1) + ' / ' + liste.length; };
+    var steng = function () { document.removeEventListener('keydown', tast); o.remove(); };
+    var tast = function (ev) { if (ev.key === 'Escape') steng(); else if (ev.key === 'ArrowLeft') vis(-1); else if (ev.key === 'ArrowRight') vis(1); };
+    forr.onclick = function (ev) { ev.stopPropagation(); vis(-1); }; nest.onclick = function (ev) { ev.stopPropagation(); vis(1); }; lukk.onclick = steng;
+    o.onclick = function (ev) { if (ev.target === o) steng(); };
+    o.append(img, nr, lukk); if (liste.length > 1) o.append(forr, nest);
+    document.body.appendChild(o); document.addEventListener('keydown', tast); vis(0);
+  });
   function auAgentCss() {
     if (document.getElementById('au-ag-css')) return;
     var s = document.createElement('style'); s.id = 'au-ag-css';
@@ -231,7 +252,7 @@
         return null;
       }).filter(Boolean);
       var lign = b.bilde && b.bilde.kilde === 'lignende';
-      var galleri = bilder.length ? '<div><div class="au-ag-bilder">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div><div class="au-ny-liten" style="color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + (lign ? 'Lignende bil fra Finn, ikke kundens bil' : bilder.length + ' bilder fra kunden · sveip for flere') + '</div></div>' : '<div class="au-ny-liten" style="color:#5E6B62">Ingen bilder fra kunden</div>';
+      var galleri = bilder.length ? '<div><div class="au-ag-bilder">' + bilder.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div><div class="au-ny-liten" style="color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + (lign ? 'Lignende bil fra Finn, ikke kundens bil' : bilder.length + ' bilder fra kunden · sveip for flere') + '</div></div>' : '<div class="au-ny-liten" style="color:#5E6B62">Ingen bilder fra kunden</div>';
       var bil = ag.bil || {};
       var id = '<div class="au-ag-id">' + esc(b.regnr) + ' · ' + esc(bil.navn || b.bil || '') + '<small>' + (bil.modellaar && String(bil.navn || '').indexOf(String(bil.modellaar)) < 0 ? bil.modellaar + ' · ' : '') + (b.km != null ? auKr(b.km) + ' km' : '') + ' · ' + esc(b.arm || '') + '</small></div>';
       var tv = (ag.tvillinger || []).map(function (t) {
@@ -347,7 +368,7 @@
         return null;
       }).filter(Boolean);
       var lign = b.bilde && b.bilde.kilde === 'lignende';
-      var galleri = bilder.length ? '<div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div>' + (lign ? '<div class="au-ny-liten">Lignende bil fra Finn, ikke kundens bil</div>' : '') : '';
+      var galleri = bilder.length ? '<div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div>' + (lign ? '<div class="au-ny-liten">Lignende bil fra Finn, ikke kundens bil</div>' : '') : '';
       var kanBruke = !!c.querySelector('.qa-anker-input');
       // c539: FSD (Grok) og Benchmark (Claude) side om side når prising-agenten har levert (Mike 13.10).
       var ag = b.agent || null;
