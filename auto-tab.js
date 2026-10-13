@@ -248,8 +248,9 @@
       '.qs-fork{font-size:13px;color:#5E6B62;padding-top:8px;border-top:1px solid #E6EAE4}',
       'details.qs-regn summary{cursor:pointer;list-style:none;font-size:14px;font-weight:600;color:#004225;min-height:44px;display:flex;align-items:center}',
       'details.qs-regn summary::after{content:"Vis";margin-left:auto;font-weight:500;font-size:13px}details.qs-regn[open] summary::after{content:"Skjul"}',
-      '.qs-kvit{border-collapse:collapse;font-size:13.5px;margin-bottom:4px}.qs-kvit td{padding:4px 0;color:#16201B}.qs-kvit td:last-child{text-align:right;white-space:nowrap}',
-      '.qs-kvit tr.sum td{font-weight:700;border-top:1px solid #16201B;padding-top:6px}.qs-kvit tr.dim td{color:#5E6B62}',
+      '.qs-kvit{border-collapse:collapse;font-size:15px;margin-bottom:4px}.qs-kvit td{padding:5px 0;color:#16201B}.qs-kvit td:last-child{text-align:right;white-space:nowrap;font-weight:600;color:#16201B!important}',
+      '.qs-kvit tr.sum td{font-weight:800;border-top:1.5px solid #16201B;padding-top:7px}.qs-kvit tr.dim td:first-child{color:#3D4A42}',
+      '.qs-arm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.qs-arm div{border:1.5px solid #DCE1D9;border-radius:12px;padding:8px 10px}.qs-arm div.aktiv{border-color:#004225;background:#E6F0EA}.qs-arm span{display:block;font-size:12px;color:#5E6B62}.qs-arm b{display:block;font-size:18px;font-weight:800;white-space:nowrap}',
       '.qs-knapper{margin-top:18px;padding:14px 20px 18px;border-top:1px solid #E6EAE4;display:grid;grid-template-columns:1fr 1.5fr;gap:10px}',
       '.qs-knapper button{min-height:48px;border-radius:12px;font:600 15px "Inter Tight",-apple-system,Helvetica,Arial,sans-serif;cursor:pointer}',
       '.qs-ny{background:#fff;color:#004225;border:1.5px solid #C9D3CC}.qs-send{background:#004225;color:#fff;border:0}.qs-send:disabled{background:#C9D0CB;cursor:not-allowed}'
@@ -301,7 +302,8 @@
         r.push('<tr class="dim"><td>Spenn</td><td>+ ' + auKr(ff.spenn.lav) + ' / + ' + auKr(ff.spenn.hoy) + '</td></tr>');
         if (arm === 'B') r.push('<tr class="dim"><td>Spor B: × 0,90, hele tusen</td><td>' + auKr(Math.round(ff.lav * 0.9)) + ' – ' + auKr(Math.round(ff.hoy * 0.9)) + '</td></tr>');
         if (arm === 'ORDNA') r.push('<tr class="dim"><td>Ordna: × 0,75, hele tusen</td><td>' + auKr(Math.round(ff.lav * 0.75)) + ' – ' + auKr(Math.round(ff.hoy * 0.75)) + '</td></tr>');
-        regn = '<table class="qs-kvit">' + r.join('') + '</table>';
+        var tre = [['A', ff.a, 'A = midt'], ['B', ff.b, 'B = A × 0,90'], ['ORDNA', ff.ordna, 'Ordna = A × 0,75']];
+        regn = '<table class="qs-kvit">' + r.join('') + '</table><div class="qs-arm">' + tre.map(function (y) { return '<div class="' + (arm === y[0] ? 'aktiv' : '') + '"><span>' + (y[0] === 'ORDNA' ? 'Ordna' : 'Spor ' + y[0]) + '</span><b>' + k(y[1]) + '</b><span>' + y[2] + '</span></div>'; }).join('') + '</div>';
       }
       var pf = (ag.historikk || []).filter(function (h) { return h.lav; })[0];
       var ea = ag.egen_annonse;
@@ -1083,7 +1085,7 @@
   }
   // Alltid: skjul rester fra auto (populert/Kokker) og gamle Send-knapper på kort vi har tatt over (c556).
   (function () { if (document.getElementById('au-grunn-css')) return; var g = document.createElement('style'); g.id = 'au-grunn-css';
-    g.textContent = '#qa-finn-box,#qa-toolbar{display:none!important}#qa-section{background:#EEF1EC;font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif}#qa-section>h1.page{font-size:22px!important;font-weight:800!important;letter-spacing:-.01em;color:#16201B!important;display:inline-block;margin-right:12px!important}#qa-summary{display:inline-block;font-size:14px!important;color:#5E6B62!important;margin-bottom:18px!important}#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
+    g.textContent = '#qa-finn-box,#qa-toolbar{display:none!important}#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
     document.head.appendChild(g); })();
   window.__qkKort = qsKort;
   setInterval(auMerkQaKort, 1500);
