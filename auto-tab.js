@@ -7,7 +7,17 @@
     s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
     (document.head || document.documentElement).appendChild(s);
   })();
+  // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
+  function auSendLaas(c, b) {
+    var ag = b.agent;
+    var grunn = !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) && !(ag.pris_kilde && ag.pris_kilde.kilde === 'manuell') ? 'Pris er ikke skrevet til ERP ennå' : '';
+    [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
+      if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
+      else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
+    });
+  }
   function auFsdBokser(c, b) {
+    auSendLaas(c, b);
     var ag = b.agent;
     if (!ag) {
       // Venter på FSD: skjul gamle auto-deler (Claude/Grok-graf, IDENT/COMPS).
