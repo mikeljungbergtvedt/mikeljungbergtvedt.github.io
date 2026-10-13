@@ -321,7 +321,7 @@
         '<div class="qs-kom' + (b.kunde_kommentar ? '' : ' tom') + '">' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : 'Kunden har ikke skrevet noe') + '</div>' +
         '<div class="qs-fakta">' + fakta.map(function (f) { return '<span>' + esc(f) + '</span>'; }).join('') + '</div>' +
         (tv.length ? '<div class="qs-seksjon"><h3>Like biler (Finn-utpris)</h3><div class="qs-tv">' + tv.map(tvRad).join('') + ((ag.forkastet || []).length ? '<div class="qs-fork">' + ag.forkastet.length + ' forkastet</div>' : '') + '</div></div>' : '') +
-        (regn ? '<div class="qs-seksjon"><details class="qs-regn"><summary>Slik er tilbudet regnet</summary>' + regn + '</details></div>' : '') +
+        (regn ? '<div class="qs-seksjon"><details class="qs-regn" open><summary>Slik er tilbudet regnet</summary>' + regn + '</details></div>' : '') +
         '<div class="qs-knapper"><button type="button" class="qs-ny">Ny vurdering</button><button type="button" class="qs-send">Send</button></div>';
       var kv = {};
       try { kv = JSON.parse(sessionStorage.getItem('qk-kvitt-' + b.id) || '{}'); } catch (_) {}
