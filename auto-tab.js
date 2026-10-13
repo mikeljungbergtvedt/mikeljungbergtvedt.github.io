@@ -9,7 +9,13 @@
   })();
   function auFsdBokser(c, b) {
     var ag = b.agent;
-    if (!ag) return;
+    if (!ag) {
+      // Venter på FSD: skjul gamle auto-deler (Claude/Grok-graf, IDENT/COMPS).
+      var gml0 = c.querySelector('.qa-finn-terrain'); if (gml0) gml0.style.display = 'none';
+      var l0 = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
+      if (l0 && l0.parentElement && l0.parentElement.parentElement) l0.parentElement.parentElement.style.display = 'none';
+      return;
+    }
     auFsdGraf(c, b, ag);
     auPrisTag(c, ag);
     auEierPlass(c);
@@ -488,7 +494,11 @@
       }
       // c573: én header i stedet for stripe + grønn boks (Mike 13.10): «FSD PRISET · FSD 219k · Benchmark 215k · avvik 2 % · Eiertid 6,7 år».
       var nyHtml = '';
-      if (agF) {
+      // c577: ingen auto/skygge-boks. Før FSD har priset: bare «FSD VENTER» + bilder (Mike 13.10).
+      if (!agF) {
+        nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong><span>FSD og Benchmark priser bilen</span>' +
+          (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div></div>' + bildeHtml;
+      } else {
         var kk = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
         var hF = AU_DEMPET[nivaa].tekst, hB = AU_DEMPET[nivaa].bak, hK = AU_DEMPET[nivaa].kant;
         if (avv0.varsel && !(agF.fsd && agF.fsd.stopp)) rute = '⚠ AVVIK';
@@ -505,7 +515,7 @@
           }).join('') + '</span>' : '') +
           (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
       }
-      el2.innerHTML = agF ? nyHtml : (enHtml + bildeHtml +
+      el2.innerHTML = nyHtml || (enHtml + bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
           (agF ? '<div></div>' : '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>') +
           '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
