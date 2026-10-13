@@ -276,7 +276,7 @@
         if (!f || f.feil || !f.linjer) return '<div><div class="au-ny-etikett">' + navn + '</div><div class="au-ny-under">' + (x && !x.pris ? navn + ' satte ingen Finn-utpris, så det finnes ikke noe fossefall.' : 'Fossefallet kunne ikke regnes' + (f && f.feil ? ': ' + esc(f.feil) : '') + '.') + '</div></div>';
         return '<div><div class="au-ny-etikett">' + navn + '</div><table>' + f.linjer.map(function (l) {
           return '<tr' + (/^=/.test(l[0]) ? ' class="sum"' : '') + '><td>' + esc(l[0]) + '</td><td class="h">' + (l[1] > 0 && !/^=|Finn/.test(l[0]) ? '+' : '') + auKr(l[1]) + '</td></tr>';
-        }).join('') + '<tr class="sum"><td>= A (forventet bud)</td><td class="h">' + auKr(f.a) + '</td></tr></table>' +
+        }).join('') + '<tr class="sum"><td>= A (forventet bud)</td><td class="h">' + auKr(f.a) + '</td></tr>' + (armValgt === 'B' ? '<tr class="sum"><td>= B (A × 0,90) · valgt</td><td class="h">' + auKr(f.b) + '</td></tr>' : armValgt === 'ORDNA' ? '<tr class="sum"><td>= Ordna (A × 0,75) · valgt</td><td class="h">' + auKr(f.ordna) + '</td></tr>' : '') + '</table>' +
           '<div class="au-ag-arm">' + [['A', f.a], ['B', f.b], ['ORDNA', f.ordna]].map(function (y) { return '<div class="' + (armValgt === y[0] ? 'valgt' : '') + '">' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '<b>' + auKr(y[1]) + '</b></div>'; }).join('') + '</div></div>';
       };
       // «Vis alt» (Mike 13.10): strukturert data, enkelt, ikke det gamle kortet.
