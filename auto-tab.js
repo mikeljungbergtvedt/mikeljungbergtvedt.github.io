@@ -277,10 +277,20 @@
       v.push(rad(false, 'Bilens egen Finn-annonse', ea == null ? 'ikke sjekket' : ea.aktiv ? (ea.lenke ? '<a href="' + esc(ea.lenke) + '" target="_blank" rel="noopener">' + esc((String(ea.lenke).match(/(\d{6,})/) || [])[1] || 'annonse') + '</a> · ' : '') + k(ea.pris) + (ea.dager != null ? ' · ' + ea.dager + ' dager ute' : '') : 'Ingen'));
       // 4 Tvillinger
       var tv = Array.isArray(ag.tvillinger) ? ag.tvillinger : [];
-      var tvRader = tv.map(function (t) {
+      // Tvillingattributter (Mike 13.10): modell/motor, hk, drift, gir, utstyr. Bilen selv øverst, avvik fra bilen i rødt.
+      var drv = function (x) { var d = String(x.drivlinje || ''); if (/4|awd|firehjul/i.test(d)) return '4WD'; if (/2|fwd|rwd|forhjul|bakhjul/i.test(d)) return '2WD'; return /xdrive|quattro|4motion|4matic|awd|4x4|4wd|allrad|e-four|all4/i.test([x.motor, x.modell, x.tittel].join(' ')) ? '4WD' : null; };
+      var gir = function (x) { var g = String(x.gir || ''); if (/aut/i.test(g)) return 'Aut'; if (/man/i.test(g)) return 'Man'; return null; };
+      var hkAv = function (x) { return x.hk || Number((String(x.tittel || '').match(/(\d{2,3})\s*hk/i) || [])[1]) || null; };
+      var mdl = function (x) { return x.modell ? [x.modell, x.motor].filter(Boolean).join(' ') : String(x.tittel || '').replace(/ - (Svart|Hvit|Sølv|Grå|Blå|Rød|Grønn|Brun|Beige|Gul|Oransje|Lilla|Gull|[A-ZÆØÅ][a-zæøå]+) - /, ' - ').replace(/ - \d{2,3} hk/i, ''); };
+      var me = ag.bilen || {};
+      var meH = hkAv(me), meD = drv(me), meG = gir(me);
+      var celle = function (v, mv) { return v == null ? '?' : (mv != null && v !== mv ? '<b style="color:#c8574d">' + esc(v) + '</b>' : esc(v)); };
+      var attr = function (x, egen) { return '<td>' + esc(mdl(x) || '?') + '</td><td>' + celle(hkAv(x), egen ? null : meH) + '</td><td>' + celle(drv(x), egen ? null : meD) + '</td><td>' + celle(gir(x), egen ? null : meG) + '</td><td>' + esc(x.utstyrsnivaa || x.trim || '?') + '</td>'; };
+      var tvRader = tv.length ? '<tr style="background:#f3f6f4"><td><b>Bilen</b></td>' + attr(me, true) + '<td>' + k(null) + '</td><td>' + k(b.km) + '</td><td>' + (aar || '–') + '</td><td></td><td></td></tr>' : '';
+      tvRader += tv.map(function (t) {
         var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
         var kode = (String(url || '').match(/(\d{6,})/) || [])[1] || t.finnkode || '–';
-        return '<tr' + (t.fsd && t.bench ? '' : ' class="one"') + '><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(kode) + '</a>' : esc(kode)) + '</td><td>' + k(t.pris) + '</td><td>' + k(t.km) + '</td><td>' + (t.aar || '–') + '</td><td>' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Aktiv') + '</td><td>' + (t.fsd && t.bench ? 'Begge' : t.fsd ? 'FSD' : 'Benchmark') + '</td></tr>';
+        return '<tr' + (t.fsd && t.bench ? '' : ' class="one"') + '><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(kode) + '</a>' : esc(kode)) + '</td>' + attr(t, false) + '<td>' + k(t.pris) + '</td><td>' + k(t.km) + '</td><td>' + (t.aar || '–') + '</td><td>' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Aktiv') + '</td><td>' + (t.fsd && t.bench ? 'Begge' : t.fsd ? 'FSD' : 'Benchmark') + '</td></tr>';
       }).join('');
       var fork = (ag.forkastet || []);
       // 5 Fra Finn-pris til kunden
@@ -316,7 +326,7 @@
           '<div class="prices"><div class="pbox fsd"><small>FSD – brukes</small><b>' + (ag.fsd && ag.fsd.pris ? auKr(ag.fsd.pris) : '–') + '</b></div><div class="pbox bm"><small>Benchmark – kontroll</small><b>' + (ag.benchmark && ag.benchmark.pris ? auKr(ag.benchmark.pris) : '–') + '</b></div></div>' +
           (sp != null ? '<div class="help' + (sp > 10 ? ' red' : '') + '" style="margin:6px 0 0">Avvik ' + sp + ' %' + (sp > 10 ? ' – se nærmere på tvillingene.' : ' – OK. Over 10 % = se nærmere på tvillingene.') + '</div>' : '') + '</div>' +
         '<div class="sec"><h2><span>4</span>Tvillinger</h2><div class="help">Like biler AI-ene brukte. Klikk finnkode for å sjekke. Gul = bare én AI brukte den.</div>' +
-          (tvRader ? '<table><tr><th>Finnkode</th><th>Pris</th><th>Km</th><th>År</th><th>Status</th><th>Brukt av</th></tr>' + tvRader + '</table>' : '') +
+          (tvRader ? '<div style="overflow-x:auto"><table><tr><th>Finnkode</th><th>Modell / motor</th><th>Hk</th><th>Drift</th><th>Gir</th><th>Utstyr</th><th>Pris</th><th>Km</th><th>År</th><th>Status</th><th>Brukt av</th></tr>' + tvRader + '</table></div>' : '') +
           (fork.length ? '<details><summary>Forkastet: ' + fork.length + ' biler (vis)</summary><ul>' + fork.map(function (f) { return '<li><a href="https://www.finn.no/mobility/item/' + encodeURIComponent(f.finnkode) + '" target="_blank" rel="noopener">' + esc(f.finnkode) + '</a> ' + esc(f.aarsak) + '</li>'; }).join('') + '</ul></details>' : '') + '</div>' +
         '<div class="sec"><h2><span>5</span>Fra Finn-pris til kunden</h2><div class="help">Trekkene som gir tilbudet. Bilen går på spor ' + armNavn + '.</div>' + ffHtml + '</div>' +
         '<div class="btns"><button type="button" class="btn qg-ny">Ny vurdering</button><button type="button" class="btn go qg-send">Send til kunde</button></div>';
