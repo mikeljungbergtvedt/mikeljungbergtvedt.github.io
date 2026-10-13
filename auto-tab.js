@@ -273,6 +273,31 @@
       var beg = [['FSD', ag.fsd], ['Benchmark', ag.benchmark]].filter(function (x) { return x[1] && x[1].begrunnelse; }).map(function (x) { return '<p style="margin:0 0 6px"><b>' + x[0] + ':</b> ' + esc(x[1].begrunnelse) + '</p>'; }).join('');
       // 7–8: fossefall Finn-utpris → A for begge modellene side om side, så A / B (A×0,90) / Ordna (A×0,75). Valgt arm markert.
       var armValgt = String(b.arm || '').toUpperCase();
+      // «Vis alt» (Mike 13.10): strukturert data, enkelt, ikke det gamle kortet.
+      var rad = function (k2, v) { return v == null || v === '' ? '' : '<dt>' + esc(k2) + '</dt><dd>' + v + '</dd>'; };
+      var dl = function (tittel, rader) { rader = rader.join(''); return rader ? '<div><h4>' + tittel + '</h4><dl>' + rader + '</dl></div>' : ''; };
+      var erpA = c.querySelector('a[href*="biladministrasjon"]');
+      var modellRader = function (x) {
+        if (!x) return ['<dt>Status</dt><dd>venter</dd>'];
+        return [rad('Modell', esc(x.modell || '')), rad('Finn-utpris', x.pris ? auKr(x.pris) : (x.feil ? esc(x.feil) : '–')), rad('Stopp', x.stopp ? esc(x.stopp_grunn || 'ja') : null),
+          rad('Tvillinger', x.antall_tvillinger != null ? String(x.antall_tvillinger) : null), rad('Forkastet', x.antall_forkastet != null ? String(x.antall_forkastet) : null),
+          rad('Tid', x.sek ? x.sek + ' s' : null), rad('Egne flagg', (x.egne_flagg || []).length ? x.egne_flagg.map(esc).join('<br>') : null)];
+      };
+      var altHtml = '<div class="au-ag-alt" hidden>' +
+        dl('Bil', [rad('Regnr', esc(b.regnr)), rad('Internnr', erpA ? '<a href="' + esc(erpA.href) + '" target="_blank" rel="noopener">' + esc(String(b.id)) + '</a>' : esc(String(b.id))),
+          rad('Kilde', esc(b.kilde || '')), rad('Arm', esc(b.arm || '')), rad('Km (ERP)', b.km != null ? auKr(b.km) : null),
+          rad('Siste EU-kontroll', ag.eu_km ? auKr(ag.eu_km.km) + ' km (' + esc(ag.eu_km.dato || '') + ')' : null),
+          rad('Årsmodell car.info', bil.modellaar ? String(bil.modellaar) : null), rad('Årsmodell ERP', ag.erp_aar ? String(ag.erp_aar) : null),
+          rad('car.info', esc(bil.navn || '')), rad('Eiertid', b.eiertid_aar != null ? String(b.eiertid_aar).replace('.', ',') + ' år' : null),
+          rad('Bilder fra kunden', b.bilde && b.bilde.kilde === 'kunde' && b.bilde.bilder ? String(b.bilde.bilder.length) : '0')]) +
+        dl('Kunde', [rad('Kommentar', b.kunde_kommentar ? esc(b.kunde_kommentar) : 'ingen')]) +
+        dl('Pris', [rad('Finn-utpris i ERP', b.finn_utpris ? auKr(b.finn_utpris) : null), rad('Estimat til kunden', b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : null),
+          rad('Skrevet til ERP', ag.erp ? (ag.erp.skrevet ? 'ja, fra FSD' : 'nei' + (ag.erp.grunn ? ': ' + esc(ag.erp.grunn) : '')) : null), rad('Priset', ag.laget ? esc(new Date(ag.laget).toLocaleString('nb-NO')) : null),
+          rad('Avvik FSD/Benchmark', ag.avvik_pst != null ? ag.avvik_pst + ' %' : null)]) +
+        dl('FSD', modellRader(ag.fsd)) + dl('Benchmark', modellRader(ag.benchmark)) +
+        (ag.reserve && ag.reserve.tvillingbiler && ag.reserve.tvillingbiler.length ? dl('Reserve (car.info mangler bilen)', ag.reserve.tvillingbiler.map(function (t) { return rad('Via ' + t.regnr, esc(t.car_info_navn || '')); })) : '') +
+        (c.querySelector('.qa-anker-input') ? '<div><h4>Sett Finn-utpris selv</h4><div class="au-ag-sett"><input type="text" inputmode="numeric" class="au-ag-inp" placeholder="f.eks. 159000"><button type="button" class="au-ny-sek au-ag-settkn">Sett</button></div></div>' : '') +
+        '</div>';
       // Fossefall én gang, for FSD-prisen (det er samme regnestykke). Benchmark: bare pris og hva kunden ville fått (Mike 13.10).
       var fF = ag.fsd && ag.fsd.fossefall && ag.fsd.fossefall.linjer ? ag.fsd.fossefall : null;
       var fB = ag.benchmark && ag.benchmark.fossefall ? ag.benchmark.fossefall : null;
@@ -443,7 +468,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { if (b.agent) auAgentKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
+      try { if (b.agent) auAgentKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
