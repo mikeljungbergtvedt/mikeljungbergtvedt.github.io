@@ -4,7 +4,7 @@
   (function () {
     if (document.getElementById('qa572-css')) return;
     var s = document.createElement('style'); s.id = 'qa572-css';
-    s.textContent = '#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 8px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
+    s.textContent = '#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
     (document.head || document.documentElement).appendChild(s);
   })();
   function auFsdBokser(c, b) {
@@ -21,8 +21,9 @@
     var drv = function (x) { var d = String(x.drivlinje || ''); if (/4|awd|firehjul/i.test(d)) return '4WD'; if (/2|fwd|rwd|forhjul|bakhjul/i.test(d)) return '2WD'; return /xdrive|quattro|4motion|4matic|awd|4x4|4wd|allrad|e-four|all4/i.test(tekst(x)) ? '4WD' : null; };
     var gir = function (x) { var g = String(x.gir || ''); return /aut/i.test(g) ? 'Aut' : /man/i.test(g) ? 'Man' : null; };
     var hkAv = function (x) { return x.hk || Number((String(x.tittel || '').match(/(\d{2,3})\s*hk/i) || [])[1]) || null; };
-    var kwh = function (x) { var m = tekst(x).match(/(\d{2,3}(?:[.,]\d)?)\s*kwh/i); return m ? m[1].replace(',', '.') + ' kWh' : null; };
-    var kar = function (x) { return x.karosseri || null; };
+    var kwh = function (x) { if (x.batteri_kwh) return String(x.batteri_kwh).replace(',', '.') + ' kWh'; var m = tekst(x).match(/(\d{2,3}(?:[.,]\d)?)\s*kwh/i); return m ? m[1].replace(',', '.') + ' kWh' : null; };
+    var rekk = function (x) { return x.rekkevidde_km ? auKr(x.rekkevidde_km) + ' km' : null; };
+    var kar = function (x) { var k = String(x.karosseri || '').trim(); if (!k) return null; k = k.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return k.length <= 3 ? k.toUpperCase() : k.charAt(0).toUpperCase() + k.slice(1); };
     var mdl = function (x) { return x.modell ? [x.modell, x.motor].filter(Boolean).join(' ') : String(x.tittel || '').replace(/ - [A-ZÆØÅ][a-zæøå]+ - /, ' - ').replace(/ - \d{2,3} hk/i, ''); };
     var aarAv = function (x) { return x.aar || x.modellaar || null; };
     var ev = !!kwh(me) || /elektrisk|electric|\bev\b|kwh/i.test(tekst(me)) || tv.some(function (t) { return !!kwh(t); });
@@ -31,13 +32,13 @@
       ['År', function (x, egen) { return egen ? refAar : aarAv(x); }, refAar],
       ['Hk', hkAv, hkAv(me)],
     ];
-    if (ev) felt.push(['Batteri', kwh, kwh(me)]);
+    if (ev) felt.push(['Batteri', kwh, kwh(me)], ['Rekkev.', rekk, rekk(me), function (a, b) { var x = parseInt(String(a).replace(/\D/g, ''), 10), y = parseInt(String(b).replace(/\D/g, ''), 10); return !x || !y || Math.abs(x - y) / y <= 0.05; }]);
     felt.push(['Gir', gir, gir(me)], ['Drift', drv, drv(me)], ['Karosseri', kar, kar(me)]);
     var td = 'padding:5px 10px 5px 0;border-top:1px solid #E7EBE4;vertical-align:top;white-space:nowrap';
-    var cel = function (v, ref, egen) { return v == null || v === '' ? '<span style="color:#9AA39C">–</span>' : (!egen && ref != null && String(v) !== String(ref) ? '<b style="color:#B8452F">' + esc(v) + '</b>' : esc(v)); };
+    var cel = function (v, ref, egen, lik) { var avvik = !egen && ref != null && (lik ? !lik(v, ref) : String(v) !== String(ref)); return v == null || v === '' ? '<span style="color:#9AA39C">–</span>' : (avvik ? '<b style="color:#B8452F">' + esc(v) + '</b>' : esc(v)); };
     var rad = function (x, egen, id, km, pris, status) {
-      return '<tr' + (egen ? ' style="background:#F3F6F4"' : '') + '><td style="' + td + '">' + id + '</td><td style="' + td + ';white-space:normal;min-width:130px">' + esc(mdl(x) || '–') + '</td>' +
-        felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen) + '</td>'; }).join('') +
+      return '<tr' + (egen ? ' style="background:#F3F6F4"' : '') + '><td style="' + td + '">' + id + '</td><td style="' + td + ';white-space:normal;min-width:120px">' + esc(mdl(x) || '–') + '</td>' +
+        felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + '</td>'; }).join('') +
         '<td style="' + td + ';text-align:right">' + km + '</td><td style="' + td + ';text-align:right">' + pris + '</td><td style="' + td + '">' + status + '</td></tr>';
     };
     var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
