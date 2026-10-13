@@ -216,6 +216,119 @@
   // c551: QA-kortet etter Mikes designmanual 13.10 (mobil først, 5 nummererte seksjoner, sticky topp/bunn, kvittering av røde varsler).
   // c555: QA send som tett «heatmap»-rutenett i Unbox-stil (Mike 13.10). Farge = status: grønn ok, gul se på, rød må sjekkes.
   // c557: QA-kortet som eksakt kopi av skissen Mike godkjente 13.10 (artifact BUNALyDCwuYa8BZCQB2CGC), i rutenett.
+  // c563: QA-kortet etter Groks design (OneDrive C2B/Peasy/15-UX/qa-kort/qa-kort.html), uendret oppsett, ekte data (Mike 13.10).
+  function qgCss() {
+    if (document.getElementById('qg-css')) return;
+    var s = document.createElement('style'); s.id = 'qg-css';
+    s.textContent = [
+      '#qa-cards{display:block!important}#qa-cards>.qa-card{margin:0 auto 20px!important;max-width:760px!important}',
+      '.qa-card.au-ny-modus{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}',
+      '.qg{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#121419;background:#fff;border:1px solid #d9e0dc;border-radius:12px;max-width:760px;margin:auto;padding:20px 24px;box-sizing:border-box}',
+      '.qg *{box-sizing:border-box}',
+      '.qg .top{display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:600;gap:12px}',
+      '.qg .badge{background:#004225;color:#fff;border-radius:8px;padding:6px 12px;font-size:14px;white-space:nowrap}',
+      '.qg .sec{border-top:1px solid #e6ece9;padding:14px 0}',
+      '.qg h2{font-size:15px;margin:0;color:#004225;font-weight:700}.qg h2 span{display:inline-block;width:22px;height:22px;border-radius:50%;background:#004225;color:#fff;text-align:center;line-height:22px;font-size:12px;margin-right:8px}',
+      '.qg .help{color:#6b756f;font-size:12px;margin:2px 0 10px 30px}',
+      '.qg .photos{display:flex;gap:8px;overflow-x:auto}.qg .photos a{flex:1;min-width:84px;height:64px;display:block}.qg .photos img{width:100%;height:64px;object-fit:cover;border-radius:6px;display:block}',
+      '.qg .ph{flex:1;height:64px;background:#dfe5e1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6b756f;font-size:11px}',
+      '.qg .quote{background:#f3f5f4;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:14px}',
+      '.qg .row{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:5px 0}.qg .row>div:last-child{text-align:right}.qg .red{color:#c62828;font-weight:600}',
+      '.qg .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}',
+      '.qg .prices{display:flex;gap:12px}.qg .pbox{flex:1;border-radius:8px;padding:10px 14px}.qg .pbox small{display:block;font-size:12px}.qg .pbox b{font-size:26px}',
+      '.qg .fsd{background:#004225;color:#fff}.qg .bm{background:#f3f5f4}',
+      '.qg table{width:100%!important;border-collapse:collapse;font-size:13px;margin:0!important}.qg th{text-align:left;color:#6b756f;font-weight:500;border-bottom:1px solid #e6ece9;padding:4px;text-transform:none!important;letter-spacing:normal!important;font-size:13px!important;font-family:inherit!important}',
+      '.qg td{padding:5px 4px;border-bottom:1px solid #f0f3f1;font-family:inherit!important}.qg a{color:#1a56c4}.qg tr.one td{background:#fff8dc}',
+      '.qg .ff{font-size:14px;max-width:420px}.qg .ff .row{padding:3px 0}.qg .ff .sum{border-top:1px solid #ccc;font-weight:600}.qg .ff .kunde{font-size:17px;color:#004225;font-weight:700;border-top:2px solid #004225;margin-top:4px;padding-top:6px}',
+      '.qg .arms{display:flex;gap:8px;margin-top:10px}.qg .arm{flex:1;border:1px solid #d9e0dc;border-radius:8px;padding:8px;font-size:13px;text-align:center}.qg .arm.on{border:2px solid #004225;background:#e6ece9;font-weight:600}',
+      '.qg details summary{cursor:pointer;color:#6b756f;font-size:12px;margin:6px 0 0}.qg details ul{margin:4px 0 0;padding-left:18px;font-size:12px;color:#6b756f}',
+      '.qg .btns{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}.qg .btn{padding:10px 18px;border-radius:8px;font-size:14px;border:1px solid #004225;background:#fff;color:#004225;cursor:pointer;font-family:inherit}.qg .go{background:#004225;color:#fff}.qg .btn:disabled{opacity:.45;cursor:not-allowed}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function qgKort(c, b) {
+    qgCss();
+    var ag = b.agent || {};
+    var nokkel = JSON.stringify([b.regnr, b.km, b.arm, b.erp_lav, b.erp_hoy, b.kunde_kommentar, b.bilde, ag]);
+    var ny = c.querySelector(':scope > .au-ny');
+    var arm = String(b.arm || 'A').toUpperCase(), armNavn = arm === 'ORDNA' ? 'Ordna' : arm;
+    if (!ny || ny.getAttribute('data-k') !== nokkel) {
+      var bil = ag.bil || {};
+      var navn = String(bil.navn || b.bil || '').split(',')[0];
+      var aar = bil.modellaar || ag.erp_aar || null;
+      var k = function (n) { return n ? auKr(n) : '–'; };
+      var tr = function (n) { return n == null ? '–' : n === 0 ? '0' : (n < 0 ? '−' : '') + auKr(Math.abs(n)); };
+      var bilder = (b.bilde && b.bilde.kilde === 'kunde' && Array.isArray(b.bilde.bilder) ? b.bilde.bilder : []).map(function (x) {
+        if (x.url) return x.url;
+        if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+        return null;
+      }).filter(Boolean);
+      // 2 Varsler
+      var rad = function (rod, venstre, hoyre) { return '<div class="row' + (rod ? ' red' : '') + '"><div><span class="dot" style="background:' + (rod ? '#c62828' : '#999') + '"></span>' + venstre + '</div><div>' + hoyre + '</div></div>'; };
+      var v = [];
+      var hist = ag.historikk || [];
+      hist.filter(function (h) { return h.bud_avvist; }).forEach(function (h) { v.push(rad(true, 'Bud avvist på vår auksjon', esc(h.bud_avvist) + ' · høyeste bud ' + k(h.hoyeste_bud))); });
+      if (ag.fsd && ag.fsd.stopp) v.push(rad(true, 'FSD stoppet bilen', esc(ag.fsd.stopp_grunn || '')));
+      if (ag.eu_km && b.km != null && ag.eu_km.km > b.km) v.push(rad(true, 'Km-avvik mot EU-kontroll', esc(ag.eu_km.dato || '') + ' · ' + auKr(ag.eu_km.km) + ' km'));
+      if (bil.kilde === 'vegvesen' || ag.reserve) v.push(rad(true, 'Mangler data', 'car.info kjenner ikke bilen'));
+      var pf = hist.filter(function (h) { return h.lav; })[0];
+      v.push(rad(false, 'Priset før', pf ? esc(pf.dato || '') + ' · ' + auKr(pf.lav) + ' – ' + auKr(pf.hoy) : 'Nei'));
+      var ea = ag.egen_annonse;
+      v.push(rad(false, 'Bilens egen Finn-annonse', ea == null ? 'ikke sjekket' : ea.aktiv ? (ea.lenke ? '<a href="' + esc(ea.lenke) + '" target="_blank" rel="noopener">' + esc((String(ea.lenke).match(/(\d{6,})/) || [])[1] || 'annonse') + '</a> · ' : '') + k(ea.pris) + (ea.dager != null ? ' · ' + ea.dager + ' dager ute' : '') : 'Ingen'));
+      // 4 Tvillinger
+      var tv = Array.isArray(ag.tvillinger) ? ag.tvillinger : [];
+      var tvRader = tv.map(function (t) {
+        var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
+        var kode = (String(url || '').match(/(\d{6,})/) || [])[1] || t.finnkode || '–';
+        return '<tr' + (t.fsd && t.bench ? '' : ' class="one"') + '><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(kode) + '</a>' : esc(kode)) + '</td><td>' + k(t.pris) + '</td><td>' + k(t.km) + '</td><td>' + (t.aar || '–') + '</td><td>' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Aktiv') + '</td><td>' + (t.fsd && t.bench ? 'Begge' : t.fsd ? 'FSD' : 'Benchmark') + '</td></tr>';
+      }).join('');
+      var fork = (ag.forkastet || []);
+      // 5 Fra Finn-pris til kunden
+      var ff = ag.fsd && ag.fsd.fossefall;
+      var ffHtml = '';
+      if (ff && ff.trinn) {
+        var r = [];
+        ff.trinn.forEach(function (l) {
+          if (l[2] === 'start') r.push('<div class="row"><div>Finn-utpris (FSD)</div><div>' + auKr(l[1]) + '</div></div>');
+          else if (l[2] === 'sum') r.push('<div class="row sum"><div>= ' + (l[0] === 'Forventet bud' ? 'Forventet bud (AR)' : l[0]) + '</div><div>' + auKr(l[1]) + '</div></div>');
+          else r.push('<div class="row"><div>− ' + esc(l[0]) + '</div><div>' + tr(l[1]) + '</div></div>');
+        });
+        r.push('<div class="row"><div>± Spenn</div><div>−' + auKr(ff.spenn.lav) + ' / +' + auKr(ff.spenn.hoy) + '</div></div>');
+        r.push('<div class="row kunde"><div>Til kunden</div><div>' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : '–') + '</div></div>');
+        ffHtml = '<div class="ff">' + r.join('') + '</div><div class="arms">' +
+          '<div class="arm' + (arm === 'A' ? ' on' : '') + '">Spor A<br>' + k(ff.a) + '<br><small>forventet bud</small></div>' +
+          '<div class="arm' + (arm === 'B' ? ' on' : '') + '">Spor B<br>' + k(ff.b) + '<br><small>A × 0,90</small></div>' +
+          '<div class="arm' + (arm === 'ORDNA' ? ' on' : '') + '">Ordna<br>' + k(ff.ordna) + '<br><small>A × 0,75</small></div></div>';
+      } else {
+        ffHtml = '<div class="ff"><div class="row kunde"><div>Til kunden</div><div>' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : '–') + '</div></div></div>';
+      }
+      var sp = ag.avvik_pst;
+      var el = document.createElement('div');
+      el.className = 'au-ny qg';
+      el.setAttribute('data-k', nokkel);
+      el.innerHTML =
+        '<div class="top"><div>' + [esc(b.regnr), esc(navn), aar, b.km != null ? auKr(b.km) + ' km' : null].filter(Boolean).join(' · ') + '</div><div class="badge">Spor: ' + armNavn + '</div></div>' +
+        '<div class="sec"><h2><span>1</span>Bilen</h2><div class="help">Er dette riktig bil og riktig tilstand?</div>' +
+          (bilder.length ? '<div class="photos">' + bilder.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '" aria-label="Bilde ' + (i + 1) + '"><img src="' + esc(u) + '" loading="lazy" alt=""></a>'; }).join('') + '</div>' : '<div class="photos"><div class="ph">Ingen bilder fra kunden</div></div>') +
+          '<div class="quote"><b>Kundens kommentar:</b> ' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : 'Ingen kommentar') + '</div></div>' +
+        '<div class="sec"><h2><span>2</span>Varsler</h2><div class="help">Rødt må sjekkes før du sender.</div>' + v.join('') + '</div>' +
+        '<div class="sec"><h2><span>3</span>Finn-utpris</h2><div class="help">Hva bilen ville stått til på Finn i dag. To uavhengige AI-er.</div>' +
+          '<div class="prices"><div class="pbox fsd"><small>FSD – brukes</small><b>' + (ag.fsd && ag.fsd.pris ? auKr(ag.fsd.pris) : '–') + '</b></div><div class="pbox bm"><small>Benchmark – kontroll</small><b>' + (ag.benchmark && ag.benchmark.pris ? auKr(ag.benchmark.pris) : '–') + '</b></div></div>' +
+          (sp != null ? '<div class="help' + (sp > 10 ? ' red' : '') + '" style="margin:6px 0 0">Avvik ' + sp + ' %' + (sp > 10 ? ' – se nærmere på tvillingene.' : ' – OK. Over 10 % = se nærmere på tvillingene.') + '</div>' : '') + '</div>' +
+        '<div class="sec"><h2><span>4</span>Tvillinger</h2><div class="help">Like biler AI-ene brukte. Klikk finnkode for å sjekke. Gul = bare én AI brukte den.</div>' +
+          (tvRader ? '<table><tr><th>Finnkode</th><th>Pris</th><th>Km</th><th>År</th><th>Status</th><th>Brukt av</th></tr>' + tvRader + '</table>' : '') +
+          (fork.length ? '<details><summary>Forkastet: ' + fork.length + ' biler (vis)</summary><ul>' + fork.map(function (f) { return '<li><a href="https://www.finn.no/mobility/item/' + encodeURIComponent(f.finnkode) + '" target="_blank" rel="noopener">' + esc(f.finnkode) + '</a> ' + esc(f.aarsak) + '</li>'; }).join('') + '</ul></details>' : '') + '</div>' +
+        '<div class="sec"><h2><span>5</span>Fra Finn-pris til kunden</h2><div class="help">Trekkene som gir tilbudet. Bilen går på spor ' + armNavn + '.</div>' + ffHtml + '</div>' +
+        '<div class="btns"><button type="button" class="btn qg-ny">Ny vurdering</button><button type="button" class="btn go qg-send">Send til kunde</button></div>';
+      el.querySelector('.qg-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (!this.disabled && eb && !eb.disabled) eb.click(); });
+      el.querySelector('.qg-ny').addEventListener('click', function (e) { e.preventDefault(); var cb = c.querySelector('.qa-clear-btn'); if (cb && !cb.disabled) cb.click(); });
+      if (ny) ny.replaceWith(el); else c.insertBefore(el, c.firstChild);
+      ny = el;
+      c.classList.add('au-ny-modus');
+    }
+    var ekte = c.querySelector('.qa-send-btn'); ny.querySelector('.qg-send').disabled = !ekte || ekte.disabled;
+    var cb = c.querySelector('.qa-clear-btn'); ny.querySelector('.qg-ny').disabled = !cb || cb.disabled;
+  }
   function qsCss() {
     if (document.getElementById('qs-css')) return;
     var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap'; document.head.appendChild(l);
@@ -874,7 +987,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { if (b.agent) qsKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
+      try { if (b.agent) qgKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
@@ -1083,7 +1196,7 @@
   (function () { if (document.getElementById('au-grunn-css')) return; var g = document.createElement('style'); g.id = 'au-grunn-css';
     g.textContent = '#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
     document.head.appendChild(g); })();
-  window.__qkKort = qsKort;
+  window.__qkKort = qgKort;
   setInterval(auMerkQaKort, 1500);
 
   // Hva kunden gjorde: status fra ERP og grunn (valg + egne ord). Oppdateres hvert 10. min på Mini.
