@@ -1081,7 +1081,7 @@
   }
   // Alltid: skjul rester fra auto (populert/Kokker) og gamle Send-knapper på kort vi har tatt over (c556).
   (function () { if (document.getElementById('au-grunn-css')) return; var g = document.createElement('style'); g.id = 'au-grunn-css';
-    g.textContent = '#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
+    g.textContent = '#qa-finn-box,#qa-toolbar{display:none!important}#qa-section{background:#EEF1EC;font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif}#qa-section>h1.page{font-size:22px!important;font-weight:800!important;letter-spacing:-.01em;color:#16201B!important;display:inline-block;margin-right:12px!important}#qa-summary{display:inline-block;font-size:14px!important;color:#5E6B62!important;margin-bottom:18px!important}#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
     document.head.appendChild(g); })();
   window.__qkKort = qsKort;
   setInterval(auMerkQaKort, 1500);
