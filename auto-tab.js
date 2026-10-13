@@ -18,6 +18,9 @@
   }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
+    // c579: knapperaden nederst, på linje mellom kortene i samme rad.
+    var kn = c.querySelector('.qa-detail-btn') || c.querySelector('.qa-clear-btn');
+    if (kn && kn.parentElement && !kn.parentElement.classList.contains('qa-actions')) kn.parentElement.classList.add('qa-actions');
     var ag = b.agent;
     if (!ag) {
       // Venter på FSD: skjul gamle auto-deler (Claude/Grok-graf, IDENT/COMPS).
@@ -159,7 +162,7 @@
   (function () {
     if (document.getElementById('qa3-css')) return;
     var s = document.createElement('style'); s.id = 'qa3-css';
-    s.textContent = '#qa-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start}#qa-cards>.qa-card{max-width:none!important;min-width:0}@media (max-width:900px){#qa-cards{grid-template-columns:minmax(0,1fr)!important}}';
+    s.textContent = '#qa-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important}#qa-cards>.qa-card{display:flex!important;flex-direction:column}#qa-cards>.qa-card>*{flex-shrink:0}#qa-cards .qa-actions{margin-top:auto!important}#qa-cards>.qa-card{max-width:none!important;min-width:0}@media (max-width:900px){#qa-cards{grid-template-columns:minmax(0,1fr)!important}}';
     (document.head || document.documentElement).appendChild(s);
   })();
   // c545: bildevisning i siden (ikke ny fane). Piler, Esc og klikk utenfor lukker.
