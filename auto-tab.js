@@ -168,7 +168,7 @@
       '.au-ny-liten{font-size:12px;color:#8A6D10}' +
       '.au-ny-kunde{background:#F7F4EE;border-radius:12px;padding:12px 14px}.au-ny-kunde p{margin:4px 0 0;font-size:16px;line-height:1.45;font-weight:500}' +
       '.au-ny-etikett{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5E6B62}.au-ny-dempet{color:#8C978F;font-weight:400}' +
-      '.au-ny-estimat{font-size:30px;font-weight:800;color:#004225;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+      '.au-ny-estimat{font-size:clamp(22px,7vw,30px);font-weight:800;color:#004225;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}' +
       '.au-ny-under{color:#5E6B62;font-size:13px}' +
       '.au-ny-kilder{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}' +
       '.au-ny-kilde{border:1px solid #DCE1D9;border-radius:10px;padding:8px 10px;display:grid;gap:2px}.au-ny-kilde span{font-size:12px;color:#5E6B62}.au-ny-kilde b{font-size:18px;font-variant-numeric:tabular-nums}' +
