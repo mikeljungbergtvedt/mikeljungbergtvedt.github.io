@@ -641,7 +641,7 @@
     var ny = c.querySelector(':scope > .au-ny');
     if (ny && ny.getAttribute('data-k') === nokkel) return;
     var el = document.createElement('div'); el.className = 'au-ny'; el.setAttribute('data-k', nokkel);
-    el.innerHTML = '<div class="au-ny-navn">' + esc(b.regnr) + ' · ' + esc(b.bil || '') + '</div><div class="au-ny-meta">' + (b.km != null ? auKr(b.km) + ' km' : '') + '</div><div class="au-ny-under">FSD priser bilen nå. Kortet kommer om 1–2 minutter.</div>';
+    el.innerHTML = '<div class="au-ny-navn">' + esc(b.regnr) + ' · ' + esc(b.bil || '') + '</div><div class="au-ny-meta">' + (b.km != null ? auKr(b.km) + ' km' : '') + '</div><div class="au-ny-under">FSD priser bilen nå. Kortet kommer om 1–3 minutter.</div><button type="button" disabled style="margin-top:10px;width:100%;min-height:44px;border:0;border-radius:10px;background:#C9D0CB;color:#fff;font:600 14px -apple-system,Helvetica,Arial,sans-serif">Venter på pris – kan ikke sendes</button>';
     if (ny) ny.replaceWith(el); else c.insertBefore(el, c.firstChild);
     c.classList.add('au-ny-modus');
   }
@@ -953,6 +953,10 @@
       var nyF = c.querySelector(':scope > .au-ny'); if (nyF && c.firstChild !== nyF) c.insertBefore(nyF, c.firstChild);
     }
   }
+  // Alltid: skjul rester fra auto (populert/Kokker) og gamle Send-knapper på kort vi har tatt over (c556).
+  (function () { if (document.getElementById('au-grunn-css')) return; var g = document.createElement('style'); g.id = 'au-grunn-css';
+    g.textContent = '#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
+    document.head.appendChild(g); })();
   window.__qkKort = qtKort;
   setInterval(auMerkQaKort, 1500);
 
