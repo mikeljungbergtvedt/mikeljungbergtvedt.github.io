@@ -151,6 +151,105 @@
     }
     return ut;
   }
+  // c537: nytt QA-kort i Unbox-stil (Mike 13.10). Bare det som trengs for å bestemme: bilen, bildene, hva kunden skriver,
+  // estimatet, auto/skygge/CC og de nærmeste like bilene fra car.info. Det gamle kortet ligger bak «Vis alt», så alle knapper virker som før.
+  function auNyCss() {
+    if (document.getElementById('au-ny-css')) return;
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap'; document.head.appendChild(l);
+    var s = document.createElement('style'); s.id = 'au-ny-css';
+    s.textContent =
+      '.qa-card.au-ny-modus:not(.au-vis-alt)>:not(.au-ny){display:none!important}' +
+      '.au-ny{font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif;color:#16201B;display:grid;gap:14px;margin-bottom:12px}' +
+      '.au-ny-hode{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}' +
+      '.au-ny-navn{font-weight:700;font-size:18px;line-height:1.25}.au-ny-meta{color:#5E6B62;font-size:13.5px;margin-top:3px;font-variant-numeric:tabular-nums}' +
+      '.au-ny-arm{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;border:1px solid #DCE1D9;border-radius:5px;padding:0 6px;color:#5E6B62}' +
+      '.au-ny-galleri{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}' +
+      '.au-ny-galleri a{flex:0 0 auto;scroll-snap-align:start}.au-ny-galleri img{height:150px;width:auto;max-width:240px;object-fit:cover;border-radius:10px;display:block;background:#E7EBE4}' +
+      '.au-ny-liten{font-size:12px;color:#8A6D10}' +
+      '.au-ny-kunde{background:#F7F4EE;border-radius:12px;padding:12px 14px}.au-ny-kunde p{margin:4px 0 0;font-size:16px;line-height:1.45;font-weight:500}' +
+      '.au-ny-etikett{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5E6B62}.au-ny-dempet{color:#8C978F;font-weight:400}' +
+      '.au-ny-estimat{font-size:30px;font-weight:800;color:#004225;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+      '.au-ny-under{color:#5E6B62;font-size:13px}' +
+      '.au-ny-kilder{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}' +
+      '.au-ny-kilde{border:1px solid #DCE1D9;border-radius:10px;padding:8px 10px;display:grid;gap:2px}.au-ny-kilde span{font-size:12px;color:#5E6B62}.au-ny-kilde b{font-size:18px;font-variant-numeric:tabular-nums}' +
+      '.au-ny-kilde.valgt{border-color:#004225;background:#E6F0EA}' +
+      '.au-ny-bruk{justify-self:start;margin-top:2px;font:600 12px inherit;font-family:inherit;color:#004225;background:none;border:1px solid #004225;border-radius:6px;padding:1px 8px;cursor:pointer}' +
+      '.au-ny-enig{font-size:13px;color:#5E6B62}.au-ny-enig.uenig{color:#8A4B12}' +
+      '.au-ny-tv table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;margin-top:4px}.au-ny-tv td{padding:6px 0;border-top:1px solid #E7EBE4}.au-ny-tv td.h{text-align:right}.au-ny-tv a{color:#004225}' +
+      '.au-ny-solgt{font-size:11px;font-weight:700;color:#004225;background:#E6F0EA;border-radius:4px;padding:1px 6px}.au-ny-ask{font-size:11px;color:#5E6B62;border:1px solid #DCE1D9;border-radius:4px;padding:0 6px}' +
+      '.au-ny-knapper{display:grid;grid-template-columns:1fr auto auto;gap:8px}' +
+      '.au-ny-send{background:#F6C744;color:#16201B;border:0;border-radius:10px;padding:13px 14px;font:700 15px inherit;font-family:inherit;cursor:pointer}.au-ny-send:disabled{opacity:.45;cursor:not-allowed}' +
+      '.au-ny-sek{background:#fff;border:1px solid #DCE1D9;color:#16201B;border-radius:10px;padding:0 14px;font:600 14px inherit;font-family:inherit;cursor:pointer}';
+    document.head.appendChild(s);
+  }
+  function auNyttKort(c, b) {
+    auNyCss();
+    var pr = (b.enighet && b.enighet.priser) || {};
+    var nokkel = JSON.stringify([b.regnr, b.km, b.erp_lav, b.erp_hoy, pr, b.kunde_kommentar, b.naermeste, b.bilde, !!c.querySelector('.qa-anker-input')]);
+    var ny = c.querySelector(':scope > .au-ny');
+    if (!ny || ny.getAttribute('data-k') !== nokkel) {
+      var k = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
+      var sp = b.enighet ? b.enighet.spenn_pst : null;
+      var mangler = ['auto', 'skygge', 'cc'].filter(function (x) { return !pr[x]; }).map(function (x) { return x === 'cc' ? 'CC' : x; });
+      var enTekst = sp == null ? 'Mangler pris fra ' + mangler.join(' og ') : (sp <= 5 ? 'Enige: ' : 'Uenige: ') + sp + ' % mellom laveste og høyeste';
+      var bilder = (b.bilde && Array.isArray(b.bilde.bilder) ? b.bilde.bilder : []).map(function (x) {
+        if (x.url) return x.url;
+        if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+        return null;
+      }).filter(Boolean);
+      var lign = b.bilde && b.bilde.kilde === 'lignende';
+      var galleri = bilder.length ? '<div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div>' + (lign ? '<div class="au-ny-liten">Lignende bil fra Finn, ikke kundens bil</div>' : '') : '';
+      var kanBruke = !!c.querySelector('.qa-anker-input');
+      var kilder = [['auto', 'Auto'], ['skygge', 'Skygge'], ['cc', 'CC']].map(function (x) {
+        var v = pr[x[0]];
+        var bruk = x[0] !== 'auto' && v && kanBruke ? '<button type="button" class="au-ny-bruk" data-kilde="' + (x[0] === 'cc' ? 'cc' : 'grok') + '" data-fu="' + Math.round(v / 1000) * 1000 + '" data-fra="' + (b.finn_utpris || '') + '">Bruk</button>' : '';
+        return '<div class="au-ny-kilde' + (x[0] === 'auto' ? ' valgt' : '') + '"><span>' + x[1] + '</span><b>' + k(v) + '</b>' + bruk + '</div>';
+      }).join('');
+      var tv = (b.naermeste || []).map(function (t) {
+        var type = t.solgt ? '<span class="au-ny-solgt">solgt</span>' : '<span class="au-ny-ask">' + (t.fjernet ? 'fjernet' : 'ute') + '</span>';
+        var km = auKr(t.km) + ' km';
+        return '<tr><td>' + (t.url ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + km + '</a>' : km) + '</td><td>' + type + '</td><td class="h">' + auKr(t.pris) + '</td></tr>';
+      }).join('');
+      var nyEl = document.createElement('div');
+      nyEl.className = 'au-ny';
+      nyEl.setAttribute('data-k', nokkel);
+      nyEl.innerHTML =
+        '<div class="au-ny-hode"><div><div class="au-ny-navn">' + esc(b.bil || b.regnr) + '</div>' +
+          '<div class="au-ny-meta">' + (b.km != null ? auKr(b.km) + ' km · ' : '') + esc(b.regnr) + ' <span class="au-ny-arm">' + esc(b.arm || '') + '</span>' + (b.eiertid_aar != null ? ' · eid ' + String(b.eiertid_aar).replace('.', ',') + ' år' : '') + '</div></div></div>' +
+        galleri +
+        '<div class="au-ny-kunde"><div class="au-ny-etikett">Kunden skriver</div><p>' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : '<span class="au-ny-dempet">Ingen kommentar</span>') + '</p></div>' +
+        '<div><div class="au-ny-etikett">Estimat til kunden</div><div class="au-ny-estimat">' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) + ' kr' : 'Ikke priset') + '</div>' +
+          '<div class="au-ny-under">' + (b.finn_utpris ? 'Bygget på Finn-utpris ' + auKr(b.finn_utpris) + ' (auto)' : 'Auto har ingen Finn-utpris') + '</div></div>' +
+        '<div><div class="au-ny-kilder">' + kilder + '</div><div class="au-ny-enig' + (sp != null && sp <= 5 ? '' : ' uenig') + '" style="margin-top:6px">' + esc(enTekst) + '</div></div>' +
+        (tv ? '<div class="au-ny-tv"><div class="au-ny-etikett">Nærmeste like biler (car.info)</div><table>' + tv + '</table></div>' : '') +
+        '<div class="au-ny-knapper"><button type="button" class="au-ny-send">Send</button><button type="button" class="au-ny-sek au-ny-endre">Endre pris</button><button type="button" class="au-ny-sek au-ny-alt">Vis alt</button></div>';
+      nyEl.querySelector('.au-ny-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (eb && !eb.disabled) eb.click(); });
+      nyEl.querySelector('.au-ny-alt').addEventListener('click', function (e) { e.preventDefault(); c.classList.toggle('au-vis-alt'); this.textContent = c.classList.contains('au-vis-alt') ? 'Skjul' : 'Vis alt'; });
+      nyEl.querySelector('.au-ny-endre').addEventListener('click', function (e) {
+        e.preventDefault(); c.classList.add('au-vis-alt'); nyEl.querySelector('.au-ny-alt').textContent = 'Skjul';
+        var inp = c.querySelector('.qa-anker-input'); if (inp) { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); inp.focus(); }
+      });
+      nyEl.querySelectorAll('.au-ny-bruk').forEach(function (kn) {
+        kn.addEventListener('click', function (e) {
+          e.preventDefault();
+          var inp = c.querySelector('.qa-anker-input'), sett = c.querySelector('.qa-anker-btn');
+          if (!inp || !sett) return;
+          inp.value = this.getAttribute('data-fu'); inp.dataset.kilde = this.getAttribute('data-kilde'); inp.dataset.fra = this.getAttribute('data-fra') || '';
+          sett.click();
+        });
+      });
+      if (ny) ny.replaceWith(nyEl); else c.insertBefore(nyEl, c.firstChild);
+      ny = nyEl;
+      c.classList.add('au-ny-modus');
+    }
+    // Send-knappen følger den ekte knappen (tekst og om den er aktiv)
+    var ekte = c.querySelector('.qa-send-btn'), send = ny.querySelector('.au-ny-send');
+    if (send) {
+      var tekst = ekte ? (ekte.innerText || '').replace(/[^\wæøåÆØÅ ]/g, '').trim() : '';
+      send.textContent = (tekst || 'Send') + (b.erp_lav ? ' · ' + auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : '');
+      send.disabled = !ekte || ekte.disabled;
+    }
+  }
   function auMerkQaKort() {
     var d = window._autoRute;
     if (!d || !Array.isArray(d.biler)) return;
@@ -161,6 +260,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
+      try { auNyttKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
@@ -362,6 +462,7 @@
         });
       });
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
+      var nyF = c.querySelector(':scope > .au-ny'); if (nyF && c.firstChild !== nyF) c.insertBefore(nyF, c.firstChild);
     }
   }
   setInterval(auMerkQaKort, 1500);
