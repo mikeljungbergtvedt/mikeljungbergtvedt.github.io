@@ -196,7 +196,7 @@
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
       var merker = auMerker(c);
-      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
@@ -289,7 +289,19 @@
             (bildeListe.length > 1 ? '<button type="button" class="au-bilde-forrige" aria-label="Forrige bilde" style="' + pilStil + '">‹</button><span class="au-bilde-nr" style="font-variant-numeric:tabular-nums">1 / ' + bildeListe.length + '</span><button type="button" class="au-bilde-neste" aria-label="Neste bilde" style="' + pilStil + '">›</button>' : '') +
             '<span>' + esc(bildeTekst) + '</span></figcaption></figure>';
       }
-      el2.innerHTML = bildeHtml +
+      // c535: auto, skygge og CC på én linje øverst, farget etter spennet: grønn ≤5 %, gul ≤10 %, rød over (Mike 13.10).
+      var enHtml = '';
+      var en = b.enighet || null;
+      if (en && en.priser) {
+        var tre = [['Auto', en.priser.auto], ['Skygge', en.priser.skygge], ['CC', en.priser.cc]].map(function (p) { return '<span>' + p[0] + ' <strong style="font-variant-numeric:tabular-nums">' + (p[1] ? Math.round(p[1] / 1000) + 'k' : '–') + '</strong></span>'; });
+        var sp = en.spenn_pst;
+        var eF = sp == null ? '#5E6B62' : sp <= 5 ? '#004225' : sp <= 10 ? '#8A6D10' : '#B8452F';
+        var eB = sp == null ? '#EEF0EC' : sp <= 5 ? '#E3EFE7' : sp <= 10 ? '#FBF3D8' : '#F8E6E1';
+        var eT = sp == null ? 'mangler pris' : (sp <= 5 ? 'enige ' : 'uenige ') + sp + ' %';
+        enHtml = '<div class="au-enighet" style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;background:' + eB + ';border-left:4px solid ' + eF + ';border-radius:8px;padding:8px 12px;font-size:15px;color:#16201B">' +
+          tre.join('<span style="color:#9AA39C">·</span>') + '<strong style="color:' + eF + ';margin-left:auto">' + eT + '</strong></div>';
+      }
+      el2.innerHTML = enHtml + bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
           '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>' +
           '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
