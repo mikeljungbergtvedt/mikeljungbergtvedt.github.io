@@ -60,7 +60,7 @@
   @keyframes sceneIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
   @keyframes sceneOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.94)}}
 
-  .h{position:absolute;left:70px;right:70px;top:300px;text-align:center;font-size:118px;font-weight:900;letter-spacing:-.04em;line-height:1.05;text-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .h{position:absolute;left:70px;right:70px;top:400px;text-align:center;font-size:118px;font-weight:900;letter-spacing:-.04em;line-height:1.05;text-shadow:0 10px 30px rgba(0,0,0,.18)}
   .h .w{display:inline-block;opacity:0;transform:translateY(80px) rotate(-6deg) scale(.6);animation:wordPop .6s var(--bounce) forwards}
   @keyframes wordPop{to{opacity:1;transform:translateY(0) rotate(0) scale(1)}}
   .h .w.hl{color:var(--yellow)}
@@ -186,6 +186,8 @@
   .endwords{margin-top:60px;display:flex;gap:34px;font-size:68px;font-weight:900}
   .endwords span{opacity:0;transform:scale(.3);animation:popIn .5s var(--bounce) forwards;padding:14px 34px;border-radius:999px;color:var(--ink)}
   .endwords span:nth-child(1){background:var(--yellow)}.endwords span:nth-child(2){background:var(--mint)}.endwords span:nth-child(3){background:#fff}
+  .cta{margin-top:70px;font-size:50px;font-weight:800;opacity:0;animation:popIn .6s 2.2s var(--bounce) forwards}
+  .cta b{display:inline-block;background:#fff;color:var(--ink);padding:12px 30px;border-radius:999px;margin-left:10px}
   .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
   .confetti i{position:absolute;top:-40px;width:22px;height:34px;border-radius:5px;opacity:0;animation:conf linear forwards}
   @keyframes conf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(var(--cx),2100px) rotate(var(--cr))}}
@@ -196,11 +198,10 @@
   <div class="bg hook" data-bg="s0"></div><div class="bg s1" data-bg="s1"></div><div class="bg s2" data-bg="s2"></div><div class="bg s3" data-bg="s3"></div>
   <div class="bg s4" data-bg="s4"></div><div class="bg s5" data-bg="s5"></div><div class="bg s6" data-bg="s6"></div><div class="bg end" data-bg="s7"></div>
   <div class="bubbles" id="bubbles"></div>
-  <div class="brand">peasy</div>
 
   <!-- hook -->
   <section class="scene" id="s0">
-    <div class="h tilt" data-words="Selg bilen|fra sofaen" data-hl="4"></div>
+    <div class="h tilt" data-words="Selg bilen|fra sofaen 🛋️" data-hl="4"></div>
     <div class="big sofa shadow"><svg viewBox="0 0 760 460">
       <rect x="110" y="40" width="540" height="240" rx="70" fill="#7b2cbf"/>
       <rect x="40" y="200" width="680" height="190" rx="60" fill="#9d4edd"/>
@@ -273,7 +274,7 @@
   <!-- 6 -->
   <section class="scene" id="s6">
     <div class="money" id="money"></div>
-    <div class="h" data-words="Pengene|på konto" data-hl="1"></div>
+    <div class="h" data-words="Pengene|på konto 💸" data-hl="1"></div>
     <div class="pill" style="top:1000px;animation-delay:1s"><span class="ok"><svg viewBox="0 0 40 40"><path d="M9 21 L17 29 L31 12"/></svg></span>Lånet innfridd</div>
     <div class="pill you" style="top:1230px;animation-delay:1.5s"><span class="ok"><svg viewBox="0 0 40 40"><path d="M9 21 L17 29 L31 12"/></svg></span>Til deg: 291 000 kr</div>
   </section>
@@ -284,6 +285,7 @@
     <div class="end">
       <div class="logo">peasy.<span class="sp"><svg viewBox="0 0 70 46"><path fill="#ffd93d" d="M2 46 Q14 6 70 0 L70 14 Q28 14 8 46 Z"/></svg></span></div>
       <div class="endwords"><span style="animation-delay:.9s">Trygt.</span><span style="animation-delay:1.3s">Enkelt.</span><span style="animation-delay:1.7s">Ferdig.</span></div>
+      <div class="cta">Prøv gratis på <b>peasy.no</b></div>
     </div>
   </section>
 
@@ -292,7 +294,6 @@
     <button class="play" id="play" aria-label="Spill av"><svg viewBox="0 0 110 110"><path d="M30 18 L92 55 L30 92 Z"/></svg></button>
     <div class="play-label" id="playLabel">Spill av</div>
   </div>
-  <div class="progress"><i id="bar"></i></div>
 </div>
 
 <script>
@@ -347,15 +348,16 @@
     el.classList.remove('on','out'); void el.offsetWidth; el.classList.add('on'); cur=sc.id; if(h) fitHeadline(h);
   }
   function start(){ enterFullscreen(); overlay.classList.remove('show'); document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on','out'));
-    cur=null; $('#bar').style.width='0%'; t0=performance.now(); playing=true; requestAnimationFrame(tick); }
+    cur=null; t0=performance.now(); playing=true; requestAnimationFrame(tick); }
   function finish(){ playing=false; playLabel.textContent='Spill av på nytt'; playBtn.setAttribute('aria-label','Spill av på nytt'); overlay.classList.add('show'); }
+  const AUTO=/[?&]auto\b/.test(location.search); // ?auto: start immediately and loop, for screen recording
   playBtn.addEventListener('click',start);
+  if(AUTO){ overlay.classList.remove('show'); setTimeout(()=>{ t0=performance.now(); playing=true; requestAnimationFrame(tick); },300); }
   addEventListener('keydown',e=>{ if(e.key==='Escape') exitFullscreen(); });
 
   function tick(now){
     if(!playing) return;
-    let t=now-t0; if(t>=TOTAL){ $('#bar').style.width='100%'; finish(); return; }
-    $('#bar').style.width=(t/TOTAL*100)+'%';
+    let t=now-t0; if(t>=TOTAL){ if(AUTO){ t0=now; t=0; cur=null; document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on','out')); } else { finish(); return; } }
     for(let i=0;i<SCENES.length;i++){ const sc=SCENES[i]; if(t>=sc.start&&t<sc.end){ if(cur!==sc.id) activate(sc); break; } }
     requestAnimationFrame(tick);
   }
