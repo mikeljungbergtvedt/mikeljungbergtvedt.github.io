@@ -1,5 +1,42 @@
 /* Peasy Pulse — Auto-fane (skygge). Leser auto-score.json (Mini: auto-score.js). Sender ingenting. */
 (function () {
+  // c572: skjul gamle auto-tellere («populert», «Kokker») og bytt IDENT/COMPS med tvillingene FSD og Benchmark brukte (Mike 13.10).
+  (function () {
+    if (document.getElementById('qa572-css')) return;
+    var s = document.createElement('style'); s.id = 'qa572-css';
+    s.textContent = '#qa-counters,.qa-finn-legends{display:none!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
+    (document.head || document.documentElement).appendChild(s);
+  })();
+  function auFsdBokser(c, b) {
+    var ag = b.agent;
+    if (!ag) return;
+    var lbl = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
+    var grid = lbl && lbl.parentElement && lbl.parentElement.parentElement;
+    if (!grid || grid.getAttribute('data-fsd') === '1') return;
+    var tv = Array.isArray(ag.tvillinger) ? ag.tvillinger : [];
+    var me = ag.bilen || {};
+    var drv = function (x) { var d = String(x.drivlinje || ''); if (/4|awd|firehjul/i.test(d)) return '4WD'; if (/2|fwd|rwd|forhjul|bakhjul/i.test(d)) return '2WD'; return /xdrive|quattro|4motion|4matic|awd|4x4|4wd|allrad|e-four|all4/i.test([x.motor, x.modell, x.tittel].join(' ')) ? '4WD' : null; };
+    var gir = function (x) { var g = String(x.gir || ''); return /aut/i.test(g) ? 'Aut' : /man/i.test(g) ? 'Man' : null; };
+    var hkAv = function (x) { return x.hk || Number((String(x.tittel || '').match(/(\d{2,3})\s*hk/i) || [])[1]) || null; };
+    var mdl = function (x) { return x.modell ? [x.modell, x.motor].filter(Boolean).join(' ') : String(x.tittel || '').replace(/ - [A-ZÆØÅ][a-zæøå]+ - /, ' - ').replace(/ - \d{2,3} hk/i, ''); };
+    var mH = hkAv(me), mD = drv(me), mG = gir(me);
+    var cel = function (v, mv, egen) { return v == null ? '?' : (!egen && mv != null && v !== mv ? '<b style="color:#B8452F">' + esc(v) + '</b>' : esc(v)); };
+    var td = 'padding:4px 6px 4px 0;border-top:1px solid #E7EBE4;vertical-align:top;white-space:nowrap';
+    var rad = function (x, egen, foran, bak) { return '<tr' + (egen ? ' style="background:#F3F6F4"' : '') + '><td style="' + td + ';overflow:hidden;text-overflow:ellipsis" title="' + esc(mdl(x) || '') + '">' + foran + '<div style="font-size:11px;color:#5E6B62;overflow:hidden;text-overflow:ellipsis">' + esc(mdl(x) || '?') + '</div></td><td style="' + td + '">' + cel(hkAv(x), mH, egen) + '</td><td style="' + td + '">' + cel(drv(x), mD, egen) + '</td><td style="' + td + '">' + cel(gir(x), mG, egen) + '</td>' + bak + '</tr>'; };
+    var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
+    if (tv.length) {
+      html += '<div style="overflow-x:auto"><table class="au-tv" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums"><colgroup><col><col style="width:32px"><col style="width:38px"><col style="width:34px"><col style="width:62px"><col style="width:64px"><col style="width:48px"></colgroup><tr style="text-align:left;color:#5E6B62;font-size:11px"><th>Finn / modell</th><th>Hk</th><th>Drift</th><th>Gir</th><th style="text-align:right">Pris</th><th style="text-align:right">Km</th><th>Status</th></tr>' +
+        rad(me, true, '<b>Bilen</b>', '<td style="' + td + '"></td><td style="' + td + ';text-align:right">' + (b.km != null ? auKr(b.km) : '–') + '</td><td style="' + td + '"></td>') +
+        tv.map(function (t) {
+          var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
+          var kode = (String(url || '').match(/(\d{6,})/) || [])[1] || '–';
+          return rad(t, false, url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#004225">' + esc(kode) + '</a>' : esc(kode), '<td style="' + td + ';text-align:right">' + (t.pris ? auKr(t.pris) : '–') + '</td><td style="' + td + ';text-align:right;padding-right:6px">' + (t.km ? auKr(t.km) : '–') + '</td><td style="' + td + '">' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Aktiv') + '</td>');
+        }).join('') + '</table></div>';
+    } else html += '<div style="font-size:12.5px;color:#5E6B62">FSD og Benchmark har ingen tvillinger for bilen.</div>';
+    grid.setAttribute('data-fsd', '1');
+    grid.style.cssText = 'margin-bottom:8px;padding:10px 12px;border:1px solid #DCE1D9;border-radius:8px;background:#fff';
+    grid.innerHTML = html;
+  }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
     if (document.getElementById('qa3-css')) return;
@@ -231,8 +268,12 @@
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
       var merker = auMerker(c);
       var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
+      // c572: med FSD/Benchmark styrer de fargen og teksten i statusboksen. Ingen auto-poeng, skygge, CC eller auto-detaljer (Mike 13.10).
+      var agF = b.agent || null;
+      if (agF) { var fs0 = agF.fsd && agF.fsd.stopp, av0 = agF.avvik_pst; nivaa = fs0 || (av0 != null && av0 > 10) || !(agF.fsd && agF.fsd.pris) ? 'r' : av0 != null && av0 > 5 ? 'y' : 'g'; }
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
       var bakgrunn = { g: '#E3EFE7', r: '#F8E6E1', y: '#FBF3D8' }[nivaa];
       var ha = auHovedarsak(b);
@@ -336,12 +377,18 @@
         enHtml = '<div class="au-enighet" style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;background:' + eB + ';border-left:4px solid ' + eF + ';border-radius:8px;padding:8px 12px;font-size:15px;color:#16201B">' +
           to.join('<span style="color:#9AA39C">·</span>') + '<strong style="color:' + eF + ';margin-left:auto">' + eT + '</strong></div>';
       }
+      if (agF) {
+        var fP1 = agF.fsd && agF.fsd.pris, bP1 = agF.benchmark && agF.benchmark.pris;
+        rute = agF.fsd && agF.fsd.stopp ? 'FSD STOPPET' : fP1 ? 'FSD PRISET' : 'FSD VENTER';
+        ha = { t: agF.fsd && agF.fsd.stopp ? (agF.fsd.stopp_grunn || 'FSD stoppet bilen') : 'FSD ' + (fP1 ? auKr(fP1) : '–') + ' · Benchmark ' + (bP1 ? auKr(bP1) : '–') + (agF.avvik_pst != null ? ' · avvik ' + agF.avvik_pst + ' %' : ''), u: '' };
+        fu = ''; grok = ''; ccHtml = ''; kildeHtml = '';
+      }
       el2.innerHTML = enHtml + bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
-          '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>' +
+          (agF ? '<div></div>' : '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>') +
           '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
             '<span style="font-weight:700;font-size:11.5px;letter-spacing:.06em;color:' + farge + '">' + rute + '</span>' +
-            '<b style="font-size:15px">' + esc(ha.t) + '</b>' +
+            (agF && agF.fsd && agF.fsd.stopp ? '<span style="font-size:13.5px">' + esc(ha.t) + '</span>' : '<b style="font-size:15px">' + esc(ha.t) + '</b>') +
             (ha.u || fu ? '<span>' + [esc(ha.u), fu].filter(Boolean).join(' ') + '</span>' : '') +
             grok +
             ccHtml +
@@ -350,13 +397,14 @@
             (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">' + merker.map(function (m, ix) {
               return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
             }).join('') + '</span>' : '') +
-            '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>' +
-              '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
+            (agF ? '' : '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>') +
+              (agF ? '' : '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
                 [['Finn', b.deler.finn, 40], ['Celle', b.deler.celle, 30], ['Data', b.deler.data, 20], ['ERP = QA', b.deler.erp, 10]].map(function (x) {
                   return '<span style="background:#fff;border:1px solid #DCD8CC;border-radius:6px;padding:3px 8px"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em">' + x[0] + '</span> <strong style="color:#16201B">' + x[1] + '/' + x[2] + '</strong></span>';
                 }).join('') + '</div>' +
-              (detaljer.length ? '<ul style="margin:0;padding-left:18px">' + detaljer.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
-            '</details>' +
+              '') +
+              (agF ? '' : detaljer.length ? '<ul style="margin:0;padding-left:18px">' + detaljer.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+            (agF ? '' : '</details>') +
           '</div>' +
         '</div>' +
         (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
