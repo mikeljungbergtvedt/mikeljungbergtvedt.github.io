@@ -158,7 +158,7 @@
     var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap'; document.head.appendChild(l);
     var s = document.createElement('style'); s.id = 'au-ny-css';
     s.textContent =
-      '.qa-card.au-ny-modus:not(.au-vis-alt)>:not(.au-ny){display:none!important}' +
+      '.qa-card.au-ny-modus:not(.au-vis-alt)>:not(.au-ny){display:none!important}.qa-card.au-ny-modus:not(.au-vis-alt) .qa-send-btn{display:none!important}' +
       '.au-ny{font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif;color:#16201B;display:grid;gap:14px;margin-bottom:12px}' +
       '.au-ny-hode{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}' +
       '.au-ny-navn{font-weight:700;font-size:18px;line-height:1.25}.au-ny-meta{color:#5E6B62;font-size:13.5px;margin-top:3px;font-variant-numeric:tabular-nums}' +
@@ -181,6 +181,97 @@
       '.au-ny-send{background:#F6C744;color:#16201B;border:0;border-radius:10px;padding:13px 14px;font:700 15px inherit;font-family:inherit;cursor:pointer}.au-ny-send:disabled{opacity:.45;cursor:not-allowed}' +
       '.au-ny-sek{background:#fff;border:1px solid #DCE1D9;color:#16201B;border-radius:10px;padding:0 14px;font:600 14px inherit;font-family:inherit;cursor:pointer}';
     document.head.appendChild(s);
+  }
+  // c540: QA-kort for FSD (Grok) + Benchmark (Claude), etter Mikes oppsett 13.10: identitet, to priser, flagg, tvillinger med lenker,
+  // forkastet, begrunnelse. Bare data fra modellenes JSON (auto-score.json b.agent). Det gamle kortet ligger bak «Vis alt».
+  function auAgentCss() {
+    if (document.getElementById('au-ag-css')) return;
+    var s = document.createElement('style'); s.id = 'au-ag-css';
+    s.textContent =
+      '.au-ag-topp{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-start}' +
+      '.au-ag-id{font-weight:700;font-size:17px;line-height:1.3}.au-ag-id small{display:block;font-weight:500;font-size:13.5px;color:#5E6B62;margin-top:2px;font-variant-numeric:tabular-nums}' +
+      '.au-ag-kn{display:flex;gap:8px;flex-wrap:wrap}' +
+      '.au-ag-priser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}' +
+      '.au-ag-pris{border:1px solid #DCE1D9;border-radius:12px;padding:10px 12px}.au-ag-pris span{font-size:12.5px;color:#5E6B62}.au-ag-pris b{display:block;font-size:26px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+      '.au-ag-pris.fsd{border-color:#004225;background:#E6F0EA}.au-ag-pris b{color:#16201B}.au-ag-pris.fsd b{color:#004225}.au-ag-pris em{font-style:normal;font-size:11.5px;font-weight:700;color:#B8452F}' +
+      '.au-ag-avvik{font-size:13.5px;color:#5E6B62;margin-top:6px}.au-ag-avvik.stor{color:#B8452F;font-weight:600}' +
+      '.au-ag-flagg{list-style:none;margin:0;padding:0;display:grid;gap:6px}.au-ag-flagg li{background:#FBE9E5;border-left:4px solid #B8452F;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;color:#16201B}' +
+      '.au-ag-tab{overflow-x:auto}.au-ag-tab table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;min-width:460px}' +
+      '.au-ag-tab th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#5E6B62;font-weight:700;padding:4px 6px 4px 0}' +
+      '.au-ag-tab td{padding:6px 6px 6px 0;border-top:1px solid #E7EBE4}.au-ag-tab td.h,.au-ag-tab th.h{text-align:right}.au-ag-tab tr.en td{background:#FFF7D6}.au-ag-tab a{color:#004225}' +
+      '.au-ag-st{font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px}.au-ag-st.solgt{color:#004225;background:#E6F0EA}.au-ag-st.aktiv{color:#16201B;border:1px solid #DCE1D9}.au-ag-st.fjernet{color:#5E6B62;border:1px dashed #C9D0C5}' +
+      '.au-ag-ff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.au-ag-ff table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}' +
+      '.au-ag-ff td{padding:3px 0;border-top:1px solid #EEF1EC}.au-ag-ff td.h{text-align:right;white-space:nowrap}.au-ag-ff tr.sum td{font-weight:700;border-top:1px solid #C9D0C5}' +
+      '.au-ag-arm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.au-ag-arm div{border:1px solid #DCE1D9;border-radius:8px;padding:4px 5px;font-size:11px;min-width:0;overflow:hidden;color:#5E6B62}' +
+      '.au-ag-arm b{display:block;font-size:13px;white-space:nowrap;color:#16201B;font-variant-numeric:tabular-nums}.au-ag-arm div.valgt{border-color:#004225;background:#E6F0EA}.au-ag-arm div.valgt b{color:#004225}' +
+      '.au-ag-beg{font-size:13.5px;line-height:1.5;color:#3D4A42}.au-ag-beg b{color:#16201B}' +
+      '.au-ag-fork{font-size:13px;color:#5E6B62}.au-ag-fork summary{cursor:pointer;font-weight:600;color:#16201B}.au-ag-fork ul{margin:6px 0 0;padding-left:18px}.au-ag-fork a{color:#5E6B62}';
+    document.head.appendChild(s);
+  }
+  function auAgentKort(c, b) {
+    auNyCss(); auAgentCss();
+    var ag = b.agent;
+    var nokkel = JSON.stringify([b.regnr, b.km, b.erp_lav, b.erp_hoy, ag]);
+    var ny = c.querySelector(':scope > .au-ny');
+    if (!ny || ny.getAttribute('data-k') !== nokkel) {
+      var kr = function (n) { return n ? auKr(n) : '–'; };
+      var pris = function (navn, x, cls) {
+        var tall = x && x.pris ? auKr(x.pris) : (x && x.feil ? 'feil' : x ? '–' : 'venter');
+        return '<div class="au-ag-pris ' + cls + '"><span>' + navn + '</span><b>' + tall + '</b>' + (x && x.stopp ? '<em>STOPP</em>' : '') + '</div>';
+      };
+      var bil = ag.bil || {};
+      var id = '<div class="au-ag-id">' + esc(b.regnr) + ' · ' + esc(bil.navn || b.bil || '') + '<small>' + (bil.modellaar ? 'Årsmodell ' + bil.modellaar + ' (' + esc(bil.kilde || 'car.info') + ') · ' : '') + (b.km != null ? auKr(b.km) + ' km' : '') + ' · <span class="au-ny-arm">' + esc(b.arm || '') + '</span></small></div>';
+      var tv = (ag.tvillinger || []).map(function (t) {
+        var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
+        var navn = t.finnkode || 'annonse';
+        var av = t.fsd && t.bench ? 'Begge' : t.fsd ? 'FSD' : 'Bench';
+        return '<tr class="' + (t.fsd && t.bench ? '' : 'en') + '"><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(navn) + '</a>' : esc(navn)) + '</td><td class="h">' + kr(t.pris) + '</td><td class="h">' + kr(t.km) + '</td><td>' + (t.aar || '–') + '</td><td>' + esc(t.trim || '–') + '</td><td><span class="au-ag-st ' + esc(t.status || 'aktiv') + '">' + esc(t.status ? t.status.charAt(0).toUpperCase() + t.status.slice(1) : '–') + '</span></td><td>' + av + '</td></tr>';
+      }).join('');
+      var fork = (ag.forkastet || []).map(function (f) { return '<li><a href="https://www.finn.no/mobility/item/' + encodeURIComponent(f.finnkode) + '" target="_blank" rel="noopener">' + esc(f.finnkode) + '</a> ' + esc(f.aarsak) + '</li>'; }).join('');
+      var beg = [['FSD', ag.fsd], ['Benchmark', ag.benchmark]].filter(function (x) { return x[1] && x[1].begrunnelse; }).map(function (x) { return '<p style="margin:0 0 6px"><b>' + x[0] + ':</b> ' + esc(x[1].begrunnelse) + '</p>'; }).join('');
+      // 7–8: fossefall Finn-utpris → A for begge modellene side om side, så A / B (A×0,90) / Ordna (A×0,75). Valgt arm markert.
+      var armValgt = String(b.arm || '').toUpperCase();
+      var ffKol = function (navn, x) {
+        var f = x && x.fossefall;
+        if (!f || f.feil || !f.linjer) return '<div><div class="au-ny-etikett">' + navn + '</div><div class="au-ny-under">' + (x && x.stopp ? 'Stoppet' : 'Ingen pris') + '</div></div>';
+        return '<div><div class="au-ny-etikett">' + navn + '</div><table>' + f.linjer.map(function (l) {
+          return '<tr' + (/^=/.test(l[0]) ? ' class="sum"' : '') + '><td>' + esc(l[0]) + '</td><td class="h">' + (l[1] > 0 && !/^=|Finn/.test(l[0]) ? '+' : '') + auKr(l[1]) + '</td></tr>';
+        }).join('') + '<tr class="sum"><td>= A (forventet bud)</td><td class="h">' + auKr(f.a) + '</td></tr></table>' +
+          '<div class="au-ag-arm">' + [['A', f.a], ['B', f.b], ['ORDNA', f.ordna]].map(function (y) { return '<div class="' + (armValgt === y[0] ? 'valgt' : '') + '">' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '<b>' + auKr(y[1]) + '</b></div>'; }).join('') + '</div></div>';
+      };
+      var ffHtml = (ag.fsd && ag.fsd.fossefall) || (ag.benchmark && ag.benchmark.fossefall) ? '<div class="au-ag-ff">' + ffKol('FSD', ag.fsd) + ffKol('Benchmark', ag.benchmark) + '</div>' : '';
+      var nyEl = document.createElement('div');
+      nyEl.className = 'au-ny';
+      nyEl.setAttribute('data-k', nokkel);
+      nyEl.innerHTML =
+        '<div class="au-ag-topp">' + id + '<div class="au-ag-kn"><button type="button" class="au-ny-send">Send</button><button type="button" class="au-ny-sek au-ag-ny">Ny vurdering</button></div></div>' +
+        '<div><div class="au-ag-priser">' + pris('FSD (Grok)', ag.fsd, 'fsd') + pris('Benchmark (Claude)', ag.benchmark, 'bench') + '</div>' +
+          (ag.avvik_pst != null ? '<div class="au-ag-avvik' + (ag.avvik_pst > 5 ? ' stor' : '') + '">Avvik ' + ag.avvik_pst + ' % mellom FSD og Benchmark</div>' : '') + '</div>' +
+        ((ag.flagg || []).length ? '<ul class="au-ag-flagg">' + ag.flagg.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+        (tv ? '<div class="au-ag-tab"><table><tr><th>Finnkode</th><th class="h">Pris</th><th class="h">Km</th><th>År</th><th>Trim</th><th>Status</th><th>Brukt av</th></tr>' + tv + '</table></div>' : '') +
+        (fork ? '<details class="au-ag-fork"><summary>Forkastet (' + ag.forkastet.length + ')</summary><ul>' + fork + '</ul></details>' : '') +
+        (beg ? '<div class="au-ag-beg">' + beg + '</div>' : '') +
+        ffHtml +
+        '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="au-ny-sek au-ny-endre">Endre pris</button><button type="button" class="au-ny-sek au-ny-alt">Vis alt</button></div>';
+      nyEl.querySelector('.au-ny-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (eb && !eb.disabled) eb.click(); });
+      nyEl.querySelector('.au-ag-ny').addEventListener('click', function (e) { e.preventDefault(); var cb = c.querySelector('.qa-clear-btn'); if (cb && !cb.disabled) cb.click(); });
+      nyEl.querySelector('.au-ny-alt').addEventListener('click', function (e) { e.preventDefault(); c.classList.toggle('au-vis-alt'); this.textContent = c.classList.contains('au-vis-alt') ? 'Skjul' : 'Vis alt'; });
+      nyEl.querySelector('.au-ny-endre').addEventListener('click', function (e) {
+        e.preventDefault(); c.classList.add('au-vis-alt'); nyEl.querySelector('.au-ny-alt').textContent = 'Skjul';
+        var inp = c.querySelector('.qa-anker-input'); if (inp) { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); inp.focus(); }
+      });
+      if (ny) ny.replaceWith(nyEl); else c.insertBefore(nyEl, c.firstChild);
+      ny = nyEl;
+      c.classList.add('au-ny-modus');
+    }
+    var ekte = c.querySelector('.qa-send-btn'), send = ny.querySelector('.au-ny-send');
+    if (send) {
+      var tekst = ekte ? (ekte.innerText || '').replace(/[^\wæøåÆØÅ ]/g, '').trim() : '';
+      send.textContent = (tekst || 'Send') + (b.erp_lav ? ' · ' + auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : '');
+      send.disabled = !ekte || ekte.disabled;
+    }
+    var cb = c.querySelector('.qa-clear-btn'), nyKn = ny.querySelector('.au-ag-ny');
+    if (nyKn) nyKn.disabled = !cb || cb.disabled;
   }
   function auNyttKort(c, b) {
     auNyCss();
@@ -285,7 +376,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { auNyttKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
+      try { if (b.agent) auAgentKort(c, b); else auNyttKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
