@@ -204,6 +204,11 @@
       '.au-ag-ff td{padding:3px 0;border-top:1px solid #EEF1EC}.au-ag-ff td.h{text-align:right;white-space:nowrap}.au-ag-ff tr.sum td{font-weight:700;border-top:1px solid #C9D0C5}' +
       '.au-ag-arm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.au-ag-arm div{border:1px solid #DCE1D9;border-radius:8px;padding:4px 5px;font-size:11px;min-width:0;overflow:hidden;color:#5E6B62}' +
       '.au-ag-arm b{display:block;font-size:13px;white-space:nowrap;color:#16201B;font-variant-numeric:tabular-nums}.au-ag-arm div.valgt{border-color:#004225;background:#E6F0EA}.au-ag-arm div.valgt b{color:#004225}' +
+      '.au-ag-alt{display:grid;gap:12px;font-size:13.5px}.au-ag-alt h4{margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5E6B62}' +
+      '.au-ag-alt dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;margin:0}.au-ag-alt dt{color:#5E6B62}.au-ag-alt dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.au-ag-alt a{color:#004225}' +
+      '.au-ag-alt .au-ag-sett{display:flex;gap:8px}.au-ag-alt input{flex:1;min-width:0;border:1px solid #DCE1D9;border-radius:8px;padding:8px 10px;font:inherit}' +
+      '.au-ag-flagg{display:grid;gap:4px}.au-ag-flagg details{background:#FBE9E5;border-left:4px solid #B8452F;border-radius:6px;padding:5px 9px;font-size:13.5px}.au-ag-flagg summary{cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#16201B}.au-ag-flagg details div{margin-top:4px;line-height:1.4}' +
+      '.au-ag-plus summary{cursor:pointer;list-style:none;font-weight:600;font-size:13.5px;color:#004225}.au-ag-plus[open] summary{margin-bottom:8px}' +
       '.au-ag-beg{font-size:13.5px;line-height:1.5;color:#3D4A42}.au-ag-beg b{color:#16201B}' +
       '.au-ag-fork{font-size:13px;color:#5E6B62}.au-ag-fork summary{cursor:pointer;font-weight:600;color:#16201B}.au-ag-fork ul{margin:6px 0 0;padding-left:18px}.au-ag-fork a{color:#5E6B62}';
     document.head.appendChild(s);
@@ -217,8 +222,15 @@
       var kr = function (n) { return n ? auKr(n) : '–'; };
       var pris = function (navn, x, cls) {
         var tall = x && x.pris ? auKr(x.pris) : (x && x.feil ? 'feil' : x ? '–' : 'venter');
-        return '<div class="au-ag-pris ' + cls + '"><span>' + navn + '</span><b>' + tall + '</b>' + (x && x.stopp ? '<em>STOPP</em>' : '') + '</div>';
+        return '<div class="au-ag-pris ' + cls + '"><span>' + navn + '</span><b>' + tall + '</b>' + (cls === 'fsd' && x && x.stopp ? '<em>STOPPET – prises manuelt</em>' : '') + '</div>';
       };
+      var bilder = (b.bilde && Array.isArray(b.bilde.bilder) ? b.bilde.bilder : []).map(function (x) {
+        if (x.url) return x.url;
+        if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+        return null;
+      }).filter(Boolean);
+      var lign = b.bilde && b.bilde.kilde === 'lignende';
+      var galleri = bilder.length ? '<div><div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div><div class="au-ny-liten" style="color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + (lign ? 'Lignende bil fra Finn, ikke kundens bil' : bilder.length + ' bilder fra kunden · sveip for flere') + '</div></div>' : '<div class="au-ny-liten" style="color:#5E6B62">Ingen bilder fra kunden</div>';
       var bil = ag.bil || {};
       var id = '<div class="au-ag-id">' + esc(b.regnr) + ' · ' + esc(bil.navn || b.bil || '') + '<small>' + (bil.modellaar ? 'Årsmodell ' + bil.modellaar + ' (' + esc(bil.kilde || 'car.info') + ') · ' : '') + (b.km != null ? auKr(b.km) + ' km' : '') + ' · <span class="au-ny-arm">' + esc(b.arm || '') + '</span></small></div>';
       var tv = (ag.tvillinger || []).map(function (t) {
@@ -233,32 +245,62 @@
       var armValgt = String(b.arm || '').toUpperCase();
       var ffKol = function (navn, x) {
         var f = x && x.fossefall;
-        if (!f || f.feil || !f.linjer) return '<div><div class="au-ny-etikett">' + navn + '</div><div class="au-ny-under">' + (x && x.stopp ? 'Stoppet' : 'Ingen pris') + '</div></div>';
+        if (!f || f.feil || !f.linjer) return '<div><div class="au-ny-etikett">' + navn + '</div><div class="au-ny-under">' + (x && !x.pris ? navn + ' satte ingen Finn-utpris, så det finnes ikke noe fossefall.' : 'Fossefallet kunne ikke regnes' + (f && f.feil ? ': ' + esc(f.feil) : '') + '.') + '</div></div>';
         return '<div><div class="au-ny-etikett">' + navn + '</div><table>' + f.linjer.map(function (l) {
           return '<tr' + (/^=/.test(l[0]) ? ' class="sum"' : '') + '><td>' + esc(l[0]) + '</td><td class="h">' + (l[1] > 0 && !/^=|Finn/.test(l[0]) ? '+' : '') + auKr(l[1]) + '</td></tr>';
         }).join('') + '<tr class="sum"><td>= A (forventet bud)</td><td class="h">' + auKr(f.a) + '</td></tr></table>' +
           '<div class="au-ag-arm">' + [['A', f.a], ['B', f.b], ['ORDNA', f.ordna]].map(function (y) { return '<div class="' + (armValgt === y[0] ? 'valgt' : '') + '">' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '<b>' + auKr(y[1]) + '</b></div>'; }).join('') + '</div></div>';
       };
+      // «Vis alt» (Mike 13.10): strukturert data, enkelt, ikke det gamle kortet.
+      var rad = function (k2, v) { return v == null || v === '' ? '' : '<dt>' + esc(k2) + '</dt><dd>' + v + '</dd>'; };
+      var dl = function (tittel, rader) { rader = rader.join(''); return rader ? '<div><h4>' + tittel + '</h4><dl>' + rader + '</dl></div>' : ''; };
+      var erpA = c.querySelector('a[href*="biladministrasjon"]');
+      var modellRader = function (x) {
+        if (!x) return ['<dt>Status</dt><dd>venter</dd>'];
+        return [rad('Modell', esc(x.modell || '')), rad('Finn-utpris', x.pris ? auKr(x.pris) : (x.feil ? esc(x.feil) : '–')), rad('Stopp', x.stopp ? esc(x.stopp_grunn || 'ja') : null),
+          rad('Tvillinger', x.antall_tvillinger != null ? String(x.antall_tvillinger) : null), rad('Forkastet', x.antall_forkastet != null ? String(x.antall_forkastet) : null),
+          rad('Tid', x.sek ? x.sek + ' s' : null), rad('Egne flagg', (x.egne_flagg || []).length ? x.egne_flagg.map(esc).join('<br>') : null)];
+      };
+      var altHtml = '<div class="au-ag-alt" hidden>' +
+        dl('Bil', [rad('Regnr', esc(b.regnr)), rad('Internnr', erpA ? '<a href="' + esc(erpA.href) + '" target="_blank" rel="noopener">' + esc(String(b.id)) + '</a>' : esc(String(b.id))),
+          rad('Kilde', esc(b.kilde || '')), rad('Arm', esc(b.arm || '')), rad('Km (ERP)', b.km != null ? auKr(b.km) : null),
+          rad('Siste EU-kontroll', ag.eu_km ? auKr(ag.eu_km.km) + ' km (' + esc(ag.eu_km.dato || '') + ')' : null),
+          rad('Årsmodell car.info', bil.modellaar ? String(bil.modellaar) : null), rad('Årsmodell ERP', ag.erp_aar ? String(ag.erp_aar) : null),
+          rad('car.info', esc(bil.navn || '')), rad('Eiertid', b.eiertid_aar != null ? String(b.eiertid_aar).replace('.', ',') + ' år' : null),
+          rad('Bilder fra kunden', b.bilde && b.bilde.kilde === 'kunde' && b.bilde.bilder ? String(b.bilde.bilder.length) : '0')]) +
+        dl('Kunde', [rad('Kommentar', b.kunde_kommentar ? esc(b.kunde_kommentar) : 'ingen')]) +
+        dl('Pris', [rad('Finn-utpris i ERP', b.finn_utpris ? auKr(b.finn_utpris) : null), rad('Estimat til kunden', b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : null),
+          rad('Skrevet til ERP', ag.erp ? (ag.erp.skrevet ? 'ja, fra FSD' : 'nei' + (ag.erp.grunn ? ': ' + esc(ag.erp.grunn) : '')) : null), rad('Priset', ag.laget ? esc(new Date(ag.laget).toLocaleString('nb-NO')) : null),
+          rad('Avvik FSD/Benchmark', ag.avvik_pst != null ? ag.avvik_pst + ' %' : null)]) +
+        dl('FSD', modellRader(ag.fsd)) + dl('Benchmark', modellRader(ag.benchmark)) +
+        (ag.reserve && ag.reserve.tvillingbiler && ag.reserve.tvillingbiler.length ? dl('Reserve (car.info mangler bilen)', ag.reserve.tvillingbiler.map(function (t) { return rad('Via ' + t.regnr, esc(t.car_info_navn || '')); })) : '') +
+        (c.querySelector('.qa-anker-input') ? '<div><h4>Sett Finn-utpris selv</h4><div class="au-ag-sett"><input type="text" inputmode="numeric" class="au-ag-inp" placeholder="f.eks. 159000"><button type="button" class="au-ny-sek au-ag-settkn">Sett</button></div></div>' : '') +
+        '</div>';
       var ffHtml = (ag.fsd && ag.fsd.fossefall) || (ag.benchmark && ag.benchmark.fossefall) ? '<div class="au-ag-ff">' + ffKol('FSD', ag.fsd) + ffKol('Benchmark', ag.benchmark) + '</div>' : '';
       var nyEl = document.createElement('div');
       nyEl.className = 'au-ny';
       nyEl.setAttribute('data-k', nokkel);
       nyEl.innerHTML =
         '<div class="au-ag-topp">' + id + '<div class="au-ag-kn"><button type="button" class="au-ny-send">Send</button><button type="button" class="au-ny-sek au-ag-ny">Ny vurdering</button></div></div>' +
+        galleri +
         '<div><div class="au-ag-priser">' + pris('FSD (Grok)', ag.fsd, 'fsd') + pris('Benchmark (Claude)', ag.benchmark, 'bench') + '</div>' +
-          (ag.avvik_pst != null ? '<div class="au-ag-avvik' + (ag.avvik_pst > 5 ? ' stor' : '') + '">Avvik ' + ag.avvik_pst + ' % mellom FSD og Benchmark</div>' : '') + '</div>' +
-        ((ag.flagg || []).length ? '<ul class="au-ag-flagg">' + ag.flagg.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+          (ag.avvik_pst != null ? '<div class="au-ag-avvik' + (ag.avvik_pst > 5 ? ' stor' : '') + '">Avvik ' + ag.avvik_pst + ' %</div>' : '') +
+          (ag.fsd && ag.fsd.fossefall && ag.fsd.fossefall.a ? '<div class="au-ag-arm">' + [['A', ag.fsd.fossefall.a], ['B', ag.fsd.fossefall.b], ['ORDNA', ag.fsd.fossefall.ordna]].map(function (y) { return '<div class="' + (String(b.arm || '').toUpperCase() === y[0] ? 'valgt' : '') + '">' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '<b>' + auKr(y[1]) + '</b></div>'; }).join('') + '</div>' : '') + '</div>' +
+        ((ag.flagg || []).length ? '<div class="au-ag-flagg">' + ag.flagg.map(function (f) { var kort = f.split(':')[0]; return '<details><summary>+ ' + esc(kort.length > 60 ? kort.slice(0, 57) + '…' : kort) + '</summary><div>' + esc(f) + '</div></details>'; }).join('') + '</div>' : '') +
         (tv ? '<div class="au-ag-tab"><table><tr><th>Finnkode</th><th class="h">Pris</th><th class="h">Km</th><th>År</th><th>Trim</th><th>Status</th><th>Brukt av</th></tr>' + tv + '</table></div>' : '') +
         (fork ? '<details class="au-ag-fork"><summary>Forkastet (' + ag.forkastet.length + ')</summary><ul>' + fork + '</ul></details>' : '') +
-        (beg ? '<div class="au-ag-beg">' + beg + '</div>' : '') +
-        ffHtml +
-        '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="au-ny-sek au-ny-endre">Endre pris</button><button type="button" class="au-ny-sek au-ny-alt">Vis alt</button></div>';
+        (beg ? '<details class="au-ag-plus"><summary>+ Begrunnelse</summary><div class="au-ag-beg">' + beg + '</div></details>' : '') +
+        (ffHtml ? '<details class="au-ag-plus"><summary>+ Fossefall</summary>' + ffHtml + '</details>' : '') +
+        '<details class="au-ag-plus"><summary>+ Alt</summary>' + altHtml.replace(' hidden>', '>') + '</details>';
       nyEl.querySelector('.au-ny-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (eb && !eb.disabled) eb.click(); });
       nyEl.querySelector('.au-ag-ny').addEventListener('click', function (e) { e.preventDefault(); var cb = c.querySelector('.qa-clear-btn'); if (cb && !cb.disabled) cb.click(); });
-      nyEl.querySelector('.au-ny-alt').addEventListener('click', function (e) { e.preventDefault(); c.classList.toggle('au-vis-alt'); this.textContent = c.classList.contains('au-vis-alt') ? 'Skjul' : 'Vis alt'; });
-      nyEl.querySelector('.au-ny-endre').addEventListener('click', function (e) {
-        e.preventDefault(); c.classList.add('au-vis-alt'); nyEl.querySelector('.au-ny-alt').textContent = 'Skjul';
-        var inp = c.querySelector('.qa-anker-input'); if (inp) { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); inp.focus(); }
+      var settKn = nyEl.querySelector('.au-ag-settkn');
+      if (settKn) settKn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var v = String(nyEl.querySelector('.au-ag-inp').value || '').replace(/\D/g, '');
+        var inp = c.querySelector('.qa-anker-input'), sett = c.querySelector('.qa-anker-btn');
+        if (!v || !inp || !sett) return;
+        inp.value = v; inp.dataset.kilde = 'manuell'; inp.dataset.fra = String(b.finn_utpris || ''); sett.click();
       });
       if (ny) ny.replaceWith(nyEl); else c.insertBefore(nyEl, c.firstChild);
       ny = nyEl;
@@ -270,8 +312,20 @@
       send.textContent = (tekst || 'Send') + (b.erp_lav ? ' · ' + auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : '');
       send.disabled = !ekte || ekte.disabled;
     }
+    if (ekte) ekte.style.display = 'none';
     var cb = c.querySelector('.qa-clear-btn'), nyKn = ny.querySelector('.au-ag-ny');
     if (nyKn) nyKn.disabled = !cb || cb.disabled;
+  }
+  // Før FSD har levert: bare bilen og «FSD priser», ikke auto/skygge/CC (skygge og CC er slått av 13.10).
+  function auVenterKort(c, b) {
+    auNyCss();
+    var nokkel = 'venter|' + b.regnr + '|' + b.km;
+    var ny = c.querySelector(':scope > .au-ny');
+    if (ny && ny.getAttribute('data-k') === nokkel) return;
+    var el = document.createElement('div'); el.className = 'au-ny'; el.setAttribute('data-k', nokkel);
+    el.innerHTML = '<div class="au-ny-navn">' + esc(b.regnr) + ' · ' + esc(b.bil || '') + '</div><div class="au-ny-meta">' + (b.km != null ? auKr(b.km) + ' km' : '') + '</div><div class="au-ny-under">FSD priser bilen nå. Kortet kommer om 1–2 minutter.</div>';
+    if (ny) ny.replaceWith(el); else c.insertBefore(el, c.firstChild);
+    c.classList.add('au-ny-modus');
   }
   function auNyttKort(c, b) {
     auNyCss();
@@ -376,7 +430,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { if (b.agent) auAgentKort(c, b); else auNyttKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
+      try { if (b.agent) auAgentKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
