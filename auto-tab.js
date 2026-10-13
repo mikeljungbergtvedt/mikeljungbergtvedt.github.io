@@ -205,6 +205,12 @@
     forr.onclick = function (ev) { ev.stopPropagation(); vis(-1); }; nest.onclick = function (ev) { ev.stopPropagation(); vis(1); }; lukk.onclick = steng;
     o.onclick = function (ev) { if (ev.target === o) steng(); };
     o.append(img, nr, lukk); if (liste.length > 1) o.append(forr, nest);
+    var x0 = null;
+    o.addEventListener('touchstart', function (ev) { x0 = ev.touches[0].clientX; }, { passive: true });
+    o.addEventListener('touchend', function (ev) { if (x0 == null) return; var dx = ev.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) vis(dx < 0 ? 1 : -1); }, { passive: true });
+    document.body.style.overflow = 'hidden';
+    var stengGml = steng; steng = function () { document.body.style.overflow = ''; stengGml(); };
+    lukk.onclick = steng; o.onclick = function (ev) { if (ev.target === o) steng(); };
     document.body.appendChild(o); document.addEventListener('keydown', tast); vis(0);
   });
   function auAgentCss() {
