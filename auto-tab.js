@@ -224,6 +224,7 @@
       '#qa-cards{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))!important;gap:20px!important;align-items:start!important}',
       '.qa-card.au-ny-modus{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;max-width:none!important;width:100%}',
       '.qs{font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif;color:#16201B;background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(0,40,20,.05),0 8px 28px rgba(0,40,20,.07);overflow:hidden;display:flex;flex-direction:column;font-variant-numeric:tabular-nums}',
+      '.qs{border-top:8px solid #2E7D4F}.qs.gul{border-top-color:#E0A800}.qs.rod{border-top-color:#C62828}.qs.gul .qs-helt{background:#FFF6D6}.qs.rod .qs-helt{background:#FBEAE8}',
       '.qs *{box-sizing:border-box}.qs table{margin:0!important;width:100%!important}.qs td,.qs th{font-family:inherit!important;text-transform:none!important;letter-spacing:normal!important}',
       '.qs-hode{padding:18px 20px 0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}',
       '.qs-navn{font-size:18px;font-weight:700;line-height:1.25}.qs-meta{font-size:13px;color:#5E6B62;margin-top:3px}',
@@ -309,7 +310,8 @@
       var fakta = [pf ? 'Priset før ' + (pf.dato || '') + ': ' + auKr(pf.lav) + '–' + auKr(pf.hoy) : 'Ikke priset før', ea == null ? 'Egen Finn-annonse ikke sjekket' : ea.aktiv ? 'Egen Finn-annonse ' + k(ea.pris) + (ea.dager != null ? ', ' + ea.dager + ' dager' : '') : 'Ingen egen Finn-annonse', euTekst];
       var sp = ag.avvik_pst;
       var el = document.createElement('div');
-      el.className = 'au-ny qs';
+      var gul = (sp != null && sp > 5 && sp <= 10) || !!b.kunde_kommentar || !!pf || (ea && ea.aktiv);
+      el.className = 'au-ny qs ' + (rode.length ? 'rod' : gul ? 'gul' : '');
       el.setAttribute('data-k', nokkel);
       el.innerHTML =
         '<div class="qs-hode"><div><div class="qs-navn">' + esc(navn || b.regnr) + '</div><div class="qs-meta">' + [aar, b.km != null ? auKr(b.km) + ' km' : null, b.regnr].filter(Boolean).map(esc).join(' · ') + '</div></div><span class="qs-spor">Spor ' + armNavn + '</span></div>' +
