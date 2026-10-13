@@ -218,6 +218,128 @@
   // c557: QA-kortet som eksakt kopi av skissen Mike godkjente 13.10 (artifact BUNALyDCwuYa8BZCQB2CGC), i rutenett.
   // c563: QA-kortet etter Groks design (OneDrive C2B/Peasy/15-UX/qa-kort/qa-kort.html), uendret oppsett, ekte data (Mike 13.10).
   // c564: varmekart over liste 3 øverst i QA / Send (Mike 13.10, qa-kort-prompt.md). Grønn ok, oransje se på, rød manuell.
+  // c565: QA / Send som kortliste etter qa-liste-10.html (Mike 13.10). Fargen bare på venstrekant og statuslinje. Like høye kort.
+  var QL_FARGE = { rod: '#c8574d', oransje: '#d99a4e', gronn: '#4f9a76' };
+  function qlCss() {
+    if (document.getElementById('ql-css')) return;
+    var s = document.createElement('style'); s.id = 'ql-css';
+    s.textContent = [
+      '#qa-cards{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr))!important;gap:12px!important;align-items:start!important;max-width:1320px;margin:0 auto}',
+      '@media (min-width:1240px){#qa-cards{grid-template-columns:repeat(5,minmax(0,1fr))!important}}',
+      '#qa-cards>.qa-card{margin:0!important;max-width:none!important}',
+      '.qa-card.au-ny-modus{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}',
+      '#ql-teller{display:flex;gap:6px;margin:6px 0 12px;max-width:420px;font-family:Inter,-apple-system,Helvetica,Arial,sans-serif}#ql-teller span{flex:1;text-align:center;border-radius:6px;padding:5px;font-weight:600;color:#fff;font-size:11.5px}',
+      '.ql{font-family:Inter,-apple-system,Helvetica,Arial,sans-serif;color:#14211a;font-size:12px;background:#fff;border-radius:10px;padding:0 11px 11px;border:1px solid #e6e9e7;overflow:hidden;box-sizing:border-box}',
+      '.ql *{box-sizing:border-box}',
+      '.ql .st{margin:0 -11px 8px -3px;font-weight:700;padding:5px 11px;font-size:11.5px;line-height:13px;height:36px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
+      '.ql .hd{display:flex;justify-content:space-between;gap:6px;height:36px}.ql .hh{height:36px;overflow:hidden;min-width:0}.ql .hh b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.ql .sp{background:#eef3ef;border-radius:8px;padding:2px 8px;height:18px;font-size:11px;white-space:nowrap;flex:0 0 auto}.ql .sp.ordna{background:#f28c28;color:#fff}',
+      '.ql .sm{color:#5b665f;font-size:11px}.ql .one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.ql .ph{display:flex;gap:4px;margin:6px 0;height:30px}.ql .ph i,.ql .ph a{flex:1;height:30px;background:#eceeed;border-radius:4px;display:block;overflow:hidden;min-width:0}.ql .ph img{width:100%;height:30px;object-fit:cover;display:block}',
+      '.ql .kom{background:#f7f8f7;border-radius:6px;padding:5px 8px;margin-bottom:3px;height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.ql .info{height:28px;overflow:hidden}',
+      '.ql .tk{background:#f3f6f4;border-radius:8px;padding:7px 10px;margin:7px 0;height:62px;overflow:hidden}.ql .big{font-size:15px;font-weight:800;color:#1d3b2c;white-space:nowrap}',
+      '.ql .lbl{font-weight:700;font-size:10.5px;color:#5b665f;margin-top:6px;text-transform:uppercase}',
+      '.ql table{width:100%!important;border-collapse:collapse;margin:0!important}.ql td{padding:2px 0;border-bottom:1px solid #f1f3f2;font-size:12px!important;font-family:inherit!important;text-transform:none!important;letter-spacing:normal!important}.ql td:nth-child(2){text-align:right;white-space:nowrap}.ql td:nth-child(3){text-align:right;width:40px}',
+      '.ql .fs tr.b td{font-weight:700}',
+      '.ql summary{font-weight:700;font-size:10.5px;color:#5b665f;margin-top:6px;cursor:pointer;list-style:none;height:18px}',
+      '.ql .bt{display:flex;gap:6px;margin-top:9px}.ql .bt button{flex:1;text-align:center;padding:7px;border-radius:7px;font:700 12px Inter,-apple-system,Helvetica,Arial,sans-serif;cursor:pointer}',
+      '.ql .b1{border:1px solid #cfd6d2;color:#3c4a42;background:#fff}.ql .b2{background:#1d3b2c;color:#fff;border:0}.ql .b2.ordna{background:#f28c28}.ql .b2:disabled{opacity:.35;cursor:not-allowed}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function qlStatus(b) {
+    var ag = b.agent || {};
+    var k = function (n) { return n ? auKr(n) : '–'; };
+    var rod = [], or = [];
+    (ag.historikk || []).filter(function (h) { return h.bud_avvist; }).forEach(function (h) { rod.push('avvist bud på egen auksjon ' + h.bud_avvist + ' (' + k(h.hoyeste_bud) + ')'); });
+    if ((b.stopp || []).some(function (x) { return /PRIS MANUELT/i.test(x); })) rod.push('PRIS MANUELT');
+    if (ag.fsd && ag.fsd.stopp) rod.push('FSD stoppet: ' + (ag.fsd.stopp_grunn || ''));
+    else if (!(ag.fsd && ag.fsd.pris) || !b.erp_lav) rod.push('mangler pris');
+    var nFsd = (ag.tvillinger || []).filter(function (t) { return t.fsd; }).length;
+    var fp = ag.fsd && ag.fsd.pris, bp = ag.benchmark && ag.benchmark.pris;
+    var avvik = fp && bp ? Math.round((fp - bp) / bp * 100) : null;
+    if (avvik != null && Math.abs(avvik) > 10) or.push('FSD vs benchmark ' + (avvik > 0 ? '+' : '') + avvik + ' %');
+    var pf = (ag.historikk || []).filter(function (h) { return h.lav; })[0];
+    if (pf) or.push('priset før ' + (pf.dato || ''));
+    if (ag.egen_annonse && ag.egen_annonse.aktiv) or.push('egen Finn-annonse ' + k(ag.egen_annonse.pris) + (ag.egen_annonse.dager != null ? ' (' + ag.egen_annonse.dager + ' d)' : ''));
+    if (ag.eu_km && b.km != null && ag.eu_km.km > b.km) or.push('km i ERP ' + auKr(b.km) + ', EU-kontroll ' + auKr(ag.eu_km.km));
+    if (fp && nFsd < 3) (rod.length ? rod : or).push('for få tvillinger (' + nFsd + ')');
+    if (rod.length) return { f: 'rod', t: 'Manuell: ' + rod.join(', '), avvik: avvik };
+    if (or.length) return { f: 'oransje', t: 'Se på: ' + or.join(', '), avvik: avvik };
+    return { f: 'gronn', t: 'OK å sende', avvik: avvik };
+  }
+  function qlKort(c, b, s) {
+    qlCss();
+    var ag = b.agent || {};
+    var nokkel = JSON.stringify([b.regnr, b.km, b.arm, b.erp_lav, b.erp_hoy, b.kunde_kommentar, b.bilde, ag, s]);
+    var ny = c.querySelector(':scope > .au-ny');
+    var arm = String(b.arm || 'A').toUpperCase(), ordna = arm === 'ORDNA';
+    if (!ny || ny.getAttribute('data-k') !== nokkel) {
+      var bil = ag.bil || {};
+      var navn = String(bil.navn || b.bil || '').split(',')[0];
+      var aar = bil.modellaar || ag.erp_aar || null;
+      var k = function (n) { return n ? auKr(n) : '–'; };
+      var ik = 'ikke tilgjengelig';
+      var farge = QL_FARGE[s.f];
+      var bilder = (b.bilde && b.bilde.kilde === 'kunde' && Array.isArray(b.bilde.bilder) ? b.bilde.bilder : []).map(function (x) {
+        if (x.url) return x.url;
+        if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+        return null;
+      }).filter(Boolean);
+      var ph = [0, 1, 2, 3].map(function (i) { return bilder[i] ? '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '" aria-label="Bilde ' + (i + 1) + '"><img src="' + esc(bilder[i]) + '" loading="lazy" alt=""></a>' : '<i></i>'; }).join('');
+      var pf = (ag.historikk || []).filter(function (h) { return h.lav; })[0];
+      var ea = ag.egen_annonse;
+      var info = (pf ? 'Priset før ' + esc(pf.dato || '') + ': ' + Math.round(pf.lav / 1000) + '–' + Math.round(pf.hoy / 1000) + 'k' : 'Ikke priset før') + ' · ' + (ea == null ? 'Egen Finn-annonse ' + ik : ea.aktiv ? 'Egen Finn-annonse ' + k(ea.pris) + (ea.dager != null ? ' (' + ea.dager + ' d)' : '') : 'Ingen egen Finn-annonse');
+      var fp = ag.fsd && ag.fsd.pris, bp = ag.benchmark && ag.benchmark.pris;
+      var tv = Array.isArray(ag.tvillinger) ? ag.tvillinger : [];
+      var tvRader = tv.map(function (t) {
+        var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
+        var km = (t.km ? auKr(t.km) + ' km' : 'km ' + ik) + (t.aar ? ' <small>' + t.aar + '</small>' : '');
+        return '<tr><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:inherit">' + km + '</a>' : km) + '</td><td>' + k(t.pris) + '</td><td><small>' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Aktiv') + '</small></td></tr>';
+      }).join('');
+      var ff = ag.fsd && ag.fsd.fossefall;
+      var verdi = function (navnL) { if (!ff || !ff.trinn) return ik; var l = ff.trinn.filter(function (x) { return x[0] === navnL; })[0]; if (!l || l[1] == null) return ik; return l[1] === 0 ? '0' : (l[1] < 0 ? '−' : '') + auKr(Math.abs(l[1])); };
+      var tilKunden = b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : ik;
+      var fsRader = [['Finn-utpris (FSD)', ff ? auKr(fp) : ik], ['Forhandlermargin', verdi('Forhandlermargin')], ['Avsetning takst', verdi('Avsetning takst')], ['Ståtid', verdi('Ståtid')], ['Omregistrering', verdi('Omregistrering')], ['Klargjøring', verdi('Klargjøring')], ['AR-salær', verdi('AR-salær')], ['= Forventet bud', verdi('Forventet bud'), 'b'], ['Peasy-avgift', verdi('Peasy-avgift')], ['Til kunden', tilKunden, 'b']];
+      var el = document.createElement('div');
+      el.className = 'au-ny ql';
+      el.style.borderLeft = '3px solid ' + farge;
+      el.setAttribute('data-k', nokkel);
+      el.innerHTML =
+        '<div class="st" style="color:' + farge + ';background:' + farge + '14">' + esc(s.t) + '</div>' +
+        '<div class="hd"><div class="hh"><b>' + esc(navn || b.regnr) + '</b><div class="sm one">' + [esc(b.regnr), aar, b.km != null ? auKr(b.km) + ' km' : null, 'EU-kontroll ' + (ag.eu_km ? auKr(ag.eu_km.km) + ' km' : ik)].filter(Boolean).join(' · ') + '</div></div><span class="sp' + (ordna ? ' ordna' : '') + '">' + (ordna ? 'Spor: Ordna' : 'Spor ' + arm) + '</span></div>' +
+        '<div class="ph">' + ph + '</div>' +
+        '<div class="kom">' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : 'Ingen kommentar') + '</div>' +
+        '<div class="sm info">' + info + '</div>' +
+        '<div class="tk"><div class="sm">TIL KUNDEN</div><div class="big">' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) + ' kr' : ik) + '</div><div class="sm">FSD <b>' + k(fp) + '</b> · Bench <b>' + k(bp) + '</b>' + (s.avvik != null ? ' · ' + (s.avvik > 0 ? '+' : '') + s.avvik + ' %' : '') + '</div></div>' +
+        '<details><summary>+ Tvillinger (' + tv.length + ')</summary>' + (tvRader ? '<table>' + tvRader + '</table>' : '') + ((ag.forkastet || []).length ? '<div class="sm" style="margin-top:3px">' + ag.forkastet.length + ' forkastet</div>' : '') + '</details>' +
+        '<div class="lbl">Fossefall</div><table class="fs">' + fsRader.map(function (r) { return '<tr' + (r[2] ? ' class="b"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'; }).join('') + '</table>' +
+        '<div class="bt"><button type="button" class="b1 ql-ny">Ny vurdering</button><button type="button" class="b2 ql-send' + (ordna ? ' ordna' : '') + '">' + (ordna ? 'Send til Ordna' : 'Send til kunde') + '</button></div>';
+      el.querySelector('.ql-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (!this.disabled && eb && !eb.disabled) eb.click(); });
+      el.querySelector('.ql-ny').addEventListener('click', function (e) { e.preventDefault(); var cb = c.querySelector('.qa-clear-btn'); if (cb && !cb.disabled) cb.click(); });
+      if (ny) ny.replaceWith(el); else c.insertBefore(el, c.firstChild);
+      ny = el;
+      c.classList.add('au-ny-modus');
+    }
+    var ekte = c.querySelector('.qa-send-btn'); ny.querySelector('.ql-send').disabled = s.f === 'rod' || !ekte || ekte.disabled;
+    var cb = c.querySelector('.qa-clear-btn'); ny.querySelector('.ql-ny').disabled = !cb || cb.disabled;
+  }
+  function qlTeller(rader) {
+    var cards = document.getElementById('qa-cards'); if (!cards) return;
+    var gml = document.getElementById('qg-heat'); if (gml) gml.remove();
+    var t = document.getElementById('ql-teller');
+    if (!t) { t = document.createElement('div'); t.id = 'ql-teller'; cards.parentNode.insertBefore(t, cards); }
+    var n = { rod: 0, oransje: 0, gronn: 0 };
+    rader.forEach(function (r) { n[r.s.f]++; });
+    var html = '<span style="background:#c8574d">' + n.rod + ' manuell</span><span style="background:#d99a4e">' + n.oransje + ' se på</span><span style="background:#4f9a76">' + n.gronn + ' ok</span>';
+    if (t.innerHTML !== html) t.innerHTML = html;
+    var rang = { rod: 0, oransje: 1, gronn: 2 };
+    rader.forEach(function (r, i) { r.c.style.order = String(rang[r.s.f] * 1000 + i); r.c.classList.remove('qg-skjult'); });
+    var sum = document.getElementById('qa-summary');
+    var tekst = rader.length + ' biler på liste 3 · røde og oransje først';
+    if (sum && sum.textContent !== tekst) sum.textContent = tekst;
+  }
   function qgStatus(b) {
     var ag = b.agent || {};
     var rod = [], or = [];
@@ -1035,10 +1157,10 @@
     var qgRader = [];
     for (var i = 0; i < kort.length; i++) {
       var c = kort[i], b = byId[auKortId(c)];
-      if (b) qgRader.push({ c: c, b: b, s: qgStatus(b) });
+      if (b) qgRader.push({ c: c, b: b, s: qlStatus(b) });
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { if (b.agent) qgKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
+      try { if (b.agent) qlKort(c, b, qgRader[qgRader.length - 1].s); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
@@ -1242,13 +1364,13 @@
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
       var nyF = c.querySelector(':scope > .au-ny'); if (nyF && c.firstChild !== nyF) c.insertBefore(nyF, c.firstChild);
     }
-    try { qgVarmekart(qgRader); } catch (e) { if (window.console) console.warn('qg-heat', e); }
+    try { qlTeller(qgRader); } catch (e) { if (window.console) console.warn('ql-teller', e); }
   }
   // Alltid: skjul rester fra auto (populert/Kokker) og gamle Send-knapper på kort vi har tatt over (c556).
   (function () { if (document.getElementById('au-grunn-css')) return; var g = document.createElement('style'); g.id = 'au-grunn-css';
     g.textContent = '#qa-finn-box,#qa-toolbar{display:none!important}#qa-counters,.qa-finn-legends{display:none!important}.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}';
     document.head.appendChild(g); })();
-  window.__qkKort = qgKort;
+  window.__qkKort = qgKort; window.__qlKort = qlKort; window.__qlStatus = qlStatus; window.__qlTeller = qlTeller;
   setInterval(auMerkQaKort, 1500);
 
   // Hva kunden gjorde: status fra ERP og grunn (valg + egne ord). Oppdateres hvert 10. min på Mini.
