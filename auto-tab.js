@@ -246,7 +246,11 @@
       '.qk-bunn{position:sticky;bottom:0;z-index:5;background:#fff;border-top:1px solid #e3e7e4;padding:10px 16px;display:grid;grid-template-columns:1fr 1.4fr;gap:10px}',
       '.qk-bunn button{min-height:48px;border-radius:12px;font:600 15px -apple-system,Helvetica,Arial,sans-serif;cursor:pointer}',
       '.qk-ny{background:#fff;color:#004225;border:2px solid #004225}.qk-send{background:#004225;color:#fff;border:2px solid #004225}.qk-send:disabled{background:#c9ceca;border-color:#c9ceca;color:#fff;cursor:not-allowed}',
-      '.qk-grunn{font-size:12px;color:#6b756f;grid-column:1/-1;margin:0}'
+      '.qk-grunn{font-size:12px;color:#6b756f;grid-column:1/-1;margin:0}',
+      '.qk table{width:100%!important;max-width:none!important;table-layout:auto!important;margin:0!important}',
+      '.qk th,.qk td{text-transform:none!important;letter-spacing:normal!important;font-family:inherit!important;background-clip:padding-box}',
+      '.qk th{font-size:12px!important}.qk td{font-size:13px}.qk-ff td{font-size:14px!important}',
+      '.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}'
     ].join('');
     document.head.appendChild(s);
   }
