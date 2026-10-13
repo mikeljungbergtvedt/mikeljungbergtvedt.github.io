@@ -1,5 +1,12 @@
 /* Peasy Pulse — Auto-fane (skygge). Leser auto-score.json (Mini: auto-score.js). Sender ingenting. */
 (function () {
+  // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
+  (function () {
+    if (document.getElementById('qa3-css')) return;
+    var s = document.createElement('style'); s.id = 'qa3-css';
+    s.textContent = '#qa-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:start}#qa-cards>.qa-card{max-width:none!important;min-width:0}@media (max-width:900px){#qa-cards{grid-template-columns:minmax(0,1fr)!important}}';
+    (document.head || document.documentElement).appendChild(s);
+  })();
   // c545: bildevisning i siden (ikke ny fane). Piler, Esc og klikk utenfor lukker.
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a.au-lb');
