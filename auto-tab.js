@@ -318,7 +318,7 @@
       el.setAttribute('data-k', nokkel);
       el.innerHTML =
         '<div class="top"><div>' + [esc(b.regnr), esc(navn), aar, b.km != null ? auKr(b.km) + ' km' : null].filter(Boolean).join(' · ') + '</div><div class="badge">Spor: ' + armNavn + '</div></div>' +
-        '<div class="sec"><h2><span>1</span>Bilen</h2><div class="help">Er dette riktig bil og riktig tilstand?</div>' +
+        '<div class="sec"><h2><span>1</span>Bilen</h2>' +
           (bilder.length ? '<div class="photos">' + bilder.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '" aria-label="Bilde ' + (i + 1) + '"><img src="' + esc(u) + '" loading="lazy" alt=""></a>'; }).join('') + '</div>' : '<div class="photos"><div class="ph">Ingen bilder fra kunden</div></div>') +
           '<div class="quote"><b>Kundens kommentar:</b> ' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : 'Ingen kommentar') + '</div></div>' +
         '<div class="sec"><h2><span>2</span>Varsler</h2><div class="help">Rødt må sjekkes før du sender.</div>' + v.join('') + '</div>' +
