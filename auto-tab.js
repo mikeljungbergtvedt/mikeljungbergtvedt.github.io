@@ -219,6 +219,7 @@
     var s = document.createElement('style'); s.id = 'qk-css';
     s.textContent = [
       '#qa-cards{grid-template-columns:minmax(0,720px)!important;justify-content:center!important}',
+      '#qa-counters,.qa-finn-legends{display:none!important}',
       '.qa-card.au-ny-modus{padding:0!important;max-width:720px;width:100%;box-sizing:border-box}',
       '.qa-card.au-ny-modus>:not(.au-ny){display:none!important}',
       '.qk{font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45;color:#16201B;font-variant-numeric:tabular-nums;border-radius:12px;background:#fff;overflow:clip}',
