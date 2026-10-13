@@ -1,5 +1,32 @@
 /* Peasy Pulse — Auto-fane (skygge). Leser auto-score.json (Mini: auto-score.js). Sender ingenting. */
 (function () {
+  // c545: bildevisning i siden (ikke ny fane). Piler, Esc og klikk utenfor lukker.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a.au-lb');
+    if (!a) return;
+    e.preventDefault();
+    var liste = []; try { liste = JSON.parse(a.getAttribute('data-bilder') || '[]'); } catch (_) {}
+    var ix = Number(a.getAttribute('data-ix')) || 0;
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center';
+    var img = document.createElement('img'); img.style.cssText = 'max-width:92vw;max-height:86vh;object-fit:contain';
+    var nr = document.createElement('div'); nr.style.cssText = 'position:absolute;top:14px;left:0;right:0;text-align:center;color:#fff;font:14px -apple-system,Helvetica,Arial,sans-serif';
+    var knapp = function (t, css) { var k = document.createElement('button'); k.type = 'button'; k.textContent = t; k.style.cssText = 'position:absolute;background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:4px;font-size:28px;width:48px;height:48px;cursor:pointer;' + css; return k; };
+    var forr = knapp('‹', 'left:12px;top:50%;transform:translateY(-50%)'), nest = knapp('›', 'right:12px;top:50%;transform:translateY(-50%)'), lukk = knapp('×', 'right:12px;top:12px');
+    var vis = function (d) { ix = (ix + d + liste.length) % liste.length; img.src = liste[ix]; nr.textContent = (ix + 1) + ' / ' + liste.length; };
+    var steng = function () { document.removeEventListener('keydown', tast); o.remove(); };
+    var tast = function (ev) { if (ev.key === 'Escape') steng(); else if (ev.key === 'ArrowLeft') vis(-1); else if (ev.key === 'ArrowRight') vis(1); };
+    forr.onclick = function (ev) { ev.stopPropagation(); vis(-1); }; nest.onclick = function (ev) { ev.stopPropagation(); vis(1); }; lukk.onclick = steng;
+    o.onclick = function (ev) { if (ev.target === o) steng(); };
+    o.append(img, nr, lukk); if (liste.length > 1) o.append(forr, nest);
+    var x0 = null;
+    o.addEventListener('touchstart', function (ev) { x0 = ev.touches[0].clientX; }, { passive: true });
+    o.addEventListener('touchend', function (ev) { if (x0 == null) return; var dx = ev.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) vis(dx < 0 ? 1 : -1); }, { passive: true });
+    document.body.style.overflow = 'hidden';
+    var stengGml = steng; steng = function () { document.body.style.overflow = ''; stengGml(); };
+    lukk.onclick = steng; o.onclick = function (ev) { if (ev.target === o) steng(); };
+    document.body.appendChild(o); document.addEventListener('keydown', tast); vis(0);
+  });
   if (!document.getElementById('au-fold-css')) {
     var st = document.createElement('style'); st.id = 'au-fold-css';
     st.textContent = '#auto-section .au-fold{cursor:pointer;user-select:none}' +
@@ -283,11 +310,9 @@
         var lign = b.bilde.kilde === 'lignende';
         var bildeTekst = lign ? 'Lignende bil fra Finn' + (b.bilde.finnkode ? ' (' + b.bilde.finnkode + ')' : '') + ', ikke kundens bil' : 'Kundens bilde';
         var pilStil = 'border:1px solid #DCD8CC;background:#fff;color:#16201B;border-radius:6px;width:28px;height:28px;font-size:16px;line-height:1;cursor:pointer';
-        bildeHtml = '<figure class="au-bilder" data-bilder="' + esc(JSON.stringify(bildeListe)) + '" data-ix="0" style="margin:0;display:grid;gap:4px;justify-items:start">' +
-          '<img src="' + esc(bildeListe[0]) + '" alt="' + esc(bildeTekst) + '" loading="lazy" style="width:auto;max-width:30%;max-height:180px;min-width:120px;object-fit:contain;border-radius:8px;background:#E7E4DA' + (lign ? ';opacity:.85' : '') + '">' +
-          '<figcaption style="display:flex;gap:8px;align-items:center;font-size:11.5px;color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' +
-            (bildeListe.length > 1 ? '<button type="button" class="au-bilde-forrige" aria-label="Forrige bilde" style="' + pilStil + '">‹</button><span class="au-bilde-nr" style="font-variant-numeric:tabular-nums">1 / ' + bildeListe.length + '</span><button type="button" class="au-bilde-neste" aria-label="Neste bilde" style="' + pilStil + '">›</button>' : '') +
-            '<span>' + esc(bildeTekst) + '</span></figcaption></figure>';
+        // c570: vanlig galleri. Alle bildene som miniatyrer på rad, klikk åpner stort bilde med piler (Mike 13.10).
+        bildeHtml = '<div style="display:grid;gap:4px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">' + bildeListe.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bildeListe)) + '" aria-label="Bilde ' + (i + 1) + '" style="flex:0 0 auto"><img src="' + esc(u) + '" alt="" loading="lazy" style="height:110px;width:auto;max-width:180px;object-fit:cover;border-radius:6px;display:block;background:#E7E4DA' + (lign ? ';opacity:.85' : '') + '"></a>'; }).join('') + '</div>' +
+          '<div style="font-size:11.5px;color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + esc(bildeTekst) + (bildeListe.length > 1 ? ' · ' + bildeListe.length + ' bilder' : '') + '</div></div>';
       }
       // c535: auto, skygge og CC på én linje øverst, farget etter spennet: grønn ≤5 %, gul ≤10 %, rød over (Mike 13.10).
       var enHtml = '';
