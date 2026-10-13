@@ -311,11 +311,30 @@
       var ff = ag.fsd && ag.fsd.fossefall;
       var s5 = '<section class="qk-sek"><h3>5 Fra Finn-pris til kunden</h3><p class="qk-hjelp">Trekkene som gir tilbudet.</p>';
       if (ff && ff.trinn) {
-        s5 += '<table class="qk-ff">' + ff.trinn.map(function (l) {
+        // Hele regnestykket synlig: avrunding til midt, spenn til A, og × 0,90 / × 0,75 for B og Ordna (bare visning).
+        var rad5 = function (t, v, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + t + '</td><td class="h">' + v + '</td></tr>'; };
+        var fortegn = function (n) { return n === 0 ? '0' : (n > 0 ? '+ ' : '− ') + auKr(Math.abs(n)); };
+        var rader5 = [];
+        var forventet = null, avgift = null;
+        ff.trinn.forEach(function (l) {
           var sum = l[2] === 'sum', start = l[2] === 'start';
-          var v = l[1] == null ? 'ikke sjekket' : (start || sum || l[1] === 0 ? '' : l[1] > 0 ? '+ ' : '− ') + auKr(Math.abs(l[1]));
-          return '<tr' + (sum ? ' class="sum"' : '') + '><td>' + (sum ? '= ' : start ? '' : '− ') + esc(l[0]) + '</td><td class="h">' + v + '</td></tr>';
-        }).join('') + '<tr><td>± spenn</td><td class="h">− ' + auKr(ff.spenn.lav) + ' / + ' + auKr(ff.spenn.hoy) + '</td></tr></table>' +
+          if (l[0] === 'Forventet bud') forventet = l[1];
+          if (l[0] === 'Peasy-avgift') avgift = l[1];
+          if (l[0] === 'Midt' && forventet != null && avgift != null && l[1] != null) {
+            var avr = l[1] - (Math.round(forventet) + avgift);
+            if (avr !== 0) rader5.push(rad5('Avrundet', fortegn(avr)));
+          }
+          var v = l[1] == null ? 'ikke sjekket' : start || sum ? auKr(l[1]) : fortegn(l[1]);
+          rader5.push(rad5((sum ? '= ' : start ? '' : '− ') + esc(l[0]), v, sum ? 'sum' : ''));
+        });
+        rader5.push(rad5('± spenn', '− ' + auKr(ff.spenn.lav) + ' / + ' + auKr(ff.spenn.hoy)));
+        if (ff.lav != null && ff.hoy != null) {
+          rader5.push(rad5('= Spor A', auKr(ff.lav) + ' – ' + auKr(ff.hoy), 'sum'));
+          if (arm === 'B') rader5.push(rad5('× 0,90 = spor B', auKr(Math.round(ff.lav * 0.9)) + ' – ' + auKr(Math.round(ff.hoy * 0.9))));
+          if (arm === 'ORDNA') rader5.push(rad5('× 0,75 = spor Ordna', auKr(Math.round(ff.lav * 0.75)) + ' – ' + auKr(Math.round(ff.hoy * 0.75))));
+          if (arm === 'B' || arm === 'ORDNA') rader5.push(rad5('Avrundet til hele tusen', ''));
+        }
+        s5 += '<table class="qk-ff">' + rader5.join('') + '</table>' +
           '<div class="qk-kunde"><span>Til kunden (' + armNavn + ')</span><b>' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : 'ikke satt') + '</b></div>' +
           '<div class="qk-spor3">' + [['A', ff.a, 'A = midt'], ['B', ff.b, 'B = A × 0,90'], ['ORDNA', ff.ordna, 'Ordna = A × 0,75']].map(function (y) {
             return '<div class="' + (arm === y[0] ? 'aktiv' : '') + '"><span>' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '</span><b>' + kr(y[1]) + '</b><span>' + y[2] + '</span></div>';
