@@ -686,6 +686,11 @@ document.addEventListener('visibilitychange',function(){
     <div style="padding:10px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;color:#667A72;line-height:1.5"><b>Kost per mottatt bil</b> = annonsekost i uka delt på antall biler fra ukas leads som er kommet til anlegget. Lavere er bedre. Den gule linjen markerer en endring. Uker merket <i>foreløpig</i> er ikke ferdig talt: bilene trenger noen dager fra lead til anlegg. Kost per solgt bil per kanal står i tabellen og grafen over.</div>
     <div style="padding:8px 12px;overflow-x:auto"><table id="mk-effekt" style="width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums"><tr><td style="padding:10px;color:var(--muted)">Laster …</td></tr></table></div>
     <div id="mk-effekt-fot" style="padding:0 18px 12px;font-size:11px;color:#667A72"></div></div>
+  <!-- c528: trakt per video/annonse (utm_content), video-trakt.json fra Mini. Samme utvalg som kampanje-score. -->
+  <div class="table-card" style="margin-bottom:22px"><div class="th"><div class="th-title">Per video &mdash; trakt per utm_content</div></div>
+    <div style="padding:10px 18px;background:rgba(0,66,37,0.04);border-left:3px solid #004225;font-size:12px;color:#667A72;line-height:1.5"><b>Biler</b> = Peasy-leads fra betalte annonser med denne utm_content. <b>Estimat akseptert</b> = mottatt på anlegg. <b>Avvist</b> = avvist før anlegg. <b>Retur</b> = returnert etter bud. <b>Kost per kontrakt</b> = Meta-annonsekost for annonsen delt på solgte biler. Mål: under 2 000 kr. Google-kost per annonse mangler.</div>
+    <div style="padding:8px 12px;overflow-x:auto"><table id="mk-video" style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums"><tr><td style="padding:10px;color:var(--muted)">Laster …</td></tr></table></div>
+    <div id="mk-video-fot" style="padding:0 18px 12px;font-size:11px;color:#667A72"></div></div>
   <div class="section-label" style="margin-top:22px">3 · Hvor skal neste krone?</div>
   <div class="table-card" style="margin-bottom:22px"><div class="th"><div class="th-title">Per kampanje &mdash; fra lead til solgt</div>
     <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:#004225">Mål fra endring: <input type="date" id="mk-kamp-fra" onchange="mkKampFraSett(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid #004225;border-radius:8px;color:#004225"><button onclick="mkKampFraSett('')" style="font-size:11px;padding:3px 9px;border-radius:12px;cursor:pointer;border:1px solid #004225;background:#fff;color:#004225">Nullstill</button></div></div>
@@ -13665,6 +13670,28 @@ setTimeout(tick,1500);setInterval(tick,5000);
     var f=document.getElementById('mk-effekt-fot'); if(f) f.textContent='Grønt/rødt = minst 15 % bedre/dårligere enn Metas vanlige uke ('+kr(refM)+' kr). car_received sendt til Meta: '+(d.car_received_sendt||0)+' biler. Oppdatert '+new Date(d.bygget).toLocaleString('nb-NO')+'.';
   }
   function last(){ fetch('meta-effekt.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(tegn).catch(function(){ var t=document.getElementById('mk-effekt'); if(t) t.innerHTML='<tr><td style="padding:10px">Fant ikke meta-effekt.json.</td></tr>'; }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', last); else last();
+})();
+</script>
+<script>
+/* c528: Per video, trakt per utm_content (video-trakt.json) */
+(function(){
+  function kr(n){ return n==null ? 'mangler' : Math.round(n).toLocaleString('nb-NO')+' kr'; }
+  function esc(x){ return String(x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function td(v,st){ return '<td style="padding:6px 8px;text-align:right;'+(st||'')+'">'+v+'</td>'; }
+  function tegn(d){
+    var t=document.getElementById('mk-video'); if(!t) return;
+    var v=(d&&d.videoer)||[]; if(!v.length){ t.innerHTML='<tr><td style="padding:10px">Ingen data.</td></tr>'; return; }
+    var maal=d.maal_kost_per_kontrakt||2000;
+    var h='<tr style="text-align:right;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em"><th style="text-align:left;padding:6px 8px">utm_content</th><th style="padding:6px 8px">Kanal</th><th style="padding:6px 8px">Biler</th><th style="padding:6px 8px">Estimat akseptert</th><th style="padding:6px 8px">Solgt / kontrakt</th><th style="padding:6px 8px">Avvist</th><th style="padding:6px 8px">Retur</th><th style="padding:6px 8px">Annonsekost</th><th style="padding:6px 8px">Kost per kontrakt</th></tr>';
+    v.forEach(function(x){
+      var kpk=x.kost_per_kontrakt, st=kpk==null?'color:#8A938D':(kpk<maal?'color:#1F7A4D;font-weight:700':'color:#B8452F;font-weight:700');
+      h+='<tr style="border-top:1px solid rgba(0,66,37,.08)"><td style="padding:6px 8px">'+esc(x.utm_content)+'</td>'+td(x.kanal)+td(x.biler)+td(x.akseptert)+td(x.solgt)+td(x.avvist)+td(x.retur)+td(kr(x.kost),x.kost==null?'color:#8A938D':'')+td(kpk==null?(x.kost!=null?'ingen salg':'mangler'):kr(kpk),st)+'</tr>';
+    });
+    t.innerHTML=h;
+    var f=document.getElementById('mk-video-fot'); if(f) f.textContent='Leads fra '+d.fra+'. Kost: '+d.kost_kilde+'. Grønt = under '+maal.toLocaleString('nb-NO')+' kr per kontrakt. Oppdatert '+new Date(d.bygget).toLocaleString('nb-NO')+'.';
+  }
+  function last(){ fetch('video-trakt.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(tegn).catch(function(){ var t=document.getElementById('mk-video'); if(t) t.innerHTML='<tr><td style="padding:10px">Fant ikke video-trakt.json.</td></tr>'; }); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', last); else last();
 })();
 </script>
