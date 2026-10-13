@@ -273,19 +273,20 @@
       var beg = [['FSD', ag.fsd], ['Benchmark', ag.benchmark]].filter(function (x) { return x[1] && x[1].begrunnelse; }).map(function (x) { return '<p style="margin:0 0 6px"><b>' + x[0] + ':</b> ' + esc(x[1].begrunnelse) + '</p>'; }).join('');
       // 7–8: fossefall Finn-utpris → A for begge modellene side om side, så A / B (A×0,90) / Ordna (A×0,75). Valgt arm markert.
       var armValgt = String(b.arm || '').toUpperCase();
-      // Fossefall som én tabell: Lag | FSD | Benchmark. Tallene står i egne kolonner (Mike 13.10: «jeg skal se tallene»).
+      // Fossefall én gang, for FSD-prisen (det er samme regnestykke). Benchmark: bare pris og hva kunden ville fått (Mike 13.10).
       var fF = ag.fsd && ag.fsd.fossefall && ag.fsd.fossefall.linjer ? ag.fsd.fossefall : null;
-      var fB = ag.benchmark && ag.benchmark.fossefall && ag.benchmark.fossefall.linjer ? ag.benchmark.fossefall : null;
+      var fB = ag.benchmark && ag.benchmark.fossefall ? ag.benchmark.fossefall : null;
+      var armTall = function (f) { return !f ? null : armValgt === 'B' ? f.b : armValgt === 'ORDNA' ? f.ordna : f.a; };
+      var armNavn = armValgt === 'ORDNA' ? 'Ordna' : (armValgt || 'A');
       var ffHtml = '';
-      if (fF || fB) {
-        var navnL = (fF || fB).linjer.map(function (l) { return l[0]; });
-        var verdi = function (f, n) { if (!f) return '–'; var l = f.linjer.filter(function (x) { return x[0] === n; })[0]; return l ? auKr(l[1]) : '–'; };
-        var rader = navnL.map(function (n) { return '<tr' + (/^=/.test(n) ? ' class="sum"' : '') + '><td>' + esc(n) + '</td><td class="tall">' + verdi(fF, n) + '</td><td class="tall">' + verdi(fB, n) + '</td></tr>'; });
-        rader.push('<tr class="sum"><td>= A (forventet bud)</td><td class="tall">' + (fF ? auKr(fF.a) : '–') + '</td><td class="tall">' + (fB ? auKr(fB.a) : '–') + '</td></tr>');
-        if (armValgt === 'B') rader.push('<tr class="sum"><td>= B (A × 0,90), valgt</td><td class="tall">' + (fF ? auKr(fF.b) : '–') + '</td><td class="tall">' + (fB ? auKr(fB.b) : '–') + '</td></tr>');
-        if (armValgt === 'ORDNA') rader.push('<tr class="sum"><td>= Ordna (A × 0,75), valgt</td><td class="tall">' + (fF ? auKr(fF.ordna) : '–') + '</td><td class="tall">' + (fB ? auKr(fB.ordna) : '–') + '</td></tr>');
-        ffHtml = '<table class="au-ag-fft"><tr><th></th><th class="tall">FSD</th><th class="tall">Benchmark</th></tr>' + rader.join('') + '</table>';
+      if (fF) {
+        var rader = fF.linjer.map(function (l) { return '<tr' + (/^=/.test(l[0]) ? ' class="sum"' : '') + '><td>' + esc(l[0]) + '</td><td class="tall">' + auKr(l[1]) + '</td></tr>'; });
+        rader.push('<tr class="sum"><td>= A (forventet bud)</td><td class="tall">' + auKr(fF.a) + '</td></tr>');
+        if (armValgt === 'B') rader.push('<tr class="sum"><td>= B (A × 0,90)</td><td class="tall">' + auKr(fF.b) + '</td></tr>');
+        if (armValgt === 'ORDNA') rader.push('<tr class="sum"><td>= Ordna (A × 0,75)</td><td class="tall">' + auKr(fF.ordna) + '</td></tr>');
+        ffHtml = '<table class="au-ag-fft">' + rader.join('') + '</table>';
       }
+      if (fB && armTall(fB)) ffHtml += '<div class="au-ny-liten" style="margin-top:6px">Med Benchmark (' + auKr(ag.benchmark.pris) + ') ville ' + armNavn + ' blitt ' + auKr(armTall(fB)) + '.</div>';
       var nyEl = document.createElement('div');
       nyEl.className = 'au-ny';
       nyEl.setAttribute('data-k', nokkel);
