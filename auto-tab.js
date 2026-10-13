@@ -69,7 +69,9 @@
     return false;
   }
   function auHentRuter(forste) {
-    fetch('auto-score.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+    var miniUrl = window.PA_PROXY_ERP && window.PA_TOKEN_ERP ? window.PA_PROXY_ERP.replace(/\/list\/$/, '/auto-score') + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP) + '&x=' + Date.now() : null;
+    var hent = function (u) { return fetch(u, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }); };
+    (miniUrl ? hent(miniUrl).catch(function () { return null; }).then(function (d) { return d || hent('auto-score.json?t=' + Date.now()); }) : hent('auto-score.json?t=' + Date.now()))
       .then(function (d) {
         if (!d) return;
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
@@ -188,29 +190,26 @@
     if (document.getElementById('au-ag-css')) return;
     var s = document.createElement('style'); s.id = 'au-ag-css';
     s.textContent =
-      '.au-ag-topp{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-start}' +
-      '.au-ag-id{font-weight:700;font-size:17px;line-height:1.3}.au-ag-id small{display:block;font-weight:500;font-size:13.5px;color:#5E6B62;margin-top:2px;font-variant-numeric:tabular-nums}' +
-      '.au-ag-kn{display:flex;gap:8px;flex-wrap:wrap}' +
-      '.au-ag-priser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}' +
-      '.au-ag-pris{border:1px solid #DCE1D9;border-radius:12px;padding:10px 12px}.au-ag-pris span{font-size:12.5px;color:#5E6B62}.au-ag-pris b{display:block;font-size:26px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}' +
-      '.au-ag-pris.fsd{border-color:#004225;background:#E6F0EA}.au-ag-pris b{color:#16201B}.au-ag-pris.fsd b{color:#004225}.au-ag-pris em{font-style:normal;font-size:11.5px;font-weight:700;color:#B8452F}' +
-      '.au-ag-avvik{font-size:13.5px;color:#5E6B62;margin-top:6px}.au-ag-avvik.stor{color:#B8452F;font-weight:600}' +
-      '.au-ag-flagg{list-style:none;margin:0;padding:0;display:grid;gap:6px}.au-ag-flagg li{background:#FBE9E5;border-left:4px solid #B8452F;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;color:#16201B}' +
-      '.au-ag-tab{overflow-x:auto}.au-ag-tab table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;min-width:460px}' +
-      '.au-ag-tab th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#5E6B62;font-weight:700;padding:4px 6px 4px 0}' +
-      '.au-ag-tab td{padding:6px 6px 6px 0;border-top:1px solid #E7EBE4}.au-ag-tab td.h,.au-ag-tab th.h{text-align:right}.au-ag-tab tr.en td{background:#FFF7D6}.au-ag-tab a{color:#004225}' +
-      '.au-ag-st{font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px}.au-ag-st.solgt{color:#004225;background:#E6F0EA}.au-ag-st.aktiv{color:#16201B;border:1px solid #DCE1D9}.au-ag-st.fjernet{color:#5E6B62;border:1px dashed #C9D0C5}' +
-      '.au-ag-ff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.au-ag-ff table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}' +
-      '.au-ag-ff td{padding:3px 0;border-top:1px solid #EEF1EC}.au-ag-ff td.h{text-align:right;white-space:nowrap}.au-ag-ff tr.sum td{font-weight:700;border-top:1px solid #C9D0C5}' +
-      '.au-ag-arm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.au-ag-arm div{border:1px solid #DCE1D9;border-radius:8px;padding:4px 5px;font-size:11px;min-width:0;overflow:hidden;color:#5E6B62}' +
-      '.au-ag-arm b{display:block;font-size:13px;white-space:nowrap;color:#16201B;font-variant-numeric:tabular-nums}.au-ag-arm div.valgt{border-color:#004225;background:#E6F0EA}.au-ag-arm div.valgt b{color:#004225}' +
-      '.au-ag-alt{display:grid;gap:12px;font-size:13.5px}.au-ag-alt h4{margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5E6B62}' +
-      '.au-ag-alt dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;margin:0}.au-ag-alt dt{color:#5E6B62}.au-ag-alt dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.au-ag-alt a{color:#004225}' +
-      '.au-ag-alt .au-ag-sett{display:flex;gap:8px}.au-ag-alt input{flex:1;min-width:0;border:1px solid #DCE1D9;border-radius:8px;padding:8px 10px;font:inherit}' +
-      '.au-ag-flagg{display:grid;gap:4px}.au-ag-flagg details{background:#FBE9E5;border-left:4px solid #B8452F;border-radius:6px;padding:5px 9px;font-size:13.5px}.au-ag-flagg summary{cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#16201B}.au-ag-flagg details div{margin-top:4px;line-height:1.4}' +
-      '.au-ag-plus summary{cursor:pointer;list-style:none;font-weight:600;font-size:13.5px;color:#004225}.au-ag-plus[open] summary{margin-bottom:8px}' +
-      '.au-ag-beg{font-size:13.5px;line-height:1.5;color:#3D4A42}.au-ag-beg b{color:#16201B}' +
-      '.au-ag-fork{font-size:13px;color:#5E6B62}.au-ag-fork summary{cursor:pointer;font-weight:600;color:#16201B}.au-ag-fork ul{margin:6px 0 0;padding-left:18px}.au-ag-fork a{color:#5E6B62}';
+      '.au-ny .au-send-topp{display:none!important}' +
+      '.au-ny{font-family:-apple-system,Helvetica,Arial,sans-serif;gap:10px;font-size:14px;color:#1B1F1D}' +
+      '.au-ag-topp{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid #E2E5E0;padding-bottom:8px}' +
+      '.au-ag-id{font-weight:600;font-size:15px}.au-ag-id small{font-weight:400;color:#6B726D;margin-left:6px;font-variant-numeric:tabular-nums}' +
+      '.au-ag-kn{display:flex;gap:6px}.au-ag-kn button{font:600 13px -apple-system,Helvetica,Arial,sans-serif;border-radius:4px;padding:7px 12px;cursor:pointer}' +
+      '.au-ag-kn .au-ny-send{background:#1F5132;color:#fff;border:1px solid #1F5132}.au-ag-kn .au-ny-send:disabled{opacity:.4}.au-ag-kn .au-ny-sek{background:#fff;color:#1B1F1D;border:1px solid #C9CEC8}' +
+      '.au-ag-tall{display:flex;flex-wrap:wrap;gap:4px 22px;font-variant-numeric:tabular-nums;align-items:baseline}.au-ag-tall span{color:#6B726D;font-size:12px;margin-right:4px}.au-ag-tall b{font-size:17px;font-weight:600}' +
+      '.au-ag-tall .rod{color:#A33A23}.au-ag-tall .valgt{text-decoration:underline;text-underline-offset:3px}' +
+      '.au-ag-flagg{display:grid;gap:2px}.au-ag-flagg details{font-size:13px;color:#A33A23}.au-ag-flagg summary{cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.au-ag-flagg details div{color:#1B1F1D;margin:2px 0 4px 12px}' +
+      '.au-ag-bilder{display:flex;gap:4px;overflow-x:auto}.au-ag-bilder img{height:64px;width:auto;display:block;border-radius:2px}.au-ag-bilder a{flex:0 0 auto}' +
+      '.au-ag-tab{overflow-x:auto}.au-ag-tab table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;min-width:440px}' +
+      '.au-ag-tab th{text-align:left;font-size:11px;color:#6B726D;font-weight:600;padding:2px 8px 2px 0;border-bottom:1px solid #E2E5E0}.au-ag-tab td{padding:3px 8px 3px 0;border-bottom:1px solid #F0F2EF}' +
+      '.au-ag-tab td.h,.au-ag-tab th.h{text-align:right}.au-ag-tab tr.en td{color:#8A6D10}.au-ag-tab a{color:#1F5132}' +
+      '.au-ag-plus summary{cursor:pointer;list-style:none;font-size:13px;color:#1F5132}.au-ag-plus>div,.au-ag-plus>dl{margin-top:6px}' +
+      '.au-ag-beg{font-size:13px;line-height:1.45}.au-ag-ff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.au-ag-ff table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}' +
+      '.au-ag-ff td{padding:2px 0}.au-ag-ff td.h{text-align:right}.au-ag-ff tr.sum td{font-weight:600;border-top:1px solid #E2E5E0}.au-ag-arm{display:none}' +
+      '.au-ag-alt{display:grid;gap:8px;font-size:13px}.au-ag-alt h4{margin:0;font-size:11px;color:#6B726D;font-weight:600}.au-ag-alt dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:0}.au-ag-alt dt{color:#6B726D}.au-ag-alt dd{margin:0;overflow-wrap:anywhere}' +
+      '.au-ag-sett{display:flex;gap:6px}.au-ag-sett input{flex:1;min-width:0;border:1px solid #C9CEC8;border-radius:4px;padding:6px 8px;font:inherit}.au-ag-sett button{border:1px solid #C9CEC8;background:#fff;border-radius:4px;padding:0 10px;cursor:pointer}' +
+      '.au-ag-fork{font-size:12.5px;color:#6B726D}.au-ag-fork ul{margin:4px 0 0;padding-left:16px}.au-ag-fork a{color:#6B726D}' +
+      '.au-ny-liten{font-size:12px;color:#6B726D}';
     document.head.appendChild(s);
   }
   function auAgentKort(c, b) {
@@ -230,9 +229,9 @@
         return null;
       }).filter(Boolean);
       var lign = b.bilde && b.bilde.kilde === 'lignende';
-      var galleri = bilder.length ? '<div><div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div><div class="au-ny-liten" style="color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + (lign ? 'Lignende bil fra Finn, ikke kundens bil' : bilder.length + ' bilder fra kunden · sveip for flere') + '</div></div>' : '<div class="au-ny-liten" style="color:#5E6B62">Ingen bilder fra kunden</div>';
+      var galleri = bilder.length ? '<div><div class="au-ag-bilder">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div><div class="au-ny-liten" style="color:' + (lign ? '#8A6D10' : '#5E6B62') + '">' + (lign ? 'Lignende bil fra Finn, ikke kundens bil' : bilder.length + ' bilder fra kunden · sveip for flere') + '</div></div>' : '<div class="au-ny-liten" style="color:#5E6B62">Ingen bilder fra kunden</div>';
       var bil = ag.bil || {};
-      var id = '<div class="au-ag-id">' + esc(b.regnr) + ' · ' + esc(bil.navn || b.bil || '') + '<small>' + (bil.modellaar ? 'Årsmodell ' + bil.modellaar + ' (' + esc(bil.kilde || 'car.info') + ') · ' : '') + (b.km != null ? auKr(b.km) + ' km' : '') + ' · <span class="au-ny-arm">' + esc(b.arm || '') + '</span></small></div>';
+      var id = '<div class="au-ag-id">' + esc(b.regnr) + ' · ' + esc(bil.navn || b.bil || '') + '<small>' + (bil.modellaar && String(bil.navn || '').indexOf(String(bil.modellaar)) < 0 ? bil.modellaar + ' · ' : '') + (b.km != null ? auKr(b.km) + ' km' : '') + ' · ' + esc(b.arm || '') + '</small></div>';
       var tv = (ag.tvillinger || []).map(function (t) {
         var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
         var navn = t.finnkode || 'annonse';
@@ -283,10 +282,13 @@
       nyEl.innerHTML =
         '<div class="au-ag-topp">' + id + '<div class="au-ag-kn"><button type="button" class="au-ny-send">Send</button><button type="button" class="au-ny-sek au-ag-ny">Ny vurdering</button></div></div>' +
         galleri +
-        '<div><div class="au-ag-priser">' + pris('FSD (Grok)', ag.fsd, 'fsd') + pris('Benchmark (Claude)', ag.benchmark, 'bench') + '</div>' +
-          (ag.avvik_pst != null ? '<div class="au-ag-avvik' + (ag.avvik_pst > 5 ? ' stor' : '') + '">Avvik ' + ag.avvik_pst + ' %</div>' : '') +
-          (ag.fsd && ag.fsd.fossefall && ag.fsd.fossefall.a ? '<div class="au-ag-arm">' + [['A', ag.fsd.fossefall.a], ['B', ag.fsd.fossefall.b], ['ORDNA', ag.fsd.fossefall.ordna]].map(function (y) { return '<div class="' + (String(b.arm || '').toUpperCase() === y[0] ? 'valgt' : '') + '">' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '<b>' + auKr(y[1]) + '</b></div>'; }).join('') + '</div>' : '') + '</div>' +
-        ((ag.flagg || []).length ? '<div class="au-ag-flagg">' + ag.flagg.map(function (f) { var kort = f.split(':')[0]; return '<details><summary>+ ' + esc(kort.length > 60 ? kort.slice(0, 57) + '…' : kort) + '</summary><div>' + esc(f) + '</div></details>'; }).join('') + '</div>' : '') +
+        '<div class="au-ag-tall">' +
+          '<div><span>FSD</span><b>' + (ag.fsd && ag.fsd.pris ? auKr(ag.fsd.pris) : (ag.fsd && ag.fsd.stopp ? 'stopp' : '–')) + '</b></div>' +
+          '<div><span>Benchmark</span><b>' + (ag.benchmark && ag.benchmark.pris ? auKr(ag.benchmark.pris) : '–') + '</b></div>' +
+          (ag.avvik_pst != null ? '<div><span>Avvik</span><b class="' + (ag.avvik_pst > 5 ? 'rod' : '') + '">' + ag.avvik_pst + ' %</b></div>' : '') +
+          (ag.fsd && ag.fsd.fossefall && ag.fsd.fossefall.a ? [['A', ag.fsd.fossefall.a], ['B', ag.fsd.fossefall.b], ['ORDNA', ag.fsd.fossefall.ordna]].map(function (y) { return '<div><span>' + (y[0] === 'ORDNA' ? 'Ordna' : y[0]) + '</span><b class="' + (String(b.arm || '').toUpperCase() === y[0] ? 'valgt' : '') + '">' + auKr(y[1]) + '</b></div>'; }).join('') : '') +
+        '</div>' +
+        ((ag.flagg || []).length ? '<div class="au-ag-flagg">' + ag.flagg.map(function (f) { var kort = f.split(':')[0]; return '<details><summary>⚑ ' + esc(kort.length > 70 ? kort.slice(0, 67) + '…' : kort) + '</summary><div>' + esc(f) + '</div></details>'; }).join('') + '</div>' : '') +
         (tv ? '<div class="au-ag-tab"><table><tr><th>Finnkode</th><th class="h">Pris</th><th class="h">Km</th><th>År</th><th>Trim</th><th>Status</th><th>Brukt av</th></tr>' + tv + '</table></div>' : '') +
         (fork ? '<details class="au-ag-fork"><summary>Forkastet (' + ag.forkastet.length + ')</summary><ul>' + fork + '</ul></details>' : '') +
         (beg ? '<details class="au-ag-plus"><summary>+ Begrunnelse</summary><div class="au-ag-beg">' + beg + '</div></details>' : '') +
