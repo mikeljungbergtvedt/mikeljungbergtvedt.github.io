@@ -214,6 +214,128 @@
     document.body.appendChild(o); document.addEventListener('keydown', tast); vis(0);
   });
   // c551: QA-kortet etter Mikes designmanual 13.10 (mobil først, 5 nummererte seksjoner, sticky topp/bunn, kvittering av røde varsler).
+  // c555: QA send som tett «heatmap»-rutenett i Unbox-stil (Mike 13.10). Farge = status: grønn ok, gul se på, rød må sjekkes.
+  function qtCss() {
+    if (document.getElementById('qt-css')) return;
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap'; document.head.appendChild(l);
+    var s = document.createElement('style'); s.id = 'qt-css';
+    s.textContent = [
+      '#qa-counters,.qa-finn-legends{display:none!important}',
+      '#qa-cards{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr))!important;gap:12px!important;justify-content:stretch!important;align-items:start}',
+      '.qa-card.au-ny-modus{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;max-width:none;width:100%}',
+      '.qa-card.au-ny-modus>:not(.au-ny){display:none!important}.qa-card.au-ny-modus .qa-send-btn,.qa-card.au-ny-modus .au-send-topp{display:none!important}',
+      '.qt{font-family:"Inter Tight",-apple-system,Helvetica,Arial,sans-serif;color:#16201B;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,40,20,.05),0 6px 18px rgba(0,40,20,.06);overflow:hidden;border-top:5px solid #2E7D4F;font-variant-numeric:tabular-nums}',
+      '.qt.gul{border-top-color:#E0A800}.qt.rod{border-top-color:#C62828}',
+      '.qt *{box-sizing:border-box}.qt table{width:100%!important;margin:0!important}.qt th,.qt td{text-transform:none!important;letter-spacing:normal!important;font-family:inherit!important}',
+      '.qt-hode{padding:10px 12px 0;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}',
+      '.qt-navn{font-size:14.5px;font-weight:700;line-height:1.25}.qt-meta{font-size:11.5px;color:#5E6B62;margin-top:1px}',
+      '.qt-spor{flex:0 0 auto;font-size:11px;font-weight:700;color:#004225;background:#E6F0EA;border-radius:999px;padding:2px 8px}',
+      '.qt-bilder{display:flex;gap:4px;overflow-x:auto;padding:8px 12px 0;scrollbar-width:none}.qt-bilder a{flex:0 0 auto;display:block}.qt-bilder img{height:52px;width:auto;border-radius:6px;display:block}',
+      '.qt-pris{margin:8px 12px 0;padding:8px 10px;border-radius:10px;background:#E6F0EA}.qt.gul .qt-pris{background:#FFF6D6}.qt.rod .qt-pris{background:#FBEAE8}',
+      '.qt-sum{font-size:21px;font-weight:800;color:#004225;letter-spacing:-.01em;white-space:nowrap}.qt-ki{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:11.5px;color:#5E6B62;margin-top:2px}.qt-ki b{color:#16201B;font-size:12.5px}',
+      '.qt-chip{font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;background:#fff;color:#004225}.qt-chip.rod{background:#C62828;color:#fff}.qt-chip.gul{background:#E0A800;color:#fff}',
+      '.qt-varsel{margin:6px 12px 0;font-size:12px;font-weight:600;color:#C62828;display:flex;gap:6px;align-items:flex-start;cursor:pointer}.qt-varsel span{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.qt-varsel span:hover{-webkit-line-clamp:unset}.qt-varsel input{width:18px;height:18px;flex:0 0 auto;margin:0;accent-color:#004225}',
+      '.qt-kom{margin:6px 12px 0;font-size:12.5px;line-height:1.35;background:#F7F4EE;border-radius:8px;padding:6px 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.qt-kom.tom{color:#5E6B62;background:none;padding:0}',
+      '.qt-tv{margin:6px 12px 0}.qt-tv a{display:flex;justify-content:space-between;gap:6px;font-size:12px;padding:4px 0;border-top:1px solid #EEF1EC;color:inherit;text-decoration:none}.qt-tv a.en{background:#FFF6D6}',
+      '.qt-tv a span:first-child{color:#5E6B62}.qt-tv a b{font-weight:600}.qt-tv small{color:#004225;font-weight:700;font-size:10px;margin-left:4px}',
+      '.qt details.qt-mer{margin:6px 12px 0;font-size:12.5px}.qt-mer summary{cursor:pointer;list-style:none;color:#004225;font-weight:600;min-height:32px;display:flex;align-items:center}',
+      '.qt-kv{width:100%;border-collapse:collapse;font-size:12px}.qt-kv td{padding:2px 0;color:#5E6B62}.qt-kv td:last-child{text-align:right;white-space:nowrap;color:#16201B}.qt-kv tr.sum td{font-weight:700;color:#16201B;border-top:1px solid #16201B}',
+      '.qt-fakta{font-size:11.5px;color:#5E6B62;line-height:1.5;margin:4px 0}',
+      '.qt-kn{display:grid;grid-template-columns:auto 1fr;gap:6px;padding:8px 12px 10px;margin-top:8px;border-top:1px solid #EEF1EC}',
+      '.qt-kn button{min-height:40px;border-radius:10px;font:600 13px "Inter Tight",-apple-system,Helvetica,Arial,sans-serif;cursor:pointer;padding:0 12px}',
+      '.qt-ny{background:#fff;color:#004225;border:1.5px solid #C9D3CC}.qt-send{background:#004225;color:#fff;border:0}.qt-send:disabled{background:#C9D0CB;cursor:not-allowed}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function qtKort(c, b) {
+    qtCss();
+    var ag = b.agent || {};
+    var nokkel = JSON.stringify([b.regnr, b.km, b.arm, b.erp_lav, b.erp_hoy, b.kunde_kommentar, b.bilde, ag]);
+    var ny = c.querySelector(':scope > .au-ny');
+    var arm = String(b.arm || 'A').toUpperCase(), armNavn = arm === 'ORDNA' ? 'Ordna' : arm;
+    if (!ny || ny.getAttribute('data-k') !== nokkel) {
+      var bil = ag.bil || {};
+      var navn = String(bil.navn || b.bil || '').split(',')[0];
+      var aar = bil.modellaar || ag.erp_aar || null;
+      var k = function (n) { return n ? auKr(n) : '–'; };
+      // Røde varsler (må kvitteres) og gule (se på)
+      var rode = [], gule = [];
+      (ag.historikk || []).filter(function (h) { return h.bud_avvist; }).forEach(function (h) { rode.push(['bud-' + h.id, 'Bud avvist hos oss ' + h.bud_avvist + ' (høyeste ' + k(h.hoyeste_bud) + ')']); });
+      if (ag.fsd && ag.fsd.stopp) rode.push(['stopp', 'FSD stoppet: ' + (ag.fsd.stopp_grunn || '')]);
+      if (!ag.fsd || !ag.fsd.pris) rode.push(['ingenpris', 'FSD har ingen Finn-utpris']);
+      if (ag.avvik_pst != null && ag.avvik_pst > 10) rode.push(['avvik', 'FSD og Benchmark er ' + ag.avvik_pst + ' % uenige']);
+      if (ag.eu_km && b.km != null && ag.eu_km.km > b.km) rode.push(['km', 'EU-kontroll ' + ag.eu_km.dato + ': ' + auKr(ag.eu_km.km) + ' km, ERP ' + auKr(b.km) + ' km']);
+      if (bil.kilde === 'vegvesen' || ag.reserve) rode.push(['carinfo', 'car.info kjenner ikke bilen']);
+      if (ag.avvik_pst != null && ag.avvik_pst > 5 && ag.avvik_pst <= 10) gule.push('Avvik ' + ag.avvik_pst + ' %');
+      if (b.kunde_kommentar) gule.push('Kunden har skrevet noe');
+      var pf = (ag.historikk || []).filter(function (h) { return h.lav; })[0];
+      if (pf) gule.push('Priset før');
+      var status = rode.length ? 'rod' : gule.length ? 'gul' : '';
+      var bilder = (b.bilde && b.bilde.kilde === 'kunde' && Array.isArray(b.bilde.bilder) ? b.bilde.bilder : []).map(function (x) {
+        if (x.url) return x.url;
+        if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+        return null;
+      }).filter(Boolean);
+      var chip = ag.avvik_pst == null ? '' : '<span class="qt-chip' + (ag.avvik_pst > 10 ? ' rod' : ag.avvik_pst > 5 ? ' gul' : '') + '">' + (ag.avvik_pst <= 5 ? 'Enige ' : 'Avvik ') + ag.avvik_pst + ' %</span>';
+      var tv = Array.isArray(ag.tvillinger) ? ag.tvillinger : [];
+      var tvRad = function (t) {
+        var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : '#');
+        return '<a class="' + (t.fsd && t.bench ? '' : 'en') + '" href="' + esc(url) + '" target="_blank" rel="noopener"><span>' + (t.km ? auKr(t.km) + ' km' : 'km ikke sjekket') + (t.aar ? ' · ' + t.aar : '') + (t.trim ? ' · ' + esc(String(t.trim).slice(0, 18)) : '') + '</span><span><b>' + k(t.pris) + '</b><small>' + (t.status === 'solgt' ? 'Solgt' : t.status === 'fjernet' ? 'Fjernet' : 'Ute') + '</small></span></a>';
+      };
+      var ff = ag.fsd && ag.fsd.fossefall;
+      var regn = '';
+      if (ff && ff.trinn) {
+        var r = [];
+        var forv = null, avg = null;
+        ff.trinn.forEach(function (l) {
+          if (l[0] === 'Forventet bud') forv = l[1];
+          if (l[0] === 'Peasy-avgift') avg = l[1];
+          if (l[0] === 'Midt' && forv != null && avg != null && l[1] != null) { var avr = l[1] - (Math.round(forv) + avg); if (avr) r.push('<tr><td>Avrundet</td><td>' + (avr > 0 ? '+ ' : '− ') + auKr(Math.abs(avr)) + '</td></tr>'); }
+          if (l[1] === 0 && l[2] !== 'start') return;
+          r.push('<tr' + (l[2] === 'sum' ? ' class="sum"' : '') + '><td>' + esc(l[0] === 'Midt' ? 'Midt (spor A)' : l[0]) + '</td><td>' + (l[1] == null ? 'ikke sjekket' : l[2] ? auKr(l[1]) : '− ' + auKr(Math.abs(l[1]))) + '</td></tr>');
+        });
+        r.push('<tr><td>Spenn</td><td>+ ' + auKr(ff.spenn.lav) + ' / + ' + auKr(ff.spenn.hoy) + '</td></tr>');
+        if (arm === 'B') r.push('<tr><td>Spor B: × 0,90</td><td>' + auKr(Math.round(ff.lav * 0.9)) + ' – ' + auKr(Math.round(ff.hoy * 0.9)) + '</td></tr>');
+        if (arm === 'ORDNA') r.push('<tr><td>Ordna: × 0,75</td><td>' + auKr(Math.round(ff.lav * 0.75)) + ' – ' + auKr(Math.round(ff.hoy * 0.75)) + '</td></tr>');
+        regn = '<table class="qt-kv">' + r.join('') + '</table>';
+      }
+      var ea = ag.egen_annonse;
+      var fakta = [pf ? 'Priset før ' + (pf.dato || '') + ': ' + auKr(pf.lav) + ' – ' + auKr(pf.hoy) : 'Ikke priset før',
+        ea == null ? 'Egen Finn-annonse: ikke sjekket' : ea.aktiv ? 'Egen Finn-annonse: ' + k(ea.pris) + (ea.dager != null ? ', ' + ea.dager + ' dager ute' : '') : 'Ingen egen Finn-annonse',
+        ag.eu_km ? 'EU-kontroll ' + auKr(ag.eu_km.km) + ' km (' + ag.eu_km.dato + ')' : 'EU-kontroll ikke sjekket'];
+      var el = document.createElement('div');
+      el.className = 'au-ny qt ' + status;
+      el.setAttribute('data-k', nokkel);
+      el.innerHTML =
+        '<div class="qt-hode"><div><div class="qt-navn">' + esc(navn || b.regnr) + '</div><div class="qt-meta">' + (aar || '') + (aar ? ' · ' : '') + (b.km != null ? auKr(b.km) + ' km · ' : '') + esc(b.regnr) + '</div></div><span class="qt-spor">Spor ' + armNavn + '</span></div>' +
+        (bilder.length ? '<div class="qt-bilder">' + bilder.map(function (u, i) { return '<a href="#" class="au-lb" data-ix="' + i + '" data-bilder="' + esc(JSON.stringify(bilder)) + '" aria-label="Bilde ' + (i + 1) + '"><img src="' + esc(u) + '" loading="lazy" alt=""></a>'; }).join('') + '</div>' : '') +
+        '<div class="qt-pris"><div class="qt-sum">' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) : 'Ikke priset') + '</div><div class="qt-ki"><span>FSD <b>' + (ag.fsd && ag.fsd.pris ? auKr(ag.fsd.pris) : '–') + '</b></span><span>Bench <b>' + (ag.benchmark && ag.benchmark.pris ? auKr(ag.benchmark.pris) : '–') + '</b></span>' + chip + '</div></div>' +
+        rode.map(function (x) { return '<label class="qt-varsel"><input type="checkbox" class="qt-kvitt" data-id="' + x[0] + '"><span>' + esc(x[1]) + '</span></label>'; }).join('') +
+        '<div class="qt-kom' + (b.kunde_kommentar ? '' : ' tom') + '">' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : 'Ingen kommentar') + '</div>' +
+        (tv.length ? '<div class="qt-tv">' + tv.slice(0, 3).map(tvRad).join('') + '</div>' : '') +
+        '<details class="qt-mer"><summary>Mer · ' + tv.length + ' like biler, regnestykke</summary>' +
+          (tv.length > 3 ? '<div class="qt-tv" style="margin:0">' + tv.slice(3).map(tvRad).join('') + '</div>' : '') +
+          ((ag.forkastet || []).length ? '<div class="qt-fakta">' + ag.forkastet.length + ' forkastet</div>' : '') +
+          regn + '<div class="qt-fakta">' + fakta.map(esc).join('<br>') + '</div></details>' +
+        '<div class="qt-kn"><button type="button" class="qt-ny">Ny vurdering</button><button type="button" class="qt-send">Send</button></div>';
+      var kv = {};
+      try { kv = JSON.parse(sessionStorage.getItem('qk-kvitt-' + b.id) || '{}'); } catch (_) {}
+      el.querySelectorAll('.qt-kvitt').forEach(function (x) { x.checked = !!kv[x.getAttribute('data-id')]; x.addEventListener('change', function () { kv[x.getAttribute('data-id')] = x.checked; try { sessionStorage.setItem('qk-kvitt-' + b.id, JSON.stringify(kv)); } catch (_) {} qtKnapper(c, el, b); }); });
+      el.querySelector('.qt-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (!this.disabled && eb && !eb.disabled) eb.click(); });
+      el.querySelector('.qt-ny').addEventListener('click', function (e) { e.preventDefault(); var cb = c.querySelector('.qa-clear-btn'); if (cb && !cb.disabled) cb.click(); });
+      if (ny) ny.replaceWith(el); else c.insertBefore(el, c.firstChild);
+      ny = el;
+      c.classList.add('au-ny-modus');
+    }
+    qtKnapper(c, ny, b);
+  }
+  function qtKnapper(c, el, b) {
+    var ekte = c.querySelector('.qa-send-btn'), send = el.querySelector('.qt-send');
+    var mangler = [].slice.call(el.querySelectorAll('.qt-kvitt')).filter(function (x) { return !x.checked; }).length;
+    send.disabled = !ekte || ekte.disabled || mangler > 0;
+    send.textContent = mangler > 0 ? 'Kvitter ' + mangler + ' varsel' : 'Send ' + (b.erp_lav ? Math.round(b.erp_lav / 1000) + '–' + Math.round(b.erp_hoy / 1000) + 'k' : '');
+    var cb = c.querySelector('.qa-clear-btn'); el.querySelector('.qt-ny').disabled = !cb || cb.disabled;
+  }
   function qkCss() {
     if (document.getElementById('qk-css')) return;
     var s = document.createElement('style'); s.id = 'qk-css';
@@ -626,7 +748,7 @@
       var c = kort[i], b = byId[auKortId(c)];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      try { if (b.agent) qkKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
+      try { if (b.agent) qtKort(c, b); else auVenterKort(c, b); } catch (e) { if (window.console) console.warn('au-ny', e); try { var fk = c.querySelector(':scope > .au-ny'); if (!fk) { fk = document.createElement('div'); fk.className = 'au-ny'; c.insertBefore(fk, c.firstChild); } fk.setAttribute('data-k', 'feil'); fk.innerHTML = '<div style="color:#A33A23;font-size:13px">Kortet kunne ikke tegnes (' + esc(e && e.message || e) + '). Gi beskjed til Claude.</div>'; } catch (_) {} }
       var info = [];
       auRyddKort(c, info);
       if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
@@ -831,7 +953,7 @@
       var nyF = c.querySelector(':scope > .au-ny'); if (nyF && c.firstChild !== nyF) c.insertBefore(nyF, c.firstChild);
     }
   }
-  window.__qkKort = qkKort;
+  window.__qkKort = qtKort;
   setInterval(auMerkQaKort, 1500);
 
   // Hva kunden gjorde: status fra ERP og grunn (valg + egne ord). Oppdateres hvert 10. min på Mini.
