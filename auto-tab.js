@@ -185,7 +185,7 @@
   function auNyttKort(c, b) {
     auNyCss();
     var pr = (b.enighet && b.enighet.priser) || {};
-    var nokkel = JSON.stringify([b.regnr, b.km, b.erp_lav, b.erp_hoy, pr, b.kunde_kommentar, b.naermeste, b.bilde, !!c.querySelector('.qa-anker-input')]);
+    var nokkel = JSON.stringify([b.regnr, b.km, b.erp_lav, b.erp_hoy, pr, b.kunde_kommentar, b.naermeste, b.agent, b.bilde, !!c.querySelector('.qa-anker-input')]);
     var ny = c.querySelector(':scope > .au-ny');
     if (!ny || ny.getAttribute('data-k') !== nokkel) {
       var k = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
@@ -200,6 +200,31 @@
       var lign = b.bilde && b.bilde.kilde === 'lignende';
       var galleri = bilder.length ? '<div class="au-ny-galleri">' + bilder.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" loading="lazy" alt="Bilde ' + (i + 1) + '"></a>'; }).join('') + '</div>' + (lign ? '<div class="au-ny-liten">Lignende bil fra Finn, ikke kundens bil</div>' : '') : '';
       var kanBruke = !!c.querySelector('.qa-anker-input');
+      // c539: FSD (Grok) og Benchmark (Claude) side om side når prising-agenten har levert (Mike 13.10).
+      var ag = b.agent || null;
+      var agKilde = function (navn, x, kildeKode, valgt) {
+        var v = x && x.pris;
+        var bruk = !valgt && v && kanBruke ? '<button type="button" class="au-ny-bruk" data-kilde="' + kildeKode + '" data-fu="' + Math.round(v / 1000) * 1000 + '" data-fra="' + (b.finn_utpris || '') + '">Bruk</button>' : '';
+        var tekst = x ? (x.stopp ? 'stopp' : x.feil ? 'feil' : k(v)) : 'venter';
+        return '<div class="au-ny-kilde' + (valgt ? ' valgt' : '') + '"><span>' + navn + '</span><b>' + tekst + '</b>' + bruk + '</div>';
+      };
+      var agDiff = ag && ag.fsd && ag.benchmark && ag.fsd.pris && ag.benchmark.pris ? Math.round(Math.abs(ag.fsd.pris - ag.benchmark.pris) / Math.min(ag.fsd.pris, ag.benchmark.pris) * 100) : null;
+      var tvRad = function (t) {
+        var st = t.status === 'solgt' ? '<span class="au-ny-solgt">solgt</span>' : '<span class="au-ny-ask">' + esc(t.status || 'aktiv') + '</span>';
+        var km = t.km ? auKr(t.km) + ' km' : '–';
+        var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
+        return '<tr><td>' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + km + '</a>' : km) + '</td><td>' + st + '</td><td class="h">' + auKr(t.pris) + '</td></tr>';
+      };
+      var agHtml = '';
+      if (ag) {
+        var f = ag.fsd || {}, bm = ag.benchmark || {};
+        agHtml = '<div><div class="au-ny-kilder" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + agKilde('FSD (Grok)', ag.fsd, 'fsd', true) + agKilde('Benchmark (Claude)', ag.benchmark, 'benchmark', false) + '</div>' +
+          '<div class="au-ny-enig' + (agDiff != null && agDiff <= 5 ? '' : ' uenig') + '" style="margin-top:6px">' + (agDiff != null ? (agDiff <= 5 ? 'Enige: ' : 'Uenige: ') + agDiff + ' %' : '') + (b.finn_utpris ? (agDiff != null ? ' · ' : '') + 'auto ' + k(b.finn_utpris) : '') + '</div></div>' +
+          (f.stopp ? '<div class="au-ny-kunde" style="background:#FBF1E3"><div class="au-ny-etikett" style="color:#8A4B12">FSD stoppet bilen</div><p style="font-size:14.5px">' + esc(f.stopp_grunn || '') + '</p></div>' : '') +
+          (f.begrunnelse ? '<div class="au-ny-under" style="line-height:1.45">' + esc(f.begrunnelse) + '</div>' : '') +
+          ((f.tvillinger || []).length ? '<div class="au-ny-tv"><div class="au-ny-etikett">FSD sine tvillinger</div><table>' + f.tvillinger.map(tvRad).join('') + '</table></div>' : '') +
+          ((bm.tvillinger || []).length ? '<details class="au-ny-tv"><summary class="au-ny-etikett" style="cursor:pointer">Benchmark sine tvillinger' + (bm.pris ? ' · ' + auKr(bm.pris) : '') + '</summary>' + (bm.begrunnelse ? '<div class="au-ny-under" style="margin:6px 0">' + esc(bm.begrunnelse) + '</div>' : '') + '<table>' + bm.tvillinger.map(tvRad).join('') + '</table></details>' : '');
+      }
       var kilder = [['auto', 'Auto'], ['skygge', 'Skygge'], ['cc', 'CC']].map(function (x) {
         var v = pr[x[0]];
         var bruk = x[0] !== 'auto' && v && kanBruke ? '<button type="button" class="au-ny-bruk" data-kilde="' + (x[0] === 'cc' ? 'cc' : 'grok') + '" data-fu="' + Math.round(v / 1000) * 1000 + '" data-fra="' + (b.finn_utpris || '') + '">Bruk</button>' : '';
@@ -219,9 +244,9 @@
         galleri +
         '<div class="au-ny-kunde"><div class="au-ny-etikett">Kunden skriver</div><p>' + (b.kunde_kommentar ? '«' + esc(b.kunde_kommentar) + '»' : '<span class="au-ny-dempet">Ingen kommentar</span>') + '</p></div>' +
         '<div><div class="au-ny-etikett">Estimat til kunden</div><div class="au-ny-estimat">' + (b.erp_lav ? auKr(b.erp_lav) + ' – ' + auKr(b.erp_hoy) + ' kr' : 'Ikke priset') + '</div>' +
-          '<div class="au-ny-under">' + (b.finn_utpris ? 'Bygget på Finn-utpris ' + auKr(b.finn_utpris) + ' (auto)' : 'Auto har ingen Finn-utpris') + '</div></div>' +
-        '<div><div class="au-ny-kilder">' + kilder + '</div><div class="au-ny-enig' + (sp != null && sp <= 5 ? '' : ' uenig') + '" style="margin-top:6px">' + esc(enTekst) + '</div></div>' +
-        (tv ? '<div class="au-ny-tv"><div class="au-ny-etikett">Nærmeste like biler (car.info)</div><table>' + tv + '</table></div>' : '') +
+          '<div class="au-ny-under">' + (b.finn_utpris ? 'Bygget på Finn-utpris ' + auKr(b.finn_utpris) + (ag && ag.erp && ag.erp.skrevet ? ' (FSD)' : ' (auto)') : 'Ingen Finn-utpris') + '</div></div>' +
+        (ag ? agHtml : '<div><div class="au-ny-kilder">' + kilder + '</div><div class="au-ny-enig' + (sp != null && sp <= 5 ? '' : ' uenig') + '" style="margin-top:6px">' + esc(enTekst) + '</div></div>' +
+        (tv ? '<div class="au-ny-tv"><div class="au-ny-etikett">Nærmeste like biler (car.info)</div><table>' + tv + '</table></div>' : '')) +
         '<div class="au-ny-knapper"><button type="button" class="au-ny-send">Send</button><button type="button" class="au-ny-sek au-ny-endre">Endre pris</button><button type="button" class="au-ny-sek au-ny-alt">Vis alt</button></div>';
       nyEl.querySelector('.au-ny-send').addEventListener('click', function (e) { e.preventDefault(); var eb = c.querySelector('.qa-send-btn'); if (eb && !eb.disabled) eb.click(); });
       nyEl.querySelector('.au-ny-alt').addEventListener('click', function (e) { e.preventDefault(); c.classList.toggle('au-vis-alt'); this.textContent = c.classList.contains('au-vis-alt') ? 'Skjul' : 'Vis alt'; });
