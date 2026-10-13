@@ -190,6 +190,7 @@
     if (document.getElementById('au-ag-css')) return;
     var s = document.createElement('style'); s.id = 'au-ag-css';
     s.textContent =
+      '#qa-cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),440px))!important;justify-content:start!important}' +
       '.au-ny .au-send-topp{display:none!important}' +
       '.au-ny{font-family:-apple-system,Helvetica,Arial,sans-serif;gap:10px;font-size:14px;color:#1B1F1D}' +
       '.au-ag-topp{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid #E2E5E0;padding-bottom:8px}' +
