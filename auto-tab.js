@@ -4,13 +4,16 @@
   (function () {
     if (document.getElementById('qa572-css')) return;
     var s = document.createElement('style'); s.id = 'qa572-css';
-    s.textContent = '.au-hode{container-type:inline-size}.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px}@container (max-width:430px){.au-hode-l .au-eier{display:none}}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
+    s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
     (document.head || document.documentElement).appendChild(s);
   })();
   function auFsdBokser(c, b) {
     var ag = b.agent;
     if (!ag) return;
     auFsdGraf(c, b, ag);
+    auPrisTag(c, ag);
+    auEierPlass(c);
+    if (c.querySelector('table.au-tv2')) auStickyLefts(c);
     var lbl = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
     var grid = lbl && lbl.parentElement && lbl.parentElement.parentElement;
     if (!grid || grid.getAttribute('data-fsd') === '2') return;
@@ -35,19 +38,19 @@
       ['År', function (x, egen) { return egen ? refAar : aarAv(x); }, refAar],
       ['Hk', hkAv, hkAv(me)],
     ];
-    if (ev) felt.push(['Batteri', kwh, kwh(me)], ['Rekkev.', rekk, rekk(me), function (a, b) { var x = parseInt(String(a).replace(/\D/g, ''), 10), y = parseInt(String(b).replace(/\D/g, ''), 10); return !x || !y || Math.abs(x - y) / y <= 0.05; }]);
+    if (ev) felt.push(['Batteri', kwh, kwh(me)], ['Rekkev.', rekk, me.rekkevidde_kilde === 'vegvesen' ? null : rekk(me), function (a, b) { var x = parseInt(String(a).replace(/\D/g, ''), 10), y = parseInt(String(b).replace(/\D/g, ''), 10); return !x || !y || Math.abs(x - y) / y <= 0.05; }]);
     felt.push(['Gir', gir, gir(me)], ['Drift', drv, drv(me)], ['Karosseri', kar, kar(me)]);
     var td = 'padding:5px 10px 5px 0;border-top:1px solid #E7EBE4;vertical-align:top;white-space:nowrap';
     var cel = function (v, ref, egen, lik) { var avvik = !egen && ref != null && (lik ? !lik(v, ref) : String(v) !== String(ref)); return v == null || v === '' ? '<span style="color:#9AA39C">–</span>' : (avvik ? '<b style="color:' + AU_AVVIK_RED + '">' + esc(v) + '</b>' : esc(v)); };
-    var st = function (i) { return ';position:sticky;left:' + [0, 76, 138, 204][i] + 'px;background:inherit;z-index:1'; };
+    var st = function (i, ekstra) { return ';position:sticky;left:0;background:inherit;z-index:2' + (ekstra || '') + '" data-s="' + i; };
     var rad = function (x, egen, id, km, pris, status) {
-      return '<tr style="background:' + (egen ? '#F3F6F4' : '#fff') + '"><td style="' + td + st(0) + '">' + id + '</td><td style="' + td + st(1) + ';text-align:right">' + km + '</td><td style="' + td + st(2) + ';text-align:right">' + pris + '</td><td style="' + td + st(3) + ';border-right:1px solid #E7EBE4">' + status + '</td>' +
+      return '<tr style="background:' + (egen ? '#F3F6F4' : '#fff') + '"><td style="' + td + st(0) + '">' + id + '</td><td style="' + td + st(1, ';text-align:right') + '">' + km + '</td><td style="' + td + st(2, ';text-align:right') + '">' + pris + '</td><td style="' + td + st(3, ';border-right:1px solid #E7EBE4') + '">' + status + '</td>' +
         '<td style="' + td + ';max-width:190px;overflow:hidden;text-overflow:ellipsis;padding-left:8px" title="' + esc(mdl(x)) + '">' + esc(mdl(x) || '–') + '</td>' +
         felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + '</td>'; }).join('') + '</tr>';
     };
     var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
     if (tv.length) {
-      html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="au-tv2" style="border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:100%"><tr style="text-align:left;color:#5E6B62;font-size:11px;background:#fff"><th style="width:70px;min-width:70px' + st(0) + '">Finn</th><th style="width:56px;min-width:56px;text-align:right' + st(1) + '">Km</th><th style="width:60px;min-width:60px;text-align:right' + st(2) + '">Pris</th><th style="width:46px;min-width:46px' + st(3) + ';border-right:1px solid #E7EBE4">Status</th><th style="padding-left:8px">Modell / variant</th>' +
+      html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="au-tv2" style="border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:100%"><tr style="text-align:left;color:#5E6B62;font-size:11px;background:#fff"><th style="width:70px;min-width:70px' + st(0) + '">Finn</th><th style="width:56px;min-width:56px;text-align:right' + st(1) + '">Km</th><th style="width:60px;min-width:60px;text-align:right' + st(2) + '">Pris</th><th style="width:46px;min-width:46px' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="padding-left:8px">Modell / variant</th>' +
         felt.map(function (f) { return '<th>' + f[0] + '</th>'; }).join('') + '</tr>' +
         rad(me, true, '<b>Bilen</b>', b.km != null ? auKr(b.km) : '–', '', '') +
         tv.map(function (t) {
@@ -57,6 +60,7 @@
         }).join('') + '</table></div>';
     } else html += '<div style="font-size:12.5px;color:#5E6B62">FSD og Benchmark har ingen tvillinger for bilen.</div>';
     grid.setAttribute('data-fsd', '2');
+    setTimeout(function () { auStickyLefts(grid); }, 0);
     grid.style.cssText = 'margin-bottom:8px;padding:10px 12px;border:1px solid #DCE1D9;border-radius:8px;background:#fff;min-width:0';
     grid.innerHTML = html;
   }
@@ -101,7 +105,7 @@
   // c575: dempede statusfarger og avviksvarsel (Mike 13.10). Terskel = clamp(5 % av Mid, 5 000, 50 000). Ikke en blokkering.
   var AU_DEMPET = {
     g: { bak: '#EEF5F0', kant: '#8DB89D', tekst: '#2F5E43' },
-    y: { bak: '#FAF2E4', kant: '#D8B07A', tekst: '#7A5422' },
+    y: { bak: '#F7F1DC', kant: '#D3C07E', tekst: '#6B5A1F' },
     r: { bak: '#F8ECEC', kant: '#D19A9A', tekst: '#8A3B3B' }
   };
   var AU_AVVIK_RED = '#A65B52';
@@ -112,6 +116,28 @@
     var diff = f && bm ? Math.abs(f - bm) : null;
     var terskel = mid ? auTerskel(mid) : null;
     return { mid: mid, diff: diff, terskel: terskel, varsel: !!(diff != null && terskel && diff > terskel) };
+  }
+  // c576: faste kolonner (Finn, Km, Pris, Status) får left = faktisk posisjon, så de aldri dekker modellteksten.
+  function auStickyLefts(root) {
+    var t = root.querySelector('table.au-tv2'); if (!t) return;
+    var box = t.parentElement, sl = box.scrollLeft; box.scrollLeft = 0;
+    var alle = t.querySelectorAll('[data-s]');
+    [].forEach.call(alle, function (c) { c.style.left = 'auto'; });
+    var t0 = t.getBoundingClientRect().left;
+    var lefts = [].map.call(t.querySelectorAll('tr:first-child [data-s]'), function (th) { return Math.round(th.getBoundingClientRect().left - t0); });
+    box.scrollLeft = sl;
+    [].forEach.call(alle, function (c) { c.style.left = (lefts[Number(c.getAttribute('data-s'))] || 0) + 'px'; });
+  }
+  function auEierPlass(c) {
+    var l = c.querySelector('.au-hode-l'), e = l && l.querySelector('.au-eier');
+    if (!e) return; e.style.display = ''; if (l.scrollWidth > l.clientWidth + 1) e.style.display = 'none';
+  }
+  // c576: «Manuell · X» bare når Finn-prisen er satt for hånd. Ellers «Merged · X» (Mid av FSD og Benchmark).
+  function auPrisTag(c, ag) {
+    var pill = c.querySelector('.qa-chef-pill'); if (!pill || !ag.pris_kilde) return;
+    var tall = (pill.textContent.split('·')[1] || '').trim();
+    var ny = (ag.pris_kilde.kilde === 'manuell' ? 'Manuell' : 'Merged') + ' · ' + tall;
+    if (pill.textContent !== ny) { pill.textContent = ny; pill.title = ag.pris_kilde.kilde === 'manuell' ? 'Finn-pris satt for hånd' : 'Mid = (FSD + Benchmark) / 2'; }
   }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
@@ -469,7 +495,7 @@
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         var midt0 = ['FSD ' + kk(fP0), 'Bench ' + kk(bP0)];
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
-        nyHtml = '<div class="au-hode" style="background:' + hB + ';border-left:3px solid ' + hK + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
+        nyHtml = '<div class="au-hode" style="background:' + hB + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (agF.fsd && agF.fsd.stopp ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(agF.fsd.stopp_grunn || 'FSD stoppet bilen') + '</div>' : '') + '</div>' +
