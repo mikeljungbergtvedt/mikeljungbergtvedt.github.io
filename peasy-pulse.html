@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c585</title>
+<title>Peasy Pulse v16.08.c586</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c585';</script>
+<script>document.title='Peasy Pulse v16.08.c586';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c585</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c586</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c585</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c586</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2900,6 +2900,7 @@ function opsIDag(rows){
   var solgt=all.filter(function(r){
     if(pulseIsSoldToday(r)||(r._salg&&pulseIsToday(r._salg))) return true;
     var live=ev[String(r[1]||'').trim().split(/\s+/)[0].toUpperCase()];
+    if(live&&live.peasy_car_id!=null&&String(live.peasy_car_id)!==String(r[0]).trim()) return false; /* c586: bare samme internnr */
     return !!(live&&AKSEPT_ST[String(live.status||'').toUpperCase()]&&live.dateNO&&pulseIsToday(live.dateNO)&&!pulseSoldDate(r));
   });
   var retur=all.filter(function(r){return pulseIsToday(bokRetur(r));});
@@ -3312,11 +3313,17 @@ function overlayErpEvents(rows){
       if(!j||!j.ok||!j.byRegnr) return rows;
       window._erpEvents=j;
       var n=0;
+      /* c586: hendelsen gjelder én registrering (internnr). Samme bil kan være registrert flere ganger:
+         bruk peasy_car_id; mangler den, bare nyeste internnr for regnr. Aldri gamle registreringer (Mike 14.10). */
+      var nyeste={};
+      for(var i0=1;i0<rows.length;i0++){var r0=rows[i0];if(!r0)continue;var g0=String(r0[1]||'').trim().split(/\s+/)[0].toUpperCase();var n0=Number(r0[0])||0;if(!nyeste[g0]||n0>nyeste[g0])nyeste[g0]=n0;}
       for(var i=1;i<rows.length;i++){
         var r=rows[i]; if(!r) continue;
         var reg=String(r[1]||'').trim().split(/\s+/)[0].toUpperCase();
         var live=j.byRegnr[reg];
         if(!live) continue;
+        var liveId=live.peasy_car_id!=null?String(live.peasy_car_id):'';
+        if(liveId ? String(r[0]).trim()!==liveId : (Number(r[0])||0)!==nyeste[reg]) continue;
         n++;
         var xlsxSt=String(r[12]||'').trim();
         var liveRank=statusRank(live.pulseStatus, live.status);
@@ -7182,7 +7189,7 @@ function buildErpRowMaps(){
     if(!r||!r.length)return;
     var erpId=r[0];var regnr=r[1];
     if(erpId!==undefined&&erpId!==null&&erpId!=='')byErpId[String(erpId)]=r;
-    if(regnr)byRegnr[String(regnr).toUpperCase()]=r;
+    if(regnr){var rk0=String(regnr).toUpperCase();if(!byRegnr[rk0]||(Number(erpId)||0)>(Number(byRegnr[rk0][0])||0))byRegnr[rk0]=r;} /* c586: nyeste internnr */
   });
   return {byErpId:byErpId,byRegnr:byRegnr};
 }
@@ -7200,7 +7207,7 @@ function bilNavnForRecord(r,erpRow){
 }
 function findErpRowForRecord(r){
   var maps=window._v2bmErpMaps||{byErpId:{},byRegnr:{}};
-  if(r.erpId!==undefined&&r.erpId!==null){var hit=maps.byErpId[String(r.erpId)];if(hit)return hit;}
+  if(r.erpId!==undefined&&r.erpId!==null&&r.erpId!==''){return maps.byErpId[String(r.erpId)]||null;} /* c586: har målingen internnr, aldri en annen registrering */
   if(r.regnr){var hitR=maps.byRegnr[String(r.regnr).toUpperCase()];if(hitR)return hitR;}
   return null;
 }
@@ -9337,7 +9344,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c585</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c586</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13642,7 +13649,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
 <script src="laering-tab.js?v=c467"></script>
 <script src="gb-ml-tab.js?v=c492"></script>
-<script src="auto-tab.js?v=202610140930a"></script>
+<script src="auto-tab.js?v=202610141300a"></script>
 <script src="bud-tab.js?v=202609291753"></script>
 
 <script>
