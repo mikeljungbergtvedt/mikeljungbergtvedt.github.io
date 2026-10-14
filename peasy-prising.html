@@ -74,6 +74,15 @@
     opacity:0;animation:pop .4s var(--ease) forwards}
   .chip.k{color:var(--white);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
 
+  /* ===== 0 INTRO ===== */
+  .intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .intro .logo{position:relative;font-size:200px;font-weight:900;letter-spacing:-.06em;line-height:1;opacity:0;animation:pop .9s .3s var(--ease) forwards}
+  .intro .logo .sp{right:-40px;top:-14px;width:108px;height:72px}
+  .intro .line{width:0;height:1px;margin:40px 0 34px;background:linear-gradient(90deg,transparent,var(--line),transparent);animation:lineGrow 1s 1.2s var(--ease) forwards}
+  @keyframes lineGrow{to{width:760px}}
+  .intro .t{font-family:var(--mono);font-size:17px;letter-spacing:.34em;text-transform:uppercase;color:var(--mute);opacity:0;animation:fadeUp .8s 1.7s var(--ease) forwards}
+  .intro .t b{color:var(--white);font-weight:500}
+
   /* ===== 1 ERP ===== */
   .erp{position:absolute;left:50%;top:50%;width:1500px;height:640px;margin:-320px 0 0 -750px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0a1410;overflow:hidden;
     display:grid;grid-template-columns:300px 1fr;transform-origin:58% 46%;animation:erpZoom 7.5s .2s var(--ease) forwards;box-shadow:0 40px 100px rgba(0,0,0,.6)}
@@ -263,8 +272,17 @@
   <div class="hud tr"><small>T+</small><span id="tc">00:00.0</span></div>
   <div class="scenetag" id="scenetag"></div>
   <div class="hud bl">EF••551 · Taycan 4S · 2020</div>
-  <div class="hud br"><span id="ver" style="color:var(--mute)">v5</span> &nbsp;·&nbsp; <span id="spd" title="Hastighet (tastene 1–4, eller klikk)" style="cursor:pointer">1×</span> &nbsp;·&nbsp; <span id="snd" title="Lyd av/på (M)" style="cursor:pointer">♪ lyd på</span></div>
+  <div class="hud br"><span id="ver" style="color:var(--mute)">v6</span> &nbsp;·&nbsp; <span id="spd" title="Hastighet (tastene 1–5, eller klikk)" style="cursor:pointer">1,75×</span> &nbsp;·&nbsp; <span id="snd" title="Lyd av/på (M)" style="cursor:pointer">♪ lyd på</span></div>
   <div class="steps" id="steps"></div>
+
+  <!-- 0 INTRO -->
+  <section class="scene" id="s0">
+    <div class="intro">
+      <div class="logo">peasy<span class="sp"><svg viewBox="0 0 70 46"><path fill="#24d58e" d="M2 46 Q14 6 70 0 L70 14 Q28 14 8 46 Z"/></svg></span></div>
+      <div class="line"></div>
+      <div class="t"><b>Peasy</b> bruker nyeste teknologi for å verdivurdere din bil</div>
+    </div>
+  </section>
 
   <!-- 1 ERP -->
   <section class="scene" id="s1">
@@ -381,10 +399,11 @@
 
 <script>
 (function(){
-  const DUR=[8000,22000,6000,28000,8000,20000,10000,10000]; // 112 s
-  const SCENES=[]; let acc=0; DUR.forEach((d,i)=>{SCENES.push({id:'s'+(i+1),start:acc,end:acc+d});acc+=d;});
+  const INTRO=6000;
+  const DUR=[INTRO,8000,22000,6000,28000,8000,20000,10000,10000]; // intro + 112 s
+  const SCENES=[]; let acc=0; DUR.forEach((d,i)=>{SCENES.push({id:'s'+i,start:acc,end:acc+d});acc+=d;});
   const TOTAL=acc;
-  const TAGS=['01 · ERP · Liste 1','02 · Data-agent · Origin-CV','03 · Porten','04 · Agent A · Agent B','05 · Snitt','06 · CFO · Fossefall','07 · Mennesket','08 · Tilbake til ERP'];
+  const TAGS=['','01 · ERP · Liste 1','02 · Data-agent · Origin-CV','03 · Porten','04 · Agent A · Agent B','05 · Snitt','06 · CFO · Fossefall','07 · Mennesket','08 · Tilbake til ERP'];
   const $=s=>document.querySelector(s);
   const stage=$('#stage');
   const fmt=n=>Math.round(n).toLocaleString('nb-NO').replace(/ |,/g,' ');
@@ -392,7 +411,7 @@
 
   function fit(){ stage.style.transform='scale('+Math.min(innerWidth/1920,innerHeight/1080)+')'; }
   addEventListener('resize',fit); fit();
-  const steps=$('#steps'); SCENES.forEach(()=>steps.appendChild(document.createElement('b')));
+  const steps=$('#steps'); for(let i=0;i<DUR.length-1;i++) steps.appendChild(document.createElement('b'));
 
   /* ---- matrix rain ---- */
   (function(){ const c=$('#matrix'),x=c.getContext('2d'); const cols=Math.floor(1920/22); const drops=Array.from({length:cols},()=>Math.random()*-60);
@@ -420,6 +439,7 @@
     const p=document.createElementNS(SVG,'path'); p.setAttribute('d',d); p.style.animationDelay=delay+'s'; svg.appendChild(p);
     for(let i=0;i<(dots||2);i++){ const c=document.createElementNS(SVG,'circle'); c.setAttribute('r',4); c.style.offsetPath='path("'+d+'")'; c.style.animationDelay=(delay+0.6+i*0.5)+'s'; svg.appendChild(c);} }
   const build={
+    s0(){ st(()=>ping(330,1.6,.1),300); st(()=>ping(495,1.2,.07),1700); },
     s2(){ const svg=$('#wires2 svg'); svg.innerHTML=''; const ys=[260,414,583,742];
       ys.forEach((y,i)=>wire(svg,570,y,860,540,1.4+i*1.6,3)); wire(svg,1060,540,1360,300,2.0,3); wire(svg,1060,540,1360,540,2.3,3);
       const cv=$('#cv'); cv.querySelectorAll('.line').forEach(e=>e.remove());
@@ -460,12 +480,12 @@
 
   /* ---- playback ---- */
   const BASE=1.2; // film runs 20 % faster than authored
-  let cur=null,outTimer=null,playing=false,filmT=0,lastNow=0,mult=1,rate=BASE;
-  const RATES=[1,1.25,1.5,2];
+  let cur=null,outTimer=null,playing=false,filmT=0,lastNow=0,mult=1.75,rate=BASE*1.75;
+  const RATES=[1,1.25,1.5,1.75,2];
   function applyRate(){ $('#spd').textContent=(mult+'').replace('.',',')+'×'; document.getAnimations().forEach(a=>{ a.playbackRate=rate; }); }
   function setRate(m){ mult=m; rate=BASE*m; applyRate(); }
   $('#spd').addEventListener('click',()=>setRate(RATES[(RATES.indexOf(mult)+1)%RATES.length]));
-  addEventListener('keydown',e=>{ const i=parseInt(e.key,10); if(i>=1&&i<=4) setRate(RATES[i-1]); });
+  addEventListener('keydown',e=>{ const i=parseInt(e.key,10); if(i>=1&&i<=5) setRate(RATES[i-1]); });
   const st=(fn,ms)=>setTimeout(fn,ms/rate);
   const overlay=$('#overlay'),playBtn=$('#play'),playLabel=$('#playLabel'),tc=$('#tc'),scenetag=$('#scenetag');
   function enterFullscreen(){ const el=document.documentElement; try{ const r=el.requestFullscreen?el.requestFullscreen():el.webkitRequestFullscreen?el.webkitRequestFullscreen():null; if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
@@ -474,7 +494,7 @@
     if(cur){ const old=$('#'+cur); old.classList.add('out'); clearTimeout(outTimer); outTimer=setTimeout(()=>old.classList.remove('on','out'),500/rate); }
     const el=$('#'+sc.id); if(build[sc.id]) build[sc.id]();
     el.classList.remove('on','out'); void el.offsetWidth; el.classList.add('on'); cur=sc.id; applyRate();
-    [...steps.children].forEach((b,i)=>b.classList.toggle('cur',i===idx));
+    [...steps.children].forEach((b,i)=>b.classList.toggle('cur',i===idx-1));
     scenetag.classList.remove('on'); scenetag.textContent=TAGS[idx]; void scenetag.offsetWidth; scenetag.classList.add('on');
     ping(196,.4,.06);
   }
@@ -486,7 +506,7 @@
   function tick(now){
     if(!playing) return;
     filmT+=(now-lastNow)*rate; lastNow=now; const t=filmT; if(t>=TOTAL){ finish(); return; }
-    const s=t/1000; tc.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+Math.floor((s%1)*10);
+    const s=Math.max(0,t-INTRO)/1000; tc.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+Math.floor((s%1)*10);
     for(let i=0;i<SCENES.length;i++){ const sc=SCENES[i]; if(t>=sc.start&&t<sc.end){ if(cur!==sc.id) activate(sc,i); break; } }
     requestAnimationFrame(tick);
   }
