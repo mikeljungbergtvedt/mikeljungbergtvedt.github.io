@@ -19,6 +19,7 @@
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
     auAarTopp(c, b, b.agent);
+    auKmTopp(c, b, b.agent);
     // c579: knapperaden nederst, på linje mellom kortene i samme rad.
     var kn = c.querySelector('.qa-detail-btn') || c.querySelector('.qa-clear-btn');
     if (kn && kn.parentElement && !kn.parentElement.classList.contains('qa-actions')) kn.parentElement.classList.add('qa-actions');
@@ -80,7 +81,7 @@
     if (tv.length) {
       html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="au-tv2" style="border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:100%"><tr style="text-align:left;color:#5E6B62;font-size:11px;background:#fff"><th style="width:70px;min-width:70px' + st(0) + '">Finn</th><th style="width:56px;min-width:56px;text-align:right' + st(1) + '">Km</th><th style="width:60px;min-width:60px;text-align:right' + st(2) + '">Pris</th><th style="width:46px;min-width:46px' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="padding-left:8px">Modell / variant</th>' +
         felt.map(function (f) { return '<th>' + f[0] + '</th>'; }).join('') + '</tr>' +
-        rad(me, true, '<b>Bilen</b>', b.km != null ? auKr(b.km) : '–', '', '') +
+        rad(me, true, '<b>Bilen</b>', auKm(ag, b) != null ? auKr(auKm(ag, b)) : '–', '', '') +
         tv.map(function (t) {
           var url = t.lenke || (t.finnkode ? 'https://www.finn.no/mobility/item/' + t.finnkode : null);
           var kode = (String(url || '').match(/(\d{6,})/) || [])[1] || '–';
@@ -233,7 +234,7 @@
       var id = 'au-cvx-' + b.id;
       html = '<div class="qa-origin-cv-h">ORIGIN-CV<button type="button" class="au-cv-pluss" data-t="' + id + '" title="Åpne hele car.info-returen" style="border:1px solid #DCE1D9;background:#fff;border-radius:5px;width:22px;height:20px;cursor:pointer;font-weight:700;color:#0F6E66">+</button></div>' +
         rad(esc(String(b.id)) + ' · ' + esc(b.regnr)) +
-        rad('ERP ' + (b.km != null ? auKr(b.km) + ' km' : 'km –')) +
+        rad('ERP ' + (auKm(ag, b) != null ? auKr(auKm(ag, b)) + ' km' : 'km –') + auKmMerke(ag, b)) +
         rad(esc(navn)) +
         rad([hk ? hk + ' hk' : null, ci.drivstoff ? esc(ci.drivstoff) : null, ci.karosseri ? esc(ci.karosseri) : null].filter(Boolean).join(' · ')) +
         '<div id="' + id + '" hidden style="margin-top:6px;font-size:11.5px;line-height:1.45;max-height:320px;overflow:auto">' +
@@ -252,6 +253,14 @@
     var ci = ag && ag.bil && ag.bil.kilde !== 'vegvesen' && ag.bil.modellaar, erp = (ag && ag.erp_aar) || null;
     var html = ci ? esc(String(ci)) + (erp && Number(erp) !== Number(ci) ? ' <small style="color:#8C978F">ERP ' + esc(String(erp)) + '</small>' : '') : null;
     if (!html) { var t = (el.getAttribute('data-erp') || el.textContent || '').trim(); if (!el.getAttribute('data-erp')) el.setAttribute('data-erp', t); html = esc(t) + (t ? ' <small style="color:#8C978F">(ERP)</small>' : ''); }
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+  // c584: km på kortet fra én kilde: km for aktivt internnr (agent.km, samme som ORIGIN-CV). Avvik mot ERP-lista i liten skrift.
+  function auKm(ag, b) { return (ag && ag.km) || b.km || null; }
+  function auKmMerke(ag, b) { var a = ag && ag.km; return a && b.km && Number(a) !== Number(b.km) ? ' <small style="color:#8C978F">ERP-liste ' + auKr(b.km) + ' km</small>' : ''; }
+  function auKmTopp(c, b, ag) {
+    var el = c.querySelector('.qa-kmtopp'); var km = auKm(ag, b); if (!el || !km) return;
+    var html = Math.round(km / 1000) + 'k km' + auKmMerke(ag, b);
     if (el.innerHTML !== html) el.innerHTML = html;
   }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
