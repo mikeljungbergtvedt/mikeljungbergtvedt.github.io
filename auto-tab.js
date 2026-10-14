@@ -10,7 +10,9 @@
   // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
   function auSendLaas(c, b) {
     var ag = b.agent;
-    var grunn = !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) && !(ag.pris_kilde && ag.pris_kilde.kilde === 'manuell') ? 'Pris er ikke skrevet til ERP ennå' : '';
+    var manuell = !!(ag && ag.pris_kilde && ag.pris_kilde.kilde === 'manuell' && b.erp_lav);
+    // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
+    var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
     [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
@@ -263,6 +265,19 @@
     var html = Math.round(km / 1000) + 'k km' + auKmMerke(ag, b);
     if (el.innerHTML !== html) el.innerHTML = html;
   }
+  // c585: ikoner i headeren for «priset før» og «vært på vår auksjon» (tidligere internnr, bare historikk). Detaljer i tooltip.
+  function auHistIkoner(ag) {
+    var h = (ag && ag.historikk) || [];
+    var k = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
+    var priset = h.filter(function (x) { return x.lav || x.hoy; });
+    var auk = h.filter(function (x) { return x.hoyeste_bud || x.bud_avvist; });
+    var svg = function (d) { return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
+    var ik = function (tittel, d) { return '<span title="' + esc(tittel) + '" style="display:inline-flex;align-items:center;color:#5E4A1F;cursor:help">' + svg(d) + '</span>'; };
+    var ut = '';
+    if (priset.length) ut += ik('Priset før: ' + priset.map(function (x) { return (x.dato || '?') + ' ' + k(x.lav) + '–' + k(x.hoy) + ' (internnr ' + x.id + (x.status ? ', ' + x.status : '') + ')'; }).join(' · '), '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/>');
+    if (auk.length) ut += ik('Vært på vår auksjon: ' + auk.map(function (x) { return (x.dato || '?') + (x.hoyeste_bud ? ' høyeste bud ' + k(x.hoyeste_bud) : '') + (x.bud_avvist ? ', bud avvist ' + x.bud_avvist : '') + ' (internnr ' + x.id + ')'; }).join(' · '), '<path d="M14 6l4 4M9 11l4 4M12.5 4.5l7 7-3 3-7-7z"/><path d="M10.5 12.5L4 19"/><path d="M3 21h8"/>');
+    return ut ? '<span style="display:inline-flex;gap:6px;align-items:center;align-self:center">' + ut + '</span>' : '';
+  }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
     if (document.getElementById('qa3-css')) return;
@@ -493,7 +508,7 @@
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
       var merker = auMerker(c);
-      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
@@ -614,7 +629,7 @@
       var nyHtml = '';
       // c577: ingen auto/skygge-boks. Før FSD har priset: bare «FSD VENTER» + bilder (Mike 13.10).
       if (!agF) {
-        nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong><span>FSD og Benchmark priser bilen</span>' +
+        nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong><span>FSD og Benchmark priser bilen</span>' + auHistIkoner(b.agent) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div></div>' + bildeHtml;
       } else {
         var kk = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
@@ -624,7 +639,7 @@
         var midt0 = ['FSD ' + kk(fP0), 'Bench ' + kk(bP0)];
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
         nyHtml = '<div class="au-hode" style="background:' + hB + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
-          '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' +
+          '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (agF.fsd && agF.fsd.stopp ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(agF.fsd.stopp_grunn || 'FSD stoppet bilen') + '</div>' : '') + '</div>' +
           bildeHtml +
