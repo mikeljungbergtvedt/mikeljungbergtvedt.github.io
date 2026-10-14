@@ -23,6 +23,7 @@
     if (kn && kn.parentElement && !kn.parentElement.classList.contains('qa-actions')) kn.parentElement.classList.add('qa-actions');
     var ag = b.agent;
     if (!ag) {
+      auOriginCv(c, b, null);
       // Venter på FSD: skjul gamle auto-deler (Claude/Grok-graf, IDENT/COMPS).
       var gml0 = c.querySelector('.qa-finn-terrain'); if (gml0) gml0.style.display = 'none';
       var l0 = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
@@ -32,6 +33,7 @@
     auFsdGraf(c, b, ag);
     auPrisTag(c, ag);
     auMidPris(c, b, ag);
+    auOriginCv(c, b, ag);
     auEierPlass(c);
     if (c.querySelector('table.au-tv2')) auStickyLefts(c);
     var lbl = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
@@ -210,6 +212,36 @@
     }
   }
 
+  // c581: ORIGIN-CV bare fra car.info for denne bilen (dette internnr), ikke fra en eldre registrering av samme regnr.
+  // Hk og drivstoff fra car.info (systemeffekt og «Plug-in hybrid»), ikke Vegvesens bensinmotor. «+» viser hele car.info-svaret.
+  function auOriginCv(c, b, ag) {
+    var box = c.querySelector('.qa-origin-cv'); if (!box) return;
+    var ci = ag && ag.bilen && ag.bilen.carinfo;
+    var rad = function (t) { return '<div class="qa-origin-cv-row">' + t + '</div>'; };
+    var html;
+    if (!ci) {
+      html = '<div class="qa-origin-cv-h">ORIGIN-CV</div>' + rad(esc(String(b.id)) + ' · ' + esc(b.regnr)) + rad('car.info mangler for ' + esc(String(b.id)));
+    } else {
+      var hk = ci.hk || ag.bilen.hk;
+      var navn = ci.navn || '';
+      var ekstra = (ci.tekniske || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+      var pk = ci.pakker ? [].concat(ci.pakker.trim || [], ci.pakker.equip || []).filter(Boolean).join(', ') : '';
+      var id = 'au-cvx-' + b.id;
+      html = '<div class="qa-origin-cv-h">ORIGIN-CV<button type="button" class="au-cv-pluss" data-t="' + id + '" title="Åpne hele car.info-returen" style="border:1px solid #DCE1D9;background:#fff;border-radius:5px;width:22px;height:20px;cursor:pointer;font-weight:700;color:#0F6E66">+</button></div>' +
+        rad(esc(String(b.id)) + ' · ' + esc(b.regnr)) +
+        rad('ERP ' + (b.km != null ? auKr(b.km) + ' km' : 'km –')) +
+        rad(esc(navn)) +
+        rad([hk ? hk + ' hk' : null, ci.drivstoff ? esc(ci.drivstoff) : null, ci.karosseri ? esc(ci.karosseri) : null].filter(Boolean).join(' · ')) +
+        '<div id="' + id + '" hidden style="margin-top:6px;font-size:11.5px;line-height:1.45;max-height:320px;overflow:auto">' +
+          (pk ? '<div><b>Pakker:</b> ' + esc(pk) + '</div>' : '') +
+          '<div><b>Varsler:</b> ' + esc(ci.varsler && ((ci.varsler.warnings || []).length + (ci.varsler.notifications || []).length) ? JSON.stringify(ci.varsler) : 'ingen') + '</div>' +
+          '<ul style="margin:4px 0 0;padding-left:16px">' + ekstra + '</ul></div>';
+    }
+    if (box.getAttribute('data-sig') === html) return;
+    box.innerHTML = html; box.setAttribute('data-sig', html);
+    var kn = box.querySelector('.au-cv-pluss');
+    if (kn) kn.addEventListener('click', function (e) { e.preventDefault(); var x = document.getElementById(kn.getAttribute('data-t')); if (x) { x.hidden = !x.hidden; kn.textContent = x.hidden ? '+' : '−'; } });
+  }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
     if (document.getElementById('qa3-css')) return;
