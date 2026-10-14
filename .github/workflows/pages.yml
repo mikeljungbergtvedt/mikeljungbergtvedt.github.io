@@ -1,0 +1,57 @@
+# Bygger og publiserer nettstedet til GitHub Pages via Actions.
+#
+# Hvorfor: med "Deploy from a branch" kansellerer GitHub hvert Pages-bygg
+# som ligger i kø når en ny commit kommer. Robotene committer rundt 630
+# ganger i døgnet, så publisering av HTML-endringer kunne sitte fast i
+# lang tid. Her brukes en concurrency-gruppe UTEN cancel-in-progress:
+# et bygg som har startet fullføres alltid, og GitHub holder én ventende
+# kjøring for siste commit. Nettstedet ligger dermed aldri mer enn ett
+# bygg bak main.
+#
+# Rører ingenting i drift: robotene, datafilene og sidene er uendret.
+# Hele repoet publiseres som før (.nojekyll ligger i roten).
+#
+# Aktiveres med to innstillinger i repoet:
+#   1) Settings → Pages → Build and deployment → Source: "GitHub Actions"
+#   2) Settings → Secrets and variables → Actions → Variables:
+#      ny variabel PAGES_VIA_ACTIONS = true
+# Før variabelen er satt, hoppes jobben over (ingen feilede kjøringer).
+
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.PAGES_VIA_ACTIONS == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Hent repoet
+        uses: actions/checkout@v4
+
+      - name: Konfigurer Pages
+        uses: actions/configure-pages@v5
+
+      - name: Pakk nettstedet
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publiser
+        id: deployment
+        uses: actions/deploy-pages@v4
