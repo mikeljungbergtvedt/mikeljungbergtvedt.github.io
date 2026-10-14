@@ -18,6 +18,7 @@
   }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
+    auAarTopp(c, b, b.agent);
     // c579: knapperaden nederst, på linje mellom kortene i samme rad.
     var kn = c.querySelector('.qa-detail-btn') || c.querySelector('.qa-clear-btn');
     if (kn && kn.parentElement && !kn.parentElement.classList.contains('qa-actions')) kn.parentElement.classList.add('qa-actions');
@@ -55,7 +56,10 @@
     };
     var aarAv = function (x) { return x.aar || x.modellaar || null; };
     var ev = !!kwh(me) || /elektrisk|electric|\bev\b|kwh/i.test(tekst(me)) || tv.some(function (t) { return !!kwh(t); });
-    var refAar = aarAv(me) || ag.erp_aar || (ag.bil && ag.bil.modellaar) || null;
+    // Mike 14.10: årsmodell alltid fra car.info (agent.bil.modellaar). Avvik mot ERP vises som «ERP 2025»; mangler car.info: ERP-år merket «(ERP)».
+    var aarCi = (ag.bil && ag.bil.kilde !== 'vegvesen' && ag.bil.modellaar) || null;
+    var refAar = aarCi || ag.erp_aar || null;
+    var aarMerke = !aarCi && ag.erp_aar ? ' <small style="color:#8C978F">(ERP)</small>' : (aarCi && ag.erp_aar && Number(ag.erp_aar) !== Number(aarCi) ? ' <small style="color:#8C978F">ERP ' + esc(String(ag.erp_aar)) + '</small>' : '');
     var felt = [
       ['År', function (x, egen) { return egen ? refAar : aarAv(x); }, refAar],
       ['Hk', hkAv, hkAv(me)],
@@ -69,7 +73,7 @@
     var rad = function (x, egen, id, km, pris, status) {
       return '<tr style="background:' + (egen ? '#F3F6F4' : '#fff') + '"><td style="' + td + st(0) + '">' + id + '</td><td style="' + td + st(1, ';text-align:right') + '">' + km + '</td><td style="' + td + st(2, ';text-align:right') + '">' + pris + '</td><td style="' + td + st(3, ';border-right:1px solid #E7EBE4') + '">' + status + '</td>' +
         '<td style="' + td + ';max-width:190px;overflow:hidden;text-overflow:ellipsis;padding-left:8px" title="' + esc(mdl(x)) + '">' + esc(mdl(x) || '–') + '</td>' +
-        felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + '</td>'; }).join('') + '</tr>';
+        felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + (egen && f[0] === 'År' ? aarMerke : '') + '</td>'; }).join('') + '</tr>';
     };
     var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
     if (utst(me)) html += '<div style="font-size:13px;line-height:1.45;margin:0 0 8px;padding:6px 10px;background:#F3F6F4;border-radius:6px"><b>Bilens utstyr:</b> ' + esc(utst(me)) + '</div>';
@@ -241,6 +245,14 @@
     box.innerHTML = html; box.setAttribute('data-sig', html);
     var kn = box.querySelector('.au-cv-pluss');
     if (kn) kn.addEventListener('click', function (e) { e.preventDefault(); var x = document.getElementById(kn.getAttribute('data-t')); if (x) { x.hidden = !x.hidden; kn.textContent = x.hidden ? '+' : '−'; } });
+  }
+  // c583: årstall i kortets topplinje fra car.info, med ERP-avvik i liten skrift.
+  function auAarTopp(c, b, ag) {
+    var el = c.querySelector('.qa-aar'); if (!el) return;
+    var ci = ag && ag.bil && ag.bil.kilde !== 'vegvesen' && ag.bil.modellaar, erp = (ag && ag.erp_aar) || null;
+    var html = ci ? esc(String(ci)) + (erp && Number(erp) !== Number(ci) ? ' <small style="color:#8C978F">ERP ' + esc(String(erp)) + '</small>' : '') : null;
+    if (!html) { var t = (el.getAttribute('data-erp') || el.textContent || '').trim(); if (!el.getAttribute('data-erp')) el.setAttribute('data-erp', t); html = esc(t) + (t ? ' <small style="color:#8C978F">(ERP)</small>' : ''); }
+    if (el.innerHTML !== html) el.innerHTML = html;
   }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
