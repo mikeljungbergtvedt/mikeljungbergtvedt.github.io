@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peasy – slik prises en bil</title>
+<style>
+  :root{
+    --bg:#030806; --bg2:#06130d;
+    --green:#004225; --green2:#0a6b40; --line:#24d58e; --line2:#7cf2c0; --white:#f2f7f4; --mute:#7f9a8c; --dim:#3a4d44;
+    --amber:#ffcc33; --red:#ff5d5d;
+    --font:"Inter","SF Pro Display",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,"Roboto Mono","Liberation Mono",monospace;
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;color:var(--white);font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+  body{display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;flex:none;width:1920px;height:1080px;overflow:hidden;transform-origin:center center;
+    background:radial-gradient(1400px 900px at 50% 55%,var(--bg2) 0%,var(--bg) 60%,#000 100%)}
+  #matrix{position:absolute;inset:0;opacity:.16;pointer-events:none}
+  #stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 2px,transparent 2px 4px)}
+  .vig{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.7) 100%)}
+
+  /* HUD */
+  .hud{position:absolute;z-index:6;font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--mute);font-family:var(--mono)}
+  .hud.tl{top:34px;left:48px}.hud.tl i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);box-shadow:0 0 10px var(--line);margin-right:12px;animation:blink 1.4s infinite}
+  .hud.tr{top:30px;right:48px;font-size:26px;letter-spacing:.12em;color:var(--white);font-variant-numeric:tabular-nums}
+  .hud.tr small{font-size:13px;color:var(--mute);letter-spacing:.3em;margin-right:14px}
+  .hud.bl{bottom:34px;left:48px}.hud.br{bottom:34px;right:48px;cursor:pointer;color:var(--white)}
+  .corner{position:absolute;z-index:6;width:30px;height:30px;border:1px solid rgba(36,213,142,.5)}
+  .corner.a{top:22px;left:22px;border-right:0;border-bottom:0}.corner.b{top:22px;right:22px;border-left:0;border-bottom:0}
+  .corner.c{bottom:22px;left:22px;border-right:0;border-top:0}.corner.d{bottom:22px;right:22px;border-left:0;border-top:0}
+  .steps{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:6;display:flex;gap:10px}
+  .steps b{width:44px;height:2px;background:rgba(255,255,255,.12);transition:background .4s,box-shadow .4s}
+  .steps b.cur{background:var(--line);box-shadow:0 0 10px var(--line)}
+  .scenetag{position:absolute;top:78px;left:48px;z-index:6;font-family:var(--mono);font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--line);opacity:0;transition:opacity .5s}
+  .scenetag.on{opacity:1}
+  @keyframes blink{50%{opacity:.25}}
+
+  /* overlay */
+  .overlay{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(3,8,6,.94);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity .6s var(--ease)}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .ov-logo{position:relative;font-size:120px;font-weight:900;letter-spacing:-.05em;line-height:1;margin-bottom:80px}
+  .sp{position:absolute;width:64px;height:42px}.sp svg{width:100%;height:100%;overflow:visible}
+  .ov-logo .sp{right:-22px;top:-6px}
+  .play{position:relative;width:180px;height:180px;border-radius:50%;border:1px solid rgba(36,213,142,.7);background:rgba(0,66,37,.5);cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:transform .3s var(--ease),background .3s;outline:none;-webkit-tap-highlight-color:transparent}
+  .play:hover,.play:focus-visible{transform:scale(1.06);background:rgba(0,66,37,.9)}
+  .play::before{content:"";position:absolute;inset:-18px;border-radius:50%;border:1px solid rgba(36,213,142,.5);animation:ring 2.4s ease-out infinite}
+  @keyframes ring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.5);opacity:0}}
+  .play svg{width:64px;height:64px;margin-left:8px}.play path{fill:var(--white)}
+  .play-label{margin-top:34px;font-family:var(--mono);font-size:14px;letter-spacing:.34em;text-transform:uppercase;color:var(--mute)}
+
+  /* scenes */
+  .scene{position:absolute;inset:0;z-index:3;display:none;opacity:0}
+  .scene.on{display:block;animation:sIn .7s var(--ease) forwards}
+  .scene.out{animation:sOut .5s ease-in forwards}
+  @keyframes sIn{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:scale(1)}}
+  @keyframes sOut{from{opacity:1}to{opacity:0;transform:scale(.985)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{to{opacity:1}}
+  @keyframes pop{0%{opacity:0;transform:scale(.7)}70%{transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes travel{0%{opacity:0;offset-distance:0%}12%{opacity:1}88%{opacity:1}100%{opacity:0;offset-distance:100%}}
+  @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(36,213,142,0)}50%{box-shadow:0 0 30px 4px rgba(36,213,142,.35)}}
+
+  .panel{position:absolute;border:1px solid rgba(36,213,142,.28);background:rgba(3,14,9,.78);border-radius:10px;backdrop-filter:blur(4px)}
+  .panel .ttl{position:absolute;top:-11px;left:16px;padding:2px 10px;background:var(--bg);font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--line)}
+  .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mute)}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .chip{display:inline-flex;align-items:center;padding:7px 12px;border:1px solid rgba(36,213,142,.45);border-radius:6px;font-family:var(--mono);font-size:13px;color:var(--line2);background:rgba(0,66,37,.25);white-space:nowrap;
+    opacity:0;animation:pop .4s var(--ease) forwards}
+  .chip.k{color:var(--white);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+
+  /* ===== 1 ERP ===== */
+  .erp{position:absolute;left:50%;top:50%;width:1500px;height:640px;margin:-320px 0 0 -750px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0a1410;overflow:hidden;
+    display:grid;grid-template-columns:300px 1fr;transform-origin:58% 46%;animation:erpZoom 7.5s .2s var(--ease) forwards;box-shadow:0 40px 100px rgba(0,0,0,.6)}
+  @keyframes erpZoom{0%{transform:scale(.9)}100%{transform:scale(1.1)}}
+  .erp .side{background:#071009;border-right:1px solid rgba(255,255,255,.08);padding:22px 0;font-size:13px;color:var(--mute);overflow:hidden}
+  .erp .side div{padding:6px 24px;white-space:nowrap}
+  .erp .side div.h{color:var(--white);font-weight:700;margin-top:10px}
+  .erp .side div.sel{color:var(--white);background:rgba(36,213,142,.12);border-left:3px solid var(--line)}
+  .erp .main{padding:26px 30px;font-size:14px}
+  .erp .crumb{color:var(--mute);font-size:12px;margin-bottom:18px}
+  .erp h2{font-size:22px;font-weight:700;margin-bottom:22px}
+  .erp table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:16px}
+  .erp th{text-align:left;color:var(--mute);font-weight:500;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .erp td{padding:16px 10px;border-bottom:1px solid rgba(255,255,255,.05);color:#c7d3cc;white-space:nowrap}
+  .erp tr.hit td{color:var(--white);background:rgba(36,213,142,.07);animation:rowLit .6s 2.6s forwards}
+  @keyframes rowLit{to{background:rgba(36,213,142,.22);box-shadow:inset 0 0 0 1px var(--line)}}
+  .erp .scan{position:absolute;left:300px;right:0;height:2px;background:var(--line);box-shadow:0 0 16px var(--line);opacity:0;animation:scan 1.2s 1.6s ease-in-out}
+  @keyframes scan{0%{top:100px;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:420px;opacity:0}}
+
+  /* ===== 2 DATA ===== */
+  .srcs{position:absolute;left:150px;top:200px;width:420px}
+  .src{position:relative;height:120px;margin-bottom:34px;border:1px solid rgba(36,213,142,.3);border-radius:10px;background:rgba(3,14,9,.8);padding:18px 22px 18px 92px;opacity:0;animation:fadeUp .6s var(--ease) forwards}
+  .src .dot{position:absolute;left:30px;top:50%;width:34px;height:34px;margin-top:-17px;border-radius:50%;border:2px solid rgba(36,213,142,.5)}
+  .src .dot::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--line);opacity:0;box-shadow:0 0 16px var(--line)}
+  .src.on .dot::after{animation:fadeIn .3s forwards}
+  .src.on{animation:fadeUp .6s var(--ease) forwards,glow 1.2s 1 }
+  .src .n{font-weight:700;font-size:20px;letter-spacing:-.01em;margin-bottom:6px}
+  .src .lbl{font-size:10px}
+  .src.big{height:150px;border-color:rgba(36,213,142,.7)}
+  .agent{position:absolute;left:50%;top:50%;width:200px;height:200px;margin:-100px 0 0 -100px}
+  .agent svg{width:100%;height:100%;overflow:visible}
+  .agent .hex{fill:rgba(0,66,37,.55);stroke:var(--line);stroke-width:2;filter:drop-shadow(0 0 18px rgba(36,213,142,.5))}
+  .agent .core{fill:var(--line);animation:pulse 1.6s ease-in-out infinite;transform-origin:center}
+  @keyframes pulse{50%{transform:scale(1.2);opacity:.75}}
+  .agent .tag{position:absolute;left:50%;bottom:-40px;transform:translateX(-50%);font-family:var(--mono);font-size:12px;letter-spacing:.34em;color:var(--line)}
+  .agent .orb{fill:none;stroke:rgba(36,213,142,.35);stroke-dasharray:4 10;animation:spin 14s linear infinite;transform-origin:center}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .wires{position:absolute;inset:0;pointer-events:none}
+  .wires svg{width:100%;height:100%}
+  .wires path{fill:none;stroke:rgba(36,213,142,.45);stroke-width:1.5;stroke-dasharray:1200;stroke-dashoffset:1200;animation:draw 1s var(--ease) forwards}
+  .wires circle{fill:#fff;filter:drop-shadow(0 0 6px var(--line));opacity:0;animation:travel 1.1s linear infinite}
+  .cv{position:absolute;right:150px;top:140px;width:560px;height:800px;padding:46px 34px 30px}
+  .cv .line{display:flex;justify-content:space-between;font-family:var(--mono);font-size:15px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);opacity:0;animation:fadeUp .4s var(--ease) forwards}
+  .cv .line span:first-child{color:var(--mute);font-size:11px;letter-spacing:.24em;text-transform:uppercase;padding-top:3px}
+  .cv .line .warn{color:var(--amber)}
+  .cv .cur{position:absolute;left:34px;bottom:30px;width:10px;height:18px;background:var(--line);animation:blink .8s steps(1) infinite}
+  .attrs{position:absolute;left:640px;top:720px;width:640px;display:flex;flex-wrap:wrap;gap:8px}
+  .attrs .chip{font-size:12px;padding:6px 10px}
+  .attrs .hd{width:100%;margin-bottom:4px}
+
+  /* ===== 3 GATE ===== */
+  .gatewrap{position:absolute;left:50%;top:50%;width:1200px;height:360px;margin:-180px 0 0 -600px}
+  .gate{position:absolute;left:0;right:0;top:120px;height:120px;overflow:hidden}
+  .gate i{position:absolute;top:0;bottom:0;width:50%;background:linear-gradient(90deg,rgba(0,66,37,.6),rgba(0,66,37,.25));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .gate i.l{left:0;border-right:2px solid var(--line);animation:gateL 1s 4.2s var(--ease) forwards}
+  .gate i.r{right:0;border-left:2px solid var(--line);animation:gateR 1s 4.2s var(--ease) forwards}
+  @keyframes gateL{to{transform:translateX(-100%)}}@keyframes gateR{to{transform:translateX(100%)}}
+  .gate .msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-family:var(--mono);font-size:16px;letter-spacing:.4em;text-transform:uppercase;color:var(--white);animation:fadeIn .1s forwards,gateMsg .3s 4.2s forwards}
+  @keyframes gateMsg{to{opacity:0}}
+  .locks{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;gap:60px}
+  .lock{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:12px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;opacity:0;animation:fadeUp .4s forwards}
+  .lock i{width:16px;height:16px;border-radius:50%;border:1px solid var(--mute)}
+  .lock.ok i{border-color:var(--line);background:var(--line);box-shadow:0 0 12px var(--line);animation:pop .3s forwards}
+  .lock.ok{color:var(--white)}
+  .doc{position:absolute;left:50%;top:300px;width:90px;height:110px;margin-left:-45px;border:1px solid var(--line);border-radius:6px;background:rgba(0,66,37,.4);box-shadow:0 0 24px rgba(36,213,142,.4);
+    animation:docWait .8s ease-in-out infinite alternate,docGo 1s 4.6s var(--ease) forwards}
+  .doc::before{content:"";position:absolute;left:14px;right:14px;top:18px;height:3px;background:var(--line);box-shadow:0 12px 0 var(--line),0 24px 0 var(--line),0 36px 0 rgba(36,213,142,.5)}
+  @keyframes docWait{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+  @keyframes docGo{to{transform:translateY(-210px) scale(.8);opacity:0}}
+  .nopart{position:absolute;left:0;right:0;top:300px;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--mute);opacity:0;animation:fadeUp .5s 1s forwards}
+
+  /* ===== 4 TWO AGENTS ===== */
+  .ag{position:absolute;top:120px;width:880px;height:860px;padding:40px 30px 30px}
+  .ag.l{left:70px}.ag.r{right:70px}
+  .ag .name{position:absolute;top:-14px;left:24px;padding:3px 12px;background:var(--bg);font-family:var(--mono);font-size:14px;letter-spacing:.36em;color:var(--line)}
+  .ag .note{position:absolute;top:-14px;right:24px;padding:3px 12px;background:var(--bg);font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--mute)}
+  .filters{display:flex;gap:10px;margin-bottom:18px}
+  .f{padding:7px 12px;border:1px solid rgba(255,255,255,.15);border-radius:6px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);opacity:0;animation:fadeUp .4s forwards,fOn .3s forwards}
+  @keyframes fOn{to{color:var(--white);border-color:var(--line);background:rgba(0,66,37,.5);box-shadow:0 0 12px rgba(36,213,142,.3)}}
+  .mat{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;height:300px}
+  .m{border:1px solid rgba(36,213,142,.25);border-radius:5px;background:rgba(36,213,142,.05);opacity:0;animation:pop .3s forwards;position:relative;overflow:hidden}
+  .m::before{content:"";position:absolute;left:8px;right:8px;top:10px;height:30%;border-radius:3px;background:rgba(36,213,142,.18)}
+  .m::after{content:"";position:absolute;left:8px;right:30%;bottom:10px;height:3px;background:rgba(255,255,255,.14);box-shadow:0 -7px 0 rgba(255,255,255,.1)}
+  .m.x{animation:pop .3s forwards,mOut .4s forwards}
+  @keyframes mOut{to{opacity:.16;transform:scale(.9)}}
+  .m.t{animation:pop .3s forwards,mTwin .5s forwards}
+  @keyframes mTwin{to{border-color:var(--line);background:rgba(36,213,142,.2);box-shadow:0 0 16px rgba(36,213,142,.4)}}
+  .twins{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+  .tw{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;align-items:center;padding:10px 16px;border:1px solid rgba(36,213,142,.35);border-radius:6px;background:rgba(0,66,37,.25);font-family:var(--mono);font-size:14px;
+    opacity:0;transform:translateX(-60px);animation:twIn .5s var(--ease) forwards}
+  .ag.r .tw{transform:translateX(60px)}
+  @keyframes twIn{to{opacity:1;transform:translateX(0)}}
+  .tw .lbl{font-size:10px}.tw .sold{color:var(--line);text-align:right;letter-spacing:.2em;font-size:11px}
+  .lockp{position:absolute;left:30px;right:30px;bottom:26px;height:120px;border-top:1px solid rgba(36,213,142,.3);display:flex;align-items:center;justify-content:space-between;padding-top:14px}
+  .lockp .p{font-family:var(--mono);font-size:64px;font-weight:700;letter-spacing:-.02em;color:var(--white);opacity:0;animation:lockIn .25s var(--ease) forwards}
+  .lockp .p small{font-size:20px;color:var(--mute);margin-left:8px}
+  @keyframes lockIn{0%{opacity:0;transform:scale(1.4)}100%{opacity:1;transform:scale(1);text-shadow:0 0 30px rgba(36,213,142,.6)}}
+  .lockp .st{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--line);opacity:0;animation:fadeIn .2s forwards}
+  .avvik{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;animation:pop .5s forwards}
+  .avvik .n{font-family:var(--mono);font-size:44px;color:var(--white)}
+  .flash{position:absolute;inset:0;background:rgba(36,213,142,.12);opacity:0;animation:flash .35s forwards}
+  @keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+  /* ===== 5 MID ===== */
+  .mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:1400px}
+  .mid .pair{display:flex;justify-content:center;gap:260px;font-family:var(--mono);font-size:72px;font-weight:700}
+  .mid .pair div{opacity:0;animation:fadeUp .5s .2s forwards,merge 1s 1.8s var(--ease) forwards}
+  .mid .pair div:last-child{animation-name:fadeUp,mergeR}
+  @keyframes merge{to{transform:translateX(330px);opacity:0}}
+  @keyframes mergeR{to{transform:translateX(-330px);opacity:0}}
+  .mid .pair small{display:block;font-size:12px;letter-spacing:.34em;color:var(--mute);margin-bottom:12px;font-weight:500}
+  .mid .one{position:absolute;left:0;right:0;top:-18px;font-family:var(--mono);font-size:120px;font-weight:700;letter-spacing:-.03em;opacity:0;animation:pop .5s 2.6s var(--ease) forwards;text-shadow:0 0 40px rgba(36,213,142,.5)}
+  .mid .one small{display:block;font-size:13px;letter-spacing:.36em;color:var(--line);font-weight:500;margin-bottom:10px}
+  .mid .rule{margin-top:190px;display:inline-flex;align-items:center;gap:26px;padding:16px 28px;border:1px solid rgba(255,204,51,.5);border-radius:8px;font-family:var(--mono);font-size:20px;color:var(--amber);opacity:0;animation:fadeUp .5s 4.4s forwards}
+  .mid .rule b{color:var(--white);font-weight:700}
+  .mid .cap{position:absolute;left:0;right:0;top:-18px;font-family:var(--mono);font-size:120px;font-weight:700;letter-spacing:-.03em;opacity:0;animation:pop .4s 5.8s var(--ease) forwards;color:var(--white)}
+  .mid .cap small{display:block;font-size:13px;letter-spacing:.36em;color:var(--amber);font-weight:500;margin-bottom:10px}
+  .mid .one.off{animation:pop .5s 2.6s var(--ease) forwards,fadeOut .3s 5.8s forwards}
+  @keyframes fadeOut{to{opacity:0}}
+
+  /* ===== 6 CFO ===== */
+  .wf{position:absolute;left:160px;top:130px;width:1600px;height:820px;padding:50px 50px 30px}
+  .wf .row{display:grid;grid-template-columns:420px 1fr 260px;align-items:center;height:62px;font-family:var(--mono);font-size:20px;opacity:0;animation:fadeUp .4s var(--ease) forwards}
+  .wf .row .k{color:var(--mute);font-size:13px;letter-spacing:.24em;text-transform:uppercase}
+  .wf .row .bar{height:22px;position:relative}
+  .wf .row .bar i{position:absolute;top:0;height:100%;border-radius:3px;background:rgba(36,213,142,.35);border:1px solid rgba(36,213,142,.6);transform:scaleX(0);transform-origin:left;animation:barIn .5s .15s var(--ease) forwards}
+  .wf .row.neg .bar i{background:rgba(255,93,93,.25);border-color:rgba(255,93,93,.6);transform-origin:right}
+  .wf .row.pos .bar i{background:rgba(255,204,51,.25);border-color:rgba(255,204,51,.6)}
+  @keyframes barIn{to{transform:scaleX(1)}}
+  .wf .row .v{text-align:right;color:var(--white);font-variant-numeric:tabular-nums}
+  .wf .row.neg .v{color:#ff9d9d}.wf .row.pos .v{color:var(--amber)}
+  .wf .row.sum{border-top:1px solid rgba(36,213,142,.5);margin-top:8px;height:80px;font-size:30px;font-weight:700}
+  .wf .row.sum .bar i{background:rgba(36,213,142,.5)}
+  .wf .res{position:absolute;right:50px;bottom:28px;display:flex;gap:60px;opacity:0;animation:pop .5s 11.6s var(--ease) forwards}
+  .wf .res div{text-align:right;font-family:var(--mono);font-size:64px;font-weight:700;color:var(--white);text-shadow:0 0 30px rgba(36,213,142,.5)}
+  .wf .res small{display:block;font-size:12px;letter-spacing:.36em;color:var(--line);font-weight:500;margin-bottom:6px}
+  .cfo{position:absolute;left:60px;top:130px}
+
+  /* ===== 7 HUMAN ===== */
+  .card{position:absolute;left:50%;top:50%;width:1560px;height:840px;margin:-420px 0 0 -780px;padding:50px 40px 40px;display:grid;grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:22px}
+  .card .box{border:1px solid rgba(36,213,142,.25);border-radius:8px;background:rgba(0,66,37,.12);padding:16px;position:relative;opacity:0;animation:fadeUp .5s var(--ease) forwards;overflow:hidden}
+  .card .box .lbl{position:absolute;top:12px;left:16px}
+  .photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:30px;height:calc(100% - 30px)}
+  .photos i{border-radius:6px;background:linear-gradient(135deg,rgba(36,213,142,.18),rgba(36,213,142,.04));position:relative}
+  .photos i::after{content:"";position:absolute;left:18%;right:18%;bottom:26%;height:34%;border:2px solid rgba(36,213,142,.6);border-radius:40% 40% 10% 10%/60% 60% 10% 10%}
+  .ln{height:8px;border-radius:4px;background:rgba(255,255,255,.12);margin:10px 0}
+  .mini{margin-top:32px;font-family:var(--mono);font-size:12px;color:#c7d3cc;line-height:1.9}
+  .mini b{color:var(--white)}
+  .send{position:absolute;right:40px;bottom:40px;width:260px;height:76px;border-radius:8px;background:var(--line);color:#031a0f;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:16px;letter-spacing:.4em;font-weight:700;
+    box-shadow:0 0 30px rgba(36,213,142,.5);opacity:0;animation:pop .4s 5.2s var(--ease) forwards,press .3s 7.6s ease-in-out,sent .4s 7.9s forwards}
+  @keyframes press{50%{transform:scale(.94)}}
+  @keyframes sent{to{background:var(--white)}}
+  .hand{position:absolute;right:120px;bottom:-200px;width:150px;height:200px;opacity:0;animation:handIn .8s 6.6s var(--ease) forwards,handPress .3s 7.6s ease-in-out,handOut .6s 8.2s forwards}
+  @keyframes handIn{to{opacity:1;transform:translate(0,-230px)}}
+  @keyframes handPress{50%{transform:translate(0,-216px) scale(.97)}}
+  @keyframes handOut{to{opacity:0;transform:translate(60px,-120px)}}
+  .hand svg{width:100%;height:100%}.hand path{fill:rgba(242,247,244,.92);stroke:var(--line);stroke-width:3;stroke-linejoin:round}
+
+  /* ===== 8 LOOP ===== */
+  .loopwrap{position:absolute;left:50%;top:50%;width:900px;height:900px;margin:-450px 0 0 -450px}
+  .loopwrap svg{width:100%;height:100%;overflow:visible}
+  .loopwrap .ring{fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:2600;stroke-dashoffset:2600;filter:drop-shadow(0 0 10px rgba(36,213,142,.6));animation:draw 3.6s .6s var(--ease) forwards}
+  .loopwrap .node{fill:#061a10;stroke:var(--line);stroke-width:2;opacity:0;animation:pop .4s forwards}
+  .loopwrap .nl{font-family:var(--mono);font-size:12px;letter-spacing:.2em;fill:var(--mute);text-anchor:middle;opacity:0;animation:fadeIn .4s forwards}
+  .loopdone{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;animation:pop .5s 4.6s var(--ease) forwards}
+  .loopdone .t{font-family:var(--mono);font-size:16px;letter-spacing:.5em;text-transform:uppercase;color:var(--line)}
+  .loopdone .v{font-family:var(--mono);font-size:58px;font-weight:700;margin-top:18px;color:var(--white)}
+  .erpmini{position:absolute;left:50%;top:50%;width:1100px;height:120px;margin:-60px 0 0 -550px;border:1px solid rgba(36,213,142,.4);border-radius:8px;background:#0a1410;display:grid;grid-template-columns:200px 1fr 300px;align-items:center;padding:0 30px;font-family:var(--mono);font-size:18px;
+    opacity:0;animation:fadeUp .5s .1s forwards,erpOut .5s 3.8s forwards}
+  @keyframes erpOut{to{opacity:0;transform:scale(.9)}}
+  .erpmini .w{color:var(--line);text-align:right;opacity:0;animation:fadeIn .3s 1.2s forwards}
+  .endlogo{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;animation:fadeIn .8s 6.6s forwards}
+  .endlogo .logo{position:relative;font-size:200px;font-weight:900;letter-spacing:-.06em;line-height:1;opacity:0;animation:pop .9s 6.8s var(--ease) forwards}
+  .endlogo .logo .sp{right:-40px;top:-14px;width:108px;height:72px}
+  .endlogo .words{margin-top:40px;display:flex;gap:40px;font-family:var(--mono);font-size:14px;letter-spacing:.44em;text-transform:uppercase;color:var(--mute)}
+  .endlogo .words span{opacity:0;animation:fadeUp .5s forwards}
+  .endlogo.hide{animation:fadeIn .8s 6.6s forwards,none}
+  .loopfade{position:absolute;inset:0;background:var(--bg);opacity:0;animation:fadeIn .8s 6.2s forwards}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="matrix" width="1920" height="1080"></canvas>
+  <div class="vig"></div>
+  <div class="corner a"></div><div class="corner b"></div><div class="corner c"></div><div class="corner d"></div>
+  <div class="hud tl"><i></i>Peasy · Pricing Loop</div>
+  <div class="hud tr"><small>T+</small><span id="tc">00:00.0</span></div>
+  <div class="scenetag" id="scenetag"></div>
+  <div class="hud bl">EF••551 · Taycan 4S · 2020</div>
+  <div class="hud br" id="snd" title="Lyd av/på (M)">♪ lyd på</div>
+  <div class="steps" id="steps"></div>
+
+  <!-- 1 ERP -->
+  <section class="scene" id="s1">
+    <div class="erp">
+      <div class="side">
+        <div>Dashboard</div><div>Biler</div><div>Kundeservice</div>
+        <div class="h">Peasy arbeidsliste</div>
+        <div class="sel">1 Nye biler (9)</div><div>2 SD mottatt (0)</div><div>3 Endelig estimat (0)</div><div>4 Venter på trans. best. (148)</div>
+        <div>5a På vei (6)</div><div>5b Mottatt (0)</div><div>5c Forberedelse (6)</div><div>6 Ready for auction (2)</div><div>7 På auksjonen (1)</div>
+        <div>9 Vent. på budaksept (1)</div><div>14 Solgt (228)</div><div>16 Avvist (4868)</div>
+        <div class="h">Pris-verktøy</div><div>Rapporter</div><div>Oppsett</div>
+      </div>
+      <div class="main">
+        <div class="crumb">Hjem › Peasy arbeidsliste › Nye biler</div>
+        <h2>Liste 1 – dagens registrerte biler</h2>
+        <table>
+          <tr><th>SD mottatt</th><th>Internnr.</th><th>RegNr.</th><th>Merke</th><th>Modell</th><th>År</th><th>Km</th><th>Sted</th><th>Lav–høy</th></tr>
+          <tr><td>12.10 09:40</td><td>5378</td><td>BS••014</td><td>PORSCHE</td><td>Cayenne</td><td>2013</td><td>201 000</td><td>Rjukan</td><td>–</td></tr>
+          <tr><td>12.10 09:58</td><td>5384</td><td>ED••441</td><td>PORSCHE</td><td>Taycan 4</td><td>2022</td><td>61 000</td><td>Bergen</td><td>–</td></tr>
+          <tr class="hit"><td>12.10 12:00</td><td>5388</td><td>EF••551</td><td>PORSCHE</td><td>Taycan 4S</td><td>2020</td><td>158 000</td><td>Gjerdrum</td><td>–</td></tr>
+          <tr><td>10.10 03:07</td><td>5352</td><td>BS••314</td><td>PORSCHE</td><td>Cayenne Diesel</td><td>2013</td><td>176 000</td><td>Blommenholm</td><td>–</td></tr>
+          <tr><td>09.10 02:42</td><td>5326</td><td>DP••703</td><td>PORSCHE</td><td>Macan GTS</td><td>2016</td><td>98 000</td><td>Sandnes</td><td>–</td></tr>
+        </table>
+      </div>
+      <div class="scan"></div>
+    </div>
+  </section>
+
+  <!-- 2 DATA -->
+  <section class="scene" id="s2">
+    <div class="wires" id="wires2"><svg viewBox="0 0 1920 1080"></svg></div>
+    <div class="srcs" id="srcs">
+      <div class="src" style="animation-delay:.3s"><div class="dot"></div><div class="n">ERP</div><div class="lbl">Registrering · km · kommentar</div></div>
+      <div class="src" style="animation-delay:.5s"><div class="dot"></div><div class="n">Statens vegvesen</div><div class="lbl">Drivlinje · drivstoff · karosseri</div></div>
+      <div class="src big" style="animation-delay:.7s"><div class="dot"></div><div class="n">car.info</div><div class="lbl">Modell · motor · utstyr · EU-kontroll</div></div>
+      <div class="src" style="animation-delay:.9s"><div class="dot"></div><div class="n">elbilradar</div><div class="lbl">Rekkevidde</div></div>
+    </div>
+    <div class="agent"><svg viewBox="0 0 200 200"><circle class="orb" cx="100" cy="100" r="96"/><polygon class="hex" points="100,14 174,57 174,143 100,186 26,143 26,57"/><circle class="core" cx="100" cy="100" r="16"/></svg><div class="tag">DATA</div></div>
+    <div class="panel cv" id="cv"><div class="ttl">Origin-CV</div><div class="cur"></div></div>
+    <div class="attrs" id="attrs"></div>
+  </section>
+
+  <!-- 3 GATE -->
+  <section class="scene" id="s3">
+    <div class="gatewrap">
+      <div class="locks">
+        <div class="lock" style="animation-delay:.3s"><i></i>ERP</div><div class="lock" style="animation-delay:.4s"><i></i>Vegvesen</div>
+        <div class="lock" style="animation-delay:.5s"><i></i>car.info</div><div class="lock" style="animation-delay:.6s"><i></i>elbilradar</div>
+      </div>
+      <div class="gate"><i class="l"></i><i class="r"></i><div class="msg">Venter på komplett CV</div></div>
+      <div class="doc"></div>
+      <div class="nopart">Ingen prising på halve data</div>
+    </div>
+  </section>
+
+  <!-- 4 AGENTS -->
+  <section class="scene" id="s4">
+    <div class="panel ag l"><div class="name">FSD</div><div class="note">ingen regler · ingen kode</div>
+      <div class="filters" id="fl"></div><div class="mat" id="ml"></div><div class="twins" id="tl"></div>
+      <div class="lockp"><div class="p" id="pl">426 900<small>kr</small></div><div class="st" id="sl">● låst</div></div></div>
+    <div class="panel ag r"><div class="name">BENCHMARK</div><div class="note">ingen regler · ingen kode</div>
+      <div class="filters" id="fr"></div><div class="mat" id="mr"></div><div class="twins" id="tr"></div>
+      <div class="lockp"><div class="p" id="pr">432 100<small>kr</small></div><div class="st" id="sr">● låst</div></div></div>
+    <div class="avvik" id="avvik"><div class="lbl">avvik</div><div class="n">1,2 %</div></div>
+    <div class="flash" id="flash1"></div><div class="flash" id="flash2"></div>
+  </section>
+
+  <!-- 5 MID -->
+  <section class="scene" id="s5">
+    <div class="mid">
+      <div class="pair"><div><small>FSD</small>426 900</div><div><small>BENCHMARK</small>432 100</div></div>
+      <div class="one off"><small>MID</small>429 500</div>
+      <div class="cap"><small>Finn-utpris</small>428 000</div>
+      <div class="rule">≤ 95 % × <b>450 468</b> <span class="lbl" style="color:var(--amber)">egen annonse</span> → <b>428 000</b></div>
+    </div>
+  </section>
+
+  <!-- 6 CFO -->
+  <section class="scene" id="s6">
+    <div class="agent cfo" style="width:120px;height:120px;margin:0"><svg viewBox="0 0 200 200"><polygon class="hex" points="100,14 174,57 174,143 100,186 26,143 26,57"/><circle class="core" cx="100" cy="100" r="16"/></svg><div class="tag" style="bottom:-30px">CFO</div></div>
+    <div class="panel wf" id="wf"><div class="ttl">Fossefall</div>
+      <div class="res"><div><small>Lav</small>329 000</div><div><small>Høy</small>362 000</div></div>
+    </div>
+  </section>
+
+  <!-- 7 HUMAN -->
+  <section class="scene" id="s7">
+    <div class="panel card">
+      <div class="box" style="grid-row:1/3;animation-delay:.3s"><span class="lbl">Bilder</span><div class="photos"><i></i><i></i><i></i><i></i></div></div>
+      <div class="box" style="animation-delay:.6s"><span class="lbl">Kommentar · CV</span><div class="mini"><b>Taycan 4S · 2020 · 158 000 km</b><br>490 hk · 93.4 kWh · 4WD · 460 km<br>EU 2024 · 108 850 km · utstyr 12 ✓<br>heftelser <span style="color:var(--amber)">⚠ manuell sjekk</span></div></div>
+      <div class="box" style="animation-delay:.9s"><span class="lbl">Tvillinger</span><div class="mini">103 000 km · 479 000 · solgt<br>95 000 km · 384 000 · solgt<br>104 000 km · 409 000 · solgt<br>136 000 km · 417 000 · solgt</div></div>
+      <div class="box" style="animation-delay:1.2s"><span class="lbl">FSD · Benchmark</span><div class="mini" style="font-size:26px;line-height:1.5"><b>426 900</b> · <b>432 100</b><br><span style="font-size:12px;color:var(--line)">MID 429 500 → 428 000</span></div></div>
+      <div class="box" style="animation-delay:1.5s"><span class="lbl">Fossefall</span><div class="mini">428 000 → −42 800 → −30 000 → −4 532<br>→ −1 000 → −9 193 → −11 900 → +425<br><b style="font-size:22px">329 000 – 362 000</b></div></div>
+      <div class="send">SEND</div>
+      <div class="hand"><svg viewBox="0 0 150 200"><path d="M40 200 L40 110 Q40 96 54 96 L56 96 L56 30 Q56 12 74 12 Q92 12 92 30 L92 96 L112 96 Q124 96 128 108 L134 108 Q148 108 150 124 L150 150 Q150 200 100 200 Z"/></svg></div>
+    </div>
+  </section>
+
+  <!-- 8 LOOP -->
+  <section class="scene" id="s8">
+    <div class="erpmini"><div>EF••551</div><div>PORSCHE Taycan 4S · 2020 · 158 000 km</div><div class="w">329 000 – 362 000</div></div>
+    <div class="loopwrap" id="loop"><svg viewBox="0 0 900 900"><circle class="ring" cx="450" cy="450" r="400"/><g id="loopnodes"></g></svg></div>
+    <div class="loopdone"><div class="t">Loop komplett</div><div class="v">T+<span id="tcend">00:00</span></div></div>
+    <div class="loopfade"></div>
+    <div class="endlogo"><div class="logo">peasy<span class="sp"><svg viewBox="0 0 70 46"><path fill="#24d58e" d="M2 46 Q14 6 70 0 L70 14 Q28 14 8 46 Z"/></svg></span></div>
+      <div class="words"><span style="animation-delay:7.6s">Data</span><span style="animation-delay:7.9s">Analyse</span><span style="animation-delay:8.2s">Kontroll</span><span style="animation-delay:8.5s">Presisjon</span></div></div>
+  </section>
+
+  <div class="overlay show" id="overlay">
+    <div class="ov-logo">peasy<span class="sp"><svg viewBox="0 0 70 46"><path fill="#24d58e" d="M2 46 Q14 6 70 0 L70 14 Q28 14 8 46 Z"/></svg></span></div>
+    <button class="play" id="play" aria-label="Spill av"><svg viewBox="0 0 64 64"><path d="M16 8 L56 32 L16 56 Z"/></svg></button>
+    <div class="play-label" id="playLabel">Spill av · slik prises en bil</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DUR=[8000,22000,6000,28000,8000,20000,10000,10000]; // 112 s
+  const SCENES=[]; let acc=0; DUR.forEach((d,i)=>{SCENES.push({id:'s'+(i+1),start:acc,end:acc+d});acc+=d;});
+  const TOTAL=acc;
+  const TAGS=['01 · ERP · Liste 1','02 · Data-agent · Origin-CV','03 · Porten','04 · FSD · Benchmark','05 · MID','06 · CFO · Fossefall','07 · Mennesket','08 · Tilbake til ERP'];
+  const $=s=>document.querySelector(s);
+  const stage=$('#stage');
+  const fmt=n=>Math.round(n).toLocaleString('nb-NO').replace(/ |,/g,' ');
+  const SVG='http://www.w3.org/2000/svg';
+
+  function fit(){ stage.style.transform='scale('+Math.min(innerWidth/1920,innerHeight/1080)+')'; }
+  addEventListener('resize',fit); fit();
+  const steps=$('#steps'); SCENES.forEach(()=>steps.appendChild(document.createElement('b')));
+
+  /* ---- matrix rain ---- */
+  (function(){ const c=$('#matrix'),x=c.getContext('2d'); const cols=Math.floor(1920/22); const drops=Array.from({length:cols},()=>Math.random()*-60);
+    const chars='0123456789ABCDEF<>/\\|{}[]=+-*#%';
+    function step(){ x.fillStyle='rgba(3,8,6,.12)'; x.fillRect(0,0,1920,1080); x.font='16px monospace';
+      for(let i=0;i<cols;i++){ const y=drops[i]*22; x.fillStyle=Math.random()<.06?'#bffde3':'#1f9f6b'; x.fillText(chars[Math.floor(Math.random()*chars.length)],i*22,y);
+        if(y>1080&&Math.random()>.985) drops[i]=0; drops[i]+=0.5+Math.random()*0.5; } }
+    setInterval(step,70); })();
+
+  /* ---- sound: calm electronic bed, pure Web Audio ---- */
+  let AC=null,master=null,soundOn=true;
+  function audioInit(){ if(AC) return; try{ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=soundOn?0.5:0; master.connect(AC.destination);
+      const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420; lp.connect(master);
+      [[55,'sine',.18],[110,'triangle',.07],[164.8,'sine',.04],[82.4,'sine',.06]].forEach(([f,t,g],i)=>{ const o=AC.createOscillator(); o.type=t; o.frequency.value=f; o.detune.value=(i%2?4:-4);
+        const gn=AC.createGain(); gn.gain.value=g; const lfo=AC.createOscillator(); lfo.frequency.value=0.05+i*0.03; const lg=AC.createGain(); lg.gain.value=g*0.6; lfo.connect(lg); lg.connect(gn.gain); lfo.start();
+        o.connect(gn); gn.connect(lp); o.start(); });
+      // soft noise air
+      const buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.3;
+      const n=AC.createBufferSource(); n.buffer=buf; n.loop=true; const nf=AC.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=900; nf.Q.value=0.6; const ng=AC.createGain(); ng.gain.value=0.025; n.connect(nf); nf.connect(ng); ng.connect(master); n.start();
+    }catch(e){} }
+  function ping(freq,dur,vol){ if(!AC) return; try{ const o=AC.createOscillator(); o.type='sine'; o.frequency.value=freq; const g=AC.createGain(); const t=AC.currentTime; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);}catch(e){} }
+  function click(){ if(!AC) return; try{ const buf=AC.createBuffer(1,AC.sampleRate*0.04,AC.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3); const s=AC.createBufferSource(); s.buffer=buf; const f=AC.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800; const g=AC.createGain(); g.gain.value=0.5; s.connect(f); f.connect(g); g.connect(master); s.start(); }catch(e){} }
+  const cues=[]; // [time ms, fn]
+  function cue(t,fn){ cues.push([t,fn]); }
+  function toggleSound(){ soundOn=!soundOn; if(master) master.gain.value=soundOn?0.5:0; $('#snd').textContent=soundOn?'♪ lyd på':'♪ lyd av'; }
+  $('#snd').addEventListener('click',toggleSound); addEventListener('keydown',e=>{ if(e.key==='m'||e.key==='M') toggleSound(); });
+
+  /* ---- builders ---- */
+  const CV=[['Modell','Taycan 4S'],['År','2020'],['Km','158 000 · 26 333/år'],['VIN','WP0ZZZY1Z•••••••'],['Motor','360 kW · 490 hk'],['Batteri','93.4 kWh'],['Drivlinje','4WD · automat'],['Karosseri','Sedan'],['Rekkevidde','460 km'],['Service','108 380 → 108 850 km'],['EU','2024-03-26 · 108 850 km'],['Utstyr','12 ✓'],['Kommentar','✓'],['Heftelser','⚠ sjekk',1]];
+  const ATTR=['Pakke 4S','490 hk','93.4 kWh','Sedan','4WD','460 km','Performance Battery Plus','Sport Chrono','Panoramatak','BOSE','Adaptiv luftfjæring','LED Matrix','21" felger','Varmepumpe','Keyless','Ryggekamera'];
+  function wire(svg,x1,y1,x2,y2,delay,dots){ const cx=(x1+x2)/2; const d='M'+x1+' '+y1+' C '+cx+' '+y1+', '+cx+' '+y2+', '+x2+' '+y2;
+    const p=document.createElementNS(SVG,'path'); p.setAttribute('d',d); p.style.animationDelay=delay+'s'; svg.appendChild(p);
+    for(let i=0;i<(dots||2);i++){ const c=document.createElementNS(SVG,'circle'); c.setAttribute('r',4); c.style.offsetPath='path("'+d+'")'; c.style.animationDelay=(delay+0.6+i*0.5)+'s'; svg.appendChild(c);} }
+  const build={
+    s2(){ const svg=$('#wires2 svg'); svg.innerHTML=''; const ys=[260,414,583,742];
+      ys.forEach((y,i)=>wire(svg,570,y,860,540,1.4+i*1.6,3)); wire(svg,1060,540,1360,300,2.0,3); wire(svg,1060,540,1360,540,2.3,3);
+      const cv=$('#cv'); cv.querySelectorAll('.line').forEach(e=>e.remove());
+      const at=[0,0,0,0,1,1,1,1,2,2,2,2,0,0]; const srcT=[2.0,3.6,5.2,6.8]; // when each source answers
+      CV.forEach((l,i)=>{ const d=document.createElement('div'); d.className='line'; d.innerHTML='<span>'+l[0]+'</span><span'+(l[2]?' class="warn"':'')+'>'+l[1]+'</span>';
+        const base=i<4?2.4:i<8?4.0:i<12?5.8:12.6; d.style.animationDelay=(base+(i%4)*0.35)+'s'; cv.appendChild(d); });
+      const srcs=document.querySelectorAll('#srcs .src'); srcs.forEach((s,i)=>{ s.classList.remove('on'); setTimeout(()=>{s.classList.add('on'); ping(440+i*110,.5,.08);},srcT[i]*1000); });
+      const a=$('#attrs'); a.innerHTML='<div class="hd lbl" style="opacity:0;animation:fadeIn .3s 6.2s forwards">car.info · attributter og utstyr</div>';
+      ATTR.forEach((t,i)=>{ const c=document.createElement('span'); c.className='chip'+(i<6?' k':''); c.textContent=t; c.style.animationDelay=(6.4+i*0.3)+'s'; a.appendChild(c); setTimeout(click,(6.4+i*0.3)*1000); }); },
+    s3(){ const locks=document.querySelectorAll('#s3 .lock'); locks.forEach((l,i)=>{ l.classList.remove('ok'); setTimeout(()=>{l.classList.add('ok'); click();},(1.4+i*.6)*1000); }); setTimeout(()=>ping(220,1.2,.12),4200); },
+    s4(){ const F=['Modell','Motor','Drivlinje','Karosseri','Utstyr','Km']; const twins=[['103 000 km','479 000'],['95 000 km','384 000'],['104 000 km','409 000'],['136 000 km','417 000']];
+      [['#fl','#ml','#tl',0],['#fr','#mr','#tr',0.4]].forEach(([f,m,t,off])=>{
+        const fb=$(f); fb.innerHTML=''; F.forEach((n,i)=>{ const d=document.createElement('div'); d.className='f'; d.textContent=n; d.style.animationDelay=(0.6+off)+'s,'+(3.2+off+i*1.1)+'s'; fb.appendChild(d); });
+        const mb=$(m); mb.innerHTML=''; const keep=new Set([5,10,19,28]); for(let i=0;i<40;i++){ const d=document.createElement('div'); const k=keep.has(i); d.className='m '+(k?'t':'x');
+          const step=k?0:(i%6); d.style.animationDelay=(1.2+off+i*0.04)+'s,'+(k?9.6+off:3.4+off+step*1.1)+'s'; mb.appendChild(d); }
+        const tb=$(t); tb.innerHTML=''; twins.forEach((tw,i)=>{ const d=document.createElement('div'); d.className='tw'; d.innerHTML='<span class="lbl">tvilling '+(i+1)+'</span><span>'+tw[0]+'</span><span>'+tw[1]+' kr</span><span class="sold">solgt</span>'; d.style.animationDelay=(11+off+i*0.5)+'s'; tb.appendChild(d); });
+      });
+      [['#pl','#sl','#flash1',17.0,660],['#pr','#sr','#flash2',19.5,720]].forEach(([p,s,f,t,fq])=>{ $(p).style.animationDelay=t+'s'; $(s).style.animationDelay=(t+.2)+'s'; $(f).style.animationDelay=t+'s'; setTimeout(()=>{click();ping(fq,.6,.15);},t*1000); });
+      $('#avvik').style.animationDelay='22s';
+      // filter clicks
+      for(let i=0;i<6;i++) setTimeout(click,(3.2+i*1.1)*1000); },
+    s5(){ setTimeout(()=>ping(330,1,.12),2600); setTimeout(click,5800); },
+    s6(){ const rows=[['Finn-utpris',428000,'base'],['Forhandlermargin',-42800],['Avsetning takst',-30000],['Omregistrering',-4532],['Klargjøring',-1000],['Salær',-9193],['Peasy-avgift',-11900],['Avrunding',425,'pos'],['Peasy-bud',329000,'sum']];
+      const wf=$('#wf'); wf.querySelectorAll('.row').forEach(e=>e.remove()); const res=wf.querySelector('.res'); const max=428000; let run=0;
+      rows.forEach((r,i)=>{ const d=document.createElement('div'); const neg=r[1]<0; d.className='row '+(r[2]==='sum'?'sum':r[2]==='pos'?'pos':neg?'neg':'');
+        let left,width; if(r[2]==='base'||r[2]==='sum'){ left=0; width=Math.abs(r[1])/max*100; run=r[1]; } else if(neg){ const nr=run+r[1]; left=nr/max*100; width=(run-nr)/max*100; run=nr; } else { left=run/max*100; width=r[1]/max*100; run+=r[1]; }
+        d.innerHTML='<div class="k">'+r[0]+'</div><div class="bar"><i style="left:'+left+'%;width:'+Math.max(width,0.4)+'%"></i></div><div class="v">'+(r[1]>0&&r[2]!=='base'&&r[2]!=='sum'?'+':'')+(neg?'−':'')+fmt(Math.abs(r[1]))+'</div>';
+        d.style.animationDelay=(0.8+i*1.1)+'s'; wf.insertBefore(d,res); setTimeout(click,(0.8+i*1.1)*1000); });
+      setTimeout(()=>ping(550,.8,.14),11600); },
+    s7(){ setTimeout(click,7600); setTimeout(()=>ping(880,.6,.12),7900); },
+    s8(){ const g=$('#loopnodes'); g.innerHTML=''; const names=['ERP','DATA','PORT','FSD·BM','MID','CFO','MENNESKE','ERP'];
+      names.forEach((n,i)=>{ const a=-Math.PI/2+i/8*Math.PI*2; const x=450+Math.cos(a)*400,y=450+Math.sin(a)*400;
+        const c=document.createElementNS(SVG,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',16); c.setAttribute('class','node'); c.style.transformOrigin=x+'px '+y+'px'; c.style.animationDelay=(0.6+i*0.45)+'s'; g.appendChild(c);
+        const t=document.createElementNS(SVG,'text'); t.setAttribute('x',450+Math.cos(a)*455); t.setAttribute('y',450+Math.sin(a)*455+5); t.setAttribute('class','nl'); t.textContent=n; t.style.animationDelay=(0.7+i*0.45)+'s'; g.appendChild(t); setTimeout(click,(0.6+i*0.45)*1000); });
+      setTimeout(()=>ping(330,1.4,.14),4600); setTimeout(()=>ping(660,1.6,.1),6800);
+      $('#tcend').textContent=$('#tc').textContent.slice(0,5); },
+  };
+
+  /* ---- playback ---- */
+  let t0=0,cur=null,outTimer=null,playing=false;
+  const overlay=$('#overlay'),playBtn=$('#play'),playLabel=$('#playLabel'),tc=$('#tc'),scenetag=$('#scenetag');
+  function enterFullscreen(){ const el=document.documentElement; try{ const r=el.requestFullscreen?el.requestFullscreen():el.webkitRequestFullscreen?el.webkitRequestFullscreen():null; if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+  function exitFullscreen(){ try{ if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen().catch(()=>{}); else if(document.webkitFullscreenElement&&document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){} }
+  function activate(sc,idx){
+    if(cur){ const old=$('#'+cur); old.classList.add('out'); clearTimeout(outTimer); outTimer=setTimeout(()=>old.classList.remove('on','out'),500); }
+    const el=$('#'+sc.id); if(build[sc.id]) build[sc.id]();
+    el.classList.remove('on','out'); void el.offsetWidth; el.classList.add('on'); cur=sc.id;
+    [...steps.children].forEach((b,i)=>b.classList.toggle('cur',i===idx));
+    scenetag.classList.remove('on'); scenetag.textContent=TAGS[idx]; void scenetag.offsetWidth; scenetag.classList.add('on');
+    ping(196,.4,.06);
+  }
+  function start(){ enterFullscreen(); audioInit(); if(AC&&AC.state==='suspended') AC.resume(); overlay.classList.remove('show');
+    document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on','out')); cur=null; t0=performance.now(); playing=true; requestAnimationFrame(tick); }
+  function finish(){ playing=false; playLabel.textContent='Spill av på nytt'; playBtn.setAttribute('aria-label','Spill av på nytt'); overlay.classList.add('show'); }
+  playBtn.addEventListener('click',start);
+  addEventListener('keydown',e=>{ if(e.key==='Escape') exitFullscreen(); });
+  function tick(now){
+    if(!playing) return;
+    let t=now-t0; if(t>=TOTAL){ finish(); return; }
+    const s=t/1000; tc.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+Math.floor((s%1)*10);
+    for(let i=0;i<SCENES.length;i++){ const sc=SCENES[i]; if(t>=sc.start&&t<sc.end){ if(cur!==sc.id) activate(sc,i); break; } }
+    requestAnimationFrame(tick);
+  }
+})();
+</script>
+</body>
+</html>
