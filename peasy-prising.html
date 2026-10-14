@@ -272,8 +272,9 @@
   <div class="hud tr"><small>T+</small><span id="tc">00:00.0</span></div>
   <div class="scenetag" id="scenetag"></div>
   <div class="hud bl">EF••551 · Taycan 4S · 2020</div>
-  <div class="hud br"><span id="ver" style="color:var(--mute)">v6</span> &nbsp;·&nbsp; <span id="spd" title="Hastighet (tastene 1–5, eller klikk)" style="cursor:pointer">1,75×</span> &nbsp;·&nbsp; <span id="snd" title="Lyd av/på (M)" style="cursor:pointer">♪ lyd på</span></div>
+  <div class="hud br"><span id="ver" style="color:var(--mute)">v7</span> &nbsp;·&nbsp; <span id="pz" title="Pause (mellomrom)" style="cursor:pointer">❚❚</span> &nbsp;·&nbsp; <span id="spd" title="Hastighet (tastene 1–5, eller klikk)" style="cursor:pointer">1,75×</span> &nbsp;·&nbsp; <span id="snd" title="Lyd av/på (M)" style="cursor:pointer">♪ lyd på</span></div>
   <div class="steps" id="steps"></div>
+  <div id="pauseTag" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;display:none;font-family:var(--mono);font-size:22px;letter-spacing:.6em;text-transform:uppercase;color:var(--line);padding:18px 40px;border:1px solid rgba(36,213,142,.5);background:rgba(3,8,6,.7)">Pause</div>
 
   <!-- 0 INTRO -->
   <section class="scene" id="s0">
@@ -425,8 +426,8 @@
   let AC=null,master=null,soundOn=true;
   function audioInit(){ if(AC) return; try{ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=soundOn?0.4:0; master.connect(AC.destination);
     }catch(e){} }
-  function ping(freq,dur,vol){ if(!AC) return; try{ const o=AC.createOscillator(); o.type='sine'; o.frequency.value=freq; const g=AC.createGain(); const t=AC.currentTime; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);}catch(e){} }
-  function click(){ if(!AC) return; try{ const buf=AC.createBuffer(1,AC.sampleRate*0.04,AC.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3); const s=AC.createBufferSource(); s.buffer=buf; const f=AC.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800; const g=AC.createGain(); g.gain.value=0.5; s.connect(f); f.connect(g); g.connect(master); s.start(); }catch(e){} }
+  function ping(freq,dur,vol){ if(!AC||paused) return; try{ const o=AC.createOscillator(); o.type='sine'; o.frequency.value=freq; const g=AC.createGain(); const t=AC.currentTime; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);}catch(e){} }
+  function click(){ if(!AC||paused) return; try{ const buf=AC.createBuffer(1,AC.sampleRate*0.04,AC.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3); const s=AC.createBufferSource(); s.buffer=buf; const f=AC.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800; const g=AC.createGain(); g.gain.value=0.5; s.connect(f); f.connect(g); g.connect(master); s.start(); }catch(e){} }
   const cues=[]; // [time ms, fn]
   function cue(t,fn){ cues.push([t,fn]); }
   function toggleSound(){ soundOn=!soundOn; if(master) master.gain.value=soundOn?0.4:0; $('#snd').textContent=soundOn?'♪ lyd på':'♪ lyd av'; }
@@ -480,7 +481,12 @@
 
   /* ---- playback ---- */
   const BASE=1.2; // film runs 20 % faster than authored
-  let cur=null,outTimer=null,playing=false,filmT=0,lastNow=0,mult=1.75,rate=BASE*1.75;
+  let cur=null,outTimer=null,playing=false,paused=false,pausedAnims=[],filmT=0,lastNow=0,mult=1.75,rate=BASE*1.75;
+  function togglePause(){ if(!playing) return; paused=!paused; $('#pauseTag').style.display=paused?'block':'none'; $('#pz').textContent=paused?'▶':'❚❚';
+    if(paused){ pausedAnims=document.getAnimations().filter(a=>a.playState==='running'); pausedAnims.forEach(a=>a.pause()); }
+    else { pausedAnims.forEach(a=>{ try{a.play();}catch(e){} }); pausedAnims=[]; lastNow=performance.now(); requestAnimationFrame(tick); } }
+  $('#pz').addEventListener('click',togglePause);
+  addEventListener('keydown',e=>{ if(e.code==='Space'||e.key==='k'||e.key==='K'){ e.preventDefault(); togglePause(); } });
   const RATES=[1,1.25,1.5,1.75,2];
   function applyRate(){ $('#spd').textContent=(mult+'').replace('.',',')+'×'; document.getAnimations().forEach(a=>{ a.playbackRate=rate; }); }
   function setRate(m){ mult=m; rate=BASE*m; applyRate(); }
@@ -498,13 +504,13 @@
     scenetag.classList.remove('on'); scenetag.textContent=TAGS[idx]; void scenetag.offsetWidth; scenetag.classList.add('on');
     ping(196,.4,.06);
   }
-  function start(){ enterFullscreen(); audioInit(); if(AC&&AC.state==='suspended') AC.resume(); overlay.classList.remove('show');
+  function start(){ enterFullscreen(); audioInit(); if(AC&&AC.state==='suspended') AC.resume(); overlay.classList.remove('show'); paused=false; pausedAnims=[]; $('#pauseTag').style.display='none'; $('#pz').textContent='❚❚';
     document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on','out')); cur=null; filmT=0; lastNow=performance.now(); playing=true; requestAnimationFrame(tick); }
   function finish(){ playing=false; playLabel.textContent='Spill av på nytt'; playBtn.setAttribute('aria-label','Spill av på nytt'); overlay.classList.add('show'); }
   playBtn.addEventListener('click',start);
   addEventListener('keydown',e=>{ if(e.key==='Escape') exitFullscreen(); });
   function tick(now){
-    if(!playing) return;
+    if(!playing||paused) return;
     filmT+=(now-lastNow)*rate; lastNow=now; const t=filmT; if(t>=TOTAL){ finish(); return; }
     const s=Math.max(0,t-INTRO)/1000; tc.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+Math.floor((s%1)*10);
     for(let i=0;i<SCENES.length;i++){ const sc=SCENES[i]; if(t>=sc.start&&t<sc.end){ if(cur!==sc.id) activate(sc,i); break; } }
