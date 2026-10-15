@@ -11,6 +11,8 @@
   function auSendLaas(c, b) {
     var ag = b.agent;
     var manuell = !!(ag && ag.pris_kilde && (ag.pris_kilde.kilde === 'manuell' || ag.pris_kilde.kilde === 'bud') && b.erp_lav); // c597: «Antatt bud» er også manuell
+    var lokal = window._qaManuell && window._qaManuell[String(b.id)]; // c604: svaret fra Mini rett etter manuell pris (15 min)
+    if (lokal && Date.now() - lokal.t < 15 * 60000 && lokal.dLav > 0) manuell = true;
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
     var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
