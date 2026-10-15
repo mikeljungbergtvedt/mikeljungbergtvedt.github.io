@@ -236,22 +236,24 @@
     if (tabell && tabell.getAttribute('data-mid') !== sig) {
       tabell.setAttribute('data-mid', sig);
       var td = 'padding:3px 6px;border-top:1px solid #E7EBE4;text-align:right;font-variant-numeric:tabular-nums';
-      /* c594 (Mike 15.10): bare kolonnen som skrives til ERP (bilens profil). Profil-linjen bare for B og Ordna. */
-      var P = arm === 'B' ? B : arm === 'ORDNA' ? O : A, navnP = arm === 'ORDNA' ? 'Ordna' : arm, fakP = arm === 'B' ? '0,9' : '0,75';
-      var cell = function (v) { return '<td style="' + td + '">' + v + '</td>'; };
+      /* c603 = c593 (Mike 15.10, «slik det var»): trekkene står i alle tre kolonner, profil-linjen viser hva B og Ordna trekker fra A,
+         og kolonnen som skrives til ERP er markert. */
+      var kol = arm === 'B' ? 1 : arm === 'ORDNA' ? 2 : 0;
+      var cell = function (v, ix, bold) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + (bold ? ';font-weight:700' : '') + '">' + v + '</td>'; };
       var bel = function (n) { return n == null ? '–' : (n < 0 ? '−' : '') + auKr(Math.abs(n)); };
       var rows = '';
       ff.trinn.forEach(function (l) {
         var sum = l[2] === 'sum', navn = l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : l[0]);
-        var v = l[1];
+        var v = [l[1], l[1], l[1]];
         if (l[0] === 'Midt') {
-          if (P !== A && P.midt != null && A.midt != null) rows += '<tr><td style="padding:3px 6px;border-top:1px solid #E7EBE4">− Profil ' + navnP + ' (× ' + fakP + ')</td>' + cell(bel(P.midt - A.midt)) + '</tr>';
-          v = P.midt;
+          rows += '<tr><td style="padding:3px 6px;border-top:1px solid #E7EBE4">− Profil (A 1,0 · B 0,9 · Ordna 0,75)</td>' + cell('0', 0) + cell(bel(B.midt != null && A.midt != null ? B.midt - A.midt : null), 1) + cell(bel(O.midt != null && A.midt != null ? O.midt - A.midt : null), 2) + '</tr>';
+          v = [A.midt, B.midt, O.midt];
         }
-        rows += '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:3px 6px;border-top:1px solid #E7EBE4">' + navn + '</td>' + cell(bel(v)) + '</tr>';
+        rows += '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:3px 6px;border-top:1px solid #E7EBE4">' + navn + '</td>' + cell(bel(v[0]), 0) + cell(bel(v[1]), 1) + cell(bel(v[2]), 2) + '</tr>';
       });
-      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:3px 6px">Lag</td><td style="' + td + '">' + navnP + ' (skrives)</td></tr>' + rows +
-        '<tr style="font-weight:700"><td style="padding:3px 6px;border-top:2px solid #2F5E43">Lav – høy</td><td style="' + td + ';border-top:2px solid #2F5E43">' + k(P.lav) + ' – ' + k(P.hoy) + '</td></tr>';
+      var hd = function (t, ix) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + '">' + t + (ix === kol ? ' ✓' : '') + '</td>'; };
+      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:3px 6px">Lag</td>' + hd('A', 0) + hd('B', 1) + hd('Ordna', 2) + '</tr>' + rows +
+        '<tr style="font-weight:700"><td style="padding:3px 6px;border-top:2px solid #2F5E43">Lav – høy</td>' + [[A, 0], [B, 1], [O, 2]].map(function (x) { return '<td style="' + td + ';border-top:2px solid #2F5E43' + (x[1] === kol ? ';background:#E8F5E9' : '') + '">' + k(x[0].lav) + ' – ' + k(x[0].hoy) + '</td>'; }).join('') + '</tr>';
     }
   }
 
