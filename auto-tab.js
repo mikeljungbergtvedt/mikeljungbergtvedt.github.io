@@ -10,7 +10,7 @@
   // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
   function auSendLaas(c, b) {
     var ag = b.agent;
-    var manuell = !!(ag && ag.pris_kilde && ag.pris_kilde.kilde === 'manuell' && b.erp_lav);
+    var manuell = !!(ag && ag.pris_kilde && (ag.pris_kilde.kilde === 'manuell' || ag.pris_kilde.kilde === 'bud') && b.erp_lav); // c597: «Antatt bud» er også manuell
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
     var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
     [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
