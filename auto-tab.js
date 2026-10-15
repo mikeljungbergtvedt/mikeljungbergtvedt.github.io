@@ -189,7 +189,9 @@
     var arm = String(b.arm || 'A').toUpperCase();
     var fak = { A: 1, B: 0.9, ORDNA: 0.75 };
     var r1 = function (n) { return n == null ? null : Math.round(n / 1000) * 1000; };
-    var band = function (x) { var f0 = fak[x]; return { midt: r1(ff.a * f0), lav: r1(ff.lav * f0), hoy: r1(ff.hoy * f0) }; };
+    /* c592: A, B og Ordna nøyaktig slik ERP får dem (auto-score mid_ff.profiler). Mangler de: A × faktor som før. */
+    var prof = ff.profiler || null, pk = { A: 'a', B: 'b', ORDNA: 'ordna' };
+    var band = function (x) { var p = prof && prof[pk[x]]; if (p && p.lav) return { midt: p.midt, lav: p.lav, hoy: p.hoy }; var f0 = fak[x]; return { midt: r1(ff.a * f0), lav: r1(ff.lav * f0), hoy: r1(ff.hoy * f0) }; };
     var A = band('A'), B = band('B'), O = band('ORDNA');
     var aktiv = arm === 'B' ? B : arm === 'ORDNA' ? O : A;
     if (b.erp_lav && b.erp_hoy) { aktiv.lav = b.erp_lav; aktiv.hoy = b.erp_hoy; }
