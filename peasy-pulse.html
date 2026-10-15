@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c589</title>
+<title>Peasy Pulse v16.08.c590</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c589';</script>
+<script>document.title='Peasy Pulse v16.08.c590';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c589</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c590</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c589</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c590</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -3415,6 +3415,8 @@ async function pulseBilfil(rows){
       var noD=function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x||'')?x.slice(8,10)+'.'+x.slice(5,7)+'.'+x.slice(0,4):null;};
       if(noD(b.bud_akseptert)) r._salg=noD(b.bud_akseptert);
       if(noD(b.bud_avvist)) r._retur=noD(b.bud_avvist);
+      /* c590: bestilt hent/lev (bilfil): første dag på «på vei», avbestilte uten dato. Én per internnr. */
+      r._bestilt=noD(b.bestilt)||null; r._bestiltType=b.bestilt_type||null;
       [[15,'gire_bestilt'],[16,'levere_selv'],[17,'mottatt'],[21,'returnert']].forEach(function(p){var v=b[p[1]];if(!v||!r[p[0]])return;var no=v.slice(8,10)+'.'+v.slice(5,7)+'.'+v.slice(0,4);if(String(r[p[0]]||'').slice(0,10)!==no)r[p[0]]=no;});
     }}
   window._pulseBilfil={bygget:d.bygget,treff:n};
@@ -3802,10 +3804,10 @@ function render(data,rows){
     var naa={n:0,hent:0,selv:0}, forr={n:0,hent:0,selv:0};
     (rows||[]).slice(1).forEach(function(r){
       if(!r||!String(r[1]||'').trim()) return;
-      var p=d0(r[15]), q=d0(r[16]);
+      var x=d0(r._bestilt), hent=r._bestiltType!=='selv'; /* c590: bilfil «bestilt» (ikke P/Q: de mister avviste og bruker ombookingsdato) */
       function i(a,b,x){ return x&&x>=a&&x<b; }
-      if(i(fra,til,p)||i(fra,til,q)){ naa.n++; if(i(fra,til,p)) naa.hent++; else naa.selv++; }
-      if(i(fraF,tilF,p)||i(fraF,tilF,q)){ forr.n++; if(i(fraF,tilF,p)) forr.hent++; else forr.selv++; }
+      if(i(fra,til,x)){ naa.n++; if(hent) naa.hent++; else naa.selv++; }
+      if(i(fraF,tilF,x)){ forr.n++; if(hent) forr.hent++; else forr.selv++; }
     });
     var dg=['søn','man','tir','ons','tor','fre','lør'], sist=new Date(til.getTime()-864e5);
     var periode=mandag?'forrige uke':(fra.getTime()===sist.getTime()?dg[fra.getDay()]:dg[fra.getDay()]+'–'+dg[sist.getDay()]);
@@ -9368,7 +9370,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c589</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c590</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13195,6 +13197,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c503: Auto-fanen: «Kunden»-kolonne med status fra ERP og grunn (valg + egne ord) i stedet for «Sendt til kunde». -->
 <!-- c495: Scoreboard: «Bud mot fossefall» (bud-tab.js, bud-fossefall.json) — Finn-utpris → estimert AR-bud → faktisk AR-bud, etter Finn-kvalitet og celle. -->
+<!-- c590: «Bestilt hent/lev» (uke) teller bilfilens «bestilt»: første dag bilen kom på «på vei», én per internnr, avbestilte (avvist før mottak / tilbake til venter på bestilling) telles ikke. -->
 <!-- c589: Operasjonelt → nøkkeltall: nytt første kort «Bestilt hent/lev» = denne uka t.o.m. i går mot samme ukedager forrige uke (P Gire bestilt / Q Levere selv). Mandag: forrige uke mot uka før. -->
 <!-- c588: QA-kortets status (SEND/QA) bygger på FSD og BM når de har priset bilen: QA bare når en av dem stoppet bilen, Mid mangler eller km-sperre. Gamle A/B/V3G-regler (mangler V3G-utpris, ident-score, A mot B) gjelder ikke lenger for disse bilene. -->
 <!-- c494: Nytt QA-kort: statusboks (poeng, rute, hovedårsak), detaljer bak +, HEFT/Origin som grå infolinje, SEND øverst = ekte SEND. Bilder gir ikke poeng. -->
