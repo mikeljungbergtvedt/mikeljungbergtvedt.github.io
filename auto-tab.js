@@ -13,10 +13,31 @@
     var manuell = !!(ag && ag.pris_kilde && (ag.pris_kilde.kilde === 'manuell' || ag.pris_kilde.kilde === 'bud') && b.erp_lav); // c597: «Antatt bud» er også manuell
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
     var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : (ag.fsd && ag.fsd.stopp) ? 'FSD har stoppet bilen. Sett Finn-pris manuelt.' : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
+    /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
+       også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
+       auksjonstreff, samlebil eller utenfor scope. */
+    if (manuell) {
+      var hard = c.querySelector('.qa-auksjon-ok, .qa-samler-avvis') || /UTENFOR SCOPE|Innhent km|✅ Sendt/.test(c.innerText || '');
+      var bunn = c.querySelector('.qa-send-btn');
+      if (!hard && !bunn) {
+        var div = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && /^Ingen utpris/.test((d.textContent || '').trim()); })[0];
+        if (div) { bunn = document.createElement('button'); bunn.type = 'button'; bunn.className = 'qa-send-btn'; div.parentNode.replaceChild(bunn, div); }
+      }
+      if (!hard && bunn && (bunn.disabled || !bunn.dataset.regnr) && bunn.getAttribute('data-manuell') !== '1') {
+        var arm = String(b.arm || 'A').toUpperCase(), who = arm === 'ORDNA' ? 'ORDNA' : arm;
+        bunn.setAttribute('data-manuell', '1'); bunn.disabled = false; bunn.removeAttribute('disabled'); bunn.removeAttribute('data-laast');
+        bunn.dataset.key = b.regnr + '__' + b.id; bunn.dataset.regnr = b.regnr; bunn.dataset.erpid = String(b.id); bunn.dataset.km = String(b.km || 0);
+        bunn.textContent = '📤 SEND ' + who; bunn.title = 'Manuelt priset i QA';
+        bunn.style.cssText = 'flex:1;min-width:100px;padding:10px 12px;background:' + (arm === 'ORDNA' ? '#E65100' : arm === 'B' ? '#1B5E20' : '#6A1B9A') + ';color:#fff;border:0;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;';
+        bunn.onclick = function () { if (typeof window.qaSend === 'function') window.qaSend(bunn); };
+      }
+    }
     [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
     });
+    var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
+    if (tp && bn) { tp.disabled = bn.disabled; if (!bn.disabled) { tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor; } }
   }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
