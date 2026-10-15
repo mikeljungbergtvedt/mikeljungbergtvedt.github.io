@@ -215,9 +215,24 @@
     if (tabell && tabell.getAttribute('data-mid') !== sig) {
       tabell.setAttribute('data-mid', sig);
       var td = 'padding:3px 6px;border-top:1px solid #E7EBE4;text-align:right;font-variant-numeric:tabular-nums';
-      var rows = ff.trinn.map(function (l) { var sum = l[2] === 'sum'; return '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:3px 6px;border-top:1px solid #E7EBE4">' + (l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : l[0])) + '</td><td style="' + td + '">' + (l[1] == null ? '–' : (l[1] < 0 ? '−' : '') + auKr(Math.abs(l[1]))) + '</td><td style="' + td + '">' + (l[0] === 'Midt' ? k(B.midt) : '') + '</td><td style="' + td + '">' + (l[0] === 'Midt' ? k(O.midt) : '') + '</td></tr>'; }).join('');
-      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:3px 6px">Lag</td><td style="' + td + '">A</td><td style="' + td + '">B</td><td style="' + td + '">Ordna</td></tr>' + rows +
-        '<tr style="font-weight:700"><td style="padding:3px 6px;border-top:2px solid #2F5E43">Lav – høy</td><td style="' + td + ';border-top:2px solid #2F5E43">' + k(A.lav) + ' – ' + k(A.hoy) + '</td><td style="' + td + ';border-top:2px solid #2F5E43">' + k(B.lav) + ' – ' + k(B.hoy) + '</td><td style="' + td + ';border-top:2px solid #2F5E43">' + k(O.lav) + ' – ' + k(O.hoy) + '</td></tr>';
+      /* c593 (Mike 15.10): trekkene står i alle tre kolonner, profil-linjen viser hva B og Ordna trekker fra A,
+         og kolonnen som skrives til ERP er markert. */
+      var kol = arm === 'B' ? 1 : arm === 'ORDNA' ? 2 : 0;
+      var cell = function (v, ix, bold) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + (bold ? ';font-weight:700' : '') + '">' + v + '</td>'; };
+      var bel = function (n) { return n == null ? '–' : (n < 0 ? '−' : '') + auKr(Math.abs(n)); };
+      var rows = '';
+      ff.trinn.forEach(function (l) {
+        var sum = l[2] === 'sum', navn = l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : l[0]);
+        var v = [l[1], l[1], l[1]];
+        if (l[0] === 'Midt') {
+          rows += '<tr><td style="padding:3px 6px;border-top:1px solid #E7EBE4">− Profil (A 1,0 · B 0,9 · Ordna 0,75)</td>' + cell('0', 0) + cell(bel(B.midt != null && A.midt != null ? B.midt - A.midt : null), 1) + cell(bel(O.midt != null && A.midt != null ? O.midt - A.midt : null), 2) + '</tr>';
+          v = [A.midt, B.midt, O.midt];
+        }
+        rows += '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:3px 6px;border-top:1px solid #E7EBE4">' + navn + '</td>' + cell(bel(v[0]), 0) + cell(bel(v[1]), 1) + cell(bel(v[2]), 2) + '</tr>';
+      });
+      var hd = function (t, ix) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + '">' + t + (ix === kol ? ' ✓' : '') + '</td>'; };
+      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:3px 6px">Lag</td>' + hd('A', 0) + hd('B', 1) + hd('Ordna', 2) + '</tr>' + rows +
+        '<tr style="font-weight:700"><td style="padding:3px 6px;border-top:2px solid #2F5E43">Lav – høy</td>' + [[A, 0], [B, 1], [O, 2]].map(function (x) { return '<td style="' + td + ';border-top:2px solid #2F5E43' + (x[1] === kol ? ';background:#E8F5E9' : '') + '">' + k(x[0].lav) + ' – ' + k(x[0].hoy) + '</td>'; }).join('') + '</tr>';
     }
   }
 
