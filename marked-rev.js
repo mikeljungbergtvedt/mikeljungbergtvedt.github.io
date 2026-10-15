@@ -61,14 +61,15 @@
       T[kn].liste = Object.keys(ids).map(function (id) {
         var o = T[kn].kamp[id] || { a: 0, b: 0, f: 0 }, k = kampKost[id] || { a: 0, b: 0, f: 0 }, sist = kampSist[id] || null;
         var avsl = sist && sist < key(dag(i0, -2));
-        return { id: id, navn: (kampNavn[id] || id.split('|')[1] || '(uten kampanje)').replace(/\s*\(Vekstloop\)\s*$/, ''), a: o.a, b: o.b, f: o.f, ka: k.a, kb: k.b, kf: k.f, avsluttet: avsl ? sist : null };
+        var rå = kampNavn[id] || id.split('|')[1] || ''; if (!rå || /\{\{/.test(rå)) rå = '(kampanje ukjent – UTM ikke fylt ut i annonsen)';
+        return { id: id, navn: rå.replace(/\s*\(Vekstloop\)\s*$/, ''), a: o.a, b: o.b, f: o.f, ka: k.a, kb: k.b, kf: k.f, avsluttet: avsl ? sist : null };
       }).sort(function (x, y) { return (y.ka + y.kb) - (x.ka + x.kb) || (y.a - x.a); });
     });
     return { T: T, A: A, B: B, uker: uker, serie: serie };
   }
 
   function pil(a, b) { if (a > b) return '<span style="color:#2E7D32;font-weight:800">▲ ' + (a - b) + '</span>'; if (a < b) return '<span style="color:#C62828;font-weight:800">▼ ' + (b - a) + '</span>'; return '<span style="color:#667A72">=</span>'; }
-  function perBest(k, n) { return k == null ? '–' : n ? kr(k / n) : (k > 0 ? 'ingen' : '–'); }
+  function perBest(k, n) { return !k ? '–' : n ? kr(k / n) : 'ingen'; }
 
   function render() {
     var root = document.getElementById('markrev-root'); if (!root) return;
