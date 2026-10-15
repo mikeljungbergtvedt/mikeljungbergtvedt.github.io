@@ -1,4 +1,4 @@
-/* Peasy Pulse — Marked (ny), c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
+/* Peasy Pulse — Marked (ny), c600 (tabellen: bare inneværende uke mot samme dager forrige uke; ukene står i grafen). c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
    Ett spørsmål: hva skjer med bestilte biler, og hvem bidrar? Bestilt = bilfilens «bestilt» (første dag på «på vei», én per internnr,
    avbestilte ute). Kanal: Peasy-leads etter UTM (Meta, Google, Direkte), ellers kilden (Drive, Ordna, AutoDB).
    Kalenderuker med ukenummer. Inneværende uke t.o.m. i går mot samme ukedager forrige uke, så de tre hele ukene før.
@@ -90,12 +90,10 @@
     var lys = ';color:#8A948F';
     var sammen = Q.hel ? 'Uke ' + U.u1 : 'Uke ' + U.u1 + ' samme dager';
     var h = '<thead><tr><th ' + th.replace('right', 'left') + '>Hvem</th><th ' + th + '>' + Q.navnNaa + '</th><th ' + th + '>' + sammen + '</th><th ' + th + '></th>' +
-      (Q.hel ? '' : '<th ' + th + '>Uke ' + U.u1 + '</th>') + '<th ' + th + '>Uke ' + U.u2 + '</th><th ' + th + '>Uke ' + U.u3 + '</th>' +
       '<th ' + th + '>Leads</th><th ' + th + '>Kost</th><th ' + th + '>Kr per bestilt (uke ' + U.f4a + '–' + U.f4b + ')</th></tr></thead><tbody>';
-    var cols = Q.hel ? 9 : 10, sum = { naa: 0, sammen: 0, u1: 0, u2: 0, u3: 0, k: 0 };
+    var cols = 7, sum = { naa: 0, sammen: 0, u1: 0, u2: 0, u3: 0, k: 0 };
     function celler(n, kost, f4n, f4k, leads, bold) {
       return '<td style="' + td + (bold ? ';font-size:15px;font-weight:800' : ';font-weight:700') + '">' + n.naa + '</td><td style="' + td + '">' + n.sammen + '</td><td style="' + td + '">' + pil(n.naa, n.sammen) + '</td>' +
-        (Q.hel ? '' : '<td style="' + td + lys + '">' + n.u1 + '</td>') + '<td style="' + td + lys + '">' + n.u2 + '</td><td style="' + td + lys + '">' + n.u3 + '</td>' +
         '<td style="' + td + '">' + (leads == null ? '' : leads) + '</td><td style="' + td + '">' + kr(kost) + '</td><td style="' + td + ';font-weight:700">' + perBest(f4k, f4n) + '</td>';
     }
     KAN.forEach(function (kn) {
@@ -113,8 +111,7 @@
       }
     });
     var bt = ';border-top:2px solid #004225';
-    h += '<tr style="font-weight:800"><td style="' + td.replace('right', 'left') + bt + '">Totalt</td><td style="' + td + bt + ';font-size:15px">' + sum.naa + '</td><td style="' + td + bt + '">' + sum.sammen + '</td><td style="' + td + bt + '">' + pil(sum.naa, sum.sammen) + '</td>' +
-      (Q.hel ? '' : '<td style="' + td + bt + lys + '">' + sum.u1 + '</td>') + '<td style="' + td + bt + lys + '">' + sum.u2 + '</td><td style="' + td + bt + lys + '">' + sum.u3 + '</td><td style="' + td + bt + '"></td><td style="' + td + bt + '">' + kr(sum.k) + '</td><td style="' + td + bt + '"></td></tr></tbody>';
+    h += '<tr style="font-weight:800"><td style="' + td.replace('right', 'left') + bt + '">Totalt</td><td style="' + td + bt + ';font-size:15px">' + sum.naa + '</td><td style="' + td + bt + '">' + sum.sammen + '</td><td style="' + td + bt + '">' + pil(sum.naa, sum.sammen) + '</td><td style="' + td + bt + '"></td><td style="' + td + bt + '">' + kr(sum.k) + '</td><td style="' + td + bt + '"></td></tr></tbody>';
     root.innerHTML =
       '<div class="section-label">Hva skjer? Bestilte hent/lev per uke</div>' +
       '<div class="table-card" style="margin-bottom:18px"><div style="padding:8px 12px;overflow-x:auto"><table id="markrev-tab" style="width:100%;border-collapse:collapse;font-size:13px">' + h + '</table></div>' +
