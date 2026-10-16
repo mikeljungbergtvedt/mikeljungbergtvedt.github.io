@@ -210,8 +210,35 @@
     if (box.getAttribute('data-sig') !== html) { box.innerHTML = html; box.setAttribute('data-sig', html); }
   }
   // Mike 14.10: prisdelen på kortet (A/B, «Kunde ser», sendelinjen, fossefallet) regnes fra Mid, ikke fra den gamle prisingens måling.
+  // c607 (Mike 16.10): stoppet av FSD/BM og ikke priset manuelt → kortet viser bare stoppen. Den gamle prisingens tall
+  // (A/B med Ident, «Kunde ser», «… sendes til kunden», «Skrives», gammelt fossefall) skjules, de er ikke det som står i ERP.
+  function auStoppVisning(c, b, ag) {
+    var gamle = [];
+    [].forEach.call(c.querySelectorAll('div'), function (d) {
+      var st = d.getAttribute('style') || '', t = (d.textContent || '').trim();
+      if (/grid-template-columns:\s*44px/.test(st)) gamle.push(d);
+      else if (d.children.length <= 3 && (/^Kunde ser \d+/.test(t) || /sendes til kunden/.test(t))) gamle.push(d);
+    });
+    [].forEach.call(c.querySelectorAll('table'), function (tb) { if (/^\s*Lag/.test((tb.querySelector('tr') || {}).textContent || '') && /Finn-utpris/.test(tb.textContent)) gamle.push(tb.closest('div') && tb.closest('div') !== c ? tb.parentNode : tb); });
+    [].forEach.call(c.querySelectorAll('span,div'), function (x) { if (x.children.length === 0 && /^Skrives:/.test((x.textContent || '').trim())) gamle.push(x); });
+    gamle.forEach(function (x) { if (x && x.style) x.style.display = 'none'; });
+    if (!c.querySelector('.au-stopp-boks')) {
+      var anker = gamle[0]; if (!anker || !anker.parentNode) return;
+      var F = ag.fsd || {}, B = ag.benchmark || {};
+      var bx = document.createElement('div'); bx.className = 'au-stopp-boks';
+      bx.style.cssText = 'margin:8px 0;padding:10px 12px;background:#F8E6E1;border:1px solid #E0A99C;border-radius:8px;font-size:13px;line-height:1.45;color:#5A2A20';
+      bx.innerHTML = '<b>' + esc(auStoppHvem(ag)) + ' stoppet bilen. Ingen pris er skrevet til ERP.</b>' +
+        '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
+        '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
+        '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under.</b></div>';
+      anker.parentNode.insertBefore(bx, anker);
+    }
+  }
   function auMidPris(c, b, ag) {
     var mid = ag.mid_pris, ff = ag.mid_ff;
+    var manuell = !!(ag.pris_kilde && /^(manuell|bud)$/.test(ag.pris_kilde.kilde || '') && b.erp_lav) || !!(window._qaManuell && window._qaManuell[String(b.id)]);
+    if (auStopp(ag) && !mid && !manuell) { auStoppVisning(c, b, ag); return; }
+    var sb = c.querySelector('.au-stopp-boks'); if (sb) sb.remove();
     if (!mid || !ff || ff.feil) return;
     var arm = String(b.arm || 'A').toUpperCase();
     var fak = { A: 1, B: 0.9, ORDNA: 0.75 };
