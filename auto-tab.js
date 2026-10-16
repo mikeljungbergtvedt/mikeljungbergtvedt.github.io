@@ -514,7 +514,8 @@
     var barn = c.children;
     for (var i = 0; i < barn.length; i++) {
       if (barn[i].classList.contains('au-qa-poeng')) continue;
-      if ((barn[i].innerText || '').trim().indexOf(regnr) === 0) return barn[i];
+      var tx = (barn[i].innerText || '').trim(); var ix = tx.indexOf(regnr);
+      if (ix === 0 || (ix > 0 && ix < 40 && !/TVILLINGER|ORIGIN-CV|Selgerkommentar/.test(tx.slice(0, ix)))) return barn[i]; // c609: tåler et merke foran regnr
     }
     return null;
   }
