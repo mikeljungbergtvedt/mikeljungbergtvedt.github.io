@@ -11,6 +11,10 @@
   function auStopp(ag) { return !!(ag && ((ag.fsd && ag.fsd.stopp) || (ag.benchmark && ag.benchmark.stopp))); }
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
   function auStoppGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.stopp) r.push('FSD: ' + (ag.fsd.stopp_grunn || 'stoppet')); if (ag && ag.benchmark && ag.benchmark.stopp) r.push('BM: ' + (ag.benchmark.stopp_grunn || 'stoppet')); return r.join(' · '); }
+  // c6xx (Mike 17.10): avvis = reparasjonsobjekt (Send låst, «Avvist», prisdelen skjult). tvil = bilen er priset, tvilen står i stripa øverst (gul), Send er IKKE låst.
+  function auAvvis(ag) { return !!(ag && ((ag.fsd && ag.fsd.avvis) || (ag.benchmark && ag.benchmark.avvis))); }
+  function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
+  function auTvil(ag) { var r = []; if (ag && ag.fsd && ag.fsd.tvil) r.push('FSD: ' + ag.fsd.tvil); if (ag && ag.benchmark && ag.benchmark.tvil) r.push('BM: ' + ag.benchmark.tvil); return r.join(' · '); }
   // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
   function auSendLaas(c, b) {
     var ag = b.agent;
@@ -18,7 +22,7 @@
     var lokal = window._qaManuell && window._qaManuell[String(b.id)]; // c604: svaret fra Mini rett etter manuell pris (15 min)
     if (lokal && Date.now() - lokal.t < 15 * 60000 && lokal.dLav > 0) manuell = true;
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
-    var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
+    var grunn = auAvvis(ag) && !manuell ? 'Reparasjonsobjekt: avvis bilen.' : manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
@@ -42,6 +46,14 @@
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
     });
+    if (auAvvis(ag) && !manuell) {
+      [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) { if (k.textContent !== 'Avvist') k.textContent = 'Avvist'; });
+      [].forEach.call(c.querySelectorAll('div'), function (d) {
+        if (d.children.length || !/border-radius:\s*6px/.test(d.getAttribute('style') || '') || !/color:\s*#fff/i.test(d.getAttribute('style') || '')) return;
+        if (!/(VENTER ERP|PRIS MANUELT|QA|SEND|AVVIST)\s*$/.test((d.textContent || '').trim())) return;
+        if (d.textContent !== '⛔ AVVIST') { d.textContent = '⛔ AVVIST'; d.style.background = '#B8452F'; }
+      });
+    }
     var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
     if (tp && bn) { tp.disabled = bn.disabled; if (!bn.disabled) { tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor; } }
   }
@@ -138,7 +150,7 @@
     var ny = c.querySelector('.au-fsdgraf');
     if (ny && ny.getAttribute('data-sig') === sig) { gml.style.display = 'none'; return; }
     gml.style.display = 'none';
-    if (auStopp(ag) || !mid) { if (ny) ny.remove(); return; }
+    if (auStopp(ag) || auAvvis(ag) || !mid) { if (ny) ny.remove(); return; }
     var vals = [fP, bP, mid].filter(function (v) { return v > 0; });
     var html = '';
     if (vals.length) {
@@ -227,7 +239,8 @@
       var F = ag.fsd || {}, B = ag.benchmark || {};
       var bx = document.createElement('div'); bx.className = 'au-stopp-boks';
       bx.style.cssText = 'margin:8px 0;padding:10px 12px;background:#F8E6E1;border:1px solid #E0A99C;border-radius:8px;font-size:13px;line-height:1.45;color:#5A2A20';
-      bx.innerHTML = '<b>' + esc(auStoppHvem(ag)) + ' stoppet bilen. Ingen pris er skrevet til ERP.</b>' +
+      if (auAvvis(ag)) bx.innerHTML = '<b>Avvist: reparasjonsobjekt. Ingen pris er skrevet til ERP.</b><div style="margin-top:4px">' + esc(auAvvisGrunn(ag)) + '</div>';
+      else bx.innerHTML = '<b>' + esc(auStoppHvem(ag)) + ' stoppet bilen. Ingen pris er skrevet til ERP.</b>' +
         '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
         '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
         '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under.</b></div>';
@@ -237,7 +250,7 @@
   function auMidPris(c, b, ag) {
     var mid = ag.mid_pris, ff = ag.mid_ff;
     var manuell = !!(ag.pris_kilde && /^(manuell|bud)$/.test(ag.pris_kilde.kilde || '') && b.erp_lav) || !!(window._qaManuell && window._qaManuell[String(b.id)]);
-    if (auStopp(ag) && !mid && !manuell) { auStoppVisning(c, b, ag); return; }
+    if ((auStopp(ag) || auAvvis(ag)) && !mid && !manuell) { auStoppVisning(c, b, ag); return; }
     var sb = c.querySelector('.au-stopp-boks'); if (sb) sb.remove();
     if (!mid || !ff || ff.feil) return;
     var arm = String(b.arm || 'A').toUpperCase();
@@ -587,7 +600,7 @@
       // c572: med FSD/Benchmark styrer de fargen og teksten i statusboksen. Ingen auto-poeng, skygge, CC eller auto-detaljer (Mike 13.10).
       var agF = b.agent || null;
       var avv0 = agF ? auAvvik(agF, b) : null;
-      if (agF) { nivaa = auStopp(agF) || !avv0.mid ? 'r' : avv0.varsel ? 'y' : 'g'; }
+      if (agF) { nivaa = auAvvis(agF) || auStopp(agF) ? 'r' : auTvil(agF) ? 'y' : !avv0.mid ? 'r' : avv0.varsel ? 'y' : 'g'; }
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
       var bakgrunn = { g: '#E3EFE7', r: '#F8E6E1', y: '#FBF3D8' }[nivaa];
       var ha = auHovedarsak(b);
@@ -707,13 +720,14 @@
         var kk = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
         var hF = AU_DEMPET[nivaa].tekst, hB = AU_DEMPET[nivaa].bak, hK = AU_DEMPET[nivaa].kant;
         if (avv0.varsel && !auStopp(agF)) rute = '⚠ AVVIK';
+        if (auAvvis(agF)) rute = 'AVVIST'; else if (!auStopp(agF) && auTvil(agF)) rute = 'TVIL';
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         var midt0 = ['FSD ' + kk(fP0), 'Bench ' + kk(bP0)];
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
         nyHtml = '<div class="au-hode" style="background:' + hB + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
-          (auStopp(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auStoppGrunn(agF)) + '</div>' : '') + '</div>' +
+          (auAvvis(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt, Peasy tar ikke imot bilen. ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auStoppGrunn(agF)) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
