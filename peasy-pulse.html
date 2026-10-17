@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c612</title>
+<title>Peasy Pulse v16.08.c613</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c612';</script>
+<script>document.title='Peasy Pulse v16.08.c613';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c612</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c613</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c612</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c613</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -2883,10 +2883,20 @@ window.pulseIsSoldToday=pulseIsSoldToday;
 function opsIDag(rows){
   var all=(rows||[]).slice(1).filter(function(r){return r&&String(r[1]||'').trim();});
   function k(r){return srcKey(r);}
-  var peasy=all.filter(function(r){return pulseIsToday(r[14])&&k(r)==='peasy';});
-  var drive=all.filter(function(r){return pulseIsToday(r[14])&&k(r)==='drive';});
-  var ordna=all.filter(function(r){return pulseIsToday(r[14])&&k(r)==='ordna';});
-  var autodb=all.filter(function(r){return pulseIsToday(r[14])&&k(r)==='autodb';});
+  /* c613 (Mike 17.10): leads, bestilt og mottatt i dag fra webhookene (Mini /erp-events idag), med en gang.
+     Excel-feltene brukes i tillegg som reserve. En lead som ikke er i Excel ennå, legges til som egen rad (internnr, regnr, kilde). */
+  var wI=(window._erpEvents&&window._erpEvents.idag)||{};
+  var sett=function(a){var o={};(a||[]).forEach(function(x){o[String(x.carId)]=x;});return o;};
+  var wLead=sett(wI.leads), wBest=sett(wI.bestilt), wMott=sett(wI.mottatt);
+  var harId={}; all.forEach(function(r){harId[String(r[0]).trim()]=1;});
+  var KILDE={peasy:'peasy',driveno:'driveno',ordna:'ordna',autodb:'autodb'};
+  Object.keys(wLead).forEach(function(id){ if(harId[id]) return; var x=wLead[id]; if(!x.kilde||!KILDE[x.kilde]) return;
+    var r=[]; r[0]=Number(id); r[1]=x.regnr||''; r[11]=x.kilde; r[14]=new Date(x.ts).toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace(',',''); r._wh=true; all.push(r); });
+  var leadIdag=function(r){return !!wLead[String(r[0]).trim()]||pulseIsToday(r[14]);};
+  var peasy=all.filter(function(r){return leadIdag(r)&&k(r)==='peasy';});
+  var drive=all.filter(function(r){return leadIdag(r)&&k(r)==='drive';});
+  var ordna=all.filter(function(r){return leadIdag(r)&&k(r)==='ordna';});
+  var autodb=all.filter(function(r){return leadIdag(r)&&k(r)==='autodb';});
   var avvist=(typeof window.liste16AvvistToday==='function')?window.liste16AvvistToday():[];
   if(!avvist.length){
     avvist=all.filter(function(r){
@@ -2894,8 +2904,8 @@ function opsIDag(rows){
       return pulseIsToday(r[13]) && st.indexOf('avvist')>=0;
     });
   }
-  var bestilt=all.filter(function(r){return pulseIsToday(r[15])||pulseIsToday(r[16]);});
-  var mottatt=all.filter(function(r){return pulseIsToday(r[17]);});
+  var bestilt=all.filter(function(r){return !!wBest[String(r[0]).trim()]||pulseIsToday(r[15])||pulseIsToday(r[16]);});
+  var mottatt=all.filter(function(r){return !!wMott[String(r[0]).trim()]||pulseIsToday(r[17]);});
   /* c514: «Solgt i dag» operasjonelt = kunden aksepterte budet i dag (webhook: kontrakt under behandling, venter signering,
      signert eller solgt), selv om «Solgt på» i ERP først settes når kontrakten er signert. */
   var AKSEPT_ST={CHANGE_OWNER:1,PROCESSING_CONTRACT:1,WAITING_FOR_SIGN_CONTRACT:1,CONTRACT_SIGNED:1,SOLD:1,SOLD_AND_PAID:1};
@@ -9381,7 +9391,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c612</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c613</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13240,6 +13250,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c503: Auto-fanen: «Kunden»-kolonne med status fra ERP og grunn (valg + egne ord) i stedet for «Sendt til kunde». -->
 <!-- c495: Scoreboard: «Bud mot fossefall» (bud-tab.js, bud-fossefall.json) — Finn-utpris → estimert AR-bud → faktisk AR-bud, etter Finn-kvalitet og celle. -->
+<!-- c613: «Leads mottatt i dag», «Bestilt hent/lev» og «Mottatt på anlegg» (i dag) fra webhookene (Mini /erp-events idag). Excel er reserve. -->
 <!-- c612: «Estimat sendt ut i dag» fra webhookene (Mini /erp-events estimatIdag) i stedet for bare Excel-kolonnen. Excel er reserve. -->
 <!-- c611: Ny fane «FSD/BM mot bud» (fsdbud-tab.js, fsd-bm-bud.json fra Mini). Scoreboard, A/B og Auto (Easy/V3G) fjernet fra menyen, ingenting slettet. -->
 <!-- c610: QA-kortet ryddet for den gamle prisingen: SEND nederst styres av FSD/BM + ERP-pris (ikke gamle målinger); bannere 0 SØSTRE/KUN ASKING/TYNT BIBLIOTEK/B 0 COMPS/ORIGIN STRIPPET/FINN ASK/kun kundens annonse/VENTER PÅ UNDERLAG, klasse-linjen «Origin · Comps» og «B begrunnelse» fjernet. -->
