@@ -290,7 +290,8 @@
         var e = lrErp(c);
         var deler = [c.regnr, c.bil,
           e.est ? 'estimat ' + e.est : (c.band ? 'prisbånd ' + c.band : ''),
-          e.bud ? 'bud ' + e.bud : '', d].filter(Boolean).map(lrEsc);
+          e.bud ? 'bud ' + e.bud : '', d, c.kilde ? 'kilde: ' + c.kilde : ''].filter(Boolean).map(lrEsc);
+          /* c618: mail-svar på «Fortell oss hvorfor» i avslutningsmalen (Mini v2/avslutningsgrunner.js) ligger i samme /laering-cars-liste, merket kilde. */
         if (e.inr) deler.unshift('<a href="' + lrErpHref(e.inr) + '" target="_blank" rel="noopener">internnr ' + lrEsc(e.inr) + '</a>');
         var metaHtml = deler.join(' · ');
         var txt = String(c.comment || c.text || '');
