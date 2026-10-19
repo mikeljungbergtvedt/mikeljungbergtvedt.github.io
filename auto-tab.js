@@ -220,6 +220,16 @@
         '<span class="qa-chef-pill qa-chef-pill--merge" title="' + (ag.mid_kilde === 'merged+origin95' ? 'Mid kappet til 0,95 × kundens egen Finn-annonse' : 'Mid = (FSD + Bench) / 2') + '">Merged · ' + k(ag.mid_pris) + (ag.mid_kilde === 'merged+origin95' ? ' (origin95)' : '') + '</span>';
     if (!box) { var cv = c.querySelector('.qa-origin-cv'); if (!cv) return; box = document.createElement('div'); box.className = 'qa-chef-pills'; cv.parentNode.insertBefore(box, cv.nextSibling); }
     if (box.getAttribute('data-sig') !== html) { box.innerHTML = html; box.setAttribute('data-sig', html); }
+    // c617 (Mike 19.10): kundens egen aktive Finn-annonse med lenke, og om Mid er kappet til 0,95 × den.
+    var ea = ag.egen_annonse, linje = c.querySelector('.au-egen-annonse');
+    if (ea && ea.aktiv && ea.lenke) {
+      var tak = ag.mid_kilde === 'merged+origin95';
+      var eh = '<b>Kundens egen annonse på Finn:</b> ' + (ea.pris ? auKr(ea.pris) + ' kr' : 'pris ukjent') + (ea.dager != null ? ' · ' + ea.dager + ' dager' : '') +
+        ' · <a href="' + esc(ea.lenke) + '" target="_blank" rel="noopener" style="color:#1565C0;font-weight:700">Åpne annonsen</a>' +
+        (tak ? '<div style="margin-top:2px;color:#8A6D10">Mid er kappet til 0,95 × denne prisen (' + auKr(ag.mid_pris) + '). Prisen kommer fra car.info. Sjekk at den faktisk står på Finn.</div>' : '');
+      if (!linje) { linje = document.createElement('div'); linje.className = 'au-egen-annonse'; linje.style.cssText = 'margin:6px 0 8px;padding:7px 10px;background:#F4F8FD;border:1px solid #BBD3EE;border-radius:6px;font-size:12px;line-height:1.45;color:#1F3A5F'; box.parentNode.insertBefore(linje, box.nextSibling); }
+      if (linje.getAttribute('data-sig') !== eh) { linje.innerHTML = eh; linje.setAttribute('data-sig', eh); }
+    } else if (linje) linje.remove();
   }
   // Mike 14.10: prisdelen på kortet (A/B, «Kunde ser», sendelinjen, fossefallet) regnes fra Mid, ikke fra den gamle prisingens måling.
   // c607 (Mike 16.10): stoppet av FSD/BM og ikke priset manuelt → kortet viser bare stoppen. Den gamle prisingens tall
