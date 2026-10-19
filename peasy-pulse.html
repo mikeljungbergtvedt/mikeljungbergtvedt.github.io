@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c621</title>
+<title>Peasy Pulse v16.08.c622</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -30,7 +30,7 @@ header{background:#004225}
   }catch(e){}
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c621';</script>
+<script>document.title='Peasy Pulse v16.08.c622';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,7 +518,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c621</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c622</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
     <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
     <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
@@ -609,7 +609,7 @@ document.addEventListener('visibilitychange',function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c621</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c622</span></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -3436,7 +3436,17 @@ async function pulseBilfil(rows){
       /* c590: bestilt hent/lev (bilfil): første dag på «på vei», avbestilte uten dato. Én per internnr. */
       r._bestilt=noD(b.bestilt)||null; r._bestiltType=b.bestilt_type||null;
       r._mottatt=noD(b.mottatt)||null; /* c591: første dag bilen ble mottatt på anlegget (RECEIVED) */
-      [[15,'gire_bestilt'],[16,'levere_selv'],[17,'mottatt'],[21,'returnert']].forEach(function(p){var v=b[p[1]];if(!v||!r[p[0]])return;var no=v.slice(8,10)+'.'+v.slice(5,7)+'.'+v.slice(0,4);if(String(r[p[0]]||'').slice(0,10)!==no)r[p[0]]=no;});
+      /* c622 (Mike 19.10): datoene Pulse teller på kommer fra bilfila for alle biler, også der Excel er tomt.
+         Registrert, SD mottatt, Estimering: bilfil (lik Excel 100 %). Bestilt: første dag på «på vei», avbestilte tomme,
+         hent i «Gire bestilt på», selv i «Levere selv». Mottatt: første mottak, Ordna når bilen går videre fra «på vei».
+         Returnert på: bilfil når bilen har vært mottatt, ellers Excel. Status og «Solgt på» står fra Excel (solgt/retur bokføres fra bud akseptert/avvist over). */
+      var dt=function(dato,tid){if(!dato)return '';var no=noD(dato);return (tid&&String(tid).slice(0,10)===no)?tid:no;};
+      var hold=function(i,v){if(String(r[i]||'').slice(0,10)!==String(v).slice(0,10))r[i]=v;};
+      hold(13,dt(b.registrert_logg)); hold(14,dt(b.sd_mottatt,b.sd_tid)); hold(31,dt(b.estimert,b.estimert_tid));
+      var hent=b.bestilt&&b.bestilt_type!=='selv';
+      hold(15,hent?dt(b.bestilt,b.gire_tid):''); hold(16,(b.bestilt&&!hent)?dt(b.bestilt,b.levere_tid):'');
+      hold(17,dt(b.mottatt));
+      if(b.returnert&&b.mottatt) hold(21,dt(b.returnert)); /* bare biler som har vært på anlegg; avviste før mottak har «retur»-milepæl uten å være returnert */
     }}
   window._pulseBilfil={bygget:d.bygget,treff:n};
   return rows;
@@ -9360,7 +9370,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c621</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c622</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13256,6 +13266,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c594: QA-kortets fossefall viser bare kolonnen som skrives til ERP (bilens profil A/B/Ordna). Profil-linjen bare for B og Ordna. -->
 <!-- c593: QA-kortets fossefall: trekkene i alle tre kolonnene (A, B, Ordna), linje «− Profil» viser B/Ordna-trekket fra A, kolonnen som skrives til ERP er grønn med ✓. -->
 <!-- c592: QA-kortet: A, B og Ordna (lav/høy/midt) tas nøyaktig fra fossefallet slik /qa/anker skriver til ERP (mid_ff.profiler), ikke A × 0,9 / 0,75. -->
+<!-- c622: Hele Pulse teller datoene fra bilfila (registrert, SD mottatt, estimert, bestilt, mottatt, returnert), også der Excel er tomt. -->
 <!-- c621: Ukesrapport teller fra bilfila (leads, priset, bestilt, mottatt, avvist, pipeline), Ordna med i mottatt. Ukens flyt viser Bestilt hent/lev. «Denne uka — aktivitet» fjernet (var lik Ukens flyt). -->
 <!-- c620: Bestilt hent/lev og Mottatt står på 0 på mandager (ny uke), teller fra tirsdag. -->
 <!-- c591: Nytt kort «Mottatt på anlegg» ved siden av «Bestilt hent/lev»: denne uka t.o.m. i går mot samme dager forrige uke, første mottak (bilfil «mottatt») per internnr. -->
