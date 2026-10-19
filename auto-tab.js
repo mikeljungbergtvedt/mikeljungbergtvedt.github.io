@@ -22,7 +22,7 @@
     var lokal = window._qaManuell && window._qaManuell[String(b.id)]; // c604: svaret fra Mini rett etter manuell pris (15 min)
     if (lokal && Date.now() - lokal.t < 15 * 60000 && lokal.dLav > 0) manuell = true;
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
-    var grunn = auAvvis(ag) && !manuell ? 'Reparasjonsobjekt: avvis bilen.' : manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : '';
+    var grunn = auAvvis(ag) && !manuell ? 'Reparasjonsobjekt: avvis bilen.' : manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
