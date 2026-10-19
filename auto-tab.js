@@ -240,10 +240,18 @@
       var bx = document.createElement('div'); bx.className = 'au-stopp-boks';
       bx.style.cssText = 'margin:8px 0;padding:10px 12px;background:#F8E6E1;border:1px solid #E0A99C;border-radius:8px;font-size:13px;line-height:1.45;color:#5A2A20';
       if (auAvvis(ag)) bx.innerHTML = '<b>Avvist: reparasjonsobjekt. Ingen pris er skrevet til ERP.</b><div style="margin-top:4px">' + esc(auAvvisGrunn(ag)) + '</div>';
-      else bx.innerHTML = '<b>' + esc(auStoppHvem(ag)) + ' stoppet bilen. Ingen pris er skrevet til ERP.</b>' +
-        '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
-        '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
-        '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under.</b></div>';
+      else {
+        /* c615 (innsikt 19.10 punkt 2): «Trenger avklaring» + utkast til spørsmål til kunden. Bare et utkast: Mike kopierer og sender selv i ERP-chatten. */
+        var sp = [];
+        [F.stopp ? F.stopp_grunn : null, B.stopp ? B.stopp_grunn : null].forEach(function (g) { (String(g || '').match(/[^.?!]*\?/g) || []).forEach(function (q) { q = q.trim(); if (q && sp.indexOf(q) < 0) sp.push(q); }); });
+        var utkast = sp.length ? 'Hei! ' + sp.join(' ') : '';
+        bx.innerHTML = '<b>Trenger avklaring. ' + esc(auStoppHvem(ag)) + ' stoppet bilen, ingen pris er skrevet til ERP.</b>' +
+          '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
+          '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
+          (utkast ? '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div class="au-utkast" style="white-space:pre-line">' + esc(utkast) + '</div><button type="button" class="au-kopier" style="margin-top:6px;font-size:12px;padding:4px 10px;border:1px solid #C9A39A;border-radius:6px;background:#fff;cursor:pointer">Kopier</button></div>' : '') +
+          '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under når svaret er klart.</b></div>';
+        var kp = bx.querySelector('.au-kopier'); if (kp) kp.onclick = function () { try { navigator.clipboard.writeText(utkast); kp.textContent = 'Kopiert'; } catch (e) {} };
+      }
       anker.parentNode.insertBefore(bx, anker);
     }
   }
@@ -706,7 +714,7 @@
       }
       if (agF) {
         var fP1 = agF.fsd && agF.fsd.pris, bP1 = agF.benchmark && agF.benchmark.pris;
-        rute = auStopp(agF) ? (auStoppHvem(agF).toUpperCase() + ' STOPPET') : fP1 ? 'FSD PRISET' : 'FSD VENTER';
+        rute = auStopp(agF) ? 'TRENGER AVKLARING' : fP1 ? 'FSD PRISET' : 'FSD VENTER'; // c615
         ha = { t: auStopp(agF) ? auStoppGrunn(agF) : 'FSD ' + (fP1 ? auKr(fP1) : '–') + ' · Benchmark ' + (bP1 ? auKr(bP1) : '–') + (agF.avvik_pst != null ? ' · avvik ' + agF.avvik_pst + ' %' : ''), u: '' };
         fu = ''; grok = ''; ccHtml = ''; kildeHtml = '';
       }
