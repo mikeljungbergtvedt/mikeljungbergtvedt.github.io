@@ -338,7 +338,7 @@
     };
     el.querySelector('.q-avvis').onclick = function () {
       if (opptatt) return;
-      auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><textarea rows="3" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px"></textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
+      auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Skriv grunnen som fra kundesenter til kunden (du-form, 1–2 setninger, ingen priser).</div><textarea rows="3" placeholder="Hei! Takk for at du ville selge bilen din til oss. Siden [grunn, f.eks. motoren har feil / du ikke har svart på spørsmålet vårt], kan vi dessverre ikke gi deg et tilbud denne gangen. Ha en fin dag! Hilsen Peasy kundesenter" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px"></textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
         if (!svar || !svar.verdi) return;
         opptatt = true; st.textContent = 'Avviser …';
         auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
