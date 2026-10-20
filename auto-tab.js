@@ -235,7 +235,7 @@
   // c607 (Mike 16.10): stoppet av FSD/BM og ikke priset manuelt → kortet viser bare stoppen. Den gamle prisingens tall
   // (A/B med Ident, «Kunde ser», «… sendes til kunden», «Skrives», gammelt fossefall) skjules, de er ikke det som står i ERP.
   /* c625 (Mike 20.10): QA-kort ved FSD-stopp: kundechat (les), redigerbar tekst + «Send» med «Er du sikker?», og «Avvis» med påkrevd kommentar.
-     Går via Mini /qa/chat/les, /qa/chat/send, /qa/avvis (samme Bearer som /social/hide). Ingenting sendes uten trykk + bekreftelse. */
+     Går via Mini /qa/chat/les, /qa/chat/send, /qa/avvis (enhetsnøkkel X-QA-Enhet, kun Mikes enhet). Ingenting sendes uten trykk + bekreftelse. */
   function auQaBase() { return String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/, '') + '/qa'; }
   function auQaPost(sti, body) {
     return fetch(auQaBase() + sti, { method: 'POST', headers: auQaHode(), body: JSON.stringify(body) })
@@ -245,7 +245,7 @@
   /* c626 (Mike 20.10): Send/Avvis krever godkjent enhet. «Be om tilgang» → mail til Mike med Godkjenn-lenke → enhetsnøkkel lagres i denne nettleseren. */
   var AU_QA_ENHET = 'peasyQaEnhet', AU_QA_VENT = 'peasyQaEnhetVent';
   function auQaEnhet() { try { return localStorage.getItem(AU_QA_ENHET) || ''; } catch (e) { return ''; } }
-  function auQaHode() { var h = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }; var e = auQaEnhet(); if (e) h['X-QA-Enhet'] = e; return h; }
+  function auQaHode() { var h = { 'Content-Type': 'application/json', 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }; var e = auQaEnhet(); if (e) h['X-QA-Enhet'] = e; return h; }
   function auQaEnhetsnavn() { var u = navigator.userAgent || ''; var os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Enhet'; var nl = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'nettleser'; return os + ' ' + nl; }
   var auQaPoll = null;
   function auQaPollStart(ferdig) {
@@ -253,7 +253,7 @@
     auQaPoll = setInterval(function () {
       var id = ''; try { id = localStorage.getItem(AU_QA_VENT) || ''; } catch (e) {}
       if (!id || Date.now() - t0 > 31 * 60000) { clearInterval(auQaPoll); auQaPoll = null; try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} ferdig(false); return; }
-      fetch(auQaBase() + '/tilgang/status?id=' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      fetch(auQaBase() + '/tilgang/status?id=' + encodeURIComponent(id), { headers: { 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }, cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.token) { try { localStorage.setItem(AU_QA_ENHET, j.token); localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(true); }
         else if (j && (j.status === 'utlopt' || j.status === 'fjernet' || j.status === 'mailfeil' || j.err === 'ukjent')) { try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(false); }
       }).catch(function () {});
@@ -307,7 +307,7 @@
     };
     tb.onclick = function () {
       if (tb.disabled) return; tb.disabled = true; st.textContent = 'Sender forespørsel …';
-      fetch(auQaBase() + '/tilgang/be', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, body: JSON.stringify({ enhetsnavn: auQaEnhetsnavn() }) })
+      fetch(auQaBase() + '/tilgang/be', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }, body: JSON.stringify({ enhetsnavn: auQaEnhetsnavn() }) })
         .then(function (r) { return r.json(); }).then(function (j) {
           if (j && j.ok && j.id) { try { localStorage.setItem(AU_QA_VENT, j.id); } catch (e) {} visTilgang(); }
           else { tb.disabled = false; st.innerHTML = '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Feil') + '</b>'; }
@@ -812,7 +812,7 @@
       if (b.bilde && Array.isArray(b.bilde.bilder)) {
         bildeListe = b.bilde.bilder.map(function (x) {
           if (x.url) return x.url;
-          if (x.lokal != null && window.PA_PROXY_ERP && window.PA_TOKEN_ERP) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?t=' + encodeURIComponent(window.PA_TOKEN_ERP);
+          if (x.lokal != null && window.PA_PROXY_ERP && window.paEnhet && window.paEnhet()) return window.PA_PROXY_ERP.replace(/\/list\/$/, '/bilde/') + encodeURIComponent(b.id + '-' + x.lokal) + '?e=' + encodeURIComponent(window.paEnhet());
           return null;
         }).filter(Boolean);
       }

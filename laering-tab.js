@@ -559,7 +559,7 @@
     var t = ctrl ? setTimeout(function () { ctrl.abort(); }, 18000) : null;
     try {
       var r = await fetch(base + '/laering-cars?t=' + Date.now(), {
-        headers: { Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') },
+        headers: { 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') },
         signal: ctrl ? ctrl.signal : undefined
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);

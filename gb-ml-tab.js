@@ -3,7 +3,7 @@
  * Gammel GB-utpris (/gb-utpris) vises uendret under «Gammel GB-utpris». */
 (function () {
   var WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
-  var TOKEN = 'FJERNET';
+  var TOKEN = '';
   var POLL_MS = 8000, MAX_POLLS = 110; // ~15 min
   var seq = 0;
 
@@ -118,7 +118,7 @@
     var url = WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/gb-ml?regnr=' + encodeURIComponent(regnr));
     for (var i = 0; i < MAX_POLLS && my === seq; i++) {
       try {
-        var r = await fetch(url + (force && i === 0 ? '&force=1' : ''), { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+        var r = await fetch(url + (force && i === 0 ? '&force=1' : ''), { headers: { 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') } });
         var j = await r.json().catch(function () { return {}; });
         if (my !== seq) return;
         if (r.status === 404) { status('GB-ML-endepunktet (/gb-ml) er ikke installert på Mini ennå.'); return; }
