@@ -13,7 +13,7 @@ import requests
 import io
 
 # CONFIG
-REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx"
+REPORT_URL = "https://api.biladministrasjon.no/public/reports/peasy/" + __import__("os").environ["PEASY_RAPPORT_KEY"] + "?output=xlsx"
 SHEET_NAME = "Sheet1"
 
 TODAY = datetime.now()

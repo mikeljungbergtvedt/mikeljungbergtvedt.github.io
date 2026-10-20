@@ -12,7 +12,7 @@ import fs from 'fs/promises';
 import * as XLSX from 'xlsx';
 import nodemailer from 'nodemailer';
 
-const XLSX_URL = 'https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx';
+const XLSX_URL = 'https://api.biladministrasjon.no/public/reports/peasy/' + process.env.PEASY_RAPPORT_KEY + '?output=xlsx';
 const MEAS_FILE = '/Users/bot/peasy-auto/v2/logs.nosync/measurements.jsonl';
 const MAIL_TO = process.env.DAILY_REPORT_TO || 'mike@autoringen.no';
 
