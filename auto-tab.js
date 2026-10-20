@@ -255,6 +255,9 @@
         var sp = [];
         [F.stopp ? F.stopp_grunn : null, B.stopp ? B.stopp_grunn : null].forEach(function (g) { (String(g || '').match(/[^.?!]*\?/g) || []).forEach(function (q) { q = q.trim(); if (q && sp.indexOf(q) < 0) sp.push(q); }); });
         var utkast = sp.length ? 'Hei! ' + sp.join(' ') : '';
+        /* c624 (20.10): stopp_grunn er nå en ferdig kundemelding («Hei! Du skriver … Kan du …?»). Da brukes den hel, FSD først. */
+        var ferdig = [F.stopp ? F.stopp_grunn : null, B.stopp ? B.stopp_grunn : null].filter(function (g) { return /^\s*Hei\b/i.test(String(g || '')); })[0];
+        if (ferdig) utkast = String(ferdig).trim();
         bx.innerHTML = '<b>Trenger avklaring. ' + esc(auStoppHvem(ag)) + ' stoppet bilen, ingen pris er skrevet til ERP.</b>' +
           '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
           '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
