@@ -234,6 +234,83 @@
   // Mike 14.10: prisdelen på kortet (A/B, «Kunde ser», sendelinjen, fossefallet) regnes fra Mid, ikke fra den gamle prisingens måling.
   // c607 (Mike 16.10): stoppet av FSD/BM og ikke priset manuelt → kortet viser bare stoppen. Den gamle prisingens tall
   // (A/B med Ident, «Kunde ser», «… sendes til kunden», «Skrives», gammelt fossefall) skjules, de er ikke det som står i ERP.
+  /* c625 (Mike 20.10): QA-kort ved FSD-stopp: kundechat (les), redigerbar tekst + «Send» med «Er du sikker?», og «Avvis» med påkrevd kommentar.
+     Går via Mini /qa/chat/les, /qa/chat/send, /qa/avvis (samme Bearer som /social/hide). Ingenting sendes uten trykk + bekreftelse. */
+  function auQaBase() { return String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/, '') + '/qa'; }
+  function auQaPost(sti, body) {
+    return fetch(auQaBase() + sti, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, status: r.status, err: 'HTTP ' + r.status }; }).then(function (j) { if (j && j.status == null && !r.ok) j.status = r.status; return j; }); })
+      .catch(function (e) { return { ok: false, err: 'Mini svarer ikke: ' + (e && e.message || e) }; });
+  }
+  function auQaTid(t) { try { return new Date(t).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return String(t || ''); } }
+  function auQaDialog(html, okTekst, kanOk) {
+    return new Promise(function (ok) {
+      var o = document.createElement('div');
+      o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
+      o.innerHTML = '<div style="background:#fff;max-width:520px;width:92%;border-radius:10px;padding:16px 18px;font-size:14px;line-height:1.45;color:#222">' + html +
+        '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button type="button" class="d-nei" style="padding:6px 14px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer">Avbryt</button>' +
+        '<button type="button" class="d-ja" style="padding:6px 14px;border:0;border-radius:6px;background:#8B2A1A;color:#fff;font-weight:700;cursor:pointer">' + esc(okTekst) + '</button></div></div>';
+      document.body.appendChild(o);
+      var ja = o.querySelector('.d-ja');
+      var sjekk = function () { ja.disabled = kanOk ? !kanOk(o) : false; ja.style.opacity = ja.disabled ? '.4' : '1'; };
+      o.addEventListener('input', sjekk); sjekk();
+      o.querySelector('.d-nei').onclick = function () { o.remove(); ok(null); };
+      ja.onclick = function () { if (ja.disabled) return; var v = o.querySelector('textarea'); o.remove(); ok({ verdi: v ? v.value.trim() : '' }); };
+    });
+  }
+  function auQaChat(el, b, ag, utkast) {
+    if (!el) return;
+    var id = String(b.id || ''), fsdStopp = !!(ag && ag.fsd && ag.fsd.stopp);
+    if (!/^\d+$/.test(id) || !fsdStopp) { if (utkast) el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div style="white-space:pre-line">' + esc(utkast) + '</div></div>'; return; }
+    var erp = 'https://biladministrasjon.no/cars_driveno/processing/final_estimate/' + encodeURIComponent(id);
+    var knapp = 'font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;';
+    el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333">' +
+      '<div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">KUNDECHAT</div><div class="q-logg" style="font-size:12px;max-height:180px;overflow:auto;color:#555">Henter chat …</div>' +
+      '<div style="font-size:11px;font-weight:800;color:#5A2A20;margin:8px 0 3px">MELDING TIL KUNDEN (ikke sendt, kan redigeres)</div>' +
+      '<textarea class="q-tekst" rows="4" style="width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px;border:1px solid #C9A39A;border-radius:6px"></textarea>' +
+      '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+      '<button type="button" class="q-send" style="' + knapp + 'border:0;background:#004225;color:#fff;font-weight:700">Send</button>' +
+      '<button type="button" class="q-avvis" style="' + knapp + 'border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis</button>' +
+      '<a href="' + erp + '" target="_blank" rel="noopener" style="font-size:12px;color:#004225">Åpne i ERP</a></div>' +
+      '<div class="q-status" style="margin-top:6px;font-size:12px"></div></div>';
+    var ta = el.querySelector('.q-tekst'), logg = el.querySelector('.q-logg'), st = el.querySelector('.q-status');
+    ta.value = utkast || '';
+    var vis = function (L) {
+      logg.innerHTML = (L && L.length) ? L.map(function (m) { return '<div style="margin-bottom:4px"><b>' + (m.fra === 'PEASY' ? 'Peasy' : 'Kunden') + '</b> · ' + esc(auQaTid(m.tid)) + ' · id ' + esc(m.id) + '<div style="white-space:pre-line;color:#222">' + esc(m.tekst) + '</div></div>'; }).join('') : '<i>Ingen meldinger i kundechatten.</i>';
+    };
+    var feil = function (j) {
+      if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || erp) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>';
+      return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>';
+    };
+    var hent = function () { return auQaPost('/chat/les', { internnr: id }).then(function (j) { if (j && j.ok) vis(j.meldinger); else logg.innerHTML = feil(j); }); };
+    hent();
+    var opptatt = false;
+    el.querySelector('.q-send').onclick = function () {
+      if (opptatt) return;
+      var tekst = ta.value.trim();
+      if (!tekst) { st.innerHTML = '<b style="color:#8B2A1A">Teksten er tom.</b>'; return; }
+      auQaDialog('<b>Er du sikker?</b><div style="margin-top:6px">Denne teksten sendes til kunden i kundechatten (e-postvarsel), nøyaktig slik:</div><div style="margin-top:6px;padding:8px;background:#F5F5F0;border-radius:6px;white-space:pre-line">' + esc(tekst) + '</div>', 'Send til kunden').then(function (svar) {
+        if (!svar) return;
+        opptatt = true; st.textContent = 'Sender …';
+        auQaPost('/chat/send', { internnr: id, tekst: tekst, bekreftet: true }).then(function (j) {
+          opptatt = false;
+          if (j && j.meldinger) vis(j.meldinger);
+          st.innerHTML = (j && j.ok) ? '<b style="color:#004225">Sendt. Meldings-id ' + esc(j.melding_id) + '.</b>' : feil(j);
+        });
+      });
+    };
+    el.querySelector('.q-avvis').onclick = function () {
+      if (opptatt) return;
+      auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><textarea rows="3" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px"></textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
+        if (!svar || !svar.verdi) return;
+        opptatt = true; st.textContent = 'Avviser …';
+        auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
+          opptatt = false;
+          st.innerHTML = (j && j.ok) ? '<b style="color:#004225">Avvist i ERP.</b>' : feil(j);
+        });
+      });
+    };
+  }
   function auStoppVisning(c, b, ag) {
     var gamle = [];
     [].forEach.call(c.querySelectorAll('div'), function (d) {
@@ -261,9 +338,9 @@
         bx.innerHTML = '<b>Trenger avklaring. ' + esc(auStoppHvem(ag)) + ' stoppet bilen, ingen pris er skrevet til ERP.</b>' +
           '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
           '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
-          (utkast ? '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div class="au-utkast" style="white-space:pre-line">' + esc(utkast) + '</div><button type="button" class="au-kopier" style="margin-top:6px;font-size:12px;padding:4px 10px;border:1px solid #C9A39A;border-radius:6px;background:#fff;cursor:pointer">Kopier</button></div>' : '') +
+          '<div class="au-qa-chat"></div>' +
           '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under når svaret er klart.</b></div>';
-        var kp = bx.querySelector('.au-kopier'); if (kp) kp.onclick = function () { try { navigator.clipboard.writeText(utkast); kp.textContent = 'Kopiert'; } catch (e) {} };
+        auQaChat(bx.querySelector('.au-qa-chat'), b, ag, utkast);
       }
       anker.parentNode.insertBefore(bx, anker);
     }
