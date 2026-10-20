@@ -194,7 +194,7 @@ footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);
 
 <h3>Datakilder &amp; API-er</h3>
 <div class="kv">
-<span class="k">ERP XLSX (Pulse data)</span><span><code>https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx</code></span>
+<span class="k">ERP XLSX (Pulse data)</span><span><code>https://api.biladministrasjon.no/public/reports/peasy/&lt;PEASY_RAPPORT_KEY i .env&gt;?output=xlsx</code></span>
 <span class="k">ERP write kommentar</span><span><code>POST /c2b_module/driveno/{id}/comments</code></span>
 <span class="k">ERP write pris</span><span><code>PUT</code> på <code>price_final_min/max</code></span>
 <span class="k">FAQ read</span><span><code>GET /c2b_module/faqs?locale=no</code> (krever auth)</span>
@@ -1078,7 +1078,7 @@ console.log(d.data.data.data.find(f =&gt; f.id === 24).content);</code></pre>
 <div class="kv">
 <span class="k">Repo</span><span><code>mikeljungbergtvedt/mikeljungbergtvedt.github.io</code></span>
 <span class="k">Live URL</span><span>https://mikeljungbergtvedt.github.io/peasy-pulse.html</span>
-<span class="k">Datakilder</span><span>ERP XLSX (<code>FJERNET</code>) + <code>peasy-questions.json</code></span>
+<span class="k">Datakilder</span><span>ERP XLSX (<code>&lt;PEASY_RAPPORT_KEY i .env&gt;</code>) + <code>peasy-questions.json</code></span>
 </div>
 
 <h3>Faner</h3>
@@ -1540,7 +1540,7 @@ await publishFaqUpdate([
 <tr><td><code>/c2b_module/faqs</code></td><td>PUT</td><td>Skriv ALLE FAQ-er. Payload: <code>{items:[...], locale:"no", removedIds:[]}</code>. <strong>Ingen partial</strong> — hele lista må sendes.</td></tr>
 <tr><td><code>/c2b_module/terms</code></td><td>GET</td><td>Vilkår (<code>text_norwegian</code>, <code>is_active</code>). 1 aktiv versjon om gangen.</td></tr>
 <tr><td><code>/c2b_module/terms/{id}</code></td><td>PUT</td><td>Oppdater vilkår. (Dev-ref: <code>api.erp.biladministrasjon.dev.soft.team</code>)</td></tr>
-<tr><td><code>/public/reports/peasy/FJERNET?output=xlsx</code></td><td>GET</td><td>XLSX-rapport for Pulse (alle biler alle statuser)</td></tr>
+<tr><td><code>/public/reports/peasy/&lt;PEASY_RAPPORT_KEY i .env&gt;?output=xlsx</code></td><td>GET</td><td>XLSX-rapport for Pulse (alle biler alle statuser)</td></tr>
 </table>
 </div>
 
@@ -1689,7 +1689,7 @@ Peasy markedsføres aktivt via Meta. Drive markedsføres ikke (ennå). Alle kamp
 <tr>
   <td><strong>ERP public XLSX</strong></td>
   <td>Daglige leads med kilde (peasy / driveno). Autoritativ kilde for "ekte" leads.</td>
-  <td><code>curl -s 'https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx' -o /tmp/erp.xlsx</code> · Parse med <code>openpyxl</code> eller <code>xlsx</code> npm-pakken.</td>
+  <td><code>curl -s 'https://api.biladministrasjon.no/public/reports/peasy/&lt;PEASY_RAPPORT_KEY i .env&gt;?output=xlsx' -o /tmp/erp.xlsx</code> · Parse med <code>openpyxl</code> eller <code>xlsx</code> npm-pakken.</td>
 </tr>
 <tr>
   <td><strong>Meta Ads Manager</strong></td>
@@ -1711,7 +1711,7 @@ Peasy markedsføres aktivt via Meta. Drive markedsføres ikke (ennå). Alle kamp
 <h3>Henting av leads-fordeling Peasy vs Drive</h3>
 <p>Standard analyse-snutt på Mini, kjøres i <code>/tmp</code>:</p>
 <pre>cd /tmp &amp;&amp; source venv/bin/activate
-curl -s 'https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx' -o erp.xlsx
+curl -s 'https://api.biladministrasjon.no/public/reports/peasy/&lt;PEASY_RAPPORT_KEY i .env&gt;?output=xlsx' -o erp.xlsx
 
 python3 &lt;&lt;'EOF'
 import openpyxl, datetime as dt
@@ -1804,8 +1804,8 @@ Claude bygger Meta-kampanjer for Mike fremover. Det betyr: kreativ-tekst, audien
 <strong>&#128274; Peasy Pulse &mdash; passord-tilgang (v16.03.c73+)</strong><br>
 Pulse er passord-beskyttet siden 27. april 2026. Hele siden er l&aring;st bak SHA-256 hash-verifisering.
 <div class="kv" style="margin-top:10px">
-<span class="k">Passord</span><span><code>FJERNET</code></span>
-<span class="k">SHA-256 hash</span><span style="font-family:monospace;font-size:11px;word-break:break-all"><code>FJERNET</code></span>
+<span class="k">Passord</span><span><code>(fjernet)</code></span>
+<span class="k">SHA-256 hash</span><span style="font-family:monospace;font-size:11px;word-break:break-all"><code>(fjernet)</code></span>
 <span class="k">Token-varighet</span><span>30 dager (localStorage per nettleser/enhet)</span>
 <span class="k">Logg ut</span><span>Lenke oppe til h&oslash;yre i header</span>
 <span class="k">Setup</span><span>Hash er injectet i <code>peasy-pulse.html</code> i en <code>const PWD_HASH</code>-variabel</span>
@@ -1818,7 +1818,7 @@ Pulse er passord-beskyttet siden 27. april 2026. Hele siden er l&aring;st bak SH
 <li>Velg nytt passord (12+ tegn, blanding bokstaver/tall/symboler, ikke gjenbruk fra andre kontoer)</li>
 <li>Generer hash p&aring; Mini: <code>echo -n 'NyttPassord' | shasum -a 256 | awk '{print $1}'</code></li>
 <li>P&aring; Mini, oppdater Pulse-fila:<pre>cd ~/mikeljungbergtvedt.github.io
-sed -i '' "s/FJERNET/NY_HASH/" peasy-pulse.html
+sed -i '' "s/(fjernet)/NY_HASH/" peasy-pulse.html
 git add peasy-pulse.html &amp;&amp; git commit -m "Rotate Pulse passord" &amp;&amp; git push</pre></li>
 <li>Oppdater denne sysdok-en med nytt passord og hash</li>
 <li>Varsle alle som har tilgang muntlig (Signal/telefon, ikke epost)</li>
@@ -1854,7 +1854,7 @@ Disse credentials er gjeldende per 21. apr. 2026. Hvis du roterer en, oppdater h
 <div class="kv">
 <span class="k">EWS / Mail</span><span><code>post@peasy.no</code> / <code>Born2025!</code> · webmail: <a href="https://exchange.tornado.email">exchange.tornado.email</a></span>
 <span class="k">ERP</span><span><code>post@peasy.no</code> / <code>Born2025!</code> · <code>https://api.biladministrasjon.no</code></span>
-<span class="k">GitHub</span><span><code>FJERNET</code></span>
+<span class="k">GitHub</span><span><code>(fjernet)</code></span>
 <span class="k">Anthropic</span><span>I <code>.env</code> som <code>ANTHROPIC_API_KEY</code></span>
 <span class="k">Telegram (felles)</span><span>Bot-token <code>8601623470:AAH...</code> · chat <code>8743185026</code></span>
 <span class="k">Telegram (track)</span><span><code>@EasyPeasyEmailBot</code> · token <code>8267707007:AAE...</code></span>
