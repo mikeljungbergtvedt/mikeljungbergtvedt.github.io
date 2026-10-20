@@ -238,9 +238,26 @@
      Går via Mini /qa/chat/les, /qa/chat/send, /qa/avvis (samme Bearer som /social/hide). Ingenting sendes uten trykk + bekreftelse. */
   function auQaBase() { return String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/, '') + '/qa'; }
   function auQaPost(sti, body) {
-    return fetch(auQaBase() + sti, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, body: JSON.stringify(body) })
+    return fetch(auQaBase() + sti, { method: 'POST', headers: auQaHode(), body: JSON.stringify(body) })
       .then(function (r) { return r.json().catch(function () { return { ok: false, status: r.status, err: 'HTTP ' + r.status }; }).then(function (j) { if (j && j.status == null && !r.ok) j.status = r.status; return j; }); })
       .catch(function (e) { return { ok: false, err: 'Mini svarer ikke: ' + (e && e.message || e) }; });
+  }
+  /* c626 (Mike 20.10): Send/Avvis krever godkjent enhet. «Be om tilgang» → mail til Mike med Godkjenn-lenke → enhetsnøkkel lagres i denne nettleseren. */
+  var AU_QA_ENHET = 'peasyQaEnhet', AU_QA_VENT = 'peasyQaEnhetVent';
+  function auQaEnhet() { try { return localStorage.getItem(AU_QA_ENHET) || ''; } catch (e) { return ''; } }
+  function auQaHode() { var h = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }; var e = auQaEnhet(); if (e) h['X-QA-Enhet'] = e; return h; }
+  function auQaEnhetsnavn() { var u = navigator.userAgent || ''; var os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Enhet'; var nl = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'nettleser'; return os + ' ' + nl; }
+  var auQaPoll = null;
+  function auQaPollStart(ferdig) {
+    if (auQaPoll) return; var t0 = Date.now();
+    auQaPoll = setInterval(function () {
+      var id = ''; try { id = localStorage.getItem(AU_QA_VENT) || ''; } catch (e) {}
+      if (!id || Date.now() - t0 > 31 * 60000) { clearInterval(auQaPoll); auQaPoll = null; try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} ferdig(false); return; }
+      fetch(auQaBase() + '/tilgang/status?id=' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.token) { try { localStorage.setItem(AU_QA_ENHET, j.token); localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(true); }
+        else if (j && (j.status === 'utlopt' || j.status === 'fjernet' || j.status === 'mailfeil' || j.err === 'ukjent')) { try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(false); }
+      }).catch(function () {});
+    }, 5000);
   }
   function auQaTid(t) { try { return new Date(t).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return String(t || ''); } }
   function auQaDialog(html, okTekst, kanOk) {
@@ -269,8 +286,9 @@
       '<div style="font-size:11px;font-weight:800;color:#5A2A20;margin:8px 0 3px">MELDING TIL KUNDEN (ikke sendt, kan redigeres)</div>' +
       '<textarea class="q-tekst" rows="4" style="width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px;border:1px solid #C9A39A;border-radius:6px"></textarea>' +
       '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-      '<button type="button" class="q-send" style="' + knapp + 'border:0;background:#004225;color:#fff;font-weight:700">Send</button>' +
-      '<button type="button" class="q-avvis" style="' + knapp + 'border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis</button>' +
+      '<span class="q-knapper" style="display:contents"><button type="button" class="q-send" style="' + knapp + 'border:0;background:#004225;color:#fff;font-weight:700">Send</button>' +
+      '<button type="button" class="q-avvis" style="' + knapp + 'border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis</button></span>' +
+      '<button type="button" class="q-tilgang" style="' + knapp + 'border:1px solid #004225;background:#fff;color:#004225;font-weight:700;display:none">Be om tilgang</button>' +
       '<a href="' + erp + '" target="_blank" rel="noopener" style="font-size:12px;color:#004225">Åpne i ERP</a></div>' +
       '<div class="q-status" style="margin-top:6px;font-size:12px"></div></div>';
     var ta = el.querySelector('.q-tekst'), logg = el.querySelector('.q-logg'), st = el.querySelector('.q-status');
@@ -278,7 +296,26 @@
     var vis = function (L) {
       logg.innerHTML = (L && L.length) ? L.map(function (m) { return '<div style="margin-bottom:4px"><b>' + (m.fra === 'PEASY' ? 'Peasy' : 'Kunden') + '</b> · ' + esc(auQaTid(m.tid)) + ' · id ' + esc(m.id) + '<div style="white-space:pre-line;color:#222">' + esc(m.tekst) + '</div></div>'; }).join('') : '<i>Ingen meldinger i kundechatten.</i>';
     };
+    var kn = el.querySelector('.q-knapper'), tb = el.querySelector('.q-tilgang');
+    var visTilgang = function (melding) {
+      var har = !!auQaEnhet(), venter = false; try { venter = !!localStorage.getItem(AU_QA_VENT); } catch (e) {}
+      kn.style.display = har ? 'contents' : 'none'; tb.style.display = har ? 'none' : '';
+      tb.disabled = venter; tb.style.opacity = venter ? '.5' : '';
+      if (melding != null) st.innerHTML = melding;
+      else if (!har) st.innerHTML = venter ? '<span style="color:#5E6B62">Venter på godkjenning fra Mike (mail sendt, lenken gjelder 30 min) …</span>' : '<span style="color:#5E6B62">Send og Avvis krever godkjent enhet.</span>';
+      if (!har && venter) auQaPollStart(function (ok) { visTilgang(ok ? '<b style="color:#004225">Enheten er godkjent. Send og Avvis er klare.</b>' : '<b style="color:#8B2A1A">Ikke godkjent (utløpt). Be om tilgang på nytt.</b>'); });
+    };
+    tb.onclick = function () {
+      if (tb.disabled) return; tb.disabled = true; st.textContent = 'Sender forespørsel …';
+      fetch(auQaBase() + '/tilgang/be', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (window.PA_TOKEN_ERP || '') }, body: JSON.stringify({ enhetsnavn: auQaEnhetsnavn() }) })
+        .then(function (r) { return r.json(); }).then(function (j) {
+          if (j && j.ok && j.id) { try { localStorage.setItem(AU_QA_VENT, j.id); } catch (e) {} visTilgang(); }
+          else { tb.disabled = false; st.innerHTML = '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Feil') + '</b>'; }
+        }).catch(function () { tb.disabled = false; st.innerHTML = '<b style="color:#8B2A1A">Mini svarer ikke.</b>'; });
+    };
+    visTilgang();
     var feil = function (j) {
+      if (j && j.enhet === false) { try { localStorage.removeItem(AU_QA_ENHET); } catch (e) {} setTimeout(function () { visTilgang(); }, 0); return '<b style="color:#8B2A1A">Enheten er ikke godkjent.</b>'; }
       if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || erp) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>';
       return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>';
     };
