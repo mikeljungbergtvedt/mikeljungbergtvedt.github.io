@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c625</title>
+<title>Peasy Pulse v16.08.c627</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -20,17 +20,32 @@ header{background:#004225}
 @keyframes kampTick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 </style>
 <script>
+/* c627 (Mike 20.10, sikkerhet trinn 2): ingen token/passord i Pulse. Porten er godkjent enhetsnøkkel (X-QA-Enhet).
+   Alle kall til Minien får X-QA-Enhet automatisk. Nøkkelen fås via «Be om tilgang» → Mike godkjenner på mail. */
+var PA_MINI_BASE='https://mike-sin-mac-mini.tail3fb404.ts.net:8443';
+function paEnhet(){ try{ return localStorage.getItem('peasyQaEnhet')||''; }catch(e){ return ''; } }
+window.paEnhet=paEnhet;
 (function(){
-  try{
-    var raw=localStorage.getItem('peasy-pulse-auth');
-    if(!raw) return;
-    var o=JSON.parse(raw);
-    if(o&&o.h==='FJERNET'&&o.t&&(Date.now()-o.t)<2592000000)
-      document.documentElement.classList.add('pulse-authed');
-  }catch(e){}
+  try{ localStorage.removeItem('peasy-pulse-auth'); localStorage.removeItem('peasyGithubToken'); }catch(e){}
+  if(paEnhet()) document.documentElement.classList.add('pulse-authed');
+  var _f=window.fetch.bind(window);
+  window.fetch=function(input,init){
+    try{
+      var url=(typeof input==='string')?input:(input&&input.url)||'';
+      if(url.indexOf(PA_MINI_BASE)===0){
+        init=Object.assign({},init||{});
+        var h=new Headers(init.headers||((typeof input!=='string'&&input&&input.headers)||{}));
+        h.delete('Authorization');
+        var e=paEnhet(); if(e&&!h.get('X-QA-Enhet')) h.set('X-QA-Enhet',e);
+        if(!h.get('X-QA-Enhet')) h.delete('X-QA-Enhet');
+        init.headers=h;
+      }
+    }catch(x){}
+    return _f(input,init);
+  };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c625';</script>
+<script>document.title='Peasy Pulse v16.08.c627';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -518,92 +533,53 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c625</div>
-    <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:18px">Tilgang kreves</div>
-    <input type="password" id="auth-input" placeholder="Passord" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccd5d2;border-radius:8px;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key==='Enter')authCheck()" />
-    <div id="auth-msg" style="font-size:12px;color:#C62828;min-height:18px;margin-bottom:8px"></div>
-    <button onclick="authCheck()" style="width:100%;padding:12px;background:#004225;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit">Lås opp</button>
-    <div style="font-size:11px;color:#888;margin-top:14px;text-align:center;line-height:1.5">Be Mike om passord hvis du ikke har det.</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c627</div>
+    <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
+    <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Trykk «Be om tilgang». Mike får en mail med Godkjenn-lenke (gyldig 30 min). Siden låses opp automatisk når den er godkjent.</div>
+    <div id="auth-msg" style="font-size:12px;color:#5E6B62;min-height:18px;margin-bottom:8px"></div>
+    <button id="auth-be" onclick="authBe()" style="width:100%;padding:12px;background:#004225;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit">Be om tilgang</button>
   </div>
 </div>
 <script>
-const PWD_HASH='FJERNET';
-const TOKEN_KEY='peasy-pulse-auth';
-const TOKEN_TTL=30*24*60*60*1000;
-
-async function sha256(t){
-  const buf=new TextEncoder().encode(t);
-  const h=await crypto.subtle.digest('SHA-256',buf);
-  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+/* c627: enhetsnøkkel er porten (erstatter passord-hash). Samme nøkkel som Send/Avvis (auto-tab.js, localStorage peasyQaEnhet). */
+function authApne(){ document.documentElement.classList.add('pulse-authed'); var g=document.getElementById('auth-gate'); if(g) g.style.display='none'; document.body.style.overflow='auto'; }
+var _authPoll=null;
+function authPollStart(){
+  if(_authPoll) return; var t0=Date.now(); var msg=document.getElementById('auth-msg');
+  _authPoll=setInterval(function(){
+    var id=''; try{ id=localStorage.getItem('peasyQaEnhetVent')||''; }catch(e){}
+    if(!id||Date.now()-t0>31*60000){ clearInterval(_authPoll); _authPoll=null; try{localStorage.removeItem('peasyQaEnhetVent');}catch(e){} if(msg) msg.textContent='Ikke godkjent. Prøv igjen.'; return; }
+    fetch(PA_MINI_BASE+'/qa/tilgang/status?id='+encodeURIComponent(id),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.token){ try{ localStorage.setItem('peasyQaEnhet',j.token); localStorage.removeItem('peasyQaEnhetVent'); }catch(e){} clearInterval(_authPoll); _authPoll=null; location.reload(); }
+      else if(j&&(j.status==='utlopt'||j.status==='fjernet'||j.status==='mailfeil'||j.err==='ukjent')){ try{localStorage.removeItem('peasyQaEnhetVent');}catch(e){} clearInterval(_authPoll); _authPoll=null; if(msg) msg.textContent='Ikke godkjent ('+(j.status||j.err)+'). Prøv igjen.'; }
+    }).catch(function(){});
+  },5000);
 }
-
-async function authCheck(){
-  const inp=document.getElementById('auth-input');
-  const msg=document.getElementById('auth-msg');
-  msg.textContent='';
-  const hash=await sha256(inp.value);
-  if(hash===PWD_HASH){
-    try{localStorage.setItem(TOKEN_KEY,JSON.stringify({h:hash,t:Date.now()}));}catch(e){}
-    document.getElementById('auth-gate').style.display='none';
-    document.body.style.overflow='auto';
-  }else{
-    msg.textContent='Feil passord';
-    inp.value='';
-    inp.focus();
-  }
+function authBe(){
+  var msg=document.getElementById('auth-msg'); if(msg) msg.textContent='Sender forespørsel …';
+  var u=navigator.userAgent||''; var os=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Mac/.test(u)?'Mac':/Windows/.test(u)?'Windows':'Enhet'; var nl=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Firefox\//.test(u)?'Firefox':/Safari\//.test(u)?'Safari':'nettleser';
+  fetch(PA_MINI_BASE+'/qa/tilgang/be',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enhetsnavn:os+' '+nl})}).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok&&j.id){ try{localStorage.setItem('peasyQaEnhetVent',j.id);}catch(e){} if(msg) msg.textContent='Venter på godkjenning fra Mike (mail sendt) …'; authPollStart(); }
+    else if(msg) msg.textContent=(j&&j.err)||'Feil, prøv igjen.';
+  }).catch(function(){ if(msg) msg.textContent='Får ikke kontakt med Minien. Prøv igjen.'; });
 }
-
 function authLogout(){
-  try{localStorage.removeItem(TOKEN_KEY);}catch(e){}
+  if(!confirm('Logge ut denne enheten? Mike må godkjenne den på nytt.')) return;
+  try{ localStorage.removeItem('peasyQaEnhet'); }catch(e){}
   location.reload();
 }
-
 (function(){
+  if(paEnhet()){ authApne(); return; }
   document.body.style.overflow='hidden';
-  try{
-    const raw=localStorage.getItem(TOKEN_KEY);
-    if(raw){
-      const o=JSON.parse(raw);
-      if(o&&o.h===PWD_HASH&&o.t&&(Date.now()-o.t)<TOKEN_TTL){
-        document.getElementById('auth-gate').style.display='none';
-        document.body.style.overflow='auto';
-        return;
-      }
-    }
-  }catch(e){}
-  setTimeout(()=>document.getElementById('auth-input')?.focus(),100);
+  try{ if(localStorage.getItem('peasyQaEnhetVent')){ var m=document.getElementById('auth-msg'); if(m) m.textContent='Venter på godkjenning fra Mike …'; authPollStart(); } }catch(e){}
 })();
 window.addEventListener('pageshow',function(e){
-  try{
-    var raw=localStorage.getItem(TOKEN_KEY);
-    if(raw){
-      var o=JSON.parse(raw);
-      if(o&&o.h===PWD_HASH&&o.t&&(Date.now()-o.t)<TOKEN_TTL){
-        document.documentElement.classList.add('pulse-authed');
-        var g=document.getElementById('auth-gate');
-        if(g) g.style.display='none';
-        document.body.style.overflow='auto';
-      }
-    }
-  }catch(x){}
-  if(e.persisted){
-    try{ if(typeof layoutPulseNav==='function') layoutPulseNav(true); }catch(x){}
-  }
+  if(paEnhet()) authApne();
+  if(e.persisted){ try{ if(typeof layoutPulseNav==='function') layoutPulseNav(true); }catch(x){} }
 });
-document.addEventListener('visibilitychange',function(){
-  if(document.hidden) return;
-  try{
-    var raw=localStorage.getItem(TOKEN_KEY);
-    if(!raw) return;
-    var o=JSON.parse(raw);
-    if(o&&o.h===PWD_HASH&&o.t&&(Date.now()-o.t)<TOKEN_TTL){
-      document.documentElement.classList.add('pulse-authed');
-      var g=document.getElementById('auth-gate');
-      if(g) g.style.display='none';
-      document.body.style.overflow='auto';
-    }
-  }catch(x){}
-});
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&paEnhet()) authApne(); });
+// Mini svarer 401 (enheten fjernet): vis porten igjen.
+(function(){ var _f=window.fetch; window.fetch=function(i,o){ return _f(i,o).then(function(r){ try{ var u=(typeof i==='string')?i:(i&&i.url)||''; if(r&&r.status===401&&u.indexOf(PA_MINI_BASE)===0&&u.indexOf('/qa/tilgang/')<0&&paEnhet()){ /* nøkkel ugyldig */ localStorage.removeItem('peasyQaEnhet'); document.documentElement.classList.remove('pulse-authed'); var g=document.getElementById('auth-gate'); if(g) g.style.display='flex'; } }catch(x){} return r; }); }; })();
 </script>
 
 
@@ -1548,15 +1524,7 @@ window.MARK_V16_04 = (function(){
 </div>
 </div>
 
-<details style="margin-bottom:24px">
-<summary style="cursor:pointer;color:#666;font-size:13px">Avansert — GitHub-token</summary>
-<p style="font-size:12px;color:#666">Lagres kun lokalt i din browser (localStorage). Brukes til å commit'e <code>peasy-config.json</code> til repoet.</p>
-<input type="password" id="innst-token" placeholder="token" style="width:100%;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:8px" />
-<div style="display:flex;gap:8px;margin-bottom:8px">
-<button onclick="innstSaveTokenLocal()" style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;cursor:pointer">Lagre token lokalt</button>
-<button onclick="innstClearToken()" style="padding:6px 14px;background:#fff5f5;border:1px solid #C62828;color:#C62828;border-radius:6px;cursor:pointer">Slett token</button>
-</div>
-</details>
+<p style="font-size:12px;color:#666;margin-bottom:24px">Lagre skriver <code>peasy-config.json</code> via Minien (kun Mikes enhet). Ingen GitHub-token i nettleseren.</p>
 
 <div style="border-top:1px solid #ddd;padding-top:16px;margin-top:16px">
 <button onclick="innstSaveToGitHub()" style="padding:10px 20px;background:#2E7D32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px">Lagre til GitHub</button>
@@ -1624,7 +1592,7 @@ window.MARK_V16_04 = (function(){
     {id:"13", tittel:"13 Kontrakt signert",    statuses:["contract_signed"]}
   ];
   var PA_LOCATIONS = {0:"Direktebil",7:"Oslo Nord, Berger (Skedsmokorset)",8:"Rogaland, Sandnes",11:"Trondheim (Lade)",12:"Bergen, Blomsterdalen",13:"Oslo Nord, Hvam (CarNext)",14:"Oslo Syd/Follo (Ski)"};
-  var PA_TOKEN_ERP = "FJERNET";
+  var PA_TOKEN_ERP = "";
   var PA_PROXY_ERP = "https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/";
   window.PA_TOKEN_ERP=PA_TOKEN_ERP;window.PA_PROXY_ERP=PA_PROXY_ERP;
   var PA_ERP_LIST_TO_ENDPOINT = {"2":"sd_received","3":"final_estimate","4":"order_delivery","5a":"on_the_way","5b":"car_received","5c":"waiting_for_preparation","6":"ready_for_auction","7":"on_auction","8":"auction_finished","9":"wait_for_bid_accept","10":"wait_for_sales_note","11":"incomplete_contract","12":"wait_for_signing","13":"contract_signed"};
@@ -1634,7 +1602,7 @@ window.MARK_V16_04 = (function(){
   async function paFetchAllErpLocs() {
     var results = await Promise.all(Object.keys(PA_ERP_LIST_TO_ENDPOINT).map(function(lid){
       var endpoint = PA_ERP_LIST_TO_ENDPOINT[lid];
-      return fetch(PA_PROXY_ERP + endpoint, {headers:{"Authorization":"Bearer " + PA_TOKEN_ERP}})
+      return fetch(PA_PROXY_ERP + endpoint, {headers:{'X-QA-Enhet': paEnhet()}})
         .then(function(r){ return r.ok ? r.json() : {biler:[]}; })
         .then(function(j){ return j.biler || []; })
         .catch(function(){ return []; });
@@ -1689,7 +1657,7 @@ window.MARK_V16_04 = (function(){
           return;
         }
         var c = unique[idx++];
-        fetch(PA_PROXY_ERP.replace(/\/list\/$/, "") + "/car/" + c.car_id, {headers:{"Authorization":"Bearer " + PA_TOKEN_ERP}})
+        fetch(PA_PROXY_ERP.replace(/\/list\/$/, "") + "/car/" + c.car_id, {headers:{'X-QA-Enhet': paEnhet()}})
           .then(function(r){ return r.ok ? r.json() : null; })
           .then(function(d){
             if (d && d.bil && d.bil.car && d.bil.car.location_id != null) {
@@ -1713,7 +1681,7 @@ window.MARK_V16_04 = (function(){
 
     try {
       var adUrl = PA_PROXY_ERP.replace(/\/list\/?$/,'') + '/auction-dates';
-      var adRes = await fetch(adUrl, {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}});
+      var adRes = await fetch(adUrl, {headers:{'X-QA-Enhet': paEnhet()}});
       if (adRes.ok) {
         var adJ = await adRes.json();
         window._paAukDates = (adJ && adJ.dates) || {};
@@ -2556,7 +2524,7 @@ window.MARK_V16_04 = (function(){
 </section>
 </main>
 <script>
-var API='https://api.biladministrasjon.no/public/reports/peasy/FJERNET?output=xlsx';
+var API=PA_MINI_BASE+'/api/rapport.xlsx'; // c627: rapportnøkkel ligger kun på Minien
 var TARGETS={prodDays:3};
 var CUTOFF=new Date('2025-11-01');
 var BRACKETS=[
@@ -3323,7 +3291,7 @@ function overlayErpEvents(rows){
   if(!rows||!rows.length) return Promise.resolve(rows);
   var base=(window.PA_PROXY_ERP||'').replace(/\/list\/$/,'');
   if(!base) return Promise.resolve(rows);
-  return fetch(base+'/erp-events?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}})
+  return fetch(base+'/erp-events?t='+Date.now(),{headers:{'X-QA-Enhet': paEnhet()}})
     .then(function(r){return r.ok?r.json():null;})
     .then(function(j){
       if(!j||!j.ok||!j.byRegnr) return rows;
@@ -3371,7 +3339,7 @@ async function loadReturSnapshot(){
   var miniP=Promise.resolve(null);
   var base=(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'');
   if(base){
-    miniP=fetch(base+'/retur-snapshot',{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')},signal:AbortSignal.timeout(8000)})
+    miniP=fetch(base+'/retur-snapshot',{headers:{'X-QA-Enhet': paEnhet()},signal:AbortSignal.timeout(8000)})
       .then(function(r){return r.ok?r.json():null;})
       .catch(function(){return null;});
   }
@@ -3461,7 +3429,7 @@ async function loadData(){
   window._liste16Recent=[];
   try{
     var l16url=(window.PA_PROXY_ERP||'')+'rejected?t='+Date.now();
-    var l16r=await fetch(l16url,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')},signal:AbortSignal.timeout(8000)});
+    var l16r=await fetch(l16url,{headers:{'X-QA-Enhet': paEnhet()},signal:AbortSignal.timeout(8000)});
     if(l16r.ok){
       var l16j=await l16r.json();
       window._liste16Recent=l16j.biler||[];
@@ -6901,9 +6869,6 @@ function innstRender(){
   innstSatserRender();
   if(typeof _kartFillPeriodeSelect==='function') _kartFillPeriodeSelect();
   document.getElementById('innst-json').textContent=JSON.stringify(c,null,2);
-  // Token preview
-  var tok=localStorage.getItem('peasyGithubToken')||'';
-  document.getElementById('innst-token').value=tok;
 }
 function innstUpdate(el){
   var i=parseInt(el.dataset.i),k=el.dataset.k,v=el.value;
@@ -7009,22 +6974,7 @@ function innstDeletePeriode(i){
   window.peasyConfig.marketingPerioder.splice(i,1);
   innstRender();
 }
-function innstSaveTokenLocal(){
-  var t=document.getElementById('innst-token').value.trim();
-  if(!t){alert('Tom token');return;}
-  localStorage.setItem('peasyGithubToken',t);
-  document.getElementById('innst-status').textContent='Token lagret lokalt';
-  document.getElementById('innst-status').style.color='#2E7D32';
-}
-function innstClearToken(){
-  localStorage.removeItem('peasyGithubToken');
-  document.getElementById('innst-token').value='';
-  document.getElementById('innst-status').textContent='Token slettet';
-  document.getElementById('innst-status').style.color='#C62828';
-}
 function innstSaveToGitHub(){
-  var token=localStorage.getItem('peasyGithubToken')||document.getElementById('innst-token').value.trim();
-  if(!token){alert('Mangler GitHub token. Lagre token først.');return;}
   innstSatserFormatAll();
   innstSatserSync();
   // Sync retur-kost
@@ -7034,18 +6984,11 @@ function innstSaveToGitHub(){
   var gireInp=document.getElementById('innst-gire');
   window.peasyConfig.gireKost=gireInp?parseInt(gireInp.value,10)||750:750;
   var status=document.getElementById('innst-status');
-  status.textContent='Henter SHA...';
+  status.textContent='Lagrer via Minien...';
   status.style.color='#666';
-  fetch('https://api.github.com/repos/mikeljungbergtvedt/mikeljungbergtvedt.github.io/contents/peasy-config.json',{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}})
-    .then(function(r){return r.json();})
-    .then(function(info){
-      var sha=info.sha;
-      var content=JSON.stringify(window.peasyConfig,null,2)+'\n';
-      var b64=btoa(unescape(encodeURIComponent(content)));
-      status.textContent='Skriver til GitHub...';
-      return fetch('https://api.github.com/repos/mikeljungbergtvedt/mikeljungbergtvedt.github.io/contents/peasy-config.json',{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'Pulse-config oppdatert via Innstillinger',content:b64,sha:sha})});
-    })
-    .then(function(r){return r.json();})
+  fetch(PA_MINI_BASE+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(window.peasyConfig)})
+    .then(function(r){return r.json().catch(function(){return {error:'HTTP '+r.status};});})
+    .then(function(res){ if(res&&res.ok) res.commit=res.commit||'uendret'; else res={message:(res&&res.error)==='forbidden'?'Kun Mikes enhet kan lagre':(res&&res.error)||'ukjent'}; return res; })
     .then(function(res){
       if(res.commit){
         status.textContent='Lagret! Pulse rekalkulerer ved neste reload.';
@@ -7574,7 +7517,7 @@ async function loadScoreboard(){
     var aukDates={};
     try{
       var adUrl=(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'')+'/auction-dates?t='+t;
-      var adRes=await fetch(adUrl,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+      var adRes=await fetch(adUrl,{headers:{'X-QA-Enhet': paEnhet()}});
       if(adRes&&adRes.ok){
         var adJ=await adRes.json();
         aukDates=(adJ&&adJ.dates)||{};
@@ -8020,7 +7963,7 @@ function driveMaanedTall(){
 window._driveAnneLogg=window._driveAnneLogg||null;
 function loadDriveAnneLogg(){
   var base=(window.PA_PROXY_ERP||'').replace(/\/list\/?$/,'');if(!base)return;
-  fetch(base+'/drive/anne-logg?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')},signal:AbortSignal.timeout(8000)})
+  fetch(base+'/drive/anne-logg?t='+Date.now(),{headers:{'X-QA-Enhet': paEnhet()},signal:AbortSignal.timeout(8000)})
     .then(function(r){return r.ok?r.json():null;})
     .then(function(j){window._driveAnneLogg=(j&&j.ok)?(j.mnd||{}):false;renderDriveMaaned(true);})
     .catch(function(){window._driveAnneLogg=false;renderDriveMaaned(true);});
@@ -8179,7 +8122,7 @@ async function loadV2Benchmark(){
     var overrides=[];
     // c181: hent overrides primaert fra Easy webhook /overrides (alltid synket med lokal fil),
     // fallback til raw GitHub easy-overrides.jsonl hvis webhook ikke svarer.
-    try{var wUrl=(window.PA_PROXY_ERP||'').replace('/list/','/overrides');var wRes=await fetch(wUrl,{headers:{'Authorization':'Bearer '+(window.PA_TOKEN_ERP||'')}});if(wRes.ok){var wJson=await wRes.json();var wMap=(wJson&&wJson.overrides)?wJson.overrides:wJson;if(wMap&&typeof wMap==='object'){overrides=Object.keys(wMap).map(function(k){return wMap[k];}).filter(Boolean);}}}catch(e){overrides=[];}
+    try{var wUrl=(window.PA_PROXY_ERP||'').replace('/list/','/overrides');var wRes=await fetch(wUrl,{headers:{'X-QA-Enhet': paEnhet()}});if(wRes.ok){var wJson=await wRes.json();var wMap=(wJson&&wJson.overrides)?wJson.overrides:wJson;if(wMap&&typeof wMap==='object'){overrides=Object.keys(wMap).map(function(k){return wMap[k];}).filter(Boolean);}}}catch(e){overrides=[];}
     if(!overrides.length){try{var oRes=await fetch(oUrl);if(oRes.ok){var oText=await oRes.text();overrides=oText.split('\n').filter(function(l){return l.trim();}).map(function(l){try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);}}catch(e){}}
     var startMs=new Date(V2BM_BENCHMARK_START+'T00:00:00').getTime();
     var fresh=measurements.filter(function(m){var ts=m.timestamp?new Date(m.timestamp).getTime():0;return ts>=startMs;});
@@ -8206,7 +8149,7 @@ async function loadV2Benchmark(){
       if(o.erpId!==undefined&&o.erpId!==null){var k=String(o.erpId);if(!byErpId[k]||ts>(byErpId[k]._ts||0))byErpId[k]=Object.assign({},o,{_ts:ts});}
       if(o.regnr){var rk=String(o.regnr).toUpperCase();if(!byRegnr[rk]||ts>(byRegnr[rk]._ts||0))byRegnr[rk]=Object.assign({},o,{_ts:ts});}
     });
-    window._v2bmRecords=fresh; try{var _fr=await fetch(window.PA_PROXY_ERP.replace('/list/','/finn-links'),{headers:{Authorization:'Bearer '+window.PA_TOKEN_ERP}});if(_fr.ok){var _fj=await _fr.json();window._finnLinks=(_fj&&_fj.finn)||{};}}catch(e){window._finnLinks=window._finnLinks||{};}
+    window._v2bmRecords=fresh; try{var _fr=await fetch(window.PA_PROXY_ERP.replace('/list/','/finn-links'),{headers:{'X-QA-Enhet': paEnhet()}});if(_fr.ok){var _fj=await _fr.json();window._finnLinks=(_fj&&_fj.finn)||{};}}catch(e){window._finnLinks=window._finnLinks||{};}
     window._v2bmOverrideByErpId=byErpId;
     window._v2bmOverrideByRegnr=byRegnr;
     window._v2bmErpMaps=buildErpRowMaps();
@@ -8609,7 +8552,7 @@ async function loadSosial(force){
   if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   try{
     var q=(force?'refresh=1&':'')+'t='+Date.now();
-    var r=await fetch(sosialBase()+'/inbox?'+q,{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+    var r=await fetch(sosialBase()+'/inbox?'+q,{headers:{'X-QA-Enhet': paEnhet()}});
     var j=await r.json();
     window._sosialInbox=j;
     if(upd) upd.textContent=(j.updatedAt?sosialTid(j.updatedAt):'')+(j.graphVersion?' · '+j.graphVersion:'');
@@ -8809,7 +8752,7 @@ async function sosialDraft(ix){
   try{
     var r=await fetch(sosialBase()+'/draft-reply',{
       method:'POST',
-      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      headers:{'X-QA-Enhet': paEnhet(),'Content-Type':'application/json'},
       body:JSON.stringify(sosialDraftPayload(it))
     });
     var j=await r.json();
@@ -8835,7 +8778,7 @@ async function sosialPublish(ix){
   try{
     var r=await fetch(sosialBase()+'/reply',{
       method:'POST',
-      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      headers:{'X-QA-Enhet': paEnhet(),'Content-Type':'application/json'},
       body:JSON.stringify({
         id:replyId, draft:draft, replyKind:it.replyKind, conversationId:it.conversationId,
         category:it.category, origText:sosialLastInbound(it), author:it.author, authorId:it.authorId,
@@ -8853,7 +8796,7 @@ async function sosialDone(ix){
   try{
     var r=await fetch(sosialBase()+'/done',{
       method:'POST',
-      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      headers:{'X-QA-Enhet': paEnhet(),'Content-Type':'application/json'},
       body:JSON.stringify({
         id:it.lastInboundId||it.id, lastInboundId:it.lastInboundId, rootId:it.id, threadId:it.id
       })
@@ -8872,7 +8815,7 @@ async function sosialHide(ix){
   try{
     var r=await fetch(sosialBase()+'/hide',{
       method:'POST',
-      headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||''),'Content-Type':'application/json'},
+      headers:{'X-QA-Enhet': paEnhet(),'Content-Type':'application/json'},
       body:JSON.stringify({
         id:hideId, replyKind:it.replyKind, conversationId:it.conversationId,
         category:it.category, author:it.author, authorId:it.authorId,
@@ -8891,7 +8834,7 @@ async function sosialHide(ix){
 }
 async function updateSosialStatus(){
   try{
-    var r=await fetch(sosialBase()+'/status?t='+Date.now(),{headers:{Authorization:'Bearer '+(window.PA_TOKEN_ERP||'')}});
+    var r=await fetch(sosialBase()+'/status?t='+Date.now(),{headers:{'X-QA-Enhet': paEnhet()}});
     var j=await r.json();
     if(typeof j.unanswered==='number') paintSosialBadge(j.unanswered);
   }catch(e){ /* header-pill tåler pause */ }
@@ -9370,7 +9313,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c625</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c627</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -9384,7 +9327,7 @@ var MND=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'
 var STATN=[[/avvist|declined|rejected/i,'Avvist','#C62828'],[/waiting_for_transport|transport bestilt|ar_car_created/i,'P\u00e5 vei','#1565C0'],[/mottatt|received/i,'Mottatt','#004225'],[/on_auction|auksjon|sale_reaction|venter svar/i,'P\u00e5 auksjon','#7B1FA2'],[/sold|solgt|contract/i,'Solgt','#2E7D32'],[/return/i,'Returnert','#667'],[/venter p\u00e5 trans|endelig estimat|venter aksept/i,'Venter aksept','#E65100']];
 function buildEM(){var EM={},EMByReg={};var lr=window._lastRows||[];for(var i=1;i<lr.length;i++){var inn=String(lr[i][0]||'').replace(/\s/g,'');var rg=String(lr[i][1]||'').toUpperCase().replace(/\s/g,'');var rec={aar:lr[i][8],km:lr[i][22],es:String(lr[i][31]||''),bs:String(lr[i][15]||lr[i][16]||''),inn:inn,rg:rg,verdi:String(lr[i][3]||'')};if(inn)EM[inn]=rec;if(rg){if(!EMByReg[rg])EMByReg[rg]=[];EMByReg[rg].push(rec);}}window._EMByReg=EMByReg;return EM;}
 var normBusy=false;
-function normOgTell(){try{if(typeof window._signaler_fetching==='undefined'){window._signaler_fetching=false;}if(!window._signaler_data){window._signaler_data={};}var _now=Date.now();if(!window._signaler_fetching && (!window._signaler_ts || (_now-window._signaler_ts)>600000)){window._signaler_fetching=true;window._signaler_ts=_now;fetch(window.PA_PROXY_ERP.replace('/list/','/signaler'),{headers:{Authorization:'Bearer '+window.PA_TOKEN_ERP}}).then(function(r){return r.json();}).then(function(j){var map={};if(j&&j.ok&&j.signaler){Object.keys(j.signaler).forEach(function(k){var e=j.signaler[k];if(e&&e.regnr){map[String(e.regnr).toUpperCase()]=e;}});}window._signaler_data=map;window._signaler_fetching=false;try{if(typeof normOgTell==='function'){normOgTell();}}catch(_e){}}).catch(function(_e){window._signaler_fetching=false;});}}catch(_e){}if(normBusy)return;normBusy=true;try{
+function normOgTell(){try{if(typeof window._signaler_fetching==='undefined'){window._signaler_fetching=false;}if(!window._signaler_data){window._signaler_data={};}var _now=Date.now();if(!window._signaler_fetching && (!window._signaler_ts || (_now-window._signaler_ts)>600000)){window._signaler_fetching=true;window._signaler_ts=_now;fetch(window.PA_PROXY_ERP.replace('/list/','/signaler'),{headers:{'X-QA-Enhet': paEnhet()}}).then(function(r){return r.json();}).then(function(j){var map={};if(j&&j.ok&&j.signaler){Object.keys(j.signaler).forEach(function(k){var e=j.signaler[k];if(e&&e.regnr){map[String(e.regnr).toUpperCase()]=e;}});}window._signaler_data=map;window._signaler_fetching=false;try{if(typeof normOgTell==='function'){normOgTell();}}catch(_e){}}).catch(function(_e){window._signaler_fetching=false;});}}catch(_e){}if(normBusy)return;normBusy=true;try{
 var tb=document.getElementById('v2bm-tbody');if(!tb)return;
 var sum=document.getElementById('v2bm-summary');if(sum)sum.style.display='none';
 var tbl=tb.closest('table');var EM=buildEM();
@@ -9502,7 +9445,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
   if (true) return; // c193: send-knapper på v3 bm slått av
 
   var WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
-  var TOKEN = 'FJERNET';
+  var TOKEN = '';
   var BTN_CSS = 'background:#2E7D32;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600';
   var BTN_BUSY = 'background:#888;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:default';
   var BTN_OK   = 'background:#1B5E20;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:default';
@@ -9534,7 +9477,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     btn.textContent = 'Sender...';
     fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer '+TOKEN},
+      headers: {'Content-Type':'application/json', 'X-QA-Enhet': paEnhet()},
       body: JSON.stringify({regnr: rg, internnr: inn, km: km})
     }).then(function(r){
       if (!r.ok) throw new Error('HTTP '+r.status);
@@ -9614,14 +9557,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
   async function refreshListe3(){
     try{
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
-      const PA_TOKEN_ERP = 'FJERNET';
-      const r = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
+      const PA_TOKEN_ERP = '';
+      const r = await fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'X-QA-Enhet': paEnhet()}});
       const j = await r.json();
       var raw = j.biler || [];
       var odOk = false;
       var odBiler = [];
       try {
-        const od = await fetch(PA_PROXY_ERP + 'order_delivery', {headers:{'Authorization':'Bearer '+PA_TOKEN_ERP}});
+        const od = await fetch(PA_PROXY_ERP + 'order_delivery', {headers:{'X-QA-Enhet': paEnhet()}});
         if (od.ok) {
           const oj = await od.json();
           odBiler = oj.biler || [];
@@ -9677,7 +9620,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <script>
 (function(){
   const WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
-  const TOKEN = 'FJERNET';
+  const TOKEN = '';
 
   function loadSent(){ try{ const raw = localStorage.getItem('qa_sent') || '{}'; return JSON.parse(raw); } catch(e){ return {}; } }
   function saveSent(o){ try{ localStorage.setItem('qa_sent', JSON.stringify(o)); }catch(e){} }
@@ -10460,9 +10403,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try { host = new URL(fu).hostname; } catch (eH) { host = ''; }
     if (!/(^|\.)finn\.no$|(^|\.)finncdn\.no$|(^|\.)car\.info$/.test(host)) return '';
     var base = String(window.PA_PROXY_ERP || '').replace(/\/list\/?$/,'');
-    var tok = window.PA_TOKEN_ERP || '';
+    var tok = paEnhet();
     if (!base || !tok) return '';
-    return base + '/og-image?auth=' + encodeURIComponent(tok) + '&url=' + encodeURIComponent(fu);
+    return base + '/og-image?e=' + encodeURIComponent(tok) + '&url=' + encodeURIComponent(fu);
   }
   function qaSisterHtml(e){
     return ''; /* c609: søsterbildet kom fra den gamle prisingen (V3G/Easy comps). Det sto foran regnr i overskriften, så SEND øverst ble ikke laget. */
@@ -11422,7 +11365,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     function once(){
       var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
       var timer = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch (eA) {} }, 18000);
-      var opts = { headers: { Authorization: 'Bearer ' + token } };
+      var opts = { headers: { 'X-QA-Enhet': paEnhet() } };
       if (ctrl) opts.signal = ctrl.signal;
       return fetch(proxy + endpoint, opts).then(function(r){
         if (!r || !r.ok) throw new Error('list not ok');
@@ -11567,7 +11510,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try {
       // 1) Fetch liste 3 (final_estimate) fra ERP. Ingen AbortSignal.timeout — Safari «Load failed» ved treg Tailscale.
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
-      const PA_TOKEN_ERP = 'FJERNET';
+      const PA_TOKEN_ERP = '';
       var qaKeepCards = false;
       var fetched = await Promise.all([
         qaFetchList(PA_PROXY_ERP, PA_TOKEN_ERP, 'final_estimate'),
@@ -11861,7 +11804,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
         return ctrl.signal;
       }
       function qaMiniInit(ms){
-        var o = { headers: { Authorization: 'Bearer ' + PA_TOKEN_ERP } };
+        var o = { headers: { 'X-QA-Enhet': paEnhet() } };
         var sig = qaAbortAfter(ms);
         if (sig) o.signal = sig;
         return o;
@@ -12139,10 +12082,10 @@ setTimeout(tick,1500);setInterval(tick,5000);
       return;
     }
     var PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
-    var PA_TOKEN_ERP = 'FJERNET';
+    var PA_TOKEN_ERP = '';
     Promise.all([
-      fetch(PA_PROXY_ERP + 'final_estimate', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; }),
-      fetch(PA_PROXY_ERP + 'order_delivery', {headers:{Authorization:'Bearer '+PA_TOKEN_ERP}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; })
+      fetch(PA_PROXY_ERP + 'final_estimate', {headers:{'X-QA-Enhet': paEnhet()}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; }),
+      fetch(PA_PROXY_ERP + 'order_delivery', {headers:{'X-QA-Enhet': paEnhet()}}).then(function(r){ return r && r.ok ? r.json() : null; }).catch(function(){ return null; })
     ]).then(function(pair){
         var j = pair[0];
         var od = pair[1];
@@ -12742,7 +12685,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/auksjon-ok'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId})
       });
       const j = await r.json().catch(()=>({}));
@@ -12770,7 +12713,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/clear-cache'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId})
       });
       const j = await r.json().catch(()=>({}));
@@ -12805,7 +12748,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId, anker, km, source: input.dataset.source||'', kilde, fra})
       });
       delete input.dataset.kilde; delete input.dataset.fra;
@@ -12836,7 +12779,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try{
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId, bud, km, source: input.dataset.source||'', kilde: 'bud'})
       });
       const j = await r.json().catch(()=>({}));
@@ -12867,7 +12810,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       let kilde = null; try { kilde = cb.dataset.kilde ? JSON.parse(cb.dataset.kilde) : null; } catch(_){}
       const r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId, anker, km, source: cb.dataset.source||'', statidKr: kr, statidKilde: kilde})
       });
       const j = await r.json().catch(()=>({}));
@@ -12895,7 +12838,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try{
       const r = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({regnr, internnr: erpId, km})
       });
       const j = await r.json().catch(()=>({}));
@@ -13225,7 +13168,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c454: QA-kort — SEND er av når fossefall mangler eller armen som skrives har Lav 0/tom/null (PRIS MANUELT). Boksen over tabellen leser A og B lav–høy fra samme fossefall som Lav–høy-raden. Vrakpant-gulv vises bare når gulvet løftet en side (vrakpant_gulv, ellers lav 3 000 / høy 5 000). -->
 <!-- c453: QA fossefall Lav–høy er lesbar på smal bredde. Hvert intervall stables på to linjer (101 000, så – 134 000). A/B/Ordna har minstebredde, tabell-tall er nowrap med tabular-nums, og kortet scroller sidelengs i stedet for at tallene overlapper. Rader, etiketter, priser og hvilke celler som har verdi er uendret. -->
 <!-- c452: QA fossefall er 11 rader i denne rekkefølgen: Finn-utpris, Forhandlermargin (tabell), Avsetning takst (tabell), Ståtid (tabell), Omregistrering, Klargjøring og Peasy-avgift kun på A (B og Ordna er strek). Peasy-bud midt, Spenn lav, Spenn høy og Lav – høy på A, B og Ordna. Spenn lav og Spenn høy er ett tall hver, lest fra spenn.lav og spenn.hoy. Midt leses fra peasy_bud_mid på armen. Ingen Usikkerhet takst, Origin-cap, Avvik, Avrunding, Ordna-trekk, Vrakpant, herav eller flerlinjeceller. Satser og formler uendret. -->
-<!-- c451: QA fossefall når Mini /measurements henger (tunnel, ~32MB, uten auth). Hentingen får Bearer og 12s avbrudd, deretter GitHub v2-measurements.jsonl. Åpne kort uten ff fylles fra Mini /bil?regnr= og indekseres på internnr og regnr. -->
+<!-- c451: QA fossefall når Mini /measurements henger (tunnel, ~32MB, uten auth). Hentingen får enhetsnøkkel og 12s avbrudd, deretter GitHub v2-measurements.jsonl. Åpne kort uten ff fylles fra Mini /bil?regnr= og indekseres på internnr og regnr. -->
 <!-- c450: Locked model — midt A; B=A×0.9; Ordna=A×0.75; sent-lav = writing arm fossefall lav. -->
 <!-- c448: Innstillinger — Fossefall-satser leses med tusenskille (38 000) og spenn som ned | opp (20 000 | 13 000). Lagres fortsatt som heltall og 20000|13000. Celle-id prisbånd|km under hver celle (150-250|50-120). Tom celle forblir tom. Live bud uendret. -->
 <!-- c456: Fossefall-satser merket LIVE i peasy-config.json og i seed. Ingen kode leser feltene — kun merkelapp. Ingen tall endret. -->
@@ -13329,7 +13272,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <script>
 (function(){
   const WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
-  const TOKEN = 'FJERNET';
+  const TOKEN = '';
 
   function fmt(n){
     if (n == null || n === '') return '–';
@@ -13363,7 +13306,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     if (et) et.querySelector('tbody').innerHTML = '';
     try {
       var url = WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/finn-utpris?regnr=' + encodeURIComponent(regnr));
-      var r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+      var r = await fetch(url, { headers: { 'X-QA-Enhet': paEnhet() } });
       var j = await r.json().catch(function(){ return {}; });
       if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP ' + r.status));
       var o = j.origin || {};
@@ -13429,7 +13372,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     try {
       var r = await fetch(WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/qa/anker'), {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        headers: {'Content-Type':'application/json','X-QA-Enhet': paEnhet()},
         body: JSON.stringify({
           regnr: siste.regnr,
           internnr: inp.dataset.erpid,
@@ -13468,7 +13411,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <script>
 (function(){
   const WEBHOOK_URL = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/trigger-eval';
-  const TOKEN = 'FJERNET';
+  const TOKEN = '';
   function fmt(n){
     if (n == null || n === '') return '—';
     var x = Number(n);
@@ -13682,7 +13625,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
     renderGbMatch(null);
     try {
       var url = WEBHOOK_URL.replace(/\/trigger-eval.*$/, '/gb-utpris?regnr=' + encodeURIComponent(regnr));
-      var r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+      var r = await fetch(url, { headers: { 'X-QA-Enhet': paEnhet() } });
       var j = await r.json().catch(function(){ return {}; });
       if (!r.ok || j.ok === false) throw new Error(j.err || j.error || ('HTTP ' + r.status));
       var b = (j.beslutning && typeof j.beslutning === 'object') ? j.beslutning : null;
@@ -13795,5 +13738,6 @@ setTimeout(tick,1500);setInterval(tick,5000);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', last); else last();
 })();
 </script>
+<!-- c627 (Mike 20.10, sikkerhet trinn 2): fjernet Mini-token, passord-hash, rapportnøkkel og GitHub-token fra Pulse. Alle Mini-kall sender X-QA-Enhet (enhetsnøkkel = porten). Rapport via Mini /api/rapport.xlsx, config-lagring via Mini /api/config (kun Mikes enhet). -->
 </body>
 </html>
