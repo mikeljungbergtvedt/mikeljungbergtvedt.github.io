@@ -59,6 +59,8 @@
   }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
+    auKjoretoy(c, b);
+    auDuplikat(c, b);
     auAarTopp(c, b, b.agent);
     auKmTopp(c, b, b.agent);
     // c579: knapperaden nederst, på linje mellom kortene i samme rad.
@@ -76,6 +78,7 @@
     auFsdGraf(c, b, ag);
     auPrisTag(c, ag);
     auMidPris(c, b, ag);
+    auChatAlle(c, b, ag);
     auOriginCv(c, b, ag);
     auEierPlass(c);
     if (c.querySelector('table.au-tv2')) auStickyLefts(c);
@@ -277,8 +280,11 @@
   }
   function auQaChat(el, b, ag, utkast) {
     if (!el) return;
-    var id = String(b.id || ''), fsdStopp = !!(ag && ag.fsd && ag.fsd.stopp);
-    if (!/^\d+$/.test(id) || !fsdStopp) { if (utkast) el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div style="white-space:pre-line">' + esc(utkast) + '</div></div>'; return; }
+    var id = String(b.id || '');
+    /* c628 (Mike 21.10): kundechat og Avvis på alle QA-kort med internnr, ikke bare FSD-stopp. Team-enhet: serveren svarer 403 (KUN_MIKE) og blokken fjernes. */
+    var bareUtkast = function () { if (utkast) el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div style="white-space:pre-line">' + esc(utkast) + '</div></div>'; else el.innerHTML = ''; };
+    if (AU_ROLLE === 'team') { bareUtkast(); return; }
+    if (!/^\d+$/.test(id)) { if (utkast) el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333"><div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">UTKAST TIL KUNDEN (ikke sendt)</div><div style="white-space:pre-line">' + esc(utkast) + '</div></div>'; return; }
     var erp = 'https://biladministrasjon.no/cars_driveno/processing/final_estimate/' + encodeURIComponent(id);
     var knapp = 'font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;';
     el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333">' +
@@ -297,9 +303,10 @@
       logg.innerHTML = (L && L.length) ? L.map(function (m) { return '<div style="margin-bottom:4px"><b>' + (m.fra === 'PEASY' ? 'Peasy' : 'Kunden') + '</b> · ' + esc(auQaTid(m.tid)) + ' · id ' + esc(m.id) + '<div style="white-space:pre-line;color:#222">' + esc(m.tekst) + '</div></div>'; }).join('') : '<i>Ingen meldinger i kundechatten.</i>';
     };
     var kn = el.querySelector('.q-knapper'), tb = el.querySelector('.q-tilgang');
+    kn.style.display = 'none';
     var visTilgang = function (melding) {
       var har = !!auQaEnhet(), venter = false; try { venter = !!localStorage.getItem(AU_QA_VENT); } catch (e) {}
-      kn.style.display = har ? 'contents' : 'none'; tb.style.display = har ? 'none' : '';
+      kn.style.display = (har && AU_ROLLE === 'mike') ? 'contents' : 'none'; tb.style.display = har ? 'none' : '';
       tb.disabled = venter; tb.style.opacity = venter ? '.5' : '';
       if (melding != null) st.innerHTML = melding;
       else if (!har) st.innerHTML = venter ? '<span style="color:#5E6B62">Venter på godkjenning fra Mike (mail sendt, lenken gjelder 30 min) …</span>' : '<span style="color:#5E6B62">Send og Avvis krever godkjent enhet.</span>';
@@ -319,7 +326,10 @@
       if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || erp) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>';
       return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>';
     };
-    var hent = function () { return auQaPost('/chat/les', { internnr: id }).then(function (j) { if (j && j.ok) vis(j.meldinger); else logg.innerHTML = feil(j); }); };
+    var hent = function () { return auQaPost('/chat/les', { internnr: id }).then(function (j) {
+      if (j && j.error === 'forbidden') { auSettRolle('team'); bareUtkast(); return; }
+      if (j && j.ok) { auSettRolle('mike'); visTilgang(); vis(j.meldinger); } else logg.innerHTML = feil(j);
+    }); };
     hent();
     var opptatt = false;
     el.querySelector('.q-send').onclick = function () {
@@ -338,15 +348,69 @@
     };
     el.querySelector('.q-avvis').onclick = function () {
       if (opptatt) return;
-      auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Skriv grunnen som fra kundesenter til kunden (du-form, 1–2 setninger, ingen priser).</div><textarea rows="3" placeholder="Hei! Takk for at du ville selge bilen din til oss. Siden [grunn, f.eks. motoren har feil / du ikke har svart på spørsmålet vårt], kan vi dessverre ikke gi deg et tilbud denne gangen. Ha en fin dag! Hilsen Peasy kundesenter" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px"></textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
-        if (!svar || !svar.verdi) return;
-        opptatt = true; st.textContent = 'Avviser …';
-        auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
-          opptatt = false;
-          st.innerHTML = (j && j.ok) ? '<b style="color:#004225">Avvist i ERP.</b>' : feil(j);
-        });
-      });
+      auAvvisDialog(id, '', st, feil, function (v) { opptatt = v; });
     };
+  }
+  /* c628: rolle fra serverens svar på /qa/chat/les: 'mike' (200) eller 'team' (403 forbidden, KUN_MIKE). null = ikke kjent ennå. */
+  var AU_ROLLE = null;
+  function auSettRolle(r) {
+    if (AU_ROLLE === r) return; AU_ROLLE = r;
+    [].forEach.call(document.querySelectorAll('[data-kun-mike]'), function (x) { if (r === 'mike') x.style.display = ''; else x.remove(); });
+    if (r === 'team') [].forEach.call(document.querySelectorAll('.au-qa-chat-alle'), function (x) { x.remove(); });
+  }
+  var AU_ERP_BIL = function (id) { return 'https://biladministrasjon.no/cars_driveno/processing/final_estimate/' + encodeURIComponent(id); };
+  function auAvvisDialog(id, forslag, st, feil, opptatt) {
+    auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Skriv grunnen som fra kundesenter til kunden (du-form, 1–2 setninger, ingen priser).</div><textarea rows="3" placeholder="Hei! Takk for at du ville selge bilen din til oss. Siden [grunn, f.eks. motoren har feil / du ikke har svart på spørsmålet vårt], kan vi dessverre ikke gi deg et tilbud denne gangen. Ha en fin dag! Hilsen Peasy kundesenter" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px">' + esc(forslag || '') + '</textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
+      if (!svar || !svar.verdi) return;
+      opptatt(true); st.textContent = 'Avviser …';
+      auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
+        opptatt(false);
+        st.innerHTML = (j && j.ok) ? '<b style="color:#004225">Avvist i ERP.</b>' : feil(j);
+      });
+    });
+  }
+  /* c628 (Mike 21.10): kjøretøytype (Vegvesen N1/M1, ellers car.info) i sammendraget, uten å trykke +. */
+  function auKjoretoy(c, b) {
+    var km = c.querySelector('.qa-kmtopp'); if (!km || !km.parentNode) return;
+    var kt = b.kjoretoytype, sp = c.querySelector('.au-kjt');
+    if (!kt || !kt.type) { if (sp) sp.remove(); return; }
+    if (!sp) { sp = document.createElement('span'); sp.className = 'au-kjt'; km.parentNode.insertBefore(sp, km.nextSibling); }
+    var h = ' · <b style="color:' + (kt.type === 'Varebil' ? '#8A4B00' : '#004225') + '">' + esc(kt.type) + (kt.kode ? ' (' + esc(kt.kode) + ')' : '') + '</b>';
+    if (sp.getAttribute('data-sig') !== h) { sp.innerHTML = h; sp.setAttribute('data-sig', h); sp.title = 'Kjøretøygruppe fra ' + (kt.kilde || ''); }
+  }
+  /* c628 (Mike 21.10): duplikat (ERP duplicate_of) – tydelig stripe øverst med Avvis rett der (bare Mikes enhet). */
+  function auDuplikat(c, b) {
+    /* Bare når saken i duplicate_of fortsatt er aktiv (auto-score duplikat.aktiv). Avvist/avsluttet eller ukjent → ingen stripe. */
+    var d = b.duplikat && b.duplikat.aktiv === true ? b.duplikat.id : null, x = c.querySelector('.au-duplikat');
+    if (!d) { if (x) x.remove(); return; }
+    if (x && x.getAttribute('data-dup') === String(d)) return;
+    if (x) x.remove();
+    var id = String(b.id || '');
+    x = document.createElement('div'); x.className = 'au-duplikat'; x.setAttribute('data-dup', String(d));
+    x.style.cssText = 'margin:0 0 10px;padding:9px 12px;background:#FDECEA;border:2px solid #C62828;border-radius:8px;font-size:13px;line-height:1.45;color:#7A1C1C;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    x.innerHTML = '<b style="font-size:14px">Duplikat av #' + esc(d) + '</b>' +
+      '<a href="' + AU_ERP_BIL(d) + '" target="_blank" rel="noopener" style="color:#7A1C1C;font-weight:700">Åpne #' + esc(d) + ' i ERP</a>' +
+      (/^\d+$/.test(id) && AU_ROLLE !== 'team' ? '<button type="button" class="q-dup-avvis" data-kun-mike style="' + (AU_ROLLE === 'mike' ? '' : 'display:none;') + 'margin-left:auto;font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis #' + esc(id) + '</button>' : '') +
+      '<span class="q-dup-st" style="flex-basis:100%;font-size:12px"></span>';
+    var topp = c.firstElementChild; if (topp && topp.nextSibling) c.insertBefore(x, topp.nextSibling); else c.appendChild(x);
+    var kn = x.querySelector('.q-dup-avvis'), st = x.querySelector('.q-dup-st'), opp = false;
+    if (kn) kn.onclick = function () {
+      if (opp) return;
+      var feil = function (j) { if (j && j.error === 'forbidden') return '<b style="color:#8B2A1A">Bare Mikes enhet kan avvise.</b>'; if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || AU_ERP_BIL(id)) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>'; return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>'; };
+      auAvvisDialog(id, 'Hei! Bilen din er registrert hos oss to ganger. Vi fortsetter i den andre saken, så denne avsluttes. Hilsen Peasy kundesenter', st, feil, function (v) { opp = v; });
+    };
+  }
+  /* c628: kundechat + Avvis på kort som ikke har stopp-boksen (den har sin egen chat). */
+  function auChatAlle(c, b, ag) {
+    var id = String(b.id || ''), x = c.querySelector('.au-qa-chat-alle');
+    var harStopp = !!c.querySelector('.au-stopp-boks .au-qa-chat');
+    if (harStopp || AU_ROLLE === 'team' || !/^\d+$/.test(id)) { if (x) x.remove(); return; }
+    if (x && x.getAttribute('data-id') === id) return;
+    if (x) x.remove();
+    x = document.createElement('div'); x.className = 'au-qa-chat-alle'; x.setAttribute('data-id', id);
+    var rad = c.querySelector('.qa-actions');
+    if (rad && rad.parentNode) rad.parentNode.insertBefore(x, rad); else c.appendChild(x);
+    auQaChat(x, b, ag, '');
   }
   function auStoppVisning(c, b, ag) {
     var gamle = [];
