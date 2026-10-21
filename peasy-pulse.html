@@ -3803,6 +3803,7 @@ function render(data,rows){
     var fraF=new Date(fra.getTime()-7*864e5), tilF=new Date(til.getTime()-7*864e5);
     var naa={n:0,hent:0,selv:0}, forr={n:0,hent:0,selv:0};
     var mNaa=0, mForr=0;
+    var bA={n:0,f:0}, bV={n:0,f:0};
     (rows||[]).slice(1).forEach(function(r){
       if(!r||!String(r[1]||'').trim()) return;
       var x=d0(r._bestilt), hent=r._bestiltType!=='selv'; /* c590: bilfil «bestilt» (ikke P/Q: de mister avviste og bruker ombookingsdato) */
@@ -3810,15 +3811,22 @@ function render(data,rows){
       if(i(fra,til,x)){ naa.n++; if(hent) naa.hent++; else naa.selv++; }
       if(i(fraF,tilF,x)){ forr.n++; if(hent) forr.hent++; else forr.selv++; }
       var m=d0(r._mottatt); if(i(fra,til,m)) mNaa++; if(i(fraF,tilF,m)) mForr++;
+      /* c631 (Mike 21.10): bud akseptert/avvist i sanntid, man–i dag mot samme dager forrige uke. Bilfil: bud_akseptert = første kontraktstatus etter WAITING_FOR_SALE_REACTION, bud_avvist = TO_BE_RETURNED. */
+      var t2=new Date(til.getTime()+864e5), t2F=new Date(t2.getTime()-7*864e5);
+      var ba=d0(r._salg); if(i(fra,t2,ba)) bA.n++; if(i(fraF,t2F,ba)) bA.f++;
+      var bv=d0(r._retur); if(i(fra,t2,bv)) bV.n++; if(i(fraF,t2F,bv)) bV.f++;
     });
     var dg=['søn','man','tir','ons','tor','fre','lør'], sist=new Date(til.getTime()-864e5);
     var periode=mandag?'ny uke':(fra.getTime()===sist.getTime()?dg[fra.getDay()]:dg[fra.getDay()]+'–'+dg[sist.getDay()]);
-    return {naa:naa, forr:forr, periode:periode, mandag:mandag, mNaa:mNaa, mForr:mForr};
+    var periode2=fra.getTime()===til.getTime()?dg[fra.getDay()]:dg[fra.getDay()]+'–'+dg[til.getDay()];
+    return {naa:naa, forr:forr, periode:periode, mandag:mandag, mNaa:mNaa, mForr:mForr, bA:bA, bV:bV, periode2:periode2};
   })();
   var ukeFarge=ukeBest.naa.n>ukeBest.forr.n?'#2E7D32':(ukeBest.naa.n<ukeBest.forr.n?'#C62828':'#004225');
   var ukeKort='<div class="dial-card neutral"><div class="dial-label">Bestilt hent/lev</div><div class="dial-value" style="color:'+ukeFarge+'">'+ukeBest.naa.n+'</div><div class="dial-unit">'+(ukeBest.mandag?'ny uke · teller fra i morgen':'mot '+ukeBest.forr.n+' samme dager forrige uke')+'</div><div class="dial-sub">'+(ukeBest.mandag?'Denne uka':'Denne uka, '+ukeBest.periode)+' · '+ukeBest.naa.hent+' henting · '+ukeBest.naa.selv+' lev. selv</div><div class="target-tag">Uke</div></div>';
   var motFarge=ukeBest.mNaa>ukeBest.mForr?'#2E7D32':(ukeBest.mNaa<ukeBest.mForr?'#C62828':'#004225');
   ukeKort+='<div class="dial-card neutral"><div class="dial-label">Mottatt på anlegg</div><div class="dial-value" style="color:'+motFarge+'">'+ukeBest.mNaa+'</div><div class="dial-unit">'+(ukeBest.mandag?'ny uke · teller fra i morgen':'mot '+ukeBest.mForr+' samme dager forrige uke')+'</div><div class="dial-sub">'+(ukeBest.mandag?'Denne uka':'Denne uka, '+ukeBest.periode)+' · første mottak per internnr</div><div class="target-tag">Uke</div></div>';
+  ['Bud akseptert','bA','første aksept per internnr'],['Bud avvist','bV','første avvisning per internnr'].forEach(function(k){ var o=ukeBest[k[1]]; var fg=k[1]==='bV'?(o.n<o.f?'#2E7D32':(o.n>o.f?'#C62828':'#004225')):(o.n>o.f?'#2E7D32':(o.n<o.f?'#C62828':'#004225'));
+    ukeKort+='<div class="dial-card neutral"><div class="dial-label">'+k[0]+'</div><div class="dial-value" style="color:'+fg+'">'+o.n+'</div><div class="dial-unit">mot '+o.f+' samme dager forrige uke</div><div class="dial-sub">Denne uka, '+ukeBest.periode2+' · '+k[2]+'</div><div class="target-tag">Uke</div></div>'; });
   var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (siste 30 dager, t.o.m. i går)</div><div class="dials-grid" style="margin-bottom:32px">'
     +ukeKort
     +'<div class="dial-card neutral"><div class="dial-label">Pris-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Bestilt i perioden / priset i perioden · Peasy, Drive, Ordna, AutoDB</div></div>'
@@ -13187,6 +13195,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c442: QA fossefall visning — Spenn heter Usikkerhet takst (usikkerhet_takst, fallback spenn). Returtrekk er underlinje «Tillegg for å treffe bud (midlertidig)» under Forhandlermargin; vist margin inkluderer beløpet (forhandlermargin_tillegg_bud, fallback returtrekk). Ordna-trekk egen rad. Gult QA-varsel når finn_utpris_grunn er «kun kundens annonse» eller «kun_kundens_annonse», eller finn_utpris_kilde er «kun_kundens_annonse»: «⚠ Finn-utpris kun fra kundens annonse (annonsepris × 0,95)». Tall/formler og SEND/fe_created_at uendret. -->
 <!-- c503: Auto-fanen: «Kunden»-kolonne med status fra ERP og grunn (valg + egne ord) i stedet for «Sendt til kunde». -->
 <!-- c495: Scoreboard: «Bud mot fossefall» (bud-tab.js, bud-fossefall.json) — Finn-utpris → estimert AR-bud → faktisk AR-bud, etter Finn-kvalitet og celle. -->
+<!-- c631: Nye kort «Bud akseptert» og «Bud avvist» (uke, man–i dag, sanntid fra bilfila hvert 5. min) ved siden av Bestilt/Mottatt. -->
 <!-- c629: Avvis-kommentar er intern i ERP (kort, saklig forslag). Helse-lampe øverst (helse.json fra Mini). -->
 <!-- c628: QA-kort: kundechat + Avvis på alle kort med internnr (bare Mikes enhet, team får 403), «Duplikat av #X» med Avvis, kjøretøytype (Vegvesen N1/M1) i sammendraget. -->
 <!-- c618: Læring «Kundens egne ord» viser også kundenes mail-svar på «Fortell oss hvorfor» i avslutningsmalen (post@, Mini v2/avslutningsgrunner.js hvert 30. min), i samme liste fra /laering-cars, merket «kilde: mail (Fortell oss hvorfor)». Ingen kundedata i repo. (Mike 19.10) -->
