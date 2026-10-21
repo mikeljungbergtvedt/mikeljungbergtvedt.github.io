@@ -262,6 +262,14 @@
       }).catch(function () {});
     }, 5000);
   }
+  /* c630: normalisert sammenligning (små bokstaver, kun bokstaver/tall), også nær lik: inneholder hverandre eller ≥80 % felles ord. */
+  function auNorm(t) { return String(t || '').toLowerCase().replace(/[^0-9a-zæøåäöé]+/g, ' ').trim(); }
+  function auNesteLik(a, b) {
+    var x = auNorm(a), y = auNorm(b); if (!x || !y) return false;
+    if (x === y || x.indexOf(y) >= 0 || y.indexOf(x) >= 0) return true;
+    var X = x.split(' '), Y = y.split(' '), sett = {}; X.forEach(function (w) { sett[w] = 1; });
+    var f = Y.filter(function (w) { return sett[w]; }).length; return f / Math.max(X.length, Y.length) >= 0.8;
+  }
   function auQaTid(t) { try { return new Date(t).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return String(t || ''); } }
   function auQaDialog(html, okTekst, kanOk) {
     return new Promise(function (ok) {
@@ -290,17 +298,22 @@
     el.innerHTML = '<div style="margin-top:8px;padding:8px 10px;background:#fff;border:1px dashed #C9A39A;border-radius:6px;color:#333">' +
       '<div style="font-size:11px;font-weight:800;color:#5A2A20;margin-bottom:3px">KUNDECHAT</div><div class="q-logg" style="font-size:12px;max-height:180px;overflow:auto;color:#555">Henter chat …</div>' +
       '<div style="font-size:11px;font-weight:800;color:#5A2A20;margin:8px 0 3px">MELDING TIL KUNDEN (ikke sendt, kan redigeres)</div>' +
-      '<textarea class="q-tekst" rows="4" style="width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px;border:1px solid #C9A39A;border-radius:6px"></textarea>' +
+      '<div class="q-venter" style="font-size:12px;margin:0 0 4px"></div>' +
+      '<textarea class="q-tekst" rows="4" placeholder="Skriv ny melding …" style="width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px;border:1px solid #C9A39A;border-radius:6px"></textarea>' +
       '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<span class="q-knapper" style="display:contents"><button type="button" class="q-send" style="' + knapp + 'border:0;background:#004225;color:#fff;font-weight:700">Send</button>' +
       '<button type="button" class="q-avvis" style="' + knapp + 'border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis</button></span>' +
       '<button type="button" class="q-tilgang" style="' + knapp + 'border:1px solid #004225;background:#fff;color:#004225;font-weight:700;display:none">Be om tilgang</button>' +
       '<a href="' + erp + '" target="_blank" rel="noopener" style="font-size:12px;color:#004225">Åpne i ERP</a></div>' +
       '<div class="q-status" style="margin-top:6px;font-size:12px"></div></div>';
-    var ta = el.querySelector('.q-tekst'), logg = el.querySelector('.q-logg'), st = el.querySelector('.q-status');
+    var ta = el.querySelector('.q-tekst'), logg = el.querySelector('.q-logg'), st = el.querySelector('.q-status'), ve = el.querySelector('.q-venter');
     ta.value = utkast || '';
     var vis = function (L) {
       logg.innerHTML = (L && L.length) ? L.map(function (m) { return '<div style="margin-bottom:4px"><b>' + (m.fra === 'PEASY' ? 'Peasy' : 'Kunden') + '</b> · ' + esc(auQaTid(m.tid)) + ' · id ' + esc(m.id) + '<div style="white-space:pre-line;color:#222">' + esc(m.tekst) + '</div></div>'; }).join('') : '<i>Ingen meldinger i kundechatten.</i>';
+      /* c630 (Mike 21.10): utkast som allerede er sendt fra Peasy -> tomt felt med placeholder. Siste melding fra Peasy -> «Venter på svar fra kunden siden …». */
+      if (L && L.length && ta.value.trim() && L.some(function (m) { return m.fra === 'PEASY' && auNesteLik(m.tekst, ta.value); })) ta.value = '';
+      var siste = (L && L.length) ? L.slice().sort(function (a, b) { return new Date(a.tid) - new Date(b.tid); })[L.length - 1] : null;
+      ve.innerHTML = (siste && siste.fra === 'PEASY') ? '<b style="color:#8A5A00">Venter på svar fra kunden siden ' + esc(auQaTid(siste.tid).replace(/\.?,? /, ' ')) + '</b>' : '';
     };
     var kn = el.querySelector('.q-knapper'), tb = el.querySelector('.q-tilgang');
     kn.style.display = 'none';
