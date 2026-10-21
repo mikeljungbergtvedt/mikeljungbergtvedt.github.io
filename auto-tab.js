@@ -10,7 +10,8 @@
   // c606 (Mike 16.10): stopp fra FSD eller BM behandles likt (ingen pris skrives, kortet viser stoppet og grunnen).
   function auStopp(ag) { return !!(ag && ((ag.fsd && ag.fsd.stopp) || (ag.benchmark && ag.benchmark.stopp))); }
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
-  function auStoppGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.stopp) r.push('FSD: ' + (ag.fsd.stopp_grunn || 'stoppet')); if (ag && ag.benchmark && ag.benchmark.stopp) r.push('BM: ' + (ag.benchmark.stopp_grunn || 'stoppet')); return r.join(' · '); }
+  // c635 (Mike 21.10): én stopptekst, FSD først, BM bare hvis FSD mangler. Vises bare i den røde stopp-boksen.
+  function auStoppGrunn(ag) { var f = ag && ag.fsd && ag.fsd.stopp ? (ag.fsd.stopp_grunn || '') : '', b = ag && ag.benchmark && ag.benchmark.stopp ? (ag.benchmark.stopp_grunn || '') : ''; return String(f || b || 'Stoppet').trim(); }
   // c6xx (Mike 17.10): avvis = reparasjonsobjekt (Send låst, «Avvist», prisdelen skjult). tvil = bilen er priset, tvilen står i stripa øverst (gul), Send er IKKE låst.
   function auAvvis(ag) { return !!(ag && ((ag.fsd && ag.fsd.avvis) || (ag.benchmark && ag.benchmark.avvis))); }
   function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
@@ -456,7 +457,7 @@
         if (ferdig) utkast = String(ferdig).trim();
         bx.innerHTML = '<b>Trenger avklaring. ' + esc(auStoppHvem(ag)) + ' stoppet bilen, ingen pris er skrevet til ERP.</b>' +
           '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
-          '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>' +
+          (utkast ? '' : '<div style="margin-top:4px">' + esc(auStoppGrunn(ag)) + '</div>') + /* c635: teksten står i utkastet, ikke to ganger */
           '<div class="au-qa-chat"></div>' +
           '<div style="margin-top:6px;color:#004225"><b>Pris bilen med «Sett Finn-pris» eller «Antatt bud» under når svaret er klart.</b></div>';
         auQaChat(bx.querySelector('.au-qa-chat'), b, ag, utkast);
@@ -955,7 +956,7 @@
         nyHtml = '<div class="au-hode" style="background:' + hB + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
-          (auAvvis(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt, Peasy tar ikke imot bilen. ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auStoppGrunn(agF)) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          (auAvvis(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt, Peasy tar ikke imot bilen. ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
@@ -967,7 +968,7 @@
           (agF ? '<div></div>' : '<div style="display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:3px solid ' + farge + ';color:' + farge + ';font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">' + b.score + '</div>') +
           '<div style="display:grid;gap:2px;color:#16201B;font-size:13.5px;line-height:1.4">' +
             '<span style="font-weight:700;font-size:11.5px;letter-spacing:.06em;color:' + farge + '">' + rute + '</span>' +
-            (auStopp(agF) ? '<span style="font-size:13.5px">' + esc(ha.t) + '</span>' : '<b style="font-size:15px">' + esc(ha.t) + '</b>') +
+            (auStopp(agF) ? '' : '<b style="font-size:15px">' + esc(ha.t) + '</b>') +
             (ha.u || fu ? '<span>' + [esc(ha.u), fu].filter(Boolean).join(' ') + '</span>' : '') +
             grok +
             ccHtml +
