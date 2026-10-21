@@ -380,7 +380,8 @@
   }
   /* c628 (Mike 21.10): duplikat (ERP duplicate_of) – tydelig stripe øverst med Avvis rett der (bare Mikes enhet). */
   function auDuplikat(c, b) {
-    var d = b.duplicate_of, x = c.querySelector('.au-duplikat');
+    /* Bare når saken i duplicate_of fortsatt er aktiv (auto-score duplikat.aktiv). Avvist/avsluttet eller ukjent → ingen stripe. */
+    var d = b.duplikat && b.duplikat.aktiv === true ? b.duplikat.id : null, x = c.querySelector('.au-duplikat');
     if (!d) { if (x) x.remove(); return; }
     if (x && x.getAttribute('data-dup') === String(d)) return;
     if (x) x.remove();
