@@ -681,11 +681,22 @@
     for (var k in ruter) if (ruter[k] === 'qa' && !vist[k] && iListe3.indexOf(k) >= 0) return true;
     return false;
   }
+  /* c634 (Mike 21.10): «Slett cache» = full nullstilling. Gamle agentdata (header, stopp, banner) for en nullstilt bil
+     vises ikke før Minien har laget ny vurdering (agent.laget nyere enn nullstillingen). Maks 30 min. */
+  function auNullstilt() { var m = {}; try { m = JSON.parse(sessionStorage.getItem('qaNullstilt') || '{}') || {}; } catch (e) {} var n = Date.now(), ut = {}; for (var k in m) if (n - m[k] < 30 * 60000) ut[k] = m[k]; return ut; }
+  window.auNullstillFilter = function (d) {
+    if (!d || !Array.isArray(d.biler)) return d;
+    var m = auNullstilt(); if (!Object.keys(m).length) return d;
+    var ut = Object.assign({}, d);
+    ut.biler = d.biler.filter(function (b) { var t = m[String(b.id)]; if (!t) return true; var l = Date.parse((b.agent && b.agent.laget) || '') || 0; return l > t; });
+    return ut;
+  };
   function auHentRuter(forste) {
     fetch('auto-score.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) return;
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
+        d = window.auNullstillFilter(d);
         window._autoRute = d;
         if (endret || forste) {
           try { if (typeof window.refreshListe3 === 'function') window.refreshListe3(); } catch (e) {}
