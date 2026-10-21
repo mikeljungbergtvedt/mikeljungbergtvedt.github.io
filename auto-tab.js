@@ -348,7 +348,7 @@
     };
     el.querySelector('.q-avvis').onclick = function () {
       if (opptatt) return;
-      auAvvisDialog(id, '', st, feil, function (v) { opptatt = v; });
+      auAvvisDialog(id, auAvvis(ag) ? 'Avvist: reparasjonsobjekt (' + auKortGrunn(ag) + ')' : '', st, feil, function (v) { opptatt = v; });
     };
   }
   /* c628: rolle fra serverens svar på /qa/chat/les: 'mike' (200) eller 'team' (403 forbidden, KUN_MIKE). null = ikke kjent ennå. */
@@ -359,8 +359,13 @@
     if (r === 'team') [].forEach.call(document.querySelectorAll('.au-qa-chat-alle'), function (x) { x.remove(); });
   }
   var AU_ERP_BIL = function (id) { return 'https://biladministrasjon.no/cars_driveno/processing/final_estimate/' + encodeURIComponent(id); };
+  function auKortGrunn(ag) {
+    var g = String((ag && ((ag.fsd && ag.fsd.avvis && ag.fsd.avvis_grunn) || (ag.benchmark && ag.benchmark.avvis && ag.benchmark.avvis_grunn))) || '').trim();
+    g = g.split(/[.;:]/)[0].trim(); return g ? (g.length > 60 ? g.slice(0, 57).trim() + '…' : g.charAt(0).toLowerCase() + g.slice(1)) : 'se agent';
+  }
   function auAvvisDialog(id, forslag, st, feil, opptatt) {
-    auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Kommentar (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Skriv grunnen som fra kundesenter til kunden (du-form, 1–2 setninger, ingen priser).</div><textarea rows="3" placeholder="Hei! Takk for at du ville selge bilen din til oss. Siden [grunn, f.eks. motoren har feil / du ikke har svart på spørsmålet vårt], kan vi dessverre ikke gi deg et tilbud denne gangen. Ha en fin dag! Hilsen Peasy kundesenter" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px">' + esc(forslag || '') + '</textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
+    /* c629 (Mike 21.10): kommentaren er INTERN i ERP. Kort og saklig, ingen hilsen, ingen du/dere, ingen beklagelse. */
+    auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Intern kommentar i ERP (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Vises ikke for kunden. Kort og saklig, f.eks. «Avvist: duplikat av #5583» eller «Avvist: reparasjonsobjekt (motorstopp)».</div><textarea rows="2" placeholder="Avvist: …" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px">' + esc(forslag || '') + '</textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
       if (!svar || !svar.verdi) return;
       opptatt(true); st.textContent = 'Avviser …';
       auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
@@ -397,7 +402,7 @@
     if (kn) kn.onclick = function () {
       if (opp) return;
       var feil = function (j) { if (j && j.error === 'forbidden') return '<b style="color:#8B2A1A">Bare Mikes enhet kan avvise.</b>'; if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || AU_ERP_BIL(id)) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>'; return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>'; };
-      auAvvisDialog(id, 'Hei! Bilen din er registrert hos oss to ganger. Vi fortsetter i den andre saken, så denne avsluttes. Hilsen Peasy kundesenter', st, feil, function (v) { opp = v; });
+      auAvvisDialog(id, 'Avvist: duplikat av #' + d, st, feil, function (v) { opp = v; });
     };
   }
   /* c628: kundechat + Avvis på kort som ikke har stopp-boksen (den har sin egen chat). */
