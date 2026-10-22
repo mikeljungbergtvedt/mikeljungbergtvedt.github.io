@@ -740,6 +740,13 @@
   /* c634 (Mike 21.10): «Slett cache» = full nullstilling. Gamle agentdata (header, stopp, banner) for en nullstilt bil
      vises ikke før Minien har laget ny vurdering (agent.laget nyere enn nullstillingen). Maks 30 min. */
   function auNullstilt() { var m = {}; try { m = JSON.parse(sessionStorage.getItem('qaNullstilt') || '{}') || {}; } catch (e) {} var n = Date.now(), ut = {}; for (var k in m) if (n - m[k] < 30 * 60000) ut[k] = m[k]; return ut; }
+  /* c644: er bilen nullstilt (Slett cache < 30 min) og uten FSD/BM-resultat nyere enn nullstillingen? */
+  window.qaErNullstilt = function (id) {
+    var t0 = auNullstilt()[String(id || '')]; if (!t0) return false;
+    var d = window._autoRute, b = d && Array.isArray(d.biler) ? d.biler.find(function (x) { return String(x.id) === String(id); }) : null;
+    var l = b && b.agent ? (Date.parse(b.agent.laget || '') || 0) : 0;
+    return !(l > t0);
+  };
   window.auNullstillFilter = function (d) {
     if (!d || !Array.isArray(d.biler)) return d;
     var m = auNullstilt(); if (!Object.keys(m).length) return d;
@@ -754,6 +761,11 @@
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
         d = window.auNullstillFilter(d);
         window._autoRute = d;
+        /* c644: et nullstilt kort byttes ut med fullt kort så snart nytt FSD/BM-resultat finnes. */
+        try {
+          var vent = [].some.call(document.querySelectorAll('#qa-cards .qa-card.qa-nullstilt'), function (c) { return !window.qaErNullstilt(c.getAttribute('data-erpid')); });
+          if (vent && typeof window.loadQA === 'function') { window._qaReady = false; window.loadQA(true); }
+        } catch (eV) {}
         if (endret || forste) {
           try { if (typeof window.refreshListe3 === 'function') window.refreshListe3(); } catch (e) {}
           // c507: last QA på nytt bare når kortene som vises ikke lenger stemmer med rutene (ny QA-bil, eller en vist bil er
