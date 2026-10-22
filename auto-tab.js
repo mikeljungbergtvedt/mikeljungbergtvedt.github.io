@@ -79,6 +79,36 @@
       if (g.textContent !== gt) g.textContent = gt;
     } else if (g) g.remove();
   }
+  /* c639 (Mike 22.10): uten FSD/BM-pris (ny bil eller «Slett cache») skjules det gamle grunnkortet (IDENT/COMPS, tomme A/B-rader,
+     «PRIS MANUELT / Finn-pris –», «Fossefall mangler …»). I stedet: «FSD og BM priser bilen på nytt». Alt skjult merkes og vises igjen når prisen kommer. */
+  function auVenterFsd(c, b) {
+    var skjul = function (el) { if (el && el !== c && el.style.display !== 'none') { el.style.display = 'none'; el.setAttribute('data-au-vent', '1'); } };
+    skjul(c.querySelector('.qa-finn-terrain'));
+    var divs = [].slice.call(c.querySelectorAll('div'));
+    divs.forEach(function (d) {
+      if (d.closest('.au-venter-fsd')) return;
+      var t = (d.innerText || d.textContent || '').trim(), st = d.getAttribute('style') || '';
+      if (/grid-template-columns:\s*44px/.test(st)) skjul(d);
+      else if (/^IDENT\b/.test(t) && /COMPS/.test(t) && t.length < 200) skjul(d);
+      else if (d.children.length <= 2 && (/^PRIS MANUELT/.test(t) || /^Fossefall mangler/.test(t) || t === '–' || t === '—')) skjul(d);
+    });
+    // IDENT/COMPS-boksene kan ligge i hver sin div: skjul felles forelder.
+    var id0 = divs.filter(function (d) { return d.children.length === 0 && (d.textContent || '').trim() === 'IDENT'; })[0];
+    if (id0 && id0.parentElement && id0.parentElement.parentElement) skjul(id0.parentElement.parentElement);
+    var v = c.querySelector('.au-venter-fsd');
+    if (!v) {
+      v = document.createElement('div'); v.className = 'au-venter-fsd';
+      v.style.cssText = 'margin:8px 0;padding:10px 12px;border-radius:8px;background:#F3F6F4;border:1px dashed #9DB5A6;color:#2F4A3B;font-size:13px;line-height:1.45';
+      v.innerHTML = '<b>FSD og BM priser bilen på nytt.</b> Det tar vanligvis 1–3 minutter. Kortet oppdateres av seg selv.';
+      var rad = c.querySelector('.qa-actions') || c.querySelector('.qa-send-btn');
+      var anker = rad && rad.closest('.qa-card > *') || null;
+      if (anker && anker.parentNode === c) c.insertBefore(v, anker); else c.appendChild(v);
+    }
+  }
+  function auVenterFsdFerdig(c) {
+    var v = c.querySelector('.au-venter-fsd'); if (v) v.remove();
+    [].forEach.call(c.querySelectorAll('[data-au-vent="1"]'), function (el) { el.style.display = ''; el.removeAttribute('data-au-vent'); });
+  }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
     try { auManuell(c, b); } catch (e) {}
@@ -92,12 +122,10 @@
     var ag = b.agent;
     if (!ag) {
       auOriginCv(c, b, null);
-      // Venter på FSD: skjul gamle auto-deler (Claude/Grok-graf, IDENT/COMPS).
-      var gml0 = c.querySelector('.qa-finn-terrain'); if (gml0) gml0.style.display = 'none';
-      var l0 = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && d.textContent === 'IDENT'; })[0];
-      if (l0 && l0.parentElement && l0.parentElement.parentElement) l0.parentElement.parentElement.style.display = 'none';
+      auVenterFsd(c, b);
       return;
     }
+    auVenterFsdFerdig(c);
     auFsdGraf(c, b, ag);
     auPrisTag(c, ag);
     auMidPris(c, b, ag);
