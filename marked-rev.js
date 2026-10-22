@@ -146,13 +146,49 @@
     var t = '<table id="markrev-kost-tab" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:4px 6px;color:#667A72">Kr per bestilt</th>' +
       Q.uker.map(function (u) { return '<th style="' + td.replace('border-top:1px solid #E7EBE4;', '') + ';color:#667A72;font-weight:600">' + esc(u.navn) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       ['Google', 'Meta', 'Totalt'].map(function (k) { return '<tr' + (k === 'Totalt' ? ' style="font-weight:800"' : '') + '><td style="text-align:left;padding:4px 6px;border-top:1px solid #E7EBE4;color:' + KOST_FARGE[k] + ';font-weight:700">' + k + '</td>' +
-        S[k].map(function (x) { return '<td style="' + td + '" title="Kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt">' + (x.v == null ? '–' : kr(x.v)) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+        S[k].map(function (x) { return '<td style="' + td + '" title="Kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt">' + (x.v == null ? '–' : kr(x.v)) + '</td>'; }).join('') + '</tr>'; }).join('') +
+      /* c642: kost per kontrakt (simulert) = kost per bestilt / (budaksept × når bud), regnes live av kalkulatoren */
+      ['Google', 'Meta', 'Totalt'].map(function (k, i) { return '<tr class="mr-kk"' + (k === 'Totalt' ? ' style="font-weight:800"' : '') + '><td style="text-align:left;padding:4px 6px;border-top:' + (i ? '1px solid #E7EBE4' : '2px solid #C9D3CC') + ';color:' + KOST_FARGE[k] + ';font-weight:700;white-space:nowrap">' + k + ' per kontrakt (sim.)</td>' +
+        S[k].map(function (x) { return '<td class="mr-kk-c" data-v="' + (x.v == null ? '' : x.v) + '" style="' + td + (i ? '' : ';border-top:2px solid #C9D3CC') + '">–</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+    var kalk = '<div id="markrev-kalk" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:6px 12px 8px;font-size:12.5px;color:#16201B">' +
+      '<label style="display:flex;align-items:center;gap:6px"><b>Budaksept</b> <input id="mr-ba" type="number" min="10" max="100" step="5" style="width:56px;padding:3px 4px;border:1px solid #C9D3CC;border-radius:5px"> % <input id="mr-ba-r" type="range" min="10" max="100" step="5" style="width:120px"></label>' +
+      '<label style="display:flex;align-items:center;gap:6px">Når bud (av bestilte) <input id="mr-nb" type="number" min="10" max="100" step="5" style="width:56px;padding:3px 4px;border:1px solid #C9D3CC;border-radius:5px"> %</label>' +
+      '<span id="mr-kalk-sum" style="font-weight:700"></span>' +
+      '<span style="color:#8A6D10;font-size:11.5px">Simulering, ikke faktiske kontrakter</span></div>';
     return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
-      '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
+      kalk + '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
       '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første gang bilen kom på «på vei». Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på alle bestilte. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
   }
+  /* c642 (Mike 22.10): kalkulator for kost per kontrakt. Valget lagres i localStorage, ikke på serveren. Mål 2 000 kr. */
+  var KALK_MAAL = 2000;
+  function kalkBind(R) {
+    var ba = document.getElementById('mr-ba'), bar = document.getElementById('mr-ba-r'), nb = document.getElementById('mr-nb'), sum = document.getElementById('mr-kalk-sum');
+    if (!ba || !bar || !nb) return;
+    var les = function (k, d) { try { var v = Number(localStorage.getItem(k)); return v >= 10 && v <= 100 ? v : d; } catch (e) { return d; } };
+    var klem = function (v) { v = Math.round(Number(v) / 5) * 5; return Math.max(10, Math.min(100, v || 0)); };
+    ba.value = bar.value = les('markrevBudaksept', 60); nb.value = les('markrevNaarBud', 100);
+    var S = kostSerier(R), Q = R.Q;
+    var farge = function (v) { return v == null ? '' : v < KALK_MAAL ? '#2E7D32' : '#C62828'; };
+    var regn = function () {
+      var f = (klem(ba.value) / 100) * (klem(nb.value) / 100);
+      [].forEach.call(document.querySelectorAll('#markrev-kost-tab .mr-kk-c'), function (td) {
+        var v = td.getAttribute('data-v'); var k = v === '' ? null : Math.round(Number(v) / f);
+        td.textContent = k == null ? '–' : kr(k); td.style.color = farge(k);
+      });
+      var n = Q.uker.length, a = S.Totalt[n - 1].v, b = S.Totalt[n - 2].v;
+      var tall = function (v) { var k = v == null ? null : Math.round(v / f); return '<span style="color:' + farge(k) + '">' + (k == null ? '–' : 'ca. ' + kr(k) + ' kr') + '</span>'; };
+      sum.innerHTML = 'Uke ' + esc(Q.uker[n - 1].navn) + ': ' + tall(a) + ' per kontrakt · uke ' + esc(Q.uker[n - 2].navn) + ': ' + tall(b) + ' · mål ' + kr(KALK_MAAL) + ' kr';
+      try { localStorage.setItem('markrevBudaksept', klem(ba.value)); localStorage.setItem('markrevNaarBud', klem(nb.value)); } catch (e) {}
+    };
+    ba.oninput = function () { bar.value = klem(ba.value); regn(); };
+    ba.onchange = function () { ba.value = bar.value = klem(ba.value); regn(); };
+    bar.oninput = function () { ba.value = bar.value; regn(); };
+    nb.oninput = regn; nb.onchange = function () { nb.value = klem(nb.value); regn(); };
+    regn();
+  }
   function kostGraf(R) {
+    kalkBind(R);
     if (!window.Chart) return;
     var cv = document.getElementById('markrev-kost'); if (!cv) return; var ex = Chart.getChart(cv); if (ex) ex.destroy();
     var S = kostSerier(R), Q = R.Q;
