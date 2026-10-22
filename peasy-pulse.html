@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c642</title>
+<title>Peasy Pulse v16.08.c643</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c642';</script>
+<script>document.title='Peasy Pulse v16.08.c643';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -533,7 +533,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c642</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c643</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -586,13 +586,27 @@ window.addEventListener('pageshow',function(e){
 });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&paEnhet()) authApne(); });
 // Mini svarer 401 (enheten fjernet): vis porten igjen.
-(function(){ var _f=window.fetch; window.fetch=function(i,o){ return _f(i,o).then(function(r){ try{ var u=(typeof i==='string')?i:(i&&i.url)||''; if(r&&r.status===401&&u.indexOf(PA_MINI_BASE)===0&&u.indexOf('/qa/tilgang/')<0&&paEnhet()){ /* nøkkel ugyldig */ localStorage.removeItem('peasyQaEnhet'); document.documentElement.classList.remove('pulse-authed'); var g=document.getElementById('auth-gate'); if(g) g.style.display='flex'; } }catch(x){} return r; }); }; })();
+/* c643 (Mike 22.10): en godkjent enhet skal huskes for godt. Et enkelt 401 sletter IKKE lenger nøkkelen (det skjedde f.eks. når Minien
+   ikke fikk lest enhetsfila). Pulse spør /qa/tilgang/meg og sletter bare hvis Minien svarer at enheten er fjernet, avvist eller ukjent. */
+var _paSjekker=null, _paSist=0;
+window.paSjekkEnhet=function(){
+  var e=paEnhet(); if(!e) return Promise.resolve(false);
+  if(_paSjekker) return _paSjekker; if(Date.now()-_paSist<30000) return Promise.resolve(true);
+  _paSist=Date.now();
+  _paSjekker=fetch(PA_MINI_BASE+'/qa/tilgang/meg?t='+Date.now(),{headers:{'X-QA-Enhet':e},cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    _paSjekker=null;
+    if(j&&j.ok&&(j.status==='fjernet'||j.status==='avvist'||j.status==='ukjent'||j.status==='utlopt')){ try{localStorage.removeItem('peasyQaEnhet');}catch(x){} document.documentElement.classList.remove('pulse-authed'); var g=document.getElementById('auth-gate'); if(g) g.style.display='flex'; return false; }
+    return true; /* godkjent, eller Minien svarte ikke: behold nøkkelen */
+  }).catch(function(){ _paSjekker=null; return true; });
+  return _paSjekker;
+};
+(function(){ var _f=window.fetch; window.fetch=function(i,o){ return _f(i,o).then(function(r){ try{ var u=(typeof i==='string')?i:(i&&i.url)||''; if(r&&r.status===401&&u.indexOf(PA_MINI_BASE)===0&&u.indexOf('/qa/tilgang/')<0&&paEnhet()){ window.paSjekkEnhet(); } }catch(x){} return r; }); }; })();
 </script>
 
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c642</span></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;">v16.08.c643</span></div>
   <!-- c629 (Mike 21.10): helse-lampe. helse.json fra Mini (helse.js hvert 10. min). Trykk = hva som feiler. -->
   <button type="button" id="helse-lampe" title="Helsesjekk" onclick="helseVis(event)" style="display:none;margin-left:10px;width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.85);cursor:pointer;padding:0;flex:0 0 auto;background:#999"></button>
   <div id="helse-pop" style="display:none;position:fixed;top:56px;left:12px;z-index:99998;background:#fff;color:#222;border:1px solid #ccd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px 14px;max-width:520px;font-size:13px;line-height:1.45"></div>
@@ -640,6 +654,7 @@ document.addEventListener('visibilitychange',function(){ if(!document.hidden&&pa
     <button class="hamburger-btn" id="btn-hamburger" aria-label="Meny" aria-expanded="false" onclick="toggleHamburger(event)">☰</button>
   </div>
 </header>
+<!-- c643: Godkjent enhet huskes: 401 eller enhet:false sletter ikke nøkkelen; Pulse spør /qa/tilgang/meg og sletter bare ved fjernet/avvist/ukjent. -->
 <!-- c642: Marked (ny): kalkulator for kost per kontrakt (budaksept, når bud), tre rader i tabellen, sammendrag mot mål 2 000 kr. -->
 <!-- c641: Marked (ny): ny graf og tabell «Kost per bestilt hent/lev, uke for uke (12 uker)» (Google, Meta, Totalt). -->
 <!-- c640: Tilgang: navn påkrevd, 6-sifret kode vises på enheten (leses opp for Mike), avvist forespørsel håndteres. -->
@@ -9337,7 +9352,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c642</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c643</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13791,7 +13806,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 
 <script src="laering-tab.js?v=c618"></script>
 <script src="gb-ml-tab.js?v=c492"></script>
-<script src="auto-tab.js?v=c640"></script>
+<script src="auto-tab.js?v=c643"></script>
 <script src="marked-rev.js?v=c642"></script>
 <script src="fsdbud-tab.js?v=c611"></script>
 <script src="bud-tab.js?v=202609291753"></script>

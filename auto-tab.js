@@ -391,7 +391,7 @@
     };
     visTilgang();
     var feil = function (j) {
-      if (j && j.enhet === false) { try { localStorage.removeItem(AU_QA_ENHET); } catch (e) {} setTimeout(function () { visTilgang(); }, 0); return '<b style="color:#8B2A1A">Enheten er ikke godkjent.</b>'; }
+      if (j && j.enhet === false) { /* c643: slett bare hvis Minien bekrefter at enheten ikke er godkjent */ if (window.paSjekkEnhet) window.paSjekkEnhet().then(function (ok) { if (!ok) visTilgang(); }); return '<b style="color:#8B2A1A">Enheten ble ikke godkjent for dette. Prøv igjen.</b>'; }
       if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || erp) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>';
       return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>';
     };
