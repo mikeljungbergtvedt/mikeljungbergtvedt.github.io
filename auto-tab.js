@@ -309,7 +309,7 @@
       if (!id || Date.now() - t0 > 31 * 60000) { clearInterval(auQaPoll); auQaPoll = null; try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} ferdig(false); return; }
       fetch(auQaBase() + '/tilgang/status?id=' + encodeURIComponent(id), { headers: { 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }, cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.token) { try { localStorage.setItem(AU_QA_ENHET, j.token); localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(true); }
-        else if (j && (j.status === 'utlopt' || j.status === 'fjernet' || j.status === 'mailfeil' || j.err === 'ukjent')) { try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(false); }
+        else if (j && (j.status === 'utlopt' || j.status === 'fjernet' || j.status === 'mailfeil' || j.status === 'avvist' || j.err === 'ukjent')) { try { localStorage.removeItem(AU_QA_VENT); } catch (e) {} clearInterval(auQaPoll); auQaPoll = null; ferdig(false); }
       }).catch(function () {});
     }, 5000);
   }
@@ -377,12 +377,17 @@
       if (!har && venter) auQaPollStart(function (ok) { visTilgang(ok ? '<b style="color:#004225">Enheten er godkjent. Send og Avvis er klare.</b>' : '<b style="color:#8B2A1A">Ikke godkjent (utløpt). Be om tilgang på nytt.</b>'); });
     };
     tb.onclick = function () {
-      if (tb.disabled) return; tb.disabled = true; st.textContent = 'Sender forespørsel …';
-      fetch(auQaBase() + '/tilgang/be', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }, body: JSON.stringify({ enhetsnavn: auQaEnhetsnavn() }) })
+      if (tb.disabled) return;
+      /* c640: navn er påkrevd; koden vises og leses opp for Mike. */
+      auQaDialog('<b>Be om tilgang</b><div style="margin-top:6px">Skriv navnet ditt. Du får en 6-sifret kode som du leser opp for Mike.</div><textarea rows="1" maxlength="40" placeholder="Navnet ditt" style="width:100%;box-sizing:border-box;font:inherit;margin-top:8px;padding:6px;border:1px solid #bbb;border-radius:6px"></textarea>', 'Be om tilgang', function (o) { return o.querySelector('textarea').value.trim().length >= 2; }).then(function (svar) {
+      if (!svar || !svar.verdi) return;
+      tb.disabled = true; st.textContent = 'Sender forespørsel …';
+      fetch(auQaBase() + '/tilgang/be', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-QA-Enhet': (window.paEnhet ? window.paEnhet() : '') }, body: JSON.stringify({ enhetsnavn: auQaEnhetsnavn(), navn: svar.verdi.slice(0, 40) }) })
         .then(function (r) { return r.json(); }).then(function (j) {
-          if (j && j.ok && j.id) { try { localStorage.setItem(AU_QA_VENT, j.id); } catch (e) {} visTilgang(); }
+          if (j && j.ok && j.id) { try { localStorage.setItem(AU_QA_VENT, j.id); } catch (e) {} visTilgang(j.kode ? '<span style="color:#1B5E20">Les opp denne koden for Mike: <b style="font-size:18px;letter-spacing:3px">' + esc(String(j.kode).replace(/(\d{3})(\d{3})/, '$1 $2')) + '</b></span>' : null); }
           else { tb.disabled = false; st.innerHTML = '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Feil') + '</b>'; }
         }).catch(function () { tb.disabled = false; st.innerHTML = '<b style="color:#8B2A1A">Mini svarer ikke.</b>'; });
+      });
     };
     visTilgang();
     var feil = function (j) {
