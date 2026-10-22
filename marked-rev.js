@@ -75,7 +75,9 @@
         return { navn: raa.replace(/\s*\(Vekstloop\)\s*$/, ''), n: o.n, l: o.l, kost: kampKost[id] || tom(), avsluttet: sist && sist < key(dag(P.naa[1], -1)) ? sist : null };
       }).sort(function (x, y) { return (y.kost.naa + y.kost.sammen) - (x.kost.naa + x.kost.sammen) || (y.n.naa - x.n.naa); });
     });
-    return { T: T, Q: Q, serie: serie };
+    // c641 (Mike 22.10): annonsekost per uke (ads-spend.json, samme dager som trenden) til kost per bestilt hent/lev.
+    var kostU = { Google: Q.uker.map(function (u) { return kostKan('Google', u.p); }), Meta: Q.uker.map(function (u) { return kostKan('Meta', u.p); }) };
+    return { T: T, Q: Q, serie: serie, kostU: kostU };
   }
 
   function pil(a, b, fmt) { fmt = fmt || String; if (a > b) return '<span style="color:#2E7D32;font-weight:800">▲ ' + fmt(a - b) + '</span>'; if (a < b) return '<span style="color:#C62828;font-weight:800">▼ ' + fmt(b - a) + '</span>'; return '<span style="color:#667A72">=</span>'; }
@@ -117,13 +119,48 @@
       '<div class="table-card" style="margin-bottom:18px"><div style="padding:8px 12px;overflow-x:auto"><table id="markrev-tab" style="width:100%;border-collapse:collapse;font-size:13px">' + h + '</table></div>' +
       '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første dag bilen kom på «på vei», én per internnr, avbestilte telles ikke. Kanal = der leadet kom fra (Peasy etter UTM). ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
       '<div class="section-label">Trend: bestilt per kanal, uke for uke (12 uker)</div>' +
-      '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>';
+      '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
+      kostHtml(R);
     root.querySelectorAll('[data-mr]').forEach(function (el) { el.onclick = function () { var k = el.getAttribute('data-mr'); apen[k] = !apen[k]; render(); }; });
+    kostGraf(R);
     if (window.Chart) {
       var cv = document.getElementById('markrev-graf'); var ex = Chart.getChart(cv); if (ex) ex.destroy();
       new Chart(cv, { type: 'line', data: { labels: Q.uker.map(function (u) { return 'Uke ' + u.navn; }), datasets: KAN.map(function (kn) { return { label: kn, data: R.serie[kn], borderColor: FARGE[kn], backgroundColor: FARGE[kn], tension: 0.25, pointRadius: 2, segment: { borderDash: function (c) { return !Q.hel && c.p1DataIndex === Q.uker.length - 1 ? [5, 4] : undefined; } } }; }) },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
     }
   }
-  window.MARKREV = { render: render, beregn: beregn, perioder: perioder };
+  /* c641 (Mike 22.10): kost per bestilt hent/lev uke for uke (12 uker). Google = Google-kost / Google-bestilt, Meta tilsvarende,
+     Totalt = (Google + Meta) / alle bestilte. Mangler bestilte en uke, blir det et hull. Samme uker og bestilt-logikk som trenden. */
+  function kostSerier(R) {
+    var Q = R.Q, alle = Q.uker.map(function (_, ix) { return KAN.reduce(function (s, k) { return s + (R.serie[k] ? R.serie[k][ix] : 0); }, 0); });
+    var del = function (k, n) { return n && k != null ? Math.round(k / n) : null; };
+    return {
+      Google: Q.uker.map(function (_, ix) { return { v: del(R.kostU.Google[ix], R.serie.Google[ix]), kost: R.kostU.Google[ix], n: R.serie.Google[ix] }; }),
+      Meta: Q.uker.map(function (_, ix) { return { v: del(R.kostU.Meta[ix], R.serie.Meta[ix]), kost: R.kostU.Meta[ix], n: R.serie.Meta[ix] }; }),
+      Totalt: Q.uker.map(function (_, ix) { var k = (R.kostU.Google[ix] || 0) + (R.kostU.Meta[ix] || 0); return { v: del(k, alle[ix]), kost: k, n: alle[ix] }; })
+    };
+  }
+  var KOST_FARGE = { Google: '#F2B705', Meta: '#1877F2', Totalt: '#004225' };
+  function kostHtml(R) {
+    var S = kostSerier(R), Q = R.Q, td = 'padding:4px 6px;text-align:right;border-top:1px solid #E7EBE4;font-variant-numeric:tabular-nums;white-space:nowrap';
+    var t = '<table id="markrev-kost-tab" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:4px 6px;color:#667A72">Kr per bestilt</th>' +
+      Q.uker.map(function (u) { return '<th style="' + td.replace('border-top:1px solid #E7EBE4;', '') + ';color:#667A72;font-weight:600">' + esc(u.navn) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      ['Google', 'Meta', 'Totalt'].map(function (k) { return '<tr' + (k === 'Totalt' ? ' style="font-weight:800"' : '') + '><td style="text-align:left;padding:4px 6px;border-top:1px solid #E7EBE4;color:' + KOST_FARGE[k] + ';font-weight:700">' + k + '</td>' +
+        S[k].map(function (x) { return '<td style="' + td + '" title="Kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt">' + (x.v == null ? '–' : kr(x.v)) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+    return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
+      '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
+      '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
+      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første gang bilen kom på «på vei». Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på alle bestilte. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
+  }
+  function kostGraf(R) {
+    if (!window.Chart) return;
+    var cv = document.getElementById('markrev-kost'); if (!cv) return; var ex = Chart.getChart(cv); if (ex) ex.destroy();
+    var S = kostSerier(R), Q = R.Q;
+    new Chart(cv, { type: 'line', data: { labels: Q.uker.map(function (u) { return 'Uke ' + u.navn; }), datasets: ['Google', 'Meta', 'Totalt'].map(function (k) { return {
+      label: k, data: S[k].map(function (x) { return x.v; }), borderColor: KOST_FARGE[k], backgroundColor: KOST_FARGE[k], borderWidth: k === 'Totalt' ? 3 : 2, tension: 0.25, pointRadius: 3, spanGaps: false,
+      segment: { borderDash: function (c) { return !Q.hel && c.p1DataIndex === Q.uker.length - 1 ? [5, 4] : undefined; } } }; }) },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function (c) { var x = S[c.dataset.label][c.dataIndex]; return c.dataset.label + ': ' + kr(x.v) + ' kr per bestilt (kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt)'; } } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return kr(v) + ' kr'; } } } } } });
+  }
+  window.MARKREV = { render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier };
 })();
