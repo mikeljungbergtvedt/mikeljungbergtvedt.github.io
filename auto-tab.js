@@ -58,8 +58,30 @@
     var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
     if (tp && bn) { tp.disabled = bn.disabled; if (!bn.disabled) { tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor; } }
   }
+  /* c638 (Mike 22.10): «Manuelt endret» på kortet når prisen er satt for hånd (ERP-logg eller nettopp lagret),
+     og «Lagret 330k – manuell» rett etter lagring til ny pris og fossefall er på kortet. */
+  function auManuell(c, b) {
+    var ag = b.agent || {}, m = window._qaManuell && window._qaManuell[String(b.id)];
+    if (m && Date.now() - m.t > 15 * 60000) m = null;
+    var pk = ag.pris_kilde && /^(manuell|bud)$/.test(ag.pris_kilde.kilde || '') ? ag.pris_kilde : null;
+    var merke = c.querySelector('.au-manuelt');
+    if (!(m || pk)) { if (merke) merke.remove(); var g0 = c.querySelector('.au-lagret'); if (g0) g0.remove(); return; }
+    var kort = function (n) { return Math.round(Number(n) / 1000) + 'k'; };
+    var til = m ? m.til : pk.til, kilde = m ? m.kilde : pk.kilde;
+    if (!merke) { merke = document.createElement('div'); merke.className = 'au-manuelt'; merke.style.cssText = 'display:inline-block;margin:0 0 6px;padding:2px 9px;border-radius:999px;background:#FFF3E0;border:1px solid #F0B46A;color:#8A4B00;font-size:12px;font-weight:700'; var h = c.querySelector('.au-hode'); if (h && h.parentNode) h.parentNode.insertBefore(merke, h.nextSibling); else c.insertBefore(merke, c.firstChild); }
+    var mt = '✎ Manuelt endret · Finn-pris ' + kort(til) + (kilde === 'bud' ? ' (fra antatt bud)' : '') + (pk && pk.tid && !m ? ' · ' + new Date(pk.tid).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+    if (merke.textContent !== mt) merke.textContent = mt;
+    var g = c.querySelector('.au-lagret');
+    if (m && m.lagret) {
+      var ferdig = m.oppdatert || (Number(ag.mid_pris) === Number(m.til) && ag.mid_kilde === 'manuell');
+      var gt = 'Lagret ' + kort(m.til) + ' – ' + (m.kilde === 'bud' ? 'fra antatt bud ' + kort(m.bud || 0) : 'manuell') + ' · ERP Lav–høy ' + auKr(m.dLav) + '–' + auKr(m.dHoy) + (ferdig ? ' · fossefall oppdatert' : ' · oppdaterer fossefall …');
+      if (!g) { g = document.createElement('div'); g.className = 'au-lagret'; g.style.cssText = 'margin:0 0 8px;padding:8px 10px;border-radius:6px;background:#E8F5E9;border:1px solid #9CCC9F;color:#1B5E20;font-size:13px;font-weight:700'; merke.parentNode.insertBefore(g, merke.nextSibling); }
+      if (g.textContent !== gt) g.textContent = gt;
+    } else if (g) g.remove();
+  }
   function auFsdBokser(c, b) {
     auSendLaas(c, b);
+    try { auManuell(c, b); } catch (e) {}
     auKjoretoy(c, b);
     auDuplikat(c, b);
     auAarTopp(c, b, b.agent);
