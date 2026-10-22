@@ -640,7 +640,7 @@
       '<td><b>' + esc(b.regnr) + '</b><div class="au-m">' + esc(b.bil || '') + '</div></td>' +
       '<td>' + esc(b.arm) + '</td>' +
       '<td class="au-r">' + k(b.erp_lav) + '–' + k(b.erp_hoy) + '</td>' +
-      (medTid ? '' : '<td class="au-m">finn ' + b.deler.finn + '/40 · celle ' + b.deler.celle + '/30 · data ' + b.deler.data + '/20 · erp ' + b.deler.erp + '/10</td>') +
+      (medTid ? '' : '<td class="au-m">' + auDeler(b).map(function (x) { return esc(x[0].toLowerCase()) + ' ' + x[1] + '/' + x[2]; }).join(' · ') + '</td>') +
       '<td class="au-w">' + hvorfor(b) + '</td></tr>';
   }
   // ── Fordeling til QA send ──────────────────────────────────────────
@@ -719,6 +719,12 @@
   }
   // Nytt QA-kort: én statusboks (poeng, rute, hovedårsak), detaljer bak +, støy samlet.
   // Dagens bokser skjules (display:none), ingenting slettes. SEND øverst trykker den ekte SEND-knappen nederst.
+  /* c637 (Mike 22.10): auto-score v4.0 = uavhengig kontroll av FSD/BM. Delpoeng leses fra b.deler + b.deler_maks (gamle kort: finn/celle/data/erp). */
+  var AU_DEL_NAVN = { tvillinger: 'Tvillinger', enighet: 'FSD/BM enige', konsistens: 'Konsistens', origin95: 'origin95', data: 'Data', finn: 'Finn', celle: 'Celle', erp: 'ERP = QA' };
+  function auDeler(b) {
+    var d = b.deler || {}, m = b.deler_maks || { finn: 40, celle: 30, data: 20, erp: 10 };
+    return Object.keys(m).filter(function (k) { return d[k] != null; }).map(function (k) { return [AU_DEL_NAVN[k] || k, d[k], m[k], k]; });
+  }
   function auHovedarsak(b) {
     var st = (b.stopp || []).join(' | '), gr = (b.grunner || []).join(' | ');
     if (b.ville_sendt) return { t: 'Klar for auto-send', u: '' };
@@ -728,6 +734,13 @@
     if (/vrak/.test(st)) return { t: 'Vrak eller ikke kjørbar', u: '' };
     if (/AI svært uenige/.test(st)) return { t: 'Claude og Grok er svært uenige om Finn-utprisen', u: (st.match(/AI svært uenige[^|]*/) || [''])[0] };
     if (/always_qa|lav sikkerhet/.test(st)) return { t: 'Lav sikkerhet i Finn-utprisen', u: '' };
+    if (b.deler_maks) {
+      var sv = auDeler(b).sort(function (x, y) { return x[1] / x[2] - y[1] / y[2]; })[0];
+      var T = { tvillinger: 'Svak tvillingdekning', enighet: 'FSD og BM er uenige', konsistens: 'Stemmer ikke med car.info/Vegvesen', origin95: 'Kundens annonse-tak ikke brukt', data: 'Ufullstendige data' };
+      var rel = { tvillinger: /tvilling|p25|Finn-utpris/, enighet: /FSD|BM|delte/, konsistens: /EU|årsmodell|hk/, origin95: /origin95/, data: /reserve|data/ };
+      if (st) return { t: 'Stopp', u: st.slice(0, 200) };
+      return sv ? { t: T[sv[3]] || sv[0], u: (b.grunner || []).filter(function (x) { return rel[sv[3]] && rel[sv[3]].test(x); }).join('. ') } : { t: 'Under grensen', u: '' };
+    }
     var d = b.deler || {};
     var svakest = [['finn', d.finn / 40], ['celle', d.celle / 30], ['data', d.data / 20], ['erp', d.erp / 10]].sort(function (x, y) { return x[1] - y[1]; })[0][0];
     if (svakest === 'celle') { var c = gr.match(/celle ([^:]+): (\d+) bud/); return { t: 'Lite erfaring i denne prisklassen', u: c ? (c[2] + ' bud i cellen ' + c[1] + '.') : '' }; }
@@ -961,6 +974,7 @@
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
           }).join('') + '</span>' : '') +
+          (b.deler_maks ? '<div class="au-kontroll" style="font-size:12px;color:#5E6B62;font-variant-numeric:tabular-nums">Kontroll <b style="color:#16201B">' + b.score + '/100</b> · ' + auDeler(b).map(function (x) { return esc(x[0]) + ' ' + x[1] + '/' + x[2]; }).join(' · ') + '</div>' : '') +
           (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
       }
       el2.innerHTML = nyHtml || (enHtml + bildeHtml +
@@ -979,7 +993,7 @@
             }).join('') + '</span>' : '') +
             (agF ? '' : '<details style="font-size:12.5px;color:#5E6B62;margin-top:2px"><summary style="cursor:pointer;color:#004225;font-weight:600;width:max-content">+ detaljer</summary>') +
               (agF ? '' : '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' +
-                [['Finn', b.deler.finn, 40], ['Celle', b.deler.celle, 30], ['Data', b.deler.data, 20], ['ERP = QA', b.deler.erp, 10]].map(function (x) {
+                auDeler(b).map(function (x) {
                   return '<span style="background:#fff;border:1px solid #DCD8CC;border-radius:6px;padding:3px 8px"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em">' + x[0] + '</span> <strong style="color:#16201B">' + x[1] + '/' + x[2] + '</strong></span>';
                 }).join('') + '</div>' +
               '') +
