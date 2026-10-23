@@ -542,18 +542,20 @@
     if (grid && grid.getAttribute('data-mid') !== sig) {
       grid.setAttribute('data-mid', sig);
       var rad = function (navn, x) { return '<div style="color:var(--muted);">' + navn + '</div><div style="text-align:right;font-weight:700;">' + k(x.lav) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.lav) + '</span></div><div style="text-align:right;font-weight:600;">' + k(mid) + '</div><div style="text-align:right;">' + k(x.hoy) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.hoy) + '</span></div><div></div>'; };
+      grid.style.cssText = 'display:grid;grid-template-columns:44px 1fr 1fr 1fr 48px;gap:4px 8px;font-size:12px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;';
       grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A', A) + rad('B', B) + rad('Ordna', O);
     }
     [].forEach.call(c.querySelectorAll('div'), function (d) {
       if (d.children.length > 3) return;
       var t = (d.textContent || '').trim();
-      if (/^Kunde ser \d+/.test(t)) d.innerHTML = '<b>Kunde ser ' + pct(aktiv.lav).replace(' %', '') + '–' + pct(aktiv.hoy) + ' av Finn</b> · ' + k(aktiv.lav) + '–' + k(aktiv.hoy) + ' kr';
-      else if (/^Finn-pris [\d\s]+$/.test(t)) d.textContent = 'Finn-pris (Mid) ' + k(mid);
-      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (fossefall fra Mid).';
+      if (/^Kunde ser \d+/.test(t)) { d.innerHTML = '<b>Kunde ser ' + pct(aktiv.lav).replace(' %', '') + '–' + pct(aktiv.hoy) + ' av Finn</b> · ' + k(aktiv.lav) + '–' + k(aktiv.hoy) + ' kr'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
+      else if (/^Finn-pris [\d\s]+$/.test(t)) { d.textContent = 'Finn-pris (Mid) ' + k(mid); if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
+      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) { d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (fossefall fra Mid).'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
     });
     var tabell = [].filter.call(c.querySelectorAll('table'), function (t) { return /^\s*Lag/.test((t.querySelector('tr') || {}).textContent || '') && /Finn-utpris/.test(t.textContent); })[0];
     if (tabell && tabell.getAttribute('data-mid') !== sig) {
       tabell.setAttribute('data-mid', sig);
+      tabell.style.display = '';
       var td = 'padding:3px 6px;border-top:1px solid #E7EBE4;text-align:right;font-variant-numeric:tabular-nums';
       /* c603 = c593 (Mike 15.10, «slik det var»): trekkene står i alle tre kolonner, profil-linjen viser hva B og Ordna trekker fra A,
          og kolonnen som skrives til ERP er markert. */
