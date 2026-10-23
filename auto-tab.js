@@ -89,7 +89,6 @@
       if (d.closest('.au-venter-fsd')) return;
       var t = (d.innerText || d.textContent || '').trim(), st = d.getAttribute('style') || '';
       if (/grid-template-columns:\s*44px/.test(st)) skjul(d);
-      else if (/^IDENT\b/.test(t) && /COMPS/.test(t) && t.length < 200) skjul(d);
       else if (d.children.length <= 2 && (/^PRIS MANUELT/.test(t) || /^Fossefall mangler/.test(t) || t === '–' || t === '—')) skjul(d);
     });
     // IDENT/COMPS-boksene kan ligge i hver sin div: skjul felles forelder.
@@ -818,7 +817,7 @@
     return { t: 'Mangler data fra selger', u: (b.grunner || []).filter(function (x) { return /kommentar|km/.test(x); }).join('. ') };
   }
   function auKr(n) { return n == null ? '–' : Math.round(n).toLocaleString('nb-NO'); }
-  var AU_STOY = [/^HEFT\b/, /^ORIGIN PÅ FINN/, /^⚠?\s*Finn-utpris kun fra kundens annonse/, /^0 SØSTRE/, /^B 0 COMPS/];
+  var AU_STOY = [/^HEFT\b/, /^ORIGIN PÅ FINN/]; // c647: 0 SØSTRE/B 0 COMPS/origin95-banner emits ikke lenger
   function auRyddKort(c, info) {
     var barn = c.children;
     for (var i = 0; i < barn.length; i++) {
