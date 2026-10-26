@@ -35,7 +35,7 @@
       } else {
         h += '<div class="table-card" style="margin-bottom:16px;padding:14px 18px;font-size:13px;color:#667A72">Ingen bud ennå. Sammenligningen fylles automatisk når de første bilene har vært på auksjon.</div>';
       }
-      var rows = R.map(function (r) {
+      var rows = mb.map(function (r) { /* c659: tabellen viser bare biler med forhandlerbud > 0 */
         var stopp = r.stopp && !r.pris_brukt;
         return '<tr' + (stopp ? ' style="color:#8A948F"' : '') + '><td style="' + td.replace('right', 'left') + ';font-family:monospace;font-weight:700">' + esc(r.regnr) + '</td><td style="' + td.replace('right', 'left') + '">' + esc(r.bil) + '</td><td style="' + td + '">' + kr(r.km) + '</td><td style="' + td + '">' + esc(r.profil === 'O' ? 'Ordna' : r.profil) + '</td>' +
           '<td style="' + td + '">' + kr(r.fsd) + '</td><td style="' + td + '">' + kr(r.bm) + '</td><td style="' + td + ';font-weight:700">' + (stopp ? 'stoppet' : kr(r.pris_brukt) + (r.pris_kilde && r.pris_kilde !== 'fsd/bm' ? ' <span style="font-size:10px;color:#667A72">' + esc(r.pris_kilde) + '</span>' : '')) + '</td>' +
