@@ -15,7 +15,7 @@
     root.innerHTML = '<div style="padding:20px;color:#667A72">Laster …</div>';
     fetch('fsd-bm-bud.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d) { root.innerHTML = '<div style="padding:20px;color:#A8221C">Fant ikke fsd-bm-bud.json.</div>'; return; }
-      var R = d.rader || [], mb = R.filter(function (r) { return r.bud; });
+      var R = d.rader || [], mb = R.filter(function (r) { return r.bud > 0; }); /* c658: bare forhandlerbud > 0 */
       var tell = {}; R.forEach(function (r) { var k = STATUS[r.liste] || r.liste || '?'; tell[k] = (tell[k] || 0) + 1; });
       var td = 'padding:6px 8px;border-bottom:1px solid rgba(0,66,37,0.06);white-space:nowrap;text-align:right';
       var th = 'padding:6px 8px;font-size:11px;color:#667A72;font-weight:700;border-bottom:1px solid rgba(0,66,37,0.15);text-align:right;white-space:nowrap';
