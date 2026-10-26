@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c648</title>
+<title>Peasy Pulse v16.08.c649</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c648';</script>
+<script>document.title='Peasy Pulse v16.08.c649';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -533,7 +533,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c648</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c649</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -656,6 +656,7 @@ window.paSjekkEnhet=function(){
 </header>
 <!-- c645: km-toleranse mot EU som FSD/auto-score (Mike 22.10). -->
 <!-- c646: første paint uten gammel QA-layout (IDENT/COMPS, A/B-rutenett). Stubber for auto-tab (Mike 23.10). -->
+<!-- c649: De fire ukekortene i Nøkkeltall viser forrige uke man–søn, samme tall som Ukesrapport-fanen (pulseUkeFire) (Mike 26.10). -->
 <!-- c648: Avvist i dag tar med kundeavvisninger fra webhookene; dagskort-overskrifter brytes på mobil (Mike 25.10). -->
 <style>/* c648 */.dk-l{min-width:0;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;-webkit-hyphens:auto;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (max-width:700px){.dk-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.dk-l{letter-spacing:0!important;font-size:9px!important}}</style>
@@ -3812,39 +3813,16 @@ function render(data,rows){
   var omlopN=veiN+(data.inProd?data.inProd.length:0);
   /* c589 (Mike 15.10): Bestilt hent/lev denne uka t.o.m. i går mot samme dager forrige uke. P = Gire bestilt, Q = Levere selv. I dag er ikke med.
      c620 (Mike 19.10): mandag = ny uke, kortene står på 0 (ingen hele dager ennå). */
-  var ukeBest=(function(){
-    function d0(v){ if(!v) return null; var p=String(v).trim().slice(0,10).split('.'); if(p.length!==3) return null; var d=new Date(+p[2], +p[1]-1, +p[0]); return isNaN(d)?null:d; }
-    var idag=new Date(); idag.setHours(0,0,0,0);
-    var man=new Date(idag); man.setDate(idag.getDate()-((idag.getDay()+6)%7));
-    var mandag=(idag.getTime()===man.getTime());
-    var fra=man, til=idag; /* [fra, til) – tom mandag */
-    var fraF=new Date(fra.getTime()-7*864e5), tilF=new Date(til.getTime()-7*864e5);
-    var naa={n:0,hent:0,selv:0}, forr={n:0,hent:0,selv:0};
-    var mNaa=0, mForr=0;
-    var bA={n:0,f:0}, bV={n:0,f:0};
-    (rows||[]).slice(1).forEach(function(r){
-      if(!r||!String(r[1]||'').trim()) return;
-      var x=d0(r._bestilt), hent=r._bestiltType!=='selv'; /* c590: bilfil «bestilt» (ikke P/Q: de mister avviste og bruker ombookingsdato) */
-      function i(a,b,x){ return x&&x>=a&&x<b; }
-      if(i(fra,til,x)){ naa.n++; if(hent) naa.hent++; else naa.selv++; }
-      if(i(fraF,tilF,x)){ forr.n++; if(hent) forr.hent++; else forr.selv++; }
-      var m=d0(r._mottatt); if(i(fra,til,m)) mNaa++; if(i(fraF,tilF,m)) mForr++;
-      /* c631 (Mike 21.10): bud akseptert/avvist i sanntid, man–i dag mot samme dager forrige uke. Bilfil: bud_akseptert = første kontraktstatus etter WAITING_FOR_SALE_REACTION, bud_avvist = TO_BE_RETURNED. */
-      var t2=til, t2F=tilF; /* c632: kun fullførte dager, som Bestilt/Mottatt */
-      var ba=d0(r._salg); if(i(fra,t2,ba)) bA.n++; if(i(fraF,t2F,ba)) bA.f++;
-      var bv=d0(r._retur); if(i(fra,t2,bv)) bV.n++; if(i(fraF,t2F,bv)) bV.f++;
-    });
-    var dg=['søn','man','tir','ons','tor','fre','lør'], sist=new Date(til.getTime()-864e5);
-    var periode=mandag?'ny uke':(fra.getTime()===sist.getTime()?dg[fra.getDay()]:dg[fra.getDay()]+'–'+dg[sist.getDay()]);
-    var periode2=fra.getTime()===til.getTime()?dg[fra.getDay()]:dg[fra.getDay()]+'–'+dg[til.getDay()];
-    return {naa:naa, forr:forr, periode:periode, mandag:mandag, mNaa:mNaa, mForr:mForr, bA:bA, bV:bV, periode2:periode2};
-  })();
-  var ukeFarge=ukeBest.naa.n>ukeBest.forr.n?'#2E7D32':(ukeBest.naa.n<ukeBest.forr.n?'#C62828':'#004225');
-  var ukeKort='<div class="dial-card neutral"><div class="dial-label">Bestilt hent/lev</div><div class="dial-value" style="color:'+ukeFarge+'">'+ukeBest.naa.n+'</div><div class="dial-unit">'+(ukeBest.mandag?'ny uke · teller fra i morgen':'mot '+ukeBest.forr.n+' samme dager forrige uke')+'</div><div class="dial-sub">'+(ukeBest.mandag?'Denne uka':'Denne uka, '+ukeBest.periode)+' · '+ukeBest.naa.hent+' henting · '+ukeBest.naa.selv+' lev. selv</div><div class="target-tag">Uke</div></div>';
-  var motFarge=ukeBest.mNaa>ukeBest.mForr?'#2E7D32':(ukeBest.mNaa<ukeBest.mForr?'#C62828':'#004225');
-  ukeKort+='<div class="dial-card neutral"><div class="dial-label">Mottatt på anlegg</div><div class="dial-value" style="color:'+motFarge+'">'+ukeBest.mNaa+'</div><div class="dial-unit">'+(ukeBest.mandag?'ny uke · teller fra i morgen':'mot '+ukeBest.mForr+' samme dager forrige uke')+'</div><div class="dial-sub">'+(ukeBest.mandag?'Denne uka':'Denne uka, '+ukeBest.periode)+' · første mottak per internnr</div><div class="target-tag">Uke</div></div>';
-  [['Bud akseptert','bA','første aksept per internnr'],['Bud avvist','bV','første avvisning per internnr']].forEach(function(k){ var o=ukeBest[k[1]]||{n:0,f:0}; var fg=k[1]==='bV'?(o.n<o.f?'#2E7D32':(o.n>o.f?'#C62828':'#004225')):(o.n>o.f?'#2E7D32':(o.n<o.f?'#C62828':'#004225'));
-    ukeKort+='<div class="dial-card neutral"><div class="dial-label">'+k[0]+'</div><div class="dial-value" style="color:'+fg+'">'+o.n+'</div><div class="dial-unit">'+(ukeBest.mandag?'ny uke · teller fra i morgen':'mot '+o.f+' samme dager forrige uke')+'</div><div class="dial-sub">'+(ukeBest.mandag?'Denne uka':'Denne uka, '+ukeBest.periode)+' · '+k[2]+'</div><div class="target-tag">Uke</div></div>'; });
+  /* c649 (Mike 26.10): de fire ukekortene viser forrige hele uke man–søn, mot uka før. Samme tall som Ukesrapport-fanen og ukesanalysen (pulseUkeFire). */
+  var ukeR=getCompletedWeekRange(1), ukeRF=getCompletedWeekRange(2);
+  var ukeA=pulseUkeFire(rows,ukeR), ukeF=pulseUkeFire(rows,ukeRF);
+  var ukeTxt='forrige uke '+ukeR.monday.getDate()+'.'+(ukeR.monday.getMonth()===ukeR.sunday.getMonth()?'':(ukeR.monday.getMonth()+1)+'.')+'–'+ukeR.sunday.getDate()+'.'+(ukeR.sunday.getMonth()+1);
+  var ukeFg=function(n,f,inv){var d=inv?f-n:n-f;return d>0?'#2E7D32':(d<0?'#C62828':'#004225');};
+  var ukeKort='';
+  [['Bestilt hent/lev','bestilt',false,ukeA.hent+' henting · '+ukeA.selv+' lev. selv'],['Mottatt på anlegg','mottatt',false,'første mottak per internnr'],['Bud akseptert','solgt',false,'= Solgt i Ukesrapport'],['Bud avvist','ret',true,'= Returnert i Ukesrapport']].forEach(function(k){
+    var n=ukeA[k[1]], f=ukeF[k[1]];
+    ukeKort+='<div class="dial-card neutral"><div class="dial-label">'+k[0]+'</div><div class="dial-value" style="color:'+ukeFg(n,f,k[2])+'">'+n+'</div><div class="dial-unit">'+ukeTxt+' · mot '+f+' uka før</div><div class="dial-sub">Uke '+ukeR.weekNum+' · '+k[3]+'</div><div class="target-tag">Uke</div></div>';
+  });
   var dials='<div class="dials-section"><div class="section-label">Nøkkeltall (siste 30 dager, t.o.m. i går)</div><div class="dials-grid" style="margin-bottom:32px">'
     +ukeKort
     +'<div class="dial-card neutral"><div class="dial-label">Pris-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Bestilt i perioden / priset i perioden · Peasy, Drive, Ordna, AutoDB</div></div>'
@@ -5508,6 +5486,23 @@ function getCompletedWeekRange(weeksAgo){
   var sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);sunday.setHours(23,59,59,999);
   return {monday:monday,sunday:sunday,weekNum:isoWeek(monday)};
 }
+/* c649 (Mike 26.10): ett felles regnestykke for de fire ukekortene i Nøkkeltall og Ukesrapport-fanen (Ukens flyt), så tallene alltid er like.
+   Bestilt h/l, Mottatt, Bud akseptert (= Solgt, bokSalg) og Bud avvist (= Returnert, bokRetur) for en hel uke man–søn. */
+function pulseUkeFire(rows,r){
+  function pdOps(v){if(!v)return null;var s=String(v).trim().slice(0,10);var p=s.split('.');if(p.length===3)return new Date(p[2]+'-'+p[1]+'-'+p[0]);return null;}
+  function pdB(v){if(!v)return null;var t=String(v).trim().slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(t)){var q=t.split('-');return new Date(+q[0],+q[1]-1,+q[2]);}return pdOps(t);}
+  function inRange(d){return d&&d>=r.monday&&d<=r.sunday;}
+  var o={bestilt:0,hent:0,selv:0,mottatt:0,solgt:0,ret:0};
+  (rows||[]).slice(1).forEach(function(row){
+    if(!row||!row[1]) return;
+    var b=row._bilfil?pdB(row._bestilt):(pdOps(row[15])||pdOps(row[16]));
+    if(inRange(b)){o.bestilt++; if(row._bilfil?row._bestiltType!=='selv':!!pdOps(row[15])) o.hent++; else o.selv++;}
+    if(inRange(pdB(row._bilfil?row._mottatt:row[17]))) o.mottatt++;
+    if(inRange(pdOps(bokSalg(row)))) o.solgt++;
+    if(inRange(pdOps(bokRetur(row)))) o.ret++;
+  });
+  return o;
+}
 function buildUkeHtml(){
   var h='';
   h+='<div style="background:#fff;border:1px solid rgba(0,66,37,0.10);border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:13px;line-height:1.55;color:#334">';
@@ -5618,6 +5613,7 @@ function renderUkesrapport(){
     var leadsAutoDB=sdLeads.filter(function(row){return kildeOf(row)==='autodb';}).length;
     var registrert=sdLeads;
     var priset=allCars.filter(function(row){return inRange(pdB(fB(row,'_est',row[31])),r);});
+    var fire=pulseUkeFire(rows,r);
     var bestilt=allCars.filter(function(row){return inRange(erBestilt(row),r);});
     var bestiltHent=bestilt.filter(function(row){return row._bilfil?row._bestiltType!=='selv':!!pdOps(row[15]);}).length;
     var mottatt=allCars.filter(function(row){return inRange(pdB(fB(row,'_mottatt',row[17])),r);});
@@ -5636,7 +5632,7 @@ function renderUkesrapport(){
     var rk1567=(window.peasyConfig&&window.peasyConfig.returKost); if(!Number.isFinite(rk1567)) rk1567=3000;
     var noCureTap=ret.length*rk1567;
     var peasyNetto=peasyFee-noCureTap;
-    return {registrert:registrert.length,leadsPeasy:leadsPeasy,leadsDrive:leadsDrive,leadsOrdna:leadsOrdna,leadsAutoDB:leadsAutoDB,priset:priset.length,bestilt:bestilt.length,bestiltHent:bestiltHent,mottatt:mottatt.length,solgt:solgt.length,ret:ret.length,avvist:avvist.length,ep:ep,bp:bp,solgtBiler:solgtBiler,retBiler:retBiler,avvistBiler:avvistBiler,bruttoOms:bruttoOms,arSalaer:arSalaer,peasyFee:peasyFee,noCureTap:noCureTap,peasyNetto:peasyNetto};
+    return {registrert:registrert.length,leadsPeasy:leadsPeasy,leadsDrive:leadsDrive,leadsOrdna:leadsOrdna,leadsAutoDB:leadsAutoDB,priset:priset.length,bestilt:fire.bestilt,bestiltHent:fire.hent,mottatt:fire.mottatt,solgt:fire.solgt,ret:fire.ret,avvist:avvist.length,ep:ep,bp:bp,solgtBiler:solgtBiler,retBiler:retBiler,avvistBiler:avvistBiler,bruttoOms:bruttoOms,arSalaer:arSalaer,peasyFee:peasyFee,noCureTap:noCureTap,peasyNetto:peasyNetto};
   }
   var cur=metrics(range);
   var prv=metrics(prev);
@@ -9357,7 +9353,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c648</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c649</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
