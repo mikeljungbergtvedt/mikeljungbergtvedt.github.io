@@ -3413,6 +3413,10 @@ async function pulseBilfil(rows){
       if(b.returnert&&b.mottatt) hold(21,dt(b.returnert)); /* bare biler som har vært på anlegg; avviste før mottak har «retur»-milepæl uten å være returnert */
     }}
   window._pulseBilfil={bygget:d.bygget,treff:n};
+  /* c663: biler som bare finnes i bilfila (ikke i Excel, før 1.11.2025) brukes kun i de fire ukekortene, så fjorårstallene telles fra peasy-cars.json. */
+  var iX={};for(var k=1;k<rows.length;k++)iX[String(rows[k][0])]=1;
+  var nD=function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x||'')?x.slice(8,10)+'.'+x.slice(5,7)+'.'+x.slice(0,4):null;};
+  window._pulseBilfilEkstra=(d.biler||[]).filter(function(b){return !iX[String(b.id)];}).map(function(b){var r=[b.id,b.regnr||String(b.id)];r._bilfil=true;r._bestilt=nD(b.bestilt);r._bestiltType=b.bestilt_type||null;r._mottatt=nD(b.mottatt);if(nD(b.bud_akseptert))r._salg=nD(b.bud_akseptert);if(nD(b.bud_avvist))r._retur=nD(b.bud_avvist);return r;});
   return rows;
 }
 async function loadData(){
@@ -3792,9 +3796,10 @@ function render(data,rows){
   /* c663 (Mike 27.10): de fire ukekortene viser denne uka hittil (man t.o.m. i går, Oslo-dager) mot de samme ukedagene i samme ISO-uke i fjor.
      Mandag (ingen hele dager ennå): forrige hele uke man–søn mot samme ISO-uke i fjor. Samme telling som før (pulseUkeFire = Ukesrapport). */
   var ukeR=pulseHittilRange(), ukeRF=pulseSammeUkeIFjor(ukeR);
-  var ukeA=pulseUkeFire(rows,ukeR), ukeF=ukeRF?pulseUkeFire(rows,ukeRF):null;
+  var ukeRows=(rows||[]).concat(window._pulseBilfilEkstra||[]);
+  var ukeA=pulseUkeFire(ukeRows,ukeR), ukeF=ukeRF?pulseUkeFire(ukeRows,ukeRF):null;
   /* Data i fjor finnes bare hvis kilden har minst én dato for feltet t.o.m. slutten av fjorårsperioden. Ellers «–», aldri gjettet tall. */
-  var ukeFHar=ukeRF?pulseUkeFire(rows,{monday:new Date(2000,0,1),sunday:ukeRF.sunday}):null;
+  var ukeFHar=ukeRF?pulseUkeFire(ukeRows,{monday:new Date(2000,0,1),sunday:ukeRF.sunday}):null;
   var ukeDd=function(d){return ['søn','man','tir','ons','tor','fre','lør'][d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1);};
   var ukeEnd0=new Date(ukeR.sunday);ukeEnd0.setHours(0,0,0,0);
   var ukeEn=ukeEnd0.getTime()===ukeR.monday.getTime();
