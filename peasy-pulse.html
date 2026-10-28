@@ -13257,6 +13257,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       + (!b.mal_ok ? '<div style="font-size:12px;background:#FDECEA;border:1px solid #E57373;color:#A8221C;border-radius:6px;padding:7px 10px;margin:8px 0;">ERP-malen mangler – send fra ERP.</div>' : '')
       + '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">'
       +   '<button type="button" class="qa-send-btn l8-send" '+(kanSende?'':'disabled ')+'data-id="'+esc(b.internnr)+'" data-bud="'+esc(b.peasy_bud)+'" data-prov="'+esc(b.provisjon)+'" style="flex:2;min-width:140px;padding:10px 12px;background:#2E7D32;color:#fff;border:0;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Send bud '+kr(b.peasy_bud)+'</button>'
+      +   '<button type="button" class="l8-prev" data-id="'+esc(b.internnr)+'" style="flex:1;min-width:120px;padding:10px 12px;background:#fff;color:#004225;border:1px solid #9CC9AE;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Unbox-forhåndsvisning</button>'
 
       + '</div><div class="l8-msg" style="font-size:12px;margin-top:8px;"></div></div>';
   }
@@ -13320,6 +13321,14 @@ setTimeout(tick,1500);setInterval(tick,5000);
       if (sum) sum.textContent = biler.length+' bil'+(biler.length===1?'':'er')+' på liste 8 – Auksjon avsluttet (eldste øverst) · hentet '+new Date(x.j.hentet).toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'});
       if (Object.keys(trykket).length) return; /* ikke tegn på nytt mens et kort er sendt/under sending */
       root.innerHTML = biler.length ? biler.map(kort).join('') : '<div style="padding:24px;color:var(--muted);">Liste 8 er tom.</div>';
+      /* 28.10 (Mike): Unbox-forhåndsvisning – Minien henter ERP-lenken ved klikk, lenken lagres aldri i Pulse. */
+      root.querySelectorAll('.l8-prev').forEach(function(b){ b.onclick=function(){
+        var w=window.open('','_blank'); var card=b.closest('.l8-card'), msg=card&&card.querySelector('.l8-msg');
+        fetch(URL8+'/forhandsvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({internnr:Number(b.dataset.id)})})
+          .then(function(r){ return r.json().catch(function(){return {ok:false,err:'HTTP '+r.status};}); })
+          .then(function(j){ if(j&&j.ok&&j.url){ if(w){ w.opener=null; w.location.href=j.url; } else window.open(j.url,'_blank','noopener'); } else { if(w) w.close(); if(msg) msg.innerHTML='<span style="color:#A8221C;font-weight:700;">'+esc((j&&j.err)||'Feil')+'</span>'; } })
+          .catch(function(e){ if(w) w.close(); if(msg) msg.textContent='Mini svarer ikke: '+(e&&e.message||e); });
+      }; });
       root.querySelectorAll('.l8-send').forEach(function(b){ b.onclick=function(){ if(!b.disabled && b.dataset.trykket!=='1') bekreft(b); }; });
     }).catch(function(e){ root.innerHTML='<div style="padding:24px;color:#A8221C;">Får ikke kontakt med Minien: '+esc(e&&e.message||e)+'</div>'; });
   };
