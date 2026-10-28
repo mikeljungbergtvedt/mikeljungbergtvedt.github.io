@@ -623,6 +623,7 @@ window.paSjekkEnhet=function(){
       <button class="mode-btn" data-mode="autodb" id="btn-autodb" onclick="setMode('autodb')">AutoDB</button>
       <button class="mode-btn" data-mode="fin" id="btn-fin" onclick="setMode('fin')">Finansielt</button>
       <button class="mode-btn" data-mode="score" id="btn-score" onclick="setMode('score')">Scoreboard</button>
+      <button class="mode-btn" data-mode="servicehist" id="btn-servicehist" onclick="setMode('servicehist')">Servicehistorikk</button>
       <button class="mode-btn" data-mode="sosial" id="btn-sosial" onclick="setMode('sosial')">Sosial</button>
       <button class="mode-btn" data-mode="mark" id="btn-mark" onclick="setMode('mark')">Marked</button>
       <button class="mode-btn" data-mode="markrev" id="btn-markrev" onclick="setMode('markrev')">Marked (ny)</button>
@@ -694,6 +695,13 @@ window.paSjekkEnhet=function(){
 <!-- c652: Fanen heter «Auksjon avsluttet», boble med usendte, kun Send bud (Mike 26.10). -->
 <!-- c651: Liste 8-fanen synlig i toppmenyen etter QA / Send; versjonsmerket følger tittelen (Mike 26.10). -->
 <!-- c650: Liste 8 – Auksjon ferdig som QA-kort, «Send bud» med bekreftelse (Mike 26.10). -->
+<!-- c668: Servicehistorikk (Mike 28.10): regnr i kø = hent servicevedlegg fra kundens mail i post@ og last opp på bilen i ERP. Kø/status via Mini /api/servicehist (X-QA-Enhet), prosessor servicehistorikk.js på Minien. -->
+<section class="mode-section" data-mode="servicehist" id="servicehist-section" style="display:none"><div style="max-width:620px;margin:16px auto;padding:0 12px;">
+<h1 class="page" style="margin-bottom:4px">Servicehistorikk</h1>
+<div class="page-sub" style="margin-bottom:14px">Skriv regnr. Vi henter servicevedleggene fra kundens mail i post@ og laster dem opp på bilen i ERP.</div>
+<form onsubmit="shLegg(event)" style="display:flex;gap:8px;margin-bottom:8px"><input id="sh-regnr" placeholder="BT73612" autocomplete="off" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px;text-transform:uppercase;font-family:inherit"><button type="submit" id="sh-knapp" style="padding:10px 16px;border:none;border-radius:10px;background:var(--green);color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Hent vedlegg</button></form>
+<div id="sh-melding" style="font-size:12px;color:var(--muted);min-height:16px;margin-bottom:10px"></div>
+<div id="sh-ko"></div></div></section>
 <section class="mode-section" data-mode="liste8" id="liste8-section" style="display:none"><div style="max-width:620px;margin:16px auto;padding:0 12px;"><h1 class="page" style="margin-bottom:4px">Auksjon avsluttet</h1><div id="liste8-summary" style="font-size:13px;color:var(--muted);margin-bottom:10px;"></div><div id="liste8-cards" style="display:grid;gap:12px;"></div></div></section>
 <section class="mode-section" data-mode="mark" id="mark-section" style="display:none">
   <!-- c482: Marked svarer på tre spørsmål. Samme tall som nøkkelkortene (faktisk Meta + Google, hele dager t.o.m. i går). -->
@@ -2749,7 +2757,7 @@ function setMode(m){
   var moreBtn=document.getElementById('btn-more');
   if(moreBtn) moreBtn.classList.toggle('active', !!document.querySelector('#nav-more-menu .mode-btn.active'));
   document.querySelectorAll('.mode-section').forEach(function(el){el.style.display=(el.dataset.mode===m)?'block':'none';});
-  document.body.classList.toggle('skip-dials', m==='treffkart'||m==='qa'||m==='sosial'||m==='uke'||m==='utpris'||m==='airegnskap'||m==='gb'||m==='laering'||m==='auto'||m==='liste8');
+  document.body.classList.toggle('skip-dials', m==='treffkart'||m==='qa'||m==='sosial'||m==='uke'||m==='utpris'||m==='airegnskap'||m==='gb'||m==='laering'||m==='auto'||m==='liste8'||m==='servicehist');
   if(m==='qa'||m==='sosial'){
     var sec=document.getElementById(m==='qa'?'qa-section':'sosial-section');
     requestAnimationFrame(function(){
@@ -2761,6 +2769,7 @@ function setMode(m){
   }
   if(m==='eval'&&window._lastData&&window._lastRows)renderEvalCharts(window._lastRows,window._lastData);
   if(m==='kart'){initKart();}
+  if(m==='servicehist'&&typeof shLast==='function')shLast();
   /* c524: bilde øverst på QA-kortet (kundens bilde fra ERP, ellers «lignende bil» fra Finn). */
   /* c523: «Bruk Grok» på QA-kortet: Groks Finn-utpris inn i Finn-pris-feltet, samme skriving som «Sett Finn-pris», kilde=grok i loggen. */
   /* c522: QA-kortet har «+ Groks tvillinger» med Finn-lenker, justert pris og begrunnelse. */
@@ -13336,6 +13345,34 @@ setTimeout(tick,1500);setInterval(tick,5000);
       root.querySelectorAll('.l8-send').forEach(function(b){ b.onclick=function(){ if(!b.disabled && b.dataset.trykket!=='1') bekreft(b); }; });
     }).catch(function(e){ root.innerHTML='<div style="padding:24px;color:#A8221C;">Får ikke kontakt med Minien: '+esc(e&&e.message||e)+'</div>'; });
   };
+})();
+</script>
+<script>
+/* c668: Servicehistorikk-kø. Skriver bare regnr til Minien; prosessoren (servicehistorikk.js) gjør resten. */
+(function(){
+  var URL=PA_MINI_BASE+'/api/servicehist';
+  function hd(j){var h={'X-QA-Enhet':paEnhet()};if(j)h['Content-Type']='application/json';return h;}
+  function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var ST={venter:['Venter','#E65100'],klar:['Klar for opplasting','#1565C0'],lastet_opp:['Lastet opp','#2E7D32'],'lastet opp':['Lastet opp','#2E7D32'],feil:['Feil','#C62828']};
+  function tid(t){try{return new Date(t).toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+  window.shLast=function(){
+    var el=document.getElementById('sh-ko');if(!el)return;
+    fetch(URL+'?t='+Date.now(),{headers:hd(),signal:AbortSignal.timeout(8000)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(j){
+      var ko=j.ko||[];if(!ko.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">Ingen i køen.</div>';return;}
+      el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;font-size:10px;color:#778">REGNR</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#778">LAGT TIL</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#778">STATUS</th></tr></thead><tbody>'+ko.map(function(k){var s=ST[k.status]||[esc(k.status||'Venter'),'#667'];return '<tr style="border-top:1px solid var(--border)"><td style="padding:6px 8px;font-weight:700">'+esc(k.regnr)+'</td><td style="padding:6px 8px;color:#667">'+tid(k.lagt_til)+'</td><td style="padding:6px 8px"><span style="color:'+s[1]+';font-weight:700">'+s[0]+'</span>'+(k.grunn?'<div style="font-size:11.5px;color:#667">'+esc(k.grunn)+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    }).catch(function(){el.innerHTML='<div style="font-size:13px;color:var(--muted)">Får ikke kontakt med Minien herfra.</div>';});
+  };
+  window.shLegg=function(ev){
+    ev.preventDefault();var inp=document.getElementById('sh-regnr'),msg=document.getElementById('sh-melding');
+    var r=String(inp.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(!/^[A-Z]{2}\d{4,5}$/.test(r)){msg.textContent='Ugyldig regnr. Eksempel: BT73612';return;}
+    msg.textContent='Legger '+r+' i kø …';
+    fetch(URL,{method:'POST',headers:hd(true),body:JSON.stringify({regnr:r}),signal:AbortSignal.timeout(8000)}).then(function(x){return x.json().then(function(j){return{ok:x.ok,st:x.status,j:j};});}).then(function(o){
+      if(o.ok){msg.textContent=r+' lagt i kø.';inp.value='';shLast();}
+      else msg.textContent=o.st===403?'Bare Mikes enhet kan legge i kø.':'Feil: '+((o.j&&o.j.error)||o.st);
+    }).catch(function(){msg.textContent='Får ikke kontakt med Minien herfra.';});
+  };
+  setInterval(function(){if(window.currentMode==='servicehist'||(typeof currentMode!=='undefined'&&currentMode==='servicehist'))shLast();},20000);
 })();
 </script>
 </body>
