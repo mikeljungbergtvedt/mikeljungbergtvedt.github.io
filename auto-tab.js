@@ -8,14 +8,14 @@
     (document.head || document.documentElement).appendChild(s);
   })();
   // c606 (Mike 16.10): stopp fra FSD eller BM behandles likt (ingen pris skrives, kortet viser stoppet og grunnen).
-  function auStopp(ag) { return !!(ag && ((ag.fsd && ag.fsd.stopp) || (ag.benchmark && ag.benchmark.stopp))); }
+  function auStopp(ag) { return QaGronn.stopp(ag); }
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
   // c635 (Mike 21.10): én stopptekst, FSD først, BM bare hvis FSD mangler. Vises bare i den røde stopp-boksen.
   function auStoppGrunn(ag) { var f = ag && ag.fsd && ag.fsd.stopp ? (ag.fsd.stopp_grunn || '') : '', b = ag && ag.benchmark && ag.benchmark.stopp ? (ag.benchmark.stopp_grunn || '') : ''; return String(f || b || 'Stoppet').trim(); }
   // c6xx (Mike 17.10): avvis = reparasjonsobjekt (Send låst, «Avvist», prisdelen skjult). tvil = bilen er priset, tvilen står i stripa øverst (gul), Send er IKKE låst.
-  function auAvvis(ag) { return !!(ag && ((ag.fsd && ag.fsd.avvis) || (ag.benchmark && ag.benchmark.avvis))); }
+  function auAvvis(ag) { return QaGronn.avvis(ag); }
   function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
-  function auTvil(ag) { var r = []; if (ag && ag.fsd && ag.fsd.tvil) r.push('FSD: ' + ag.fsd.tvil); if (ag && ag.benchmark && ag.benchmark.tvil) r.push('BM: ' + ag.benchmark.tvil); return r.join(' · '); }
+  function auTvil(ag) { return QaGronn.tvil(ag); }
   // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
   function auSendLaas(c, b) {
     var ag = b.agent;
@@ -237,7 +237,7 @@
     r: { bak: '#F8ECEC', kant: '#D19A9A', tekst: '#8A3B3B' }
   };
   var AU_AVVIK_RED = '#A65B52';
-  function auTerskel(mid) { return Math.min(50000, Math.max(5000, 0.05 * mid)); }
+  function auTerskel(mid) { return QaGronn.terskel(mid); }
   function auAvvik(ag, b) {
     var f = ag.fsd && ag.fsd.pris, bm = ag.benchmark && ag.benchmark.pris;
     // Mike 14.10: Mid = (FSD + Bench) / 2 (eller den som finnes). Manuell pris og origin95-kapp er regnet inn i ag.mid_pris (auto-score).
@@ -906,11 +906,10 @@
       var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
-      var nivaa = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
+      var nivaa = QaGronn.nivaa(b); /* 28.10: felles med Minien (qa-gronn.js) */
       // c572: med FSD/Benchmark styrer de fargen og teksten i statusboksen. Ingen auto-poeng, skygge, CC eller auto-detaljer (Mike 13.10).
       var agF = b.agent || null;
       var avv0 = agF ? auAvvik(agF, b) : null;
-      if (agF) { nivaa = auAvvis(agF) || auStopp(agF) ? 'r' : auTvil(agF) ? 'y' : !avv0.mid ? 'r' : avv0.varsel ? 'y' : 'g'; }
       var farge = { g: '#004225', r: '#B8452F', y: '#8A6D10' }[nivaa];
       var bakgrunn = { g: '#E3EFE7', r: '#F8E6E1', y: '#FBF3D8' }[nivaa];
       var ha = auHovedarsak(b);
