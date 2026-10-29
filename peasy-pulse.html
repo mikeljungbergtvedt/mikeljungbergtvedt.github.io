@@ -7859,7 +7859,10 @@ function renderOrdnaDashboard(){
     var sold=rows.filter(function(r){return inP(pd(r[18]));}).length;
     var ret=rows.filter(function(r){return inP(pd(r[21]));}).length;
     var ferdig=sold+ret;
+    /* c670 (Mike 29.10): snitt bilverdi = mid av Lav–høy sendt kunden, priset-biler i perioden. */
+    var mids=[];rows.forEach(function(r){if(!inP(pd(r[31])))return;var p=String(r[3]||'').split('-').map(function(x){return parseInt(String(x).replace(/\D/g,''),10);});if(p.length===2&&p[0]>0&&p[1]>0)mids.push((p[0]+p[1])/2);});
     return {
+      snitt:mids.length?Math.round(mids.reduce(function(a,b){return a+b;},0)/mids.length):null, nSnitt:mids.length,
       leads:leads, priset:priset, bestilt:bestilt, sold:sold, ret:ret, ferdig:ferdig,
       ep:priset?Math.round(bestilt/priset*100):null,
       bp:ferdig?Math.round(sold/ferdig*100):null
@@ -7876,7 +7879,8 @@ function renderOrdnaDashboard(){
       +kpi('Bestilt hent/lev', m.bestilt, 'aksepterte eval')
       +kpi('Solgt', m.sold, m.ferdig?(m.bp+'% av ferdig auksjon'):'ingen ferdig', '#2E7D32')
       +kpi('Returnert', m.ret, m.ferdig?(Math.round(m.ret/m.ferdig*100)+'% av ferdig auksjon'):'ingen ferdig', m.ret?'#C62828':'#667')
-      +kpi('Bud-aksept', m.bp==null?'—':m.bp+'%', m.sold+' solgt / '+m.ferdig+' ferdig (solgt eller returnert)', '#004225');
+      +kpi('Bud-aksept', m.bp==null?'—':m.bp+'%', m.sold+' solgt / '+m.ferdig+' ferdig (solgt eller returnert)', '#004225')
+      +kpi('Snitt bilverdi', m.snitt==null?'—':m.snitt.toLocaleString('nb-NO')+' kr', 'mid av Lav–høy, '+m.nSnitt+' biler', '#004225');
   }
   var el30=document.getElementById('ordna-kpi');
   if(el30) el30.innerHTML=rowKpi('Siste 30 dager', m30);
