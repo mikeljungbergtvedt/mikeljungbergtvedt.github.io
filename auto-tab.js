@@ -237,6 +237,20 @@
     r: { bak: '#F8ECEC', kant: '#D19A9A', tekst: '#8A3B3B' }
   };
   var AU_AVVIK_RED = '#A65B52';
+  /* c675 (Mike 29.10): Minien har stoppet bilen for manuell prising (agent.erp.grunn «manuell: …», ingen Lav–høy i ERP).
+     Egen header «PRIS MANUELL» (mørk oransje, ikke gul tvil / grønn), grunnen på linjen under. */
+  var AU_PM = { bak: '#FCE4D2', kant: '#C2571A', tekst: '#9A3C0A' };
+  function auPrisManuell(ag, b) {
+    var e = ag && ag.erp; if (!e || e.skrevet !== false || !/^\s*manuell\s*:/i.test(String(e.grunn || ''))) return null;
+    if (b && b.erp_lav) return null;
+    if (ag.pris_kilde && /^(manuell|bud)$/.test(ag.pris_kilde.kilde || '')) return null;
+    if (window._qaManuell && b && window._qaManuell[String(b.id)]) return null;
+    var g = String(e.grunn).replace(/^\s*manuell\s*:\s*/i, '').trim();
+    var m = g.match(/^FSD\/BM uenige uten tvillinger \((\d+)\s*%,\s*FSD\s*([\d.,]+k),\s*BM\s*([\d.,]+k)\)/i);
+    if (m) return 'FSD ' + m[2] + ' / BM ' + m[3] + ' · ' + m[1] + ' % uenige · ingen tvillinger';
+    return g.charAt(0).toUpperCase() + g.slice(1);
+  }
+  window.auPrisManuell = auPrisManuell;
   function auTerskel(mid) { return QaGronn.terskel(mid); }
   function auAvvik(ag, b) {
     var f = ag.fsd && ag.fsd.pris, bm = ag.benchmark && ag.benchmark.pris;
@@ -903,7 +917,7 @@
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
       var merker = auMerker(c);
-      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk, b.agent.erp] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = QaGronn.nivaa(b); /* 28.10: felles med Minien (qa-gronn.js) */
@@ -1030,13 +1044,15 @@
         var hF = AU_DEMPET[nivaa].tekst, hB = AU_DEMPET[nivaa].bak, hK = AU_DEMPET[nivaa].kant;
         if (avv0.varsel && !auStopp(agF)) rute = '⚠ AVVIK';
         if (auAvvis(agF)) rute = 'AVVIST'; else if (!auStopp(agF) && auTvil(agF)) rute = 'TVIL';
+        var pmG = (!auAvvis(agF) && !auStopp(agF)) ? auPrisManuell(agF, b) : null; /* c675 */
+        if (pmG) { rute = 'PRIS MANUELL'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         var midt0 = ['FSD ' + kk(fP0), 'Bench ' + kk(bP0)];
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
-        nyHtml = '<div class="au-hode" style="background:' + hB + ';border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
+        nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
-          (auAvvis(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt, Peasy tar ikke imot bilen. ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          (auAvvis(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt, Peasy tar ikke imot bilen. ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
