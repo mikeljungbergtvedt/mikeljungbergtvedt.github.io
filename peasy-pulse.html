@@ -608,6 +608,9 @@ window.paSjekkEnhet=function(){
   <!-- c629 (Mike 21.10): helse-lampe. helse.json fra Mini (helse.js hvert 10. min). Trykk = hva som feiler. -->
   <button type="button" id="helse-lampe" title="Helsesjekk" onclick="helseVis(event)" style="display:none;margin-left:10px;width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.85);cursor:pointer;padding:0;flex:0 0 auto;background:#999"></button>
   <div id="helse-pop" style="display:none;position:fixed;top:56px;left:12px;z-index:99998;background:#fff;color:#222;border:1px solid #ccd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px 14px;max-width:520px;font-size:13px;line-height:1.45"></div>
+  <!-- c669 (Mike 29.10): Auto-sendt-pille + AUTO-tagg ved regnr. Data: Mini /api/autosendt (logs.nosync/auto-sendt-gronn.jsonl). -->
+  <button type="button" id="autosendt-pill" onclick="autoPillVis(event)" style="margin-left:10px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.12);color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Auto-sendt …</button>
+  <div id="autosendt-pop" style="display:none;position:fixed;top:56px;left:12px;z-index:99998;background:#fff;color:#222;border:1px solid #ccd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px 12px;font-size:12.5px;max-width:92vw;max-height:70vh;overflow:auto"></div>
   <nav class="pulse-nav" id="pulse-nav">
     <div class="mode-toggle" id="mode-toggle">
       <button class="mode-btn active" data-mode="ops" id="btn-ops" onclick="setMode('ops')">Operasjonelt</button>
@@ -13373,6 +13376,59 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }).catch(function(){msg.textContent='Får ikke kontakt med Minien herfra.';});
   };
   setInterval(function(){if(window.currentMode==='servicehist'||(typeof currentMode!=='undefined'&&currentMode==='servicehist'))shLast();},20000);
+})();
+</script>
+<script>
+/* c669: Auto-sendt i dag/i går + AUTO-tagg. Tagg per ERP-sak: regnr får tagg når regnr-ets nyeste sak (høyeste internnr) er auto-sendt. */
+(function(){
+  var URL=PA_MINI_BASE+'/api/autosendt', DATA=null, TAGG={};
+  function ymd(d){return new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});}
+  function kl(d){return new Date(d).toLocaleTimeString('nb-NO',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit'});}
+  function kr(n){return n==null?'–':Math.round(n).toLocaleString('nb-NO');}
+  function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function norm(r){return String(r||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+  function byggTagg(){
+    TAGG={};if(!DATA)return;var auto={};DATA.forEach(function(b){auto[String(b.id)]=1;});
+    var nyeste={};(window._lastRows||[]).slice(1).forEach(function(r){var rg=norm(r[1]),id=Number(r[0]);if(rg&&id&&(!nyeste[rg]||id>nyeste[rg]))nyeste[rg]=id;});
+    DATA.forEach(function(b){var rg=norm(b.regnr);if(!rg)return;var n=nyeste[rg];if(!n||auto[String(n)])TAGG[rg]=1;});
+  }
+  var RE=/\b([A-Z]{2})\s?(\d{4,5})\b/g, SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,BUTTON:1};
+  function merk(root){
+    if(!Object.keys(TAGG).length)return;
+    var w=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){var p=n.parentNode;if(!p||SKIP[p.nodeName]||p.closest('.auto-tag,#autosendt-pop'))return NodeFilter.FILTER_REJECT;return RE.test(n.nodeValue)?(RE.lastIndex=0,NodeFilter.FILTER_ACCEPT):NodeFilter.FILTER_REJECT;}});
+    var liste=[];while(w.nextNode())liste.push(w.currentNode);
+    liste.forEach(function(n){
+      var t=n.nodeValue,m,last=0,frag=null;RE.lastIndex=0;
+      while((m=RE.exec(t))){var rg=m[1]+m[2];if(!TAGG[rg])continue;var nx=n.nextSibling;if(m.index+m[0].length===t.length&&nx&&nx.classList&&nx.classList.contains('auto-tag'))continue;
+        frag=frag||document.createDocumentFragment();frag.appendChild(document.createTextNode(t.slice(last,m.index+m[0].length)));
+        var sp=document.createElement('span');sp.className='auto-tag';sp.textContent='AUTO';sp.title='Auto-sendt (grønn)';sp.style.cssText='display:inline-block;margin-left:4px;padding:0 5px;border-radius:4px;background:#2E7D32;color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.4px;line-height:15px;vertical-align:middle';
+        frag.appendChild(sp);last=m.index+m[0].length;}
+      if(frag){frag.appendChild(document.createTextNode(t.slice(last)));n.parentNode.replaceChild(frag,n);}
+    });
+  }
+  var tm=null;function planlegg(){if(tm)return;tm=setTimeout(function(){tm=null;try{obs.disconnect();merk();}catch(e){}obs.observe(document.body,{childList:true,subtree:true,characterData:true});},400);}
+  var obs=new MutationObserver(planlegg);
+  function pill(){
+    var el=document.getElementById('autosendt-pill');if(!el)return;
+    if(!DATA){el.textContent='Får ikke kontakt med Minien herfra';return;}
+    var i=ymd(Date.now()),g=ymd(Date.now()-864e5);
+    var n=DATA.filter(function(b){return ymd(b.tid)===i;}).length,m=DATA.filter(function(b){return ymd(b.tid)===g;}).length;
+    el.textContent='Auto-sendt i dag: '+n+' · i går: '+m;
+  }
+  function hent(){
+    fetch(URL+'?t='+Date.now(),{headers:{'X-QA-Enhet':paEnhet()},signal:AbortSignal.timeout(8000)}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){DATA=j.biler||[];}).catch(function(){DATA=null;}).then(function(){pill();byggTagg();planlegg();});
+  }
+  window.autoPillVis=function(ev){
+    if(ev)ev.stopPropagation();var p=document.getElementById('autosendt-pop');if(!p)return;
+    if(p.style.display==='block'){p.style.display='none';return;}
+    if(!DATA){p.innerHTML='Får ikke kontakt med Minien herfra';}
+    else{var i=ymd(Date.now());var l=DATA.filter(function(b){return ymd(b.tid)===i;}).sort(function(a,b){return a.tid<b.tid?1:-1;});
+      p.innerHTML='<div style="font-weight:700;margin-bottom:6px">Auto-sendt i dag</div>'+(l.length?'<table style="border-collapse:collapse">'+l.map(function(b){return '<tr><td style="padding:3px 8px 3px 0;color:#667">'+kl(b.tid)+'</td><td style="padding:3px 8px 3px 0">'+esc(b.id)+'</td><td style="padding:3px 8px 3px 0;font-weight:700">'+esc(b.regnr||'–')+'</td><td style="padding:3px 8px 3px 0">'+esc(b.bil||'')+'</td><td style="padding:3px 0;white-space:nowrap">'+kr(b.lav)+'–'+kr(b.hoy)+' kr</td></tr>';}).join('')+'</table>':'<div style="color:#667">Ingen i dag.</div>');}
+    p.style.display='block';
+  };
+  document.addEventListener('click',function(e){var p=document.getElementById('autosendt-pop');if(p&&p.style.display==='block'&&!p.contains(e.target)&&e.target.id!=='autosendt-pill')p.style.display='none';});
+  function start(){hent();obs.observe(document.body,{childList:true,subtree:true,characterData:true});setInterval(hent,60000);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
 </body>
