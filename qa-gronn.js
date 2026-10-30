@@ -16,6 +16,7 @@
     var n = b.score >= 80 ? 'g' : b.score < 50 ? 'r' : 'y';
     var ag = b.agent || null;
     if (ag) { var a = avvik(ag); n = avvis(ag) || stopp(ag) ? 'r' : tvil(ag) ? 'y' : !a.mid ? 'r' : a.varsel ? 'y' : 'g'; }
+    if (b.skade_egen && n === 'g') n = 'y'; /* c678: skade i egenerklæringen er aldri grønn */
     return n;
   }
   var api = { stopp: stopp, avvis: avvis, tvil: tvil, terskel: terskel, avvik: avvik, nivaa: nivaa };
