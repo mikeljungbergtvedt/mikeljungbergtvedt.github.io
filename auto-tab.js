@@ -113,6 +113,7 @@
     try { auManuell(c, b); } catch (e) {}
     auKjoretoy(c, b);
     auDuplikat(c, b);
+    auKjorbar(c, b);
     auAarTopp(c, b, b.agent);
     auKmTopp(c, b, b.agent);
     // c579: knapperaden nederst, på linje mellom kortene i samme rad.
@@ -221,7 +222,7 @@
         (mid ? '<div style="position:absolute;left:' + pos(mid) + ';top:19px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:#004225;border:3px solid #fff;box-shadow:0 0 0 1.5px #004225"></div>' : '') +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-variant-numeric:tabular-nums;margin:0 2px">' +
-          '<span style="font-size:15px;color:#004225"><b>Mid ' + (mid ? auKr(mid) : '–') + '</b> → fossefall</span>' +
+          '<span style="font-size:15px;color:#004225"><b>Mid ' + (mid ? auKr(mid) : '–') + '</b>' + (ag.mid_anker && mid && ag.mid_anker !== mid ? ' <span style="font-size:12.5px;color:#5E6B62">(ERP-anker ' + auKr(ag.mid_anker) + ')</span>' : '') + ' → fossefall' + (b.erp_lav != null && b.erp_hoy != null ? ' <span style="font-size:12.5px;color:#5E6B62">· ERP ' + auKr(b.erp_lav) + '–' + auKr(b.erp_hoy) + '</span>' : '') + '</span>' +
           (fP && bP ? '<span style="font-size:12.5px;color:' + (av.varsel ? AU_DEMPET.y.tekst : '#5E6B62') + '">FSD vs Bench ' + (fP >= bP ? '+' : '') + Math.round((fP - bP) / bP * 100) + ' %' + (av.varsel ? ' · over terskel ' + auKr(Math.round(av.terskel)) : '') + '</span>' : '') +
         '</div>';
     }
@@ -465,27 +466,49 @@
     var h = ' · <b style="color:' + (kt.type === 'Varebil' ? '#8A4B00' : '#004225') + '">' + esc(kt.type) + (kt.kode ? ' (' + esc(kt.kode) + ')' : '') + '</b>';
     if (sp.getAttribute('data-sig') !== h) { sp.innerHTML = h; sp.setAttribute('data-sig', h); sp.title = 'Kjøretøygruppe fra ' + (kt.kilde || ''); }
   }
-  /* c628 (Mike 21.10): duplikat (ERP duplicate_of) – tydelig stripe øverst med Avvis rett der (bare Mikes enhet). */
+  /* c683 (Mike 03.11): tidligere saker med samme regnr. Liste 1–4 = grå info (ingen Avvis). Etter liste 4, vært på auksjon
+     eller henting bestilt men ikke gjennomført = rød ALARM (Avvis kun her). Gammelt dataformat: bare duplikat.aktiv. */
   function auDuplikat(c, b) {
-    /* Bare når saken i duplicate_of fortsatt er aktiv (auto-score duplikat.aktiv). Avvist/avsluttet eller ukjent → ingen stripe. */
-    var d = b.duplikat && b.duplikat.aktiv === true ? b.duplikat.id : null, x = c.querySelector('.au-duplikat');
-    if (!d) { if (x) x.remove(); return; }
-    if (x && x.getAttribute('data-dup') === String(d)) return;
+    var saker = b.tidligere_saker || (b.duplikat && b.duplikat.aktiv === true ? [{ id: b.duplikat.id, nivaa: 'alarm', tekst: 'Duplikat av #' + b.duplikat.id }] : []);
+    var x = c.querySelector('.au-duplikat');
+    if (!saker.length) { if (x) x.remove(); return; }
+    var alarm = saker.filter(function (s) { return s.nivaa === 'alarm'; });
+    var sig = JSON.stringify(saker);
+    if (x && x.getAttribute('data-dup') === sig) return;
     if (x) x.remove();
     var id = String(b.id || '');
-    x = document.createElement('div'); x.className = 'au-duplikat'; x.setAttribute('data-dup', String(d));
-    x.style.cssText = 'margin:0 0 10px;padding:9px 12px;background:#FDECEA;border:2px solid #C62828;border-radius:8px;font-size:13px;line-height:1.45;color:#7A1C1C;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
-    x.innerHTML = '<b style="font-size:14px">Duplikat av #' + esc(d) + '</b>' +
-      '<a href="' + AU_ERP_BIL(d) + '" target="_blank" rel="noopener" style="color:#7A1C1C;font-weight:700">Åpne #' + esc(d) + ' i ERP</a>' +
-      (/^\d+$/.test(id) && AU_ROLLE !== 'team' ? '<button type="button" class="q-dup-avvis" data-kun-mike style="' + (AU_ROLLE === 'mike' ? '' : 'display:none;') + 'margin-left:auto;font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis #' + esc(id) + '</button>' : '') +
+    x = document.createElement('div'); x.className = 'au-duplikat'; x.setAttribute('data-dup', sig);
+    x.style.cssText = alarm.length
+      ? 'margin:0 0 10px;padding:9px 12px;background:#FDECEA;border:2px solid #C62828;border-radius:8px;font-size:13px;line-height:1.45;color:#7A1C1C;display:flex;gap:10px;align-items:center;flex-wrap:wrap'
+      : 'margin:0 0 8px;padding:5px 10px;background:#F2F4F1;border:1px solid #DCE1D9;border-radius:6px;font-size:12px;line-height:1.4;color:#5E6B62;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    var rader = saker.map(function (s) {
+      var lenke = '<a href="' + AU_ERP_BIL(s.id) + '" target="_blank" rel="noopener" style="color:inherit;font-weight:600">#' + esc(s.id) + '</a>';
+      var tekst = esc(s.tekst || '').replace('#' + esc(s.id), lenke);
+      var gire = s.gire && s.gire.lenke ? ' · <a href="' + esc(s.gire.lenke) + '" target="_blank" rel="noopener" style="color:inherit">Gire-oppdrag</a>' : '';
+      return '<span style="flex-basis:100%">' + (s.nivaa === 'alarm' ? '<b>ALARM:</b> ' : 'ℹ︎ ') + tekst + gire + '</span>';
+    }).join('');
+    x.innerHTML = rader + (alarm.length && /^\d+$/.test(id) && AU_ROLLE !== 'team' ? '<button type="button" class="q-dup-avvis" data-kun-mike style="' + (AU_ROLLE === 'mike' ? '' : 'display:none;') + 'margin-left:auto;font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid #8B2A1A;background:#fff;color:#8B2A1A;font-weight:700">Avvis #' + esc(id) + '</button>' : '') +
       '<span class="q-dup-st" style="flex-basis:100%;font-size:12px"></span>';
     var topp = c.firstElementChild; if (topp && topp.nextSibling) c.insertBefore(x, topp.nextSibling); else c.appendChild(x);
     var kn = x.querySelector('.q-dup-avvis'), st = x.querySelector('.q-dup-st'), opp = false;
     if (kn) kn.onclick = function () {
       if (opp) return;
       var feil = function (j) { if (j && j.error === 'forbidden') return '<b style="color:#8B2A1A">Bare Mikes enhet kan avvise.</b>'; if (j && j.status === 403) return '<b style="color:#8B2A1A">Mangler rettighet i ERP – avvis i ERP: Behandling → Avvise</b> · <a href="' + esc(j.erp_url || AU_ERP_BIL(id)) + '" target="_blank" rel="noopener">Åpne bilen i ERP</a>'; return '<b style="color:#8B2A1A">' + esc((j && j.err) || 'Ukjent feil') + '</b>'; };
-      auAvvisDialog(id, 'Avvist: duplikat av #' + d, st, feil, function (v) { opp = v; });
+      auAvvisDialog(id, 'Avvist: ' + (alarm[0] ? alarm[0].tekst : 'tidligere sak'), st, feil, function (v) { opp = v; });
     };
+  }
+  /* c683 (Mike 03.11): kjørbarhet vurdert av FSD/BM ut fra kundens tekst/mangellapp. nei/usikker = manuell sjekk. */
+  function auKjorbar(c, b) {
+    var k = b.kjorbar, x = c.querySelector('.au-kjorbar');
+    if (!k || !k.verdi) { if (x) x.remove(); return; }
+    var sig = k.verdi + '|' + (k.grunn || '');
+    if (x && x.getAttribute('data-sig') === sig) return;
+    if (!x) { x = document.createElement('div'); x.className = 'au-kjorbar'; var d = c.querySelector('.au-duplikat'); var ref = d || c.firstElementChild; if (ref && ref.nextSibling) c.insertBefore(x, ref.nextSibling); else c.appendChild(x); }
+    x.setAttribute('data-sig', sig);
+    var rod = k.verdi === 'nei', gul = k.verdi === 'usikker';
+    x.style.cssText = 'margin:0 0 8px;padding:' + (rod || gul ? '7px 12px' : '4px 10px') + ';border-radius:6px;font-size:' + (rod || gul ? '13px' : '12px') + ';line-height:1.4;' +
+      (rod ? 'background:#FDECEA;border:2px solid #C62828;color:#7A1C1C' : gul ? 'background:#FFF6E0;border:1px solid #D4A017;color:#6B4E00' : 'background:#F2F4F1;border:1px solid #DCE1D9;color:#5E6B62');
+    x.innerHTML = '<b>Kjørbar: ' + esc(k.verdi) + '</b>' + (rod || gul ? ' – manuell sjekk' : '') + (k.grunn ? ' · ' + esc(k.grunn) : '') + (k.hvem ? ' <span style="opacity:.7">(' + (k.hvem === 'bm' ? 'BM' : 'FSD') + ')</span>' : '');
   }
   /* c628: kundechat + Avvis på kort som ikke har stopp-boksen (den har sin egen chat). */
   function auChatAlle(c, b, ag) {
