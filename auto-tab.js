@@ -7,6 +7,7 @@
     s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
     (document.head || document.documentElement).appendChild(s);
   })();
+  // c685 (04.11): heftelser fra Brreg (auto-score.json: b.brreg.status ok|feil|mangler). Feil → rød merking på kortet og Send sperret. Funn vises ikke.
   // c606 (Mike 16.10): stopp fra FSD eller BM behandles likt (ingen pris skrives, kortet viser stoppet og grunnen).
   function auStopp(ag) { return QaGronn.stopp(ag); }
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
@@ -43,6 +44,19 @@
         bunn.onclick = function () { if (typeof window.qaSend === 'function') window.qaSend(bunn); };
       }
     }
+    var brFeil = !!(b.brreg && b.brreg.status === 'feil');
+    if (brFeil) grunn = 'Heftelser: Brreg-oppslaget feilet. Trykk Sett pris på nytt for et nytt oppslag.';
+    var brBoks = c.querySelector('.au-brreg-feil');
+    if (brFeil) {
+      if (!brBoks) {
+        brBoks = document.createElement('div'); brBoks.className = 'au-brreg-feil';
+        brBoks.style.cssText = 'margin:6px 0;padding:6px 10px;border-radius:6px;background:#F8E6E1;border-left:4px solid #B8452F;color:#8B2A1A;font-size:13px;font-weight:600';
+        var hodeB = c.querySelector('.au-hode') || c.querySelector('.au-enighet');
+        if (hodeB && hodeB.parentNode) hodeB.parentNode.insertBefore(brBoks, hodeB.nextSibling); else c.insertBefore(brBoks, c.firstChild);
+      }
+      var brT = '⚠ Heftelser: Brreg-oppslaget feilet' + (b.brreg.tekst ? ' (' + b.brreg.tekst + ')' : '') + ' – Send er sperret. Trykk Sett pris på nytt.';
+      if (brBoks.textContent !== brT) brBoks.textContent = brT;
+    } else if (brBoks) brBoks.remove();
     [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
