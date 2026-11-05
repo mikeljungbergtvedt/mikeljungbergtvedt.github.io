@@ -1,3 +1,4 @@
+/* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
 /* Peasy Pulse — Marked (ny), c601 (bestilt, leads og kost: inneværende uke mot samme dager forrige uke, med pil. Ingen kr per bestilt). c600 (tabellen: bare inneværende uke mot samme dager forrige uke; ukene står i grafen). c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
    Ett spørsmål: hva skjer med bestilte biler, og hvem bidrar? Bestilt = bilfilens «bestilt» (første dag på «på vei», én per internnr,
    avbestilte ute). Kanal: Peasy-leads etter UTM (Meta, Google, Direkte), ellers kilden (Drive, Ordna, AutoDB).
@@ -5,6 +6,9 @@
    Mandag: forrige hele uke mot uka før. Kr per bestilt: de 4 siste hele ukene. Graf: 12 uker, siste uke «hittil». */
 (function () {
   var KAN = ['Google', 'Meta', 'Direkte', 'Drive', 'Ordna', 'AutoDB'];
+  var PEASY = ['Google', 'Meta', 'Direkte'], PARTNER = ['Drive', 'Ordna', 'AutoDB'];
+  var NAVN = { Direkte: 'Uten UTM (lag)' };
+  function nv(k) { return NAVN[k] || k; }
   var FARGE = { Google: '#F2B705', Meta: '#1877F2', Direkte: '#667A72', Drive: '#2E7D32', Ordna: '#E65100', AutoDB: '#6A1B9A' };
   var DG = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
   var apen = {};
@@ -29,6 +33,7 @@
     var P = { naa: [naaMan, naaTil], sammen: [dag(naaMan, -7), dag(naaTil, -7)] };
     P.u1 = [dag(naaMan, -7), dag(naaMan, -1)]; P.u2 = [dag(naaMan, -14), dag(naaMan, -8)]; P.u3 = [dag(naaMan, -21), dag(naaMan, -15)];
     P.f4 = [dag(naaMan, -28), dag(naaMan, -1)];
+    P.f14 = [dag(naaTil, -13), naaTil]; P.p14 = [dag(naaTil, -27), dag(naaTil, -14)];   // c691: 14d t.o.m. i går mot forrige 14d (som mailen)
     var hel = mandag;                                                          // mandag: «naa» er en hel uke
     var navnNaa = 'Uke ' + uke(naaMan) + (hel ? '' : ' (' + DG[naaMan.getDay()] + (n ? '–' + DG[naaTil.getDay()] : '') + ')');
     var uker = []; for (var w = 11; w >= 0; w--) { var f = dag(naaMan, -7 * w); uker.push({ p: [f, w === 0 ? naaTil : dag(f, 6)], navn: String(uke(f)) + (w === 0 && !hel ? ' (hittil)' : '') }); }
@@ -57,7 +62,7 @@
       var lead = d0(r[14]), t = T[kn];
       var camp = String(r[24] || '').trim(), cid = (kn === 'Meta' || kn === 'Google') ? (kn === 'Meta' ? 'meta|' + (mId(camp, String(r[28] || '').trim(), lead) || camp) : 'google|' + camp) : null;
       ['naa', 'sammen'].forEach(function (p) { if (inn(P[p], lead)) { t.l[p]++; if (cid) { var oc = t.kamp[cid] = t.kamp[cid] || { n: tom(), l: tom() }; oc.l[p]++; } } });
-      var b = d0(r._bestilt); if (!b) return;
+      var b = d0(r._bilfil ? r._bestilt : (r[15] || r[16])); if (!b) return;   // c691: Gire bestilt på | Levere selv (bilfil fyller samme kolonner)
       var treff = false;
       ids.forEach(function (p) { if (inn(P[p], b)) { t.n[p]++; treff = true; } });
       Q.uker.forEach(function (u, ix) { if (inn(u.p, b)) serie[kn][ix]++; });
@@ -81,6 +86,23 @@
   }
 
   function pil(a, b, fmt) { fmt = fmt || String; if (a > b) return '<span style="color:#2E7D32;font-weight:800">▲ ' + fmt(a - b) + '</span>'; if (a < b) return '<span style="color:#C62828;font-weight:800">▼ ' + fmt(b - a) + '</span>'; return '<span style="color:#667A72">=</span>'; }
+  /* c691: headline som morgenmailen — Peasy kost → bestilt (kr/best) nå vs samme dager forrige uke, og 14d vs forrige 14d. */
+  function peasySum(T, p) { var n = 0, l = 0; PEASY.forEach(function (k) { n += T[k].n[p]; l += T[k].l[p]; }); var kost = (T.Google.kost[p] || 0) + (T.Meta.kost[p] || 0); return { n: n, l: l, kost: kost, per: n ? kost / n : null }; }
+  function fd(d) { return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function headline(R) {
+    var T = R.T, P = R.Q.P, a = peasySum(T, 'naa'), b = peasySum(T, 'sammen'), c = peasySum(T, 'f14'), d = peasySum(T, 'p14');
+    var pct = function (x) { return x.l ? Math.round(100 * x.n / x.l) + ' %' : '–'; };
+    var MAAL = 2000, ok = a.per != null && a.per < MAAL;
+    window._markrevHeadline = { naa: a, sammen: b, f14: c, p14: d };
+    return '<div class="table-card" style="margin-bottom:18px;padding:14px 18px;border-left:4px solid ' + (ok ? '#004225' : '#B71C1C') + '">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Peasy kost → bestilt (som morgenmailen) · mål under ' + kr(MAAL) + ' kr/best</div>' +
+      '<div style="font-size:17px;font-weight:800;margin-top:6px">' + fd(P.naa[0]) + '–' + fd(P.naa[1]) + ': ' + kr(a.kost) + ' kr → ' + a.n + ' bestilt (' + kr(a.per) + ' kr/best)' +
+      ' <span style="font-weight:500;color:#667A72">— forrige ' + kr(b.kost) + ' → ' + b.n + ' (' + kr(b.per) + ')</span></div>' +
+      '<div style="font-size:13px;margin-top:4px">Leads → bestilt: ' + a.l + ' → ' + a.n + ' (' + pct(a) + ') mot ' + b.l + ' → ' + b.n + ' (' + pct(b) + ')</div>' +
+      '<div style="font-size:14px;margin-top:6px"><b>14d</b> ' + fd(P.f14[0]) + '–' + fd(P.f14[1]) + ': ' + kr(c.kost) + ' kr → <b>' + c.n + ' bestilt</b> (' + kr(c.per) + ')' +
+      ' — forrige 14d ' + fd(P.p14[0]) + '–' + fd(P.p14[1]) + ': ' + kr(d.kost) + ' → ' + d.n + ' (' + kr(d.per) + ')</div>' +
+      '<div style="font-size:11px;color:#667A72;margin-top:6px">Peasy = Google + Meta + uten UTM (lag). Partner (Drive, Ordna, AutoDB) er ute av kr/bestilt.</div></div>';
+  }
   function perBest(k, n) { return !k ? '–' : n ? kr(k / n) : 'ingen'; }
 
   function render() {
@@ -98,10 +120,13 @@
     var skille = ';border-left:1px solid rgba(0,66,37,0.08)';
     function tre(a, b, fmt, stor, venstre) { return '<td style="' + td + (venstre ? skille : '') + (stor ? ';font-size:15px;font-weight:800' : ';font-weight:700') + '">' + fmt(a) + '</td><td style="' + td + '">' + fmt(b) + '</td><td style="' + td + '">' + (a == null || b == null ? '' : pil(a, b, fmt)) + '</td>'; }
     var heltall = function (n) { return n == null ? '–' : String(n); };
+    var partnerStart = false;
     KAN.forEach(function (kn) {
-      var t = T[kn]; sum.n.naa += t.n.naa; sum.n.sammen += t.n.sammen; sum.l.naa += t.l.naa; sum.l.sammen += t.l.sammen; sum.k.naa += t.kost.naa || 0; sum.k.sammen += t.kost.sammen || 0;
+      var t = T[kn];
+      if (PARTNER.indexOf(kn) >= 0 && !partnerStart) { partnerStart = true; h += peasyRad(); h += '<tr><td colspan="' + cols + '" style="padding:10px 8px 4px;font-size:11px;color:#667A72;font-weight:700">Partner (ikke i kr/bestilt)</td></tr>'; }
+      if (PARTNER.indexOf(kn) < 0) { sum.n.naa += t.n.naa; sum.n.sammen += t.n.sammen; sum.l.naa += t.l.naa; sum.l.sammen += t.l.sammen; sum.k.naa += t.kost.naa || 0; sum.k.sammen += t.kost.sammen || 0; }
       var kan = !!t.liste && t.liste.length;
-      h += '<tr' + (kan ? ' data-mr="' + kn + '" style="cursor:pointer"' : '') + '><td style="' + td.replace('right', 'left') + ';font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:' + FARGE[kn] + ';margin-right:7px"></span>' + kn + (kan ? ' <span style="color:#667A72;font-weight:400">' + (apen[kn] ? '▾' : '▸') + '</span>' : '') + '</td>' +
+      h += '<tr' + (kan ? ' data-mr="' + kn + '" style="cursor:pointer"' : '') + '><td style="' + td.replace('right', 'left') + ';font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:' + FARGE[kn] + ';margin-right:7px"></span>' + nv(kn) + (kan ? ' <span style="color:#667A72;font-weight:400">' + (apen[kn] ? '▾' : '▸') + '</span>' : '') + '</td>' +
         tre(t.n.naa, t.n.sammen, heltall, true) + tre(t.l.naa, t.l.sammen, heltall, false, true) + tre(t.kost.naa, t.kost.sammen, kr, false, true) + '</tr>';
       if (kan && apen[kn]) {
         var L = t.liste, vis = L.length > 8 && !apen[kn + '+'] ? L.slice(0, 5) : L;
@@ -112,12 +137,12 @@
         if (vis.length < L.length) h += '<tr data-mr="' + kn + '+" style="cursor:pointer"><td colspan="' + cols + '" style="padding:6px 26px;font-size:12px;color:#004225">+ ' + (L.length - vis.length) + ' andre kampanjer</td></tr>';
       }
     });
-    var bt = ';border-top:2px solid #004225';
-    h += '<tr style="font-weight:800"><td style="' + td.replace('right', 'left') + bt + '">Totalt</td>' + [[sum.n, heltall], [sum.l, heltall], [sum.k, kr]].map(function (x, ix) { return '<td style="' + td + bt + (ix ? skille : '') + (ix ? '' : ';font-size:15px') + '">' + x[1](x[0].naa) + '</td><td style="' + td + bt + '">' + x[1](x[0].sammen) + '</td><td style="' + td + bt + '">' + pil(x[0].naa, x[0].sammen, x[1]) + '</td>'; }).join('') + '</tr></tbody>';
-    root.innerHTML =
+    h += '</tbody>';
+    function peasyRad() { var bt = ';border-top:2px solid #004225'; return '<tr style="font-weight:800"><td style="' + td.replace('right', 'left') + bt + '">Peasy totalt</td>' + [[sum.n, heltall], [sum.l, heltall], [sum.k, kr]].map(function (x, ix) { return '<td style="' + td + bt + (ix ? skille : '') + (ix ? '' : ';font-size:15px') + '">' + x[1](x[0].naa) + '</td><td style="' + td + bt + '">' + x[1](x[0].sammen) + '</td><td style="' + td + bt + '">' + pil(x[0].naa, x[0].sammen, x[1]) + '</td>'; }).join('') + '</tr>'; }
+    root.innerHTML = headline(R) +
       '<div class="section-label">Hva skjer? Bestilte hent/lev per uke</div>' +
       '<div class="table-card" style="margin-bottom:18px"><div style="padding:8px 12px;overflow-x:auto"><table id="markrev-tab" style="width:100%;border-collapse:collapse;font-size:13px">' + h + '</table></div>' +
-      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første dag bilen kom på «på vei», én per internnr, avbestilte telles ikke. Kanal = der leadet kom fra (Peasy etter UTM). ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
+      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = Gire bestilt på / Levere selv (første dag på «på vei», avbestilte telles ikke), som morgenmailen. Kanal = der leadet kom fra (Peasy etter UTM). Uten UTM er lag (ofte forsinket betalt), ikke egen kanal i kr/bestilt. ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
       '<div class="section-label">Trend: bestilt per kanal, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
       kostHtml(R);
@@ -132,7 +157,7 @@
   /* c641 (Mike 22.10): kost per bestilt hent/lev uke for uke (12 uker). Google = Google-kost / Google-bestilt, Meta tilsvarende,
      Totalt = (Google + Meta) / alle bestilte. Mangler bestilte en uke, blir det et hull. Samme uker og bestilt-logikk som trenden. */
   function kostSerier(R) {
-    var Q = R.Q, alle = Q.uker.map(function (_, ix) { return KAN.reduce(function (s, k) { return s + (R.serie[k] ? R.serie[k][ix] : 0); }, 0); });
+    var Q = R.Q, alle = Q.uker.map(function (_, ix) { return PEASY.reduce(function (s, k) { return s + (R.serie[k] ? R.serie[k][ix] : 0); }, 0); });
     var del = function (k, n) { return n && k != null ? Math.round(k / n) : null; };
     return {
       Google: Q.uker.map(function (_, ix) { return { v: del(R.kostU.Google[ix], R.serie.Google[ix]), kost: R.kostU.Google[ix], n: R.serie.Google[ix] }; }),
@@ -158,7 +183,7 @@
     return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
       kalk + '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
-      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første gang bilen kom på «på vei». Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på alle bestilte. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
+      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første gang bilen kom på «på vei». Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy bestilt (Google + Meta + uten UTM). Partner (Drive, Ordna, AutoDB) er ute. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
   }
   /* c642 (Mike 22.10): kalkulator for kost per kontrakt. Valget lagres i localStorage, ikke på serveren. Mål 2 000 kr. */
   var KALK_MAAL = 2000;
@@ -198,5 +223,5 @@
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function (c) { var x = S[c.dataset.label][c.dataIndex]; return c.dataset.label + ': ' + kr(x.v) + ' kr per bestilt (kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt)'; } } } },
         scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return kr(v) + ' kr'; } } } } } });
   }
-  window.MARKREV = { render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier };
+  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier };
 })();
