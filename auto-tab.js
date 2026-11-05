@@ -14,8 +14,9 @@
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
   // c635 (Mike 21.10): én stopptekst, FSD først, BM bare hvis FSD mangler. Vises bare i den røde stopp-boksen.
   function auStoppGrunn(ag) { var f = ag && ag.fsd && ag.fsd.stopp ? (ag.fsd.stopp_grunn || '') : '', b = ag && ag.benchmark && ag.benchmark.stopp ? (ag.benchmark.stopp_grunn || '') : ''; return String(f || b || 'Stoppet').trim(); }
-  // c6xx (Mike 17.10): avvis = reparasjonsobjekt (Send låst, «Avvist», Mid/fossefall skjult) til Mike overstyrer med Sett Finn-pris / Antatt bud. tvil = priset, gul stripe, Send IKKE låst.
+  // c6xx (Mike 17.10): avvis = reparasjonsobjekt. tvil = priset, gul stripe, Send IKKE låst.
   // c689 (Mike 05.11): avvis kan overstyres med manuell Finn-pris eller antatt bud — samme vei som stopp.
+  // c692 (Mike 05.11): avvis er bare rødt varsel. Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. QA bestemmer.
   function auAvvis(ag) { return QaGronn.avvis(ag); }
   function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
   function auErManuell(ag, b) {
@@ -29,7 +30,8 @@
     var ag = b.agent;
     var manuell = auErManuell(ag, b); // c597/c604/c689: manuell | bud | _qaManuell (15 min)
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
-    var grunn = auAvvis(ag) && !manuell ? 'Reparasjonsobjekt: avvis bilen.' : manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
+    // c692: agent.avvis er aldri en SEND-lås. Uten pris i ERP gjelder samme vent som andre biler, til QA setter Finn-pris / antatt bud.
+    var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
@@ -66,12 +68,13 @@
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
     });
-    if (auAvvis(ag) && !manuell) {
-      [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) { if (k.textContent !== 'Avvist') k.textContent = 'Avvist'; });
+    /* c692: rødt varsel (badge), ikke lås. Knappetekst og disabled røres ikke av avvis. */
+    if (auAvvis(ag)) {
       [].forEach.call(c.querySelectorAll('div'), function (d) {
+        if (d.closest('.qa-send-btn, .au-send-topp, button')) return;
         if (d.children.length || !/border-radius:\s*6px/.test(d.getAttribute('style') || '') || !/color:\s*#fff/i.test(d.getAttribute('style') || '')) return;
         if (!/(VENTER ERP|PRIS MANUELT|QA|SEND|AVVIST)\s*$/.test((d.textContent || '').trim())) return;
-        if (d.textContent !== '⛔ AVVIST') { d.textContent = '⛔ AVVIST'; d.style.background = '#B8452F'; }
+        if (d.textContent !== '⛔ AVVIST') { d.textContent = '⛔ AVVIST'; d.title = 'Reparasjonsobjekt. QA bestemmer — avvis sperrer ikke SEND.'; d.style.background = '#B8452F'; }
       });
     }
     /* c689: Finn-pris / Antatt bud skal alltid kunne brukes, også når bilen er merket avvist. */
@@ -561,10 +564,10 @@
       var F = ag.fsd || {}, B = ag.benchmark || {};
       var bx = document.createElement('div'); bx.className = 'au-stopp-boks';
       bx.style.cssText = 'margin:8px 0;padding:10px 12px;background:#F8E6E1;border:1px solid #E0A99C;border-radius:8px;font-size:13px;line-height:1.45;color:#5A2A20';
-      if (auAvvis(ag)) bx.innerHTML = '<b>Avvist: reparasjonsobjekt. Ingen pris er skrevet til ERP.</b>' +
+      if (auAvvis(ag)) bx.innerHTML = '<b>Reparasjonsobjekt. Avvis er et varsel — QA bestemmer, SEND er ikke sperret.</b>' +
         '<div style="margin-top:4px">' + esc(auAvvisGrunn(ag)) + '</div>' +
         '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
-        '<div style="margin-top:6px;color:#004225"><b>Overstyr med «Sett Finn-pris» eller «Antatt bud» under</b> — da skrives Lav–høy til ERP og SEND låses opp.</div>';
+        '<div style="margin-top:6px;color:#004225"><b>Sett Finn-pris eller Antatt bud under</b> — da skrives Lav–høy til ERP, og SEND følger som for andre manuelt prisede biler.</div>';
       else {
         /* c615 (innsikt 19.10 punkt 2): «Trenger avklaring» + utkast til spørsmål til kunden. Bare et utkast: Mike kopierer og sender selv i ERP-chatten. */
         var sp = [];
@@ -1110,7 +1113,7 @@
         nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
-          (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — overstyr med Sett Finn-pris / Antatt bud under. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? (skG ? '<div class="au-skade-tekst" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_DEMPET.y.tekst + '">«' + esc(skG) + '»</div>' : '') : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? (skG ? '<div class="au-skade-tekst" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_DEMPET.y.tekst + '">«' + esc(skG) + '»</div>' : '') : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
