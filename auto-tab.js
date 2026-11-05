@@ -14,8 +14,8 @@
   function auStoppHvem(ag) { var f = ag && ag.fsd && ag.fsd.stopp, b = ag && ag.benchmark && ag.benchmark.stopp; return f && b ? 'FSD og BM' : f ? 'FSD' : b ? 'BM' : ''; }
   // c635 (Mike 21.10): én stopptekst, FSD først, BM bare hvis FSD mangler. Vises bare i den røde stopp-boksen.
   function auStoppGrunn(ag) { var f = ag && ag.fsd && ag.fsd.stopp ? (ag.fsd.stopp_grunn || '') : '', b = ag && ag.benchmark && ag.benchmark.stopp ? (ag.benchmark.stopp_grunn || '') : ''; return String(f || b || 'Stoppet').trim(); }
-  // c6xx (Mike 17.10): avvis = reparasjonsobjekt (Send låst, «Avvist», Mid/fossefall skjult) til Mike overstyrer med Sett Finn-pris / Antatt bud. tvil = priset, gul stripe, Send IKKE låst.
-  // c689 (Mike 05.11): avvis kan overstyres med manuell Finn-pris eller antatt bud — samme vei som stopp.
+  // c692 (Mike 05.11): avvis = reparasjonsobjekt er bare varsel (rød stripe og AVVIST-merke). Låser aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. QA avgjør.
+  // tvil = priset, gul stripe. c689: manuell Finn-pris eller antatt bud skriver fortsatt Lav–høy når ERP mangler.
   function auAvvis(ag) { return QaGronn.avvis(ag); }
   function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
   function auErManuell(ag, b) {
@@ -29,7 +29,8 @@
     var ag = b.agent;
     var manuell = auErManuell(ag, b); // c597/c604/c689: manuell | bud | _qaManuell (15 min)
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
-    var grunn = auAvvis(ag) && !manuell ? 'Reparasjonsobjekt: avvis bilen.' : manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
+    // c692: avvis er ikke en lås. Samme grunn som ellers (manuell åpner, stopp/Brreg/ERP kan fortsatt låse).
+    var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
@@ -66,20 +67,36 @@
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
       else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
     });
+    /* c692: merket er varsel. SEND-knappen skal aldri hete «Avvist» eller låses av avvis. */
     if (auAvvis(ag) && !manuell) {
-      [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) { if (k.textContent !== 'Avvist') k.textContent = 'Avvist'; });
       [].forEach.call(c.querySelectorAll('div'), function (d) {
         if (d.children.length || !/border-radius:\s*6px/.test(d.getAttribute('style') || '') || !/color:\s*#fff/i.test(d.getAttribute('style') || '')) return;
         if (!/(VENTER ERP|PRIS MANUELT|QA|SEND|AVVIST)\s*$/.test((d.textContent || '').trim())) return;
         if (d.textContent !== '⛔ AVVIST') { d.textContent = '⛔ AVVIST'; d.style.background = '#B8452F'; }
       });
     }
-    /* c689: Finn-pris / Antatt bud skal alltid kunne brukes, også når bilen er merket avvist. */
-    [].forEach.call(c.querySelectorAll('.qa-anker-input, .qa-bud-input, .qa-anker-btn, .qa-bud-btn'), function (el) {
-      el.disabled = false; el.removeAttribute('disabled'); el.readOnly = false; el.style.opacity = ''; el.style.pointerEvents = '';
+    [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
+      if ((k.textContent || '').trim() === 'Avvist') {
+        var arm2 = String(b.arm || 'A').toUpperCase(), who2 = arm2 === 'ORDNA' ? 'ORDNA' : arm2;
+        k.textContent = '📤 SEND ' + who2;
+      }
+      if (k.title === 'Reparasjonsobjekt: avvis bilen.') k.title = grunn || '';
     });
+    auPrisKnapperApne(c);
     var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
     if (tp && bn) { tp.disabled = bn.disabled; if (!bn.disabled) { tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor; } }
+  }
+  /* c692: Sett Finn-pris / Antatt bud (og raden de står i) skal kunne brukes selv når avvis=true uten manuell. */
+  function auPrisKnapperApne(c) {
+    [].forEach.call(c.querySelectorAll('.qa-anker-input, .qa-bud-input, .qa-anker-btn, .qa-bud-btn'), function (el) {
+      el.disabled = false; el.removeAttribute('disabled'); el.readOnly = false; el.style.opacity = ''; el.style.pointerEvents = 'auto'; el.style.cursor = '';
+      var rad = el.parentElement;
+      while (rad && rad !== c) {
+        if (rad.style && rad.style.display === 'none') rad.style.display = '';
+        if (rad.style) rad.style.pointerEvents = '';
+        rad = rad.parentElement;
+      }
+    });
   }
   /* c638 (Mike 22.10): «Manuelt endret» på kortet når prisen er satt for hånd (ERP-logg eller nettopp lagret),
      og «Lagret 330k – manuell» rett etter lagring til ny pris og fossefall er på kortet. */
@@ -152,6 +169,7 @@
     auFsdGraf(c, b, ag);
     auPrisTag(c, ag);
     auMidPris(c, b, ag);
+    auPrisKnapperApne(c);
     auChatAlle(c, b, ag);
     auOriginCv(c, b, ag);
     auEierPlass(c);
@@ -561,10 +579,10 @@
       var F = ag.fsd || {}, B = ag.benchmark || {};
       var bx = document.createElement('div'); bx.className = 'au-stopp-boks';
       bx.style.cssText = 'margin:8px 0;padding:10px 12px;background:#F8E6E1;border:1px solid #E0A99C;border-radius:8px;font-size:13px;line-height:1.45;color:#5A2A20';
-      if (auAvvis(ag)) bx.innerHTML = '<b>Avvist: reparasjonsobjekt. Ingen pris er skrevet til ERP.</b>' +
+      if (auAvvis(ag)) bx.innerHTML = '<b>Varsel: reparasjonsobjekt. Ingen pris er skrevet til ERP.</b>' +
         '<div style="margin-top:4px">' + esc(auAvvisGrunn(ag)) + '</div>' +
         '<div style="margin-top:4px">FSD ' + (F.pris ? auKr(F.pris) : '–') + ' · BM ' + (B.pris ? auKr(B.pris) : '–') + '</div>' +
-        '<div style="margin-top:6px;color:#004225"><b>Overstyr med «Sett Finn-pris» eller «Antatt bud» under</b> — da skrives Lav–høy til ERP og SEND låses opp.</div>';
+        '<div style="margin-top:6px;color:#004225"><b>QA avgjør.</b> Sett Finn-pris eller Antatt bud under for å skrive Lav–høy. Avvis låser ikke SEND.</div>';
       else {
         /* c615 (innsikt 19.10 punkt 2): «Trenger avklaring» + utkast til spørsmål til kunden. Bare et utkast: Mike kopierer og sender selv i ERP-chatten. */
         var sp = [];
