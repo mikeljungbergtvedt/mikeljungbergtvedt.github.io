@@ -7,6 +7,7 @@
     s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:auto!important;width:auto!important;min-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:5px 6px 5px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12.5px!important;background:none}table.au-tv2 th{font-size:11px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important}table.au-tv th,table.au-tv td{padding:4px 4px 4px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:12px!important}table.au-tv th{font-size:11px!important;color:#5E6B62!important;background:none!important}';
     (document.head || document.documentElement).appendChild(s);
   })();
+  // c686 (05.11): merke, modell og årsmodell først i QA-kortets header, før FSD/Bench.
   // c685 (04.11): heftelser fra Brreg (auto-score.json: b.brreg.status ok|feil|mangler). Feil → rød merking på kortet og Send sperret. Funn vises ikke.
   // c606 (Mike 16.10): stopp fra FSD eller BM behandles likt (ingen pris skrives, kortet viser stoppet og grunnen).
   function auStopp(ag) { return QaGronn.stopp(ag); }
@@ -1087,7 +1088,11 @@
         var skG = (b.skade_egen && !pmG && !auAvvis(agF) && !auStopp(agF)) ? (b.skade_tekst || '') : null;
         if (skG != null) { rute = 'Skade egenerklæring'; hF = AU_DEMPET.y.tekst; hB = AU_DEMPET.y.bak; hK = AU_DEMPET.y.kant; }
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
-        var midt0 = ['FSD ' + kk(fP0), 'Bench ' + kk(bP0)];
+        // c686 (05.11): merke, modell og årsmodell først i headeren, før FSD/Bench.
+        var navn0 = String(b.bil || '').replace(/\s+/g, ' ').trim();
+        var aar0 = (agF.bil && agF.bil.kilde !== 'vegvesen' && agF.bil.modellaar) || agF.erp_aar || null;
+        if (navn0 && aar0 && !/\b(19|20)\d{2}\b/.test(navn0)) navn0 += ' ' + aar0;
+        var midt0 = (navn0 ? [navn0] : []).concat(['FSD ' + kk(fP0), 'Bench ' + kk(bP0)]);
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
         nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
