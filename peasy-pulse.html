@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c694</title>
+<title>Peasy Pulse v16.08.c695</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c694';</script>
+<script>document.title='Peasy Pulse v16.08.c695';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -563,7 +563,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c694</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c695</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -636,7 +636,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c694</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c695</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -1702,7 +1702,8 @@ window.MARK_V16_04 = (function(){
   window._paErpLocs = window._paErpLocs || {}; // regnr -> location_id
   window._paErpEta = window._paErpEta || {}; // regnr -> estimated_time_arrival
   window._paAukDates = window._paAukDates || {}; // internnr/regnr -> auksjonsdato
-  async function paFetchAllErpLocs() {
+  var _paLocsOnce = null;
+  async function paFetchAllErpLocsNow() {
     var results = await Promise.all(Object.keys(PA_ERP_LIST_TO_ENDPOINT).map(function(lid){
       var endpoint = PA_ERP_LIST_TO_ENDPOINT[lid];
       return fetch(PA_PROXY_ERP + endpoint, {headers:{'X-QA-Enhet': paEnhet()}})
@@ -1793,6 +1794,15 @@ window.MARK_V16_04 = (function(){
     window._paErpLocs = map;
     return map;
   }
+  function paFetchAllErpLocs() {
+    if (_paLocsOnce) { var p = _paLocsOnce; _paLocsOnce = null; return p; }
+    return paFetchAllErpLocsNow();
+  }
+  /* c695: første henting kan starte sammen med loadData når QA-fanen er åpen. Neste kall henter på nytt. */
+  window.paPrefetchErp = function(){
+    if (!_paLocsOnce) _paLocsOnce = paFetchAllErpLocsNow();
+    return _paLocsOnce;
+  };
 
   // Augmenter Pulse pipe-uavklart-tabell med Bilens stasted-kolonne
   function paAugmentUavklartTbl() {
@@ -4576,6 +4586,10 @@ function whenXlsxReady(fn){
   })();
 }
 whenXlsxReady(function(){
+  if(currentMode==='qa'){
+    try{ if(typeof window.paPrefetchErp==='function') window.paPrefetchErp(); }catch(ePf){}
+    try{ if(typeof window.qaArmPrefetch==='function') window.qaArmPrefetch(); }catch(eQa){}
+  }
   loadConfig().then(function(){return loadData();}).then(function(rows){var _t0=performance.now();render(processData(rows),rows);console.log('render(processData(_lastRows), _lastRows)', Math.round(performance.now()-_t0)+' ms');if(currentMode&&currentMode!=='ops'){try{setMode(currentMode);}catch(eM){}}}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 });
 
@@ -8955,7 +8969,7 @@ async function sosialHide(ix){
 }
 async function updateSosialStatus(){
   try{
-    var r=await fetch(sosialBase()+'/status?t='+Date.now(),{headers:{'X-QA-Enhet': paEnhet()}});
+    var r=await fetch(sosialBase()+'/status?t='+Date.now(),{headers:{'X-QA-Enhet': paEnhet()},signal:AbortSignal.timeout(8000)});
     var j=await r.json();
     if(typeof j.unanswered==='number') paintSosialBadge(j.unanswered);
   }catch(e){ /* header-pill tåler pause */ }
@@ -9461,7 +9475,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c694</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c695</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -11088,6 +11102,115 @@ setTimeout(tick,1500);setInterval(tick,5000);
   window.qaOpenListe3 = qaOpenListe3;
   window.qaInstallSentGate = qaInstallSentGate;
 
+  /* c695: samme GET-kall som loadQA, startet når siden åpnes på QA-fanen. Ingen POST, ingen SEND. */
+  window.qaArmPrefetch = function(){
+    if (window._qaWarm) return window._qaWarm;
+    var PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
+    var miniBase = PA_PROXY_ERP.replace(/\/list\/?$/,'');
+    var tFetch = Date.now();
+    function qaAbortAfter(ms){
+      var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+      if (!ctrl) return null;
+      var timer = setTimeout(function(){ try { ctrl.abort(); } catch (eA) {} }, ms);
+      if (ctrl.signal && ctrl.signal.addEventListener) ctrl.signal.addEventListener('abort', function(){ clearTimeout(timer); });
+      return ctrl.signal;
+    }
+    function qaMiniInit(ms){
+      var o = { headers: { 'X-QA-Enhet': paEnhet() } };
+      var sig = qaAbortAfter(ms);
+      if (sig) o.signal = sig;
+      return o;
+    }
+    function qaParseJsonl(text){
+      if (!text) return [];
+      return text.split('\n').filter(Boolean).map(function(l){ try { return JSON.parse(l); } catch (eL) { return null; } }).filter(Boolean);
+    }
+    function qaFetchText(u, opts){
+      return fetch(u, opts || {}).then(function(r){ return (r && r.ok) ? r.text() : Promise.reject(); });
+    }
+    function qaJsonl(url, fb){
+      var fbUrl = fb ? (fb + (fb.indexOf('?') >= 0 ? '&' : '?') + 't=' + tFetch) : '';
+      function fromFallback(){
+        if (!fbUrl) return Promise.resolve([]);
+        var fbOpts = {};
+        var fbSig = qaAbortAfter(25000);
+        if (fbSig) fbOpts.signal = fbSig;
+        return qaFetchText(fbUrl, fbOpts).then(qaParseJsonl).catch(function(){ return []; });
+      }
+      return qaFetchText(url, qaMiniInit(12000)).then(function(text){
+        var rows = qaParseJsonl(text);
+        if (rows.length) return rows;
+        return fromFallback();
+      }).catch(function(){ return fromFallback(); });
+    }
+    function qaJsonAuth(path){
+      return fetch(miniBase + path, qaMiniInit(8000)).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+    }
+    function openCars(listJ, odJ){
+      var odOk = !!(odJ && Array.isArray(odJ.biler));
+      var open = qaInstallSentGate(listJ.biler || [], odOk ? odJ.biler : [], odOk);
+      return qaOpenListe3(open).filter(function(b){ return !qaSentRecently(b); });
+    }
+    function meas(src, bigUrl, fb, cars){
+      var ids = [], regs = [];
+      (cars || []).forEach(function(b){
+        var id = b && (b.id != null ? b.id : b.erpId);
+        if (id != null && /^\d{1,9}$/.test(String(id)) && ids.indexOf(String(id)) < 0) ids.push(String(id));
+        var rg = String((b && (b.registration_number || b.regnr)) || '').toUpperCase().replace(/\s+/g, '');
+        if (/^[A-Z0-9]{2,10}$/.test(rg) && regs.indexOf(rg) < 0) regs.push(rg);
+      });
+      window._qaMeasKilde = window._qaMeasKilde || {};
+      if (!ids.length && !regs.length) {
+        window._qaMeasKilde[src] = 'full';
+        return qaJsonl(bigUrl, fb);
+      }
+      var u = miniBase + '/qa/meas?src=' + src + '&ids=' + ids.join(',') + '&regs=' + regs.join(',') + '&t=' + tFetch;
+      return fetch(u, qaMiniInit(10000)).then(function(r){
+        if (!r || !r.ok) return Promise.reject();
+        return r.text();
+      }).then(function(text){
+        window._qaMeasKilde[src] = 'liste3';
+        return qaParseJsonl(text);
+      }).catch(function(){
+        window._qaMeasKilde[src] = 'full';
+        return qaJsonl(bigUrl, fb);
+      });
+    }
+    var listsP = Promise.all([
+      qaFetchList(PA_PROXY_ERP, '', 'final_estimate'),
+      qaFetchList(PA_PROXY_ERP, '', 'order_delivery')
+    ]);
+    var finnP = qaJsonAuth('/finn-links');
+    var sigP = qaJsonAuth('/signaler');
+    var auksjonP = qaJsonAuth('/qa/auksjon');
+    var aiFrom = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+    var aiP = fetch(miniBase + '/ai-usage?from=' + encodeURIComponent(aiFrom) + '&t=' + tFetch, qaMiniInit(8000)).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; });
+    var restP = listsP.then(function(fetched){
+      var listJ = fetched && fetched[0];
+      if (!listJ || !Array.isArray(listJ.biler)) return null;
+      var cars = openCars(listJ, fetched[1]);
+      var seen = {};
+      var bilJobs = [];
+      cars.forEach(function(b){
+        var reg = String(b.registration_number || b.regnr || '').toUpperCase().replace(/\s+/g, '');
+        if (!reg || seen[reg]) return;
+        seen[reg] = 1;
+        bilJobs.push(fetch(miniBase + '/bil?regnr=' + encodeURIComponent(reg), qaMiniInit(8000)).then(function(r){
+          return (r && r.ok) ? r.json() : null;
+        }).catch(function(){ return null; }).then(function(payload){
+          return { reg: reg, id: b.id, payload: payload };
+        }));
+      });
+      return {
+        measV2: meas('v2', miniBase + '/measurements?t=' + tFetch, 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl', cars),
+        measV3g: meas('v3g', miniBase + '/v3g-measurements?t=' + tFetch, 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl', cars),
+        bilP: Promise.all(bilJobs)
+      };
+    }).catch(function(){ return null; });
+    window._qaWarm = { listsP: listsP, finnP: finnP, sigP: sigP, auksjonP: auksjonP, aiP: aiP, restP: restP, used: false };
+    return window._qaWarm;
+  };
+
   window.loadQA = async function(force){
     if (window._qaLoading) return;
     if (!force && window._qaReady && window._qaListOk && document.querySelector('#qa-cards .qa-card')) {
@@ -11113,7 +11236,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
       const PA_PROXY_ERP = 'https://mike-sin-mac-mini.tail3fb404.ts.net:8443/list/';
       const PA_TOKEN_ERP = '';
       var qaKeepCards = false;
-      var fetched = await Promise.all([
+      var warm = (window._qaWarm && !window._qaWarm.used) ? window._qaWarm : null;
+      if (warm) warm.used = true;
+      var fetched = warm ? await warm.listsP : await Promise.all([
         qaFetchList(PA_PROXY_ERP, PA_TOKEN_ERP, 'final_estimate'),
         qaFetchList(PA_PROXY_ERP, PA_TOKEN_ERP, 'order_delivery')
       ]);
@@ -11515,7 +11640,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
         return null;
       }
       /* c451: /bil is small and already carries fossefall. Do not wait for the 32MB jsonl. */
-      function qaHydrateFossefallFromBil(cars){
+      function qaApplyBilRows(rows){
+        (rows || []).forEach(function(row){
+          if (!row) return;
+          var ff = qaPayloadFossefall(row.payload);
+          if (!ff) return;
+          var payload = row.payload;
+          var ts = (payload && (payload.timestamp || payload.updated_at || payload.measured_at)) || (ff && ff.timestamp) || '';
+          qaRememberFossefall(qaInternKey(row.id), { fossefall: ff, timestamp: ts, regnr: row.reg, erpId: row.id });
+        });
+        if (!qaKeepCards) { try { paintQACards(); } catch (eEarly) {} }
+      }
+      function qaHydrateFossefallFromBil(cars, rowsP){
+        if (rowsP) {
+          return Promise.resolve(rowsP).then(function(rows){
+            if (!rows) return qaHydrateFossefallFromBil(cars, null);
+            qaApplyBilRows(rows);
+          }).catch(function(){ return qaHydrateFossefallFromBil(cars, null); });
+        }
         var seen = {};
         var jobs = [];
         (cars || []).forEach(function(b){
@@ -11561,17 +11703,24 @@ setTimeout(tick,1500);setInterval(tick,5000);
           return qaJsonl(bigUrl, fb);
         });
       }
-      var bilFfP = qaHydrateFossefallFromBil(liste3);
+      var v2Url = miniBase+'/measurements?t='+tFetch, v2Fb = 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl';
+      var v3Url = miniBase+'/v3g-measurements?t='+tFetch, v3Fb = 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl';
+      var bilRowsP = (warm && warm.restP) ? warm.restP.then(function(rest){ return rest && rest.bilP ? rest.bilP : null; }) : null;
+      var bilFfP = qaHydrateFossefallFromBil(liste3, bilRowsP);
       var _aiFrom = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+      function warmOr(key, fallback){
+        if (!warm || !warm.restP) return fallback();
+        return warm.restP.then(function(rest){ return (rest && rest[key]) ? rest[key] : fallback(); });
+      }
       var pack = await Promise.all([
-        qaMeasListe3('v2', miniBase+'/measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v2-measurements.jsonl'),
-        qaMeasListe3('v3g', miniBase+'/v3g-measurements?t='+tFetch, 'https://mikeljungbergtvedt.github.io/v3g-measurements.jsonl'),
+        warmOr('measV2', function(){ return qaMeasListe3('v2', v2Url, v2Fb); }),
+        warmOr('measV3g', function(){ return qaMeasListe3('v3g', v3Url, v3Fb); }),
         Promise.resolve([]),
         Promise.resolve([]),
-        qaJsonAuth('/finn-links'),
-        qaJsonAuth('/signaler'),
-        fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch, qaMiniInit(8000)).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; }),
-        qaJsonAuth('/qa/auksjon'),
+        (warm && warm.finnP) ? warm.finnP : qaJsonAuth('/finn-links'),
+        (warm && warm.sigP) ? warm.sigP : qaJsonAuth('/signaler'),
+        (warm && warm.aiP) ? warm.aiP : fetch(miniBase+'/ai-usage?from='+encodeURIComponent(_aiFrom)+'&t='+tFetch, qaMiniInit(8000)).then(function(r){ return (r && r.ok) ? r.json() : null; }).catch(function(){ return null; }),
+        (warm && warm.auksjonP) ? warm.auksjonP : qaJsonAuth('/qa/auksjon'),
         bilFfP
       ]);
       var measRecs = pack[0] || [];
