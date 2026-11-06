@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c692</title>
+<title>Peasy Pulse v16.08.c693</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c692';</script>
+<script>document.title='Peasy Pulse v16.08.c693';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -537,7 +537,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c692</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c693</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -610,7 +610,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c692</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c693</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -2829,7 +2829,9 @@ function parseDLow(val){if(!val||val==='-')return null;var s=String(val).replace
 /* c424: ERP-datoer er norsk vegg-klokke. Bygg LOKAL midnatt (Y,M-1,D) i stedet for
    new Date('YYYY-MM-DD'), som ISO-parses som UTC og forskyver dagen i negative tidssoner. */
 function parseDate(val){if(!val)return null;var s=String(val).trim().slice(0,10);var parts=s.split('.');if(parts.length!==3)return null;var d=new Date(parseInt(parts[2],10),parseInt(parts[1],10)-1,parseInt(parts[0],10));return isNaN(d.getTime())?null:d;}
-function pulseTodayYmd(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});}
+/* c693: én Intl-formatter per minutt. pulseIsToday kalles ~110 000 ganger per render. */
+var _tdy=null,_tdyT=0;
+function pulseTodayYmd(){var n=Date.now();if(!_tdy||n-_tdyT>60000){_tdy=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});_tdyT=n;}return _tdy;}
 function pulseCellYmd(v){
   if(v==null||v==='') return null;
   var s=String(v).trim();
@@ -2881,7 +2883,7 @@ function opsIDag(rows){
   var harId={}; all.forEach(function(r){harId[String(r[0]).trim()]=1;});
   var KILDE={peasy:'peasy',driveno:'driveno',ordna:'ordna',autodb:'autodb'};
   Object.keys(wLead).forEach(function(id){ if(harId[id]) return; var x=wLead[id]; if(!x.kilde||!KILDE[x.kilde]) return;
-    var r=[]; r[0]=Number(id); r[1]=x.regnr||''; r[11]=x.kilde; r[14]=new Date(x.ts).toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace(',',''); r._wh=true; all.push(r); });
+    var r=[]; r[0]=Number(id); r[1]=x.regnr||''; r[11]=x.kilde; r[14]=osloNbStamp(x.ts); r._wh=true; all.push(r); });
   var leadIdag=function(r){return !!wLead[String(r[0]).trim()]||pulseIsToday(r[14]);};
   var peasy=all.filter(function(r){return leadIdag(r)&&k(r)==='peasy';});
   var drive=all.filter(function(r){return leadIdag(r)&&k(r)==='drive';});
@@ -3288,10 +3290,12 @@ function parseRejectedAt(iso){
   if(isNaN(d.getTime())) d=new Date(String(iso).replace(' ','T'));
   return isNaN(d.getTime())?null:d;
 }
+var _osloNbDayFmt=null;
 function fmtRejectedAtOslo(iso){
   var d=parseRejectedAt(iso);
   if(!d) return '-';
-  return d.toLocaleDateString('nb-NO',{day:'numeric',month:'short',timeZone:'Europe/Oslo'});
+  if(!_osloNbDayFmt) _osloNbDayFmt=new Intl.DateTimeFormat('nb-NO',{day:'numeric',month:'short',timeZone:'Europe/Oslo'});
+  return _osloNbDayFmt.format(d);
 }
 function pct(n,of){return of?Math.round(n/of*100):0;}
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:null;}
@@ -4546,7 +4550,7 @@ function whenXlsxReady(fn){
   })();
 }
 whenXlsxReady(function(){
-  loadConfig().then(function(){return loadData();}).then(function(rows){render(processData(rows),rows);if(currentMode&&currentMode!=='ops'){try{setMode(currentMode);}catch(eM){}}}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
+  loadConfig().then(function(){return loadData();}).then(function(rows){var _t0=performance.now();render(processData(rows),rows);console.log('render(processData(_lastRows), _lastRows)', Math.round(performance.now()-_t0)+' ms');if(currentMode&&currentMode!=='ops'){try{setMode(currentMode);}catch(eM){}}}).catch(function(err){document.getElementById('app').innerHTML='<div style="text-align:center;padding:60px;color:#C62828">Kunne ikke hente data: '+err.message+'<br><small style="color:#999">CORS kan blokkere direkte API-kall fra nettleser.</small></div>';});
 });
 
 function _kartDefaultRegioner(){
@@ -5348,7 +5352,8 @@ function liste16RejectedDayOf(iso){
     if(isNaN(d.getTime())) d=new Date(String(iso).replace(' ','T'));
     if(isNaN(d.getTime())) return String(iso).slice(0,10);
   }
-  return d.toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+  if(!_osloSvYmdFmt) _osloSvYmdFmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo'});
+  return _osloSvYmdFmt.format(d);
 }
 function liste16MapRejectedCar(b){
   var dd=b.drive_no_car_data||{};
@@ -5369,8 +5374,16 @@ window.liste16AvvistRecent=function(){
     return (db?db.getTime():0)-(da?da.getTime():0);
   });
 };
+var _osloSvYmdFmt=null;
+var _osloNbStampFmt=null;
+function osloNbStamp(ts){
+  var d=new Date(ts);
+  if(isNaN(d.getTime())) return new Date(ts).toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace(',','');
+  if(!_osloNbStampFmt) _osloNbStampFmt=new Intl.DateTimeFormat('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return _osloNbStampFmt.format(d).replace(',','');
+}
 window.liste16AvvistToday=function(){
-  var today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'});
+  var today=pulseTodayYmd();
   var out=window.liste16AvvistRecent().filter(function(row){
     return liste16RejectedDayOf(row._rejectedAt)===today;
   });
@@ -7202,13 +7215,14 @@ function fmtKrV2(n){
   return Math.round(Number(n)).toLocaleString('nb-NO')+' kr';
 }
 
+var _fmtPrisetV2=null;
 function fmtPrisetV2(ts){
   if(!ts)return '—';
   var d=new Date(ts);
   if(isNaN(d.getTime()))return '—';
   try{
-    var s=d.toLocaleString('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    return s.replace(', ',' ');
+    if(!_fmtPrisetV2) _fmtPrisetV2=new Intl.DateTimeFormat('nb-NO',{timeZone:'Europe/Oslo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return _fmtPrisetV2.format(d).replace(', ',' ');
   }catch(e){return d.toISOString().slice(0,16).replace('T',' ');}
 }
 
@@ -9421,7 +9435,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c692</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c693</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
