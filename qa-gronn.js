@@ -19,6 +19,37 @@
     if (b.skade_egen && n === 'g') n = 'y'; /* c678: skade i egenerklæringen er aldri grønn */
     return n;
   }
-  var api = { stopp: stopp, avvis: avvis, tvil: tvil, terskel: terskel, avvik: avvik, nivaa: nivaa };
+  /* c696: drift-pause stopper auto-skriving. Manuell QA (Sett Finn-pris / bud) skal ikke låses av det.
+     SEND krever fortsatt bekreftet Lav/Høy fra Mini (/qa/anker) eller erp.skrevet / erp_lav. */
+  function driftPause(erp) {
+    if (!erp) return false;
+    return erp.grunn === 'drift-pause' || erp.blokkert === 'drift-pause';
+  }
+  function verifisertSkriv(lokal) {
+    return !!(lokal && Number(lokal.dLav) > 0 && Number(lokal.dHoy) > 0);
+  }
+  function manuellSend(ag, b, lokal, now) {
+    now = now || Date.now();
+    if (verifisertSkriv(lokal)) {
+      if (now - (lokal.t || 0) < 15 * 60000) return true;
+      if (!(ag && ag.erp && ag.erp.skrevet === true)) return true;
+    }
+    if (ag && ag.pris_kilde && /^(manuell|bud)$/.test(String(ag.pris_kilde.kilde || '')) && b && Number(b.erp_lav) > 0) return true;
+    /* Pris ligger i ERP (lav og høy), og den eneste auto-score-sperren er drift-pause. Ikke stopp. */
+    if (b && Number(b.erp_lav) > 0 && Number(b.erp_hoy) > 0 && ag && driftPause(ag.erp) && !stopp(ag)) return true;
+    return false;
+  }
+  function sendLas(ag, b, lokal, now) {
+    if (manuellSend(ag, b, lokal, now)) return '';
+    if (!ag) return 'Venter på FSD og Benchmark';
+    if (stopp(ag)) return 'stopp';
+    if (ag.erp && ag.erp.tidligere_avvist) return 'tidligere';
+    if (!(ag.erp && ag.erp.skrevet)) {
+      if (driftPause(ag.erp)) return 'drift-pause';
+      return 'Pris er ikke skrevet til ERP ennå';
+    }
+    return '';
+  }
+  var api = { stopp: stopp, avvis: avvis, tvil: tvil, terskel: terskel, avvik: avvik, nivaa: nivaa, driftPause: driftPause, verifisertSkriv: verifisertSkriv, manuellSend: manuellSend, sendLas: sendLas };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.QaGronn = api;
 })(typeof self !== 'undefined' ? self : this);

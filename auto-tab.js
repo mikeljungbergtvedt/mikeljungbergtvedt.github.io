@@ -21,8 +21,7 @@
   function auAvvisGrunn(ag) { var r = []; if (ag && ag.fsd && ag.fsd.avvis) r.push('FSD: ' + (ag.fsd.avvis_grunn || 'reparasjonsobjekt')); if (ag && ag.benchmark && ag.benchmark.avvis) r.push('BM: ' + (ag.benchmark.avvis_grunn || 'reparasjonsobjekt')); return r.join(' · '); }
   function auErManuell(ag, b) {
     var lokal = window._qaManuell && window._qaManuell[String((b && b.id) || '')];
-    if (lokal && Date.now() - lokal.t < 15 * 60000 && lokal.dLav > 0) return true;
-    return !!(ag && ag.pris_kilde && /^(manuell|bud)$/.test(ag.pris_kilde.kilde || '') && b && b.erp_lav);
+    return QaGronn.manuellSend(ag, b, lokal, Date.now());
   }
   function auTvil(ag) { return QaGronn.tvil(ag); }
   // c578: Send er låst til FSD har priset bilen (ikke stoppet) og pris er skrevet til ERP (Mike 13.10).
@@ -31,7 +30,8 @@
     var manuell = auErManuell(ag, b); // c597/c604/c689: manuell | bud | _qaManuell (15 min)
     // Manuell Finn-pris (skrevet til ERP) låser alltid opp, også når FSD har stoppet bilen.
     // c692: agent.avvis er aldri en SEND-lås. Uten pris i ERP gjelder samme vent som andre biler, til QA setter Finn-pris / antatt bud.
-    var grunn = manuell ? '' : !ag ? 'Venter på FSD og Benchmark' : auStopp(ag) ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : (ag.erp && ag.erp.tidligere_avvist) ? ('Tidligere avvist av kunden – Mike avgjør. ' + (ag.erp.grunn || '')) : !(ag.erp && ag.erp.skrevet) ? 'Pris er ikke skrevet til ERP ennå' : ''; // c616
+    var las = QaGronn.sendLas(ag, b, window._qaManuell && window._qaManuell[String(b && b.id)], Date.now());
+    var grunn = las === 'stopp' ? (auStoppHvem(ag) + ' har stoppet bilen. Sett Finn-pris manuelt.') : las === 'tidligere' ? ('Tidligere avvist av kunden – Mike avgjør. ' + ((ag.erp && ag.erp.grunn) || '')) : las === 'drift-pause' ? 'Auto-skriving er pauset (drift-pause). Sett Finn-pris eller Antatt bud skriver Lav/Høy til ERP. SEND blir aktiv når Lav og Høy er bekreftet.' : las;
     /* c602 (Mike 15.10): manuelt priset i QA (Sett Finn-pris / Antatt bud) og ERP har lav/høy → SEND nede (og oppe) er aktiv,
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
@@ -973,7 +973,7 @@
       if (topp && ekte) { topp.disabled = ekte.disabled; var et = (ekte.innerText || '').trim(); if (et && topp.textContent !== et) topp.textContent = et; var ecs = getComputedStyle(ekte); if (topp.style.backgroundColor !== ecs.backgroundColor) topp.style.backgroundColor = ecs.backgroundColor; if (topp.style.color !== ecs.color) topp.style.color = ecs.color; topp.style.cursor = ekte.disabled ? 'not-allowed' : 'pointer'; }
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
-      var merker = auMerker(c);
+      var merker = auMerker(c).filter(function (m) { return m.t.indexOf('Selgerkommentar') < 0; });
       var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk, b.agent.erp] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + (b.skade_egen ? 'S' + (b.skade_tekst || '') : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
@@ -1195,6 +1195,7 @@
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
     }
   }
+  window.auMerkQaKort = auMerkQaKort;
   setInterval(auMerkQaKort, 1500);
 
   // Hva kunden gjorde: status fra ERP og grunn (valg + egne ord). Oppdateres hvert 10. min på Mini.
