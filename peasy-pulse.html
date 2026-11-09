@@ -12570,6 +12570,31 @@ setTimeout(tick,1500);setInterval(tick,5000);
     }
   }
 
+  /* c695 (Mike 09.11): felles fjerning etter vellykket SEND eller Avvis. Bilen ut av liste 3 i minnet og localStorage, kortet tones ut og fjernes, telleren oppdateres. */
+  function qaFjernKort(erpId, card){
+    try {
+      var rawNow = Array.isArray(window._qaList3Raw) ? window._qaList3Raw : null;
+      if (!rawNow) { var cc = JSON.parse(localStorage.getItem(QA_LIST3_LS) || 'null'); rawNow = (cc && Array.isArray(cc.biler)) ? cc.biler : null; }
+      if (rawNow) {
+        window._qaList3Raw = rawNow.filter(function(b){ return String(qaErpId(b)) !== String(erpId); });
+        qaSaveList3Raw(window._qaList3Raw);
+      }
+    } catch (eRaw) {}
+    if (card) {
+      setTimeout(function(){
+        card.style.transition = 'opacity .22s ease, transform .22s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(-8px)';
+        setTimeout(function(){
+          card.remove();
+          var left = document.querySelectorAll('#qa-cards .qa-card').length;
+          var sumEl = document.getElementById('qa-summary');
+          if (sumEl) sumEl.textContent = left + ' biler på liste 3 (usendte, eldste øverst)';
+        }, 240);
+      }, 450);
+    }
+  }
+  window.qaFjernKort = qaFjernKort;
   window.qaSend = function(btn){ return qaSend(btn); }; /* c602: auto-tab låser opp SEND ved manuell pris */
   async function qaSend(btn){
     if (!btn || btn.disabled) return;
@@ -12602,27 +12627,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       btn.style.cursor = 'default';
       btn.disabled = true;
       /* c465: SEND bekreftet av Mini (ERP confirm OK) → fjern kortet, fjern bilen fra lagret liste 3, last liste 3 på nytt fra ERP. */
-      try {
-        var rawNow = Array.isArray(window._qaList3Raw) ? window._qaList3Raw : null;
-        if (!rawNow) { var cc = JSON.parse(localStorage.getItem(QA_LIST3_LS) || 'null'); rawNow = (cc && Array.isArray(cc.biler)) ? cc.biler : null; }
-        if (rawNow) {
-          window._qaList3Raw = rawNow.filter(function(b){ return String(qaErpId(b)) !== String(erpId); });
-          qaSaveList3Raw(window._qaList3Raw);
-        }
-      } catch (eRaw) {}
-      if (card) {
-        setTimeout(function(){
-          card.style.transition = 'opacity .22s ease, transform .22s ease';
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(-8px)';
-          setTimeout(function(){
-            card.remove();
-            var left = document.querySelectorAll('#qa-cards .qa-card').length;
-            var sumEl = document.getElementById('qa-summary');
-            if (sumEl) sumEl.textContent = left + ' biler på liste 3 (usendte, eldste øverst)';
-          }, 240);
-        }, 450);
-      }
+      qaFjernKort(erpId, card); /* c695: felles med Avvis */
       /* c507: ingen full omlasting etter SEND (alt blinket 1–2 ganger). Kortet er fjernet og liste 3 er oppdatert lokalt;
          neste vanlige oppdatering henter ERP på nytt. */
     }catch(e){
@@ -13471,7 +13476,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <script src="laering-tab.js?v=c618"></script>
 <script src="gb-ml-tab.js?v=c492"></script>
 <script src="qa-gronn.js?v=c682"></script>
-<script src="auto-tab.js?v=c694"></script>
+<script src="auto-tab.js?v=c695"></script>
 <script src="marked-rev.js?v=c691"></script>
 <script src="fsdbud-tab.js?v=c659"></script>
 <script src="bud-tab.js?v=202609291753"></script>

@@ -479,10 +479,18 @@
     /* c629 (Mike 21.10): kommentaren er INTERN i ERP. Kort og saklig, ingen hilsen, ingen du/dere, ingen beklagelse. */
     auQaDialog('<b>Er du sikker på at bilen skal avvises?</b><div style="margin-top:6px">ERP sender da automatisk kundemailen «Vi har avsluttet saken …» til kunden.</div><div style="margin-top:8px;font-weight:700">Intern kommentar i ERP (påkrevd)</div><div style="margin-top:4px;font-size:12px;color:#5E6B62">Vises ikke for kunden. Kort og saklig, f.eks. «Avvist: duplikat av #5583» eller «Avvist: reparasjonsobjekt (motorstopp)».</div><textarea rows="2" placeholder="Avvist: …" style="width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #bbb;border-radius:6px">' + esc(forslag || '') + '</textarea>', 'Avvis bilen', function (o) { return !!o.querySelector('textarea').value.trim(); }).then(function (svar) {
       if (!svar || !svar.verdi) return;
+      var card = st.closest ? st.closest('.qa-card') : null; /* c695 (Mike 09.11): kortet forsvinner etter avvis uten reload */
       opptatt(true); st.textContent = 'Avviser …';
+      if (card) card.style.opacity = '0.4';
       auQaPost('/avvis', { internnr: id, kommentar: svar.verdi, bekreftet: true }).then(function (j) {
         opptatt(false);
-        st.innerHTML = (j && j.ok) ? '<b style="color:#004225">Avvist i ERP.</b>' : feil(j);
+        if (j && j.ok) {
+          st.innerHTML = '<b style="color:#004225">Avvist i ERP.</b>';
+          if (window.qaFjernKort) window.qaFjernKort(id, card);
+        } else {
+          if (card) card.style.opacity = '';
+          st.innerHTML = feil(j);
+        }
       });
     });
   }
