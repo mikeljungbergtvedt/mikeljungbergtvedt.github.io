@@ -1,3 +1,4 @@
+/* c701 (Mike 10.11): Vekstloop dag-for-dag: eiertid_år (SD mottatt, eller i dag om SD mangler, minus «Eier siden», én desimal) i målgruppe (3–15 år, AR mid 70–400k, eiertid ≥ 2). Ukjent eiertid telles ikke med. Samme definisjon som vekstloop-uke.js.
 /* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
 /* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
 /* Peasy Pulse — Marked (ny), c601 (bestilt, leads og kost: inneværende uke mot samme dager forrige uke, med pil. Ingen kr per bestilt). c600 (tabellen: bare inneværende uke mot samme dager forrige uke; ukene står i grafen). c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
@@ -272,9 +273,10 @@
   }
   function vlEiertid(eierSiden, ref) {
     var d = vlParse(eierSiden); if (!d || !ref) return null;
-    return (ref - d) / (365.25 * 864e5);
+    var ref0 = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    return Math.round(((ref0 - d) / (365.25 * 864e5)) * 10) / 10;
   }
-  function vlIMalgruppe(r, aks, eierIx) {
+  function vlIMalgruppe(r, aks, eierIx, sd) {
     var arv = String((r[3] == null ? '' : r[3])).replace(/[\s\u00a0]/g, '');
     var m = arv.match(/(\d+)-(\d+)/);
     var val = m ? (+m[1] + +m[2]) / 2 : null;
@@ -282,7 +284,8 @@
     if (val == null || !aar || !aks) return null;
     var alder = aks.getFullYear() - aar;
     if (eierIx == null) return null;
-    var eier = vlEiertid(r[eierIx], aks);
+    var ref = sd || new Date();
+    var eier = vlEiertid(r[eierIx], ref);
     if (eier == null) return null;
     return alder >= 3 && alder <= 15 && val >= 70000 && val <= 400000 && eier >= 2;
   }
@@ -292,6 +295,60 @@
       if (String(h[i] || '').trim().toLowerCase() === 'eier siden') return i;
     }
     return null;
+  }
+  var _vlEier = { status: 'idle', map: null };
+  function vlMedEier(rows) {
+    rows = rows || [];
+    if (!rows.length) return rows;
+    if (vlEierIx(rows) != null) return rows;
+    if (!_vlEier.map) return rows;
+    var h = (rows[0] || []).slice();
+    h.push('Eier siden');
+    var out = [h];
+    for (var i = 1; i < rows.length; i++) {
+      var r = (rows[i] || []).slice();
+      var id = String(r[0] == null ? '' : r[0]).trim();
+      r.push(_vlEier.map[id] || '');
+      out.push(r);
+    }
+    return out;
+  }
+  function vlHentEier() {
+    if (_vlEier.status === 'loading' || _vlEier.status === 'ready' || _vlEier.status === 'fail') return;
+    if (typeof XLSX === 'undefined') return;
+    _vlEier.status = 'loading';
+    var base = (window.PA_PROXY_ERP || ((typeof PA_MINI_BASE !== 'undefined' ? PA_MINI_BASE : '') + '/list/'));
+    var mini = String(base).replace(/\/list\/?$/, '') + '/xlsx?t=' + Date.now();
+    fetch(mini, { signal: AbortSignal.timeout(8000) }).then(function (r) {
+      if (!r || !r.ok) throw new Error('xlsx');
+      return r.arrayBuffer();
+    }).then(function (buf) {
+      var wb = XLSX.read(buf, { type: 'array' });
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      var hd = raw[0] || [];
+      var iId = -1, iEier = -1;
+      for (var i = 0; i < hd.length; i++) {
+        var n = String(hd[i] || '').trim().toLowerCase();
+        if (n === 'internnr.') iId = i;
+        if (n === 'eier siden') iEier = i;
+      }
+      var map = {};
+      if (iId >= 0 && iEier >= 0) {
+        for (var j = 1; j < raw.length; j++) {
+          var rr = raw[j] || [];
+          var id = String(rr[iId] == null ? '' : rr[iId]).trim();
+          var v = rr[iEier];
+          if (!id || v == null || v === '') continue;
+          map[id] = String(v).trim();
+        }
+      }
+      _vlEier.map = map;
+      _vlEier.status = 'ready';
+      render();
+    }).catch(function () {
+      _vlEier.status = 'fail';
+      render();
+    });
   }
   function vlDenneUka() {
     var i0 = new Date(); i0.setHours(0, 0, 0, 0);
@@ -309,7 +366,7 @@
   }
   /* Samme aggregering som beregnUke i vekstloop-uke.js for vinduet w = { fra, til }. */
   function vlBeregn(rows, ads, w) {
-    rows = rows || [];
+    rows = vlMedEier(rows || []);
     var eierIx = vlEierIx(rows);
     var inn = function (d) { return d && d >= w.fra && d <= w.til; };
     var mId = (typeof pulseMetaOppslag === 'function') ? pulseMetaOppslag() : function () { return null; };
@@ -350,7 +407,7 @@
       if (inn(sd)) { tot.l++; g.l++; }
       if (inn(aks)) {
         tot.a++; g.a++;
-        var seg = vlIMalgruppe(r, aks, eierIx);
+        var seg = vlIMalgruppe(r, aks, eierIx, sd);
         if (seg === true) { tot.seg++; g.seg++; }
         else if (seg === null) { tot.segUnk++; g.segUnk++; }
       }
@@ -401,9 +458,12 @@
     return '<div class="table-card" style="margin-bottom:12px;background:#F4F6F5;opacity:.85"><div style="padding:10px 16px;font-size:13px;font-weight:700;color:#667A72">' + esc(tittel) + ' <span style="font-weight:600;font-size:11px;letter-spacing:.4px;text-transform:uppercase;border:1px solid #C9D3CC;border-radius:8px;padding:1px 7px;margin-left:8px">ikke ferdig</span></div></div>';
   }
   function vlKortTab(tittel, D) {
-    return '<div class="table-card" style="margin-bottom:12px"><div style="padding:10px 16px 4px;font-size:13px;font-weight:700;color:#004225">' + esc(tittel) + '</div><div style="padding:4px 12px 12px;overflow-x:auto">' + vlTabell(D) + '</div></div>';
+    var unk = (D && D.tot && D.tot.segUnk) || 0;
+    var note = '<div style="padding:0 16px 10px;font-size:11px;color:#667A72">ukjent eiertid: ' + unk + '</div>';
+    return '<div class="table-card" style="margin-bottom:12px"><div style="padding:10px 16px 4px;font-size:13px;font-weight:700;color:#004225">' + esc(tittel) + '</div><div style="padding:4px 12px 12px;overflow-x:auto">' + vlTabell(D) + '</div>' + note + '</div>';
   }
   function vlHtml() {
+    vlHentEier();
     var rows = window._lastRows || [], ads = window.adsSpend || null, U = vlDenneUka();
     var html = '<div class="section-label" style="margin-top:22px">Vekstloop denne uka, dag for dag</div>';
     U.dager.forEach(function (dagO) {
@@ -415,9 +475,9 @@
       var hittilTittel = 'Uke ' + U.ukeNr + ' hittil (man–' + VL_DG[U.iGar.getDay() === 0 ? 6 : U.iGar.getDay() - 1] + ' ' + fd(U.iGar) + ')';
       html += vlKortTab(hittilTittel, vlBeregn(rows, ads, { fra: U.man, til: U.iGar }));
     }
-    html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: biler 3–15 år, verdi 70–400k, eiertid minst 2 år (kolonnen «Eier siden» ligger ikke i Pulsens rader, så I målgruppe blir ukjent — vises som 0 av N, som i mailen). Mål: 20 % bestilt og 70 % solgt. OK = bestilt % ≥ 10 % og kost/bestilt ≤ 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
+    html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: biler 3–15 år, verdi 70–400k, eiertid minst 2 år (eiertid = år mellom «Eier siden» og SD mottatt, eller i dag om SD mangler, én desimal). Mangler «Eier siden» telles ikke i målgruppe (ukjent eiertid vises under hver dag). Mål: 20 % bestilt og 70 % solgt. OK = bestilt % ≥ 10 % og kost/bestilt ≤ 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
     return html;
   }
 
-  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk };
+  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk, vlMedEier: vlMedEier, _vlEier: _vlEier };
 })();
