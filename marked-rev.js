@@ -1,3 +1,4 @@
+/* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
 /* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
 /* Peasy Pulse — Marked (ny), c601 (bestilt, leads og kost: inneværende uke mot samme dager forrige uke, med pil. Ingen kr per bestilt). c600 (tabellen: bare inneværende uke mot samme dager forrige uke; ukene står i grafen). c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
    Ett spørsmål: hva skjer med bestilte biler, og hvem bidrar? Bestilt = bilfilens «bestilt» (første dag på «på vei», én per internnr,
@@ -145,7 +146,7 @@
       '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = Gire bestilt på / Levere selv (første dag på «på vei», avbestilte telles ikke), som morgenmailen. Kanal = der leadet kom fra (Peasy etter UTM). Uten UTM er lag (ofte forsinket betalt), ikke egen kanal i kr/bestilt. ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
       '<div class="section-label">Trend: bestilt per kanal, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
-      kostHtml(R);
+      kostHtml(R) + vlHtml();
     root.querySelectorAll('[data-mr]').forEach(function (el) { el.onclick = function () { var k = el.getAttribute('data-mr'); apen[k] = !apen[k]; render(); }; });
     kostGraf(R);
     if (window.Chart) {
@@ -223,5 +224,200 @@
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function (c) { var x = S[c.dataset.label][c.dataIndex]; return c.dataset.label + ': ' + kr(x.v) + ' kr per bestilt (kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt)'; } } } },
         scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return kr(v) + ' kr'; } } } } } });
   }
-  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier };
+
+  /* c700: Vekstloop denne uka, dag for dag. Samme definisjoner som v2/vekstloop-uke.js. */
+  var VL_MAL = { bestilling: 0.20, salg: 0.70, kostPerBestilt: 1000, bestiltMin: 0.10 };
+  var VL_DG = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
+
+  function vlParse(s) {
+    if (!s) return null;
+    var m = String(s).trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (!m) return null;
+    return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+  }
+  function vlPst(a, b) { return !b ? '–' : (Math.round(a / b * 1000) / 10).toLocaleString('nb-NO') + ' %'; }
+  function vlKr(n) { return n == null || !isFinite(n) ? '–' : Math.round(n).toLocaleString('nb-NO') + ' kr'; }
+  function vlKanal(utm) {
+    var u = String(utm || '').trim().toLowerCase();
+    if (u === 'facebook' || u === 'fb' || u === 'instagram' || u === 'ig' || u === 'meta') return 'meta';
+    if (u === 'google') return 'google';
+    return 'direkte';
+  }
+  function vlKortVisning(g) {
+    if (g.kanal === 'direkte') return 'Direkte / ukjent';
+    var n = String(g.navn || g.camp || '').replace(/\s*\(Vekstloop\)\s*$/, '');
+    n = n.replace(/^Konvertering:\s*/i, '').replace(/^Search:\s*/i, '');
+    n = n.replace(/\s*\[[^\]]*\]\s*/g, ' ').replace(/[«»]/g, '').replace(/;/g, ' ');
+    n = n.replace(/\s+/g, ' ').trim();
+    if (g.kanal === 'meta') {
+      if (/retarget/i.test(n)) return 'Meta Retargeting';
+      if (/^broad\b|nytt publikum/i.test(n)) return 'Meta Broad';
+      if (/^narrow\b|engasjement/i.test(n)) return 'Meta Narrow';
+      n = n.replace(/^(Broad|Narrow|Target):\s*/i, '').trim();
+      return ('Meta ' + n).replace(/\s+/g, ' ').trim();
+    }
+    if (g.kanal === 'google') {
+      if (/^brand\b/i.test(n)) return 'Google Brand';
+      if (/salg av bil/i.test(n)) return 'Google Salg av bil';
+      if (/bilsalg/i.test(n) && /bergen/i.test(n)) return 'Google Bilsalg Bergen';
+      return ('Google ' + n).replace(/\s+/g, ' ').trim();
+    }
+    return n || '–';
+  }
+  function vlKampanjeOk(g) {
+    if (g.kanal === 'direkte' || !(g.kost > 0)) return '–';
+    if (!g.a) return 'Under target';
+    var bp = g.l ? g.a / g.l : 0, kpb = g.kost / g.a;
+    return (bp >= VL_MAL.bestiltMin && kpb <= VL_MAL.kostPerBestilt) ? 'OK' : 'Under target';
+  }
+  function vlEiertid(eierSiden, ref) {
+    var d = vlParse(eierSiden); if (!d || !ref) return null;
+    return (ref - d) / (365.25 * 864e5);
+  }
+  function vlIMalgruppe(r, aks, eierIx) {
+    var arv = String((r[3] == null ? '' : r[3])).replace(/[\s\u00a0]/g, '');
+    var m = arv.match(/(\d+)-(\d+)/);
+    var val = m ? (+m[1] + +m[2]) / 2 : null;
+    var aar = Number(r[8]);
+    if (val == null || !aar || !aks) return null;
+    var alder = aks.getFullYear() - aar;
+    if (eierIx == null) return null;
+    var eier = vlEiertid(r[eierIx], aks);
+    if (eier == null) return null;
+    return alder >= 3 && alder <= 15 && val >= 70000 && val <= 400000 && eier >= 2;
+  }
+  function vlEierIx(rows) {
+    var h = (rows && rows[0]) || [];
+    for (var i = 0; i < h.length; i++) {
+      if (String(h[i] || '').trim().toLowerCase() === 'eier siden') return i;
+    }
+    return null;
+  }
+  function vlDenneUka() {
+    var i0 = new Date(); i0.setHours(0, 0, 0, 0);
+    var man = dag(i0, -((i0.getDay() + 6) % 7));
+    man.setHours(0, 0, 0, 0);
+    var dager = [];
+    for (var i = 0; i < 7; i++) {
+      var d = dag(man, i); d.setHours(0, 0, 0, 0);
+      var til = new Date(d); til.setHours(23, 59, 59, 999);
+      dager.push({ d: d, til: til, key: key(d), ferdig: d.getTime() < i0.getTime(), navn: VL_DG[i], etikett: VL_DG[i] + ' ' + fd(d) });
+    }
+    var iGar = dag(i0, -1); iGar.setHours(23, 59, 59, 999);
+    var hittilOk = iGar.getTime() >= man.getTime();
+    return { man: man, i0: i0, iGar: iGar, ukeNr: uke(man), dager: dager, hittilOk: hittilOk };
+  }
+  /* Samme aggregering som beregnUke i vekstloop-uke.js for vinduet w = { fra, til }. */
+  function vlBeregn(rows, ads, w) {
+    rows = rows || [];
+    var eierIx = vlEierIx(rows);
+    var inn = function (d) { return d && d >= w.fra && d <= w.til; };
+    var mId = (typeof pulseMetaOppslag === 'function') ? pulseMetaOppslag() : function () { return null; };
+    var kostKamp = {}, navnKamp = {};
+    var kostMeta = 0, kostGoogle = 0;
+    var days = (ads && ads.days) || {};
+    Object.keys(days).forEach(function (ds) {
+      var d = new Date(ds + 'T12:00:00'); if (!inn(d)) return;
+      var a = days[ds] || {};
+      kostMeta += Number(a.meta) || 0; kostGoogle += Number(a.google) || 0;
+    });
+    Object.keys((ads && ads.kampanjer) || {}).forEach(function (k) {
+      var c = ads.kampanjer[k]; if (!c) return;
+      var s = 0;
+      Object.keys(c.dager || {}).forEach(function (ds) {
+        var d = new Date(ds + 'T12:00:00'); if (inn(d)) s += Number(c.dager[ds]) || 0;
+      });
+      if (!s) return;
+      var keyK = c.kilde === 'google' ? 'google|' + String(c.id) : 'meta|' + String(c.id);
+      kostKamp[keyK] = (kostKamp[keyK] || 0) + s;
+      navnKamp[keyK] = c.navn;
+    });
+    var tom = function () { return { l: 0, a: 0, s: 0, seg: 0, segUnk: 0 }; };
+    var tot = tom(), kamp = {};
+    rows.slice(1).forEach(function (r) {
+      if (!r || !r[1]) return;
+      var kilde = String(r[11] || '').trim().toLowerCase();
+      var utm = String(r[23] || '').trim().toLowerCase();
+      if (kilde !== 'peasy' || utm === 'autodb') return;
+      var k = vlKanal(utm);
+      var campRaw = String(r[24] || '').trim();
+      var sd = vlParse(r[14]);
+      var m = k === 'meta' ? mId(campRaw, String(r[28] || '').trim(), sd) : null;
+      var kkey = k === 'google' ? 'google|' + campRaw : (k === 'meta' ? 'meta|' + (m || campRaw.toLowerCase()) : 'direkte|');
+      var aks = vlParse(r[15]) || vlParse(r[16]);
+      var sol = vlParse(r[18]);
+      var g = kamp[kkey] = kamp[kkey] || Object.assign(tom(), { kanal: k, camp: k === 'meta' && m ? m : campRaw, key: kkey });
+      if (inn(sd)) { tot.l++; g.l++; }
+      if (inn(aks)) {
+        tot.a++; g.a++;
+        var seg = vlIMalgruppe(r, aks, eierIx);
+        if (seg === true) { tot.seg++; g.seg++; }
+        else if (seg === null) { tot.segUnk++; g.segUnk++; }
+      }
+      if (inn(sol)) { tot.s++; g.s++; }
+    });
+    tot.kost = kostMeta + kostGoogle;
+    tot.eierIx = eierIx;
+    var rader = [];
+    Object.keys(kamp).forEach(function (kkey) {
+      var g = kamp[kkey];
+      g.kost = kostKamp[kkey] || 0;
+      g.navn = navnKamp[kkey] || (g.kanal === 'google' ? 'Google-kampanje ' + g.camp
+        : (g.kanal === 'meta' ? (g.camp || '(uten kampanje)') : 'Direkte / ukjent'));
+      if (g.kost > 0 || g.l > 0 || g.a > 0 || g.s > 0) rader.push(g);
+    });
+    Object.keys(kostKamp).forEach(function (kkey) {
+      if (!kamp[kkey]) rader.push({
+        kanal: kkey.split('|')[0], camp: kkey.split('|').slice(1).join('|'), key: kkey,
+        l: 0, a: 0, s: 0, seg: 0, segUnk: 0, kost: kostKamp[kkey], navn: navnKamp[kkey]
+      });
+    });
+    rader.sort(function (a, b) { return (b.kost || 0) - (a.kost || 0) || (b.l - a.l); });
+    return { tot: tot, rader: rader, kostMeta: kostMeta, kostGoogle: kostGoogle };
+  }
+  function vlSegTxt(g) {
+    if (!g.a) return '–';
+    return g.seg + ' av ' + g.a;
+  }
+  function vlTabell(D) {
+    var td = 'padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:right;white-space:nowrap';
+    var tdl = 'padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap';
+    var th = 'padding:4px 6px;text-align:right;background:#F0F4F2;font-size:11px;white-space:nowrap;color:#667A72;font-weight:700';
+    var thl = th.replace('right', 'left');
+    var okFarge = function (v) { return v === 'OK' ? '#1B5E20' : (v === 'Under target' ? '#B71C1C' : '#757575'); };
+    var h = '<table class="vl-dag-tab" style="border-collapse:collapse;width:auto;font-size:12px"><thead><tr>';
+    h += '<th style="' + thl + '">Kampanje</th><th style="' + th + '">Kost</th><th style="' + th + '">Leads</th><th style="' + th + '">Bestilt</th><th style="' + th + '">Bestilt %</th><th style="' + th + '">Solgt</th><th style="' + th + '">Kost/bestilt</th><th style="' + th + '">I målgruppe</th><th style="' + thl + '">OK</th></tr></thead><tbody>';
+    var sumKost = 0, sumL = 0, sumA = 0, sumS = 0, sumSeg = 0;
+    (D.rader || []).forEach(function (g) {
+      var ok = vlKampanjeOk(g);
+      sumKost += g.kost || 0; sumL += g.l; sumA += g.a; sumS += g.s; sumSeg += g.seg;
+      h += '<tr><td style="' + tdl + '">' + esc(vlKortVisning(g)) + '</td><td style="' + td + '">' + vlKr(g.kost) + '</td><td style="' + td + '">' + g.l + '</td><td style="' + td + '">' + g.a + '</td><td style="' + td + '">' + vlPst(g.a, g.l) + '</td><td style="' + td + '">' + g.s + '</td><td style="' + td + '">' + ((g.a && g.kost > 0) ? vlKr(g.kost / g.a) : '–') + '</td><td style="' + td + '">' + vlSegTxt(g) + '</td><td style="' + tdl + ';font-weight:700;color:' + okFarge(ok) + '">' + ok + '</td></tr>';
+    });
+    h += '<tr style="font-weight:800"><td style="' + tdl + '">Peasy totalt</td><td style="' + td + '">' + vlKr(sumKost) + '</td><td style="' + td + '">' + sumL + '</td><td style="' + td + '">' + sumA + '</td><td style="' + td + '">' + vlPst(sumA, sumL) + '</td><td style="' + td + '">' + sumS + '</td><td style="' + td + '">' + ((sumA && sumKost > 0) ? vlKr(sumKost / sumA) : '–') + '</td><td style="' + td + '">' + (sumA ? (sumSeg + ' av ' + sumA) : '–') + '</td><td style="' + tdl + '"></td></tr>';
+    h += '</tbody></table>';
+    return h;
+  }
+  function vlKortTom(tittel) {
+    return '<div class="table-card" style="margin-bottom:12px;background:#F4F6F5;opacity:.85"><div style="padding:10px 16px;font-size:13px;font-weight:700;color:#667A72">' + esc(tittel) + ' <span style="font-weight:600;font-size:11px;letter-spacing:.4px;text-transform:uppercase;border:1px solid #C9D3CC;border-radius:8px;padding:1px 7px;margin-left:8px">ikke ferdig</span></div></div>';
+  }
+  function vlKortTab(tittel, D) {
+    return '<div class="table-card" style="margin-bottom:12px"><div style="padding:10px 16px 4px;font-size:13px;font-weight:700;color:#004225">' + esc(tittel) + '</div><div style="padding:4px 12px 12px;overflow-x:auto">' + vlTabell(D) + '</div></div>';
+  }
+  function vlHtml() {
+    var rows = window._lastRows || [], ads = window.adsSpend || null, U = vlDenneUka();
+    var html = '<div class="section-label" style="margin-top:22px">Vekstloop denne uka, dag for dag</div>';
+    U.dager.forEach(function (dagO) {
+      if (!dagO.ferdig) { html += vlKortTom(dagO.etikett); return; }
+      html += vlKortTab(dagO.etikett, vlBeregn(rows, ads, { fra: dagO.d, til: dagO.til }));
+    });
+    if (!U.hittilOk) html += vlKortTom('Uke ' + U.ukeNr + ' hittil');
+    else {
+      var hittilTittel = 'Uke ' + U.ukeNr + ' hittil (man–' + VL_DG[U.iGar.getDay() === 0 ? 6 : U.iGar.getDay() - 1] + ' ' + fd(U.iGar) + ')';
+      html += vlKortTab(hittilTittel, vlBeregn(rows, ads, { fra: U.man, til: U.iGar }));
+    }
+    html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: biler 3–15 år, verdi 70–400k, eiertid minst 2 år (kolonnen «Eier siden» ligger ikke i Pulsens rader, så I målgruppe blir ukjent — vises som 0 av N, som i mailen). Mål: 20 % bestilt og 70 % solgt. OK = bestilt % ≥ 10 % og kost/bestilt ≤ 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
+    return html;
+  }
+
+  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk };
 })();
