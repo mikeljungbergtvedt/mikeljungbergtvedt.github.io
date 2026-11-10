@@ -4,7 +4,7 @@
   (function () {
     if (document.getElementById('qa572-css')) return;
     var s = document.createElement('style'); s.id = 'qa572-css';
-    s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden;min-width:0;max-width:100%}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px;flex-shrink:0}.au-qa-poeng{grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}.au-hode{min-width:0;max-width:100%}.au-hode-l>*:not(.au-eier){overflow:hidden;text-overflow:ellipsis;min-width:0}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:fixed!important;width:100%!important;min-width:0!important;max-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:3px 4px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;background:none;overflow:hidden;text-overflow:ellipsis}table.au-tv2 th{font-size:10px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important;max-width:100%!important}table.au-tv th,table.au-tv td{padding:3px 3px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;overflow:hidden;text-overflow:ellipsis}table.au-tv th{font-size:10px!important;color:#5E6B62!important;background:none!important}.au-tv-wrap,.au-ff-wrap{max-width:100%;min-width:0;overflow:hidden}table.au-ff-stub{width:100%!important;max-width:100%!important;table-layout:fixed!important;font-size:11px}table.au-ff-stub td{overflow:hidden;text-overflow:ellipsis;font-size:11px!important}.au-bilder-rad{display:flex;flex-wrap:wrap;gap:6px;max-width:100%;min-width:0;overflow:hidden}';
+    s.textContent = '.au-hode-l{display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden;min-width:0;max-width:100%}.au-hode-l .au-eier{margin-left:auto;color:#6B756F;font-size:13px;flex-shrink:0}.au-hode-l .au-hist-ikoner{flex-shrink:0}.au-qa-poeng{grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}.au-hode{min-width:0;max-width:100%}.au-hode-l>*:not(.au-eier):not(.au-hist-ikoner){overflow:hidden;text-overflow:ellipsis;min-width:0}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:fixed!important;width:100%!important;min-width:0!important;max-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:3px 4px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;background:none;overflow:hidden;text-overflow:ellipsis}table.au-tv2 th{font-size:10px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important;max-width:100%!important}table.au-tv th,table.au-tv td{padding:3px 3px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;overflow:hidden;text-overflow:ellipsis}table.au-tv th{font-size:10px!important;color:#5E6B62!important;background:none!important}.au-tv-wrap,.au-ff-wrap{max-width:100%;min-width:0;overflow:hidden}table.au-ff-stub{width:100%!important;max-width:100%!important;table-layout:fixed!important;font-size:11px}table.au-ff-stub td{overflow:hidden;text-overflow:ellipsis;font-size:11px!important}.au-bilder-rad{display:flex;flex-wrap:wrap;gap:6px;max-width:100%;min-width:0;overflow:hidden}';
     (document.head || document.documentElement).appendChild(s);
   })();
   // c686 (05.11): merke, modell og årsmodell først i QA-kortets header, før FSD/Bench.
@@ -713,7 +713,7 @@
     var ut = '';
     if (priset.length) ut += ik('Priset før: ' + priset.map(function (x) { return (x.dato || '?') + ' ' + k(x.lav) + '–' + k(x.hoy) + ' (internnr ' + x.id + (x.status ? ', ' + x.status : '') + ')'; }).join(' · '), '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/>');
     if (auk.length) ut += ik('Vært på vår auksjon: ' + auk.map(function (x) { return (x.dato || '?') + (x.hoyeste_bud ? ' høyeste bud ' + k(x.hoyeste_bud) : '') + (x.bud_avvist ? ', bud avvist ' + x.bud_avvist : '') + ' (internnr ' + x.id + ')'; }).join(' · '), '<path d="M14 6l4 4M9 11l4 4M12.5 4.5l7 7-3 3-7-7z"/><path d="M10.5 12.5L4 19"/><path d="M3 21h8"/>');
-    return ut ? '<span style="display:inline-flex;gap:6px;align-items:center;align-self:center">' + ut + '</span>' : '';
+    return ut ? '<span class="au-hist-ikoner" style="display:inline-flex;gap:6px;align-items:center;align-self:center;flex-shrink:0">' + ut + '</span>' : '';
   }
   // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
   (function () {
@@ -937,6 +937,54 @@
     }
     return ut;
   }
+
+  // c699 (Mike 10.11): vis selgerkommentar fra auto-score (egenerklæring + description) om kortet ble malt før data var der.
+  function auSettSelgerkommentar(c, b) {
+    var tekst = String((b && b.kunde_kommentar) || '').trim();
+    if (!tekst) return;
+    if (c.querySelector('.au-selgerkommentar')) return;
+    var alle = c.querySelectorAll('div');
+    for (var i = 0; i < alle.length; i++) {
+      if (alle[i].closest('.au-qa-poeng')) continue;
+      var tx = (alle[i].innerText || '').trim();
+      if (/^Selgerkommentar/.test(tx) && alle[i].children.length <= 3) return;
+    }
+    var lab = (String(b.kilde || '').toLowerCase() === 'driveno') ? 'Selgerkommentar (Drive / Bilens data)' : 'Selgerkommentar';
+    var el = document.createElement('div');
+    el.className = 'au-selgerkommentar';
+    el.style.cssText = 'margin-bottom:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border,#DCD8CC);border-radius:6px;font-size:12px;line-height:1.45';
+    el.innerHTML = '<b>' + esc(lab) + '</b><div style="margin-top:3px;color:#333;white-space:pre-line">' + esc(tekst) + '</div>';
+    var ref = c.querySelector('.au-kjorbar') || c.querySelector('.au-duplikat') || c.querySelector('.au-qa-poeng') || c.firstElementChild;
+    if (ref && ref.nextSibling) c.insertBefore(el, ref.nextSibling); else c.appendChild(el);
+  }
+  // c699: ERP-historikk-boks fra agent.historikk når liste-3-hist mangler, så «priset før» og tidligere verdi vises.
+  function auSettHistFraAgent(c, b) {
+    if (c.querySelector('.au-erp-hist')) return;
+    var alle = c.querySelectorAll('div');
+    for (var i = 0; i < alle.length; i++) {
+      if (/^ERP-historikk \(/.test((alle[i].innerText || '').trim())) return;
+    }
+    var h = (b && b.agent && b.agent.historikk) || (b && b.historikk) || [];
+    var rader = h.filter(function (x) { return x && (x.lav || x.hoy || x.hoyeste_bud); });
+    if (!rader.length) return;
+    var el = document.createElement('div');
+    el.className = 'au-erp-hist';
+    el.style.cssText = 'margin-top:8px;padding:7px 10px;background:#F8F8F5;border:1px solid var(--border,#DCD8CC);border-radius:6px;font-size:12px;line-height:1.45';
+    var kr = function (n) { return n != null ? Math.round(n).toLocaleString('nb-NO') : '—'; };
+    var dato = function (s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? (m[3] + '.' + m[2] + '.' + m[1]) : (s || ''); };
+    el.innerHTML = '<b>ERP-historikk (' + rader.length + ' tidligere):</b>' + rader.map(function (x) {
+      return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;font-size:11px;">'
+        + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span><b>internnr ' + esc(String(x.id || '—')) + '</b>' + (x.dato ? ' · priset ' + esc(dato(x.dato)) : '') + '</span><span>' + esc(x.status || '') + '</span></div>'
+        + '<div style="margin-top:2px;">Lav – Høy ' + kr(x.lav) + '–' + kr(x.hoy) + (x.hoyeste_bud ? ' · Høyeste bud ' + kr(x.hoyeste_bud) : '') + '</div></div>';
+    }).join('');
+    var kom = c.querySelector('.au-selgerkommentar');
+    if (kom) { if (kom.nextSibling) c.insertBefore(el, kom.nextSibling); else kom.parentNode.appendChild(el); }
+    else {
+      var ref = c.querySelector('.au-kjorbar') || c.querySelector('.au-qa-poeng') || c.firstElementChild;
+      if (ref && ref.nextSibling) c.insertBefore(el, ref.nextSibling); else c.appendChild(el);
+    }
+  }
+
   function auMerkQaKort() {
     var d = window._autoRute;
     if (!d || !Array.isArray(d.biler)) return;
@@ -981,6 +1029,8 @@
       if (topp && ekte) { topp.disabled = ekte.disabled; var et = (ekte.innerText || '').trim(); if (et && topp.textContent !== et) topp.textContent = et; var ecs = getComputedStyle(ekte); if (topp.style.backgroundColor !== ecs.backgroundColor) topp.style.backgroundColor = ecs.backgroundColor; if (topp.style.color !== ecs.color) topp.style.color = ecs.color; topp.style.cursor = ekte.disabled ? 'not-allowed' : 'pointer'; }
 
       // c506: små ikoner for det som står lenger ned på kortet (selgerkommentar, tidligere priset). Klikk = gå dit.
+      auSettSelgerkommentar(c, b);
+      auSettHistFraAgent(c, b);
       var merker = auMerker(c);
       var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk, b.agent.erp] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + (b.skade_egen ? 'S' + (b.skade_tekst || '') : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
       auFsdBokser(c, b);
