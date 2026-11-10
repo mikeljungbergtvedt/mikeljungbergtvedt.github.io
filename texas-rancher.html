@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texas' største rancher</title>
+<meta name="description" content="15 minutter om de 25 største ranchene i Texas og hva de har betydd, fra spanske jordgaver til Bezos og Yellowstone.">
+<style>
+:root{
+  --bg:#0a0f1e; --bg2:#0f1730; --land:#19233f; --land2:#223052; --gulf:#0c1a33;
+  --ink:#f2e9d6; --ink2:#bdb39d; --amber:#f0b35a; --amber2:#ffd48a; --line:rgba(240,179,90,.35);
+  --mono:"SF Mono",Menlo,Consolas,monospace; --serif:Georgia,"Times New Roman",serif; --sans:-apple-system,"Helvetica Neue",Inter,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}
+#stage{position:relative;width:1920px;height:1080px;flex:none;transform-origin:center center;background:
+ radial-gradient(1200px 800px at 30% 45%,#121c38 0%,var(--bg) 60%,#06091a 100%);overflow:hidden;cursor:pointer}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:
+ repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 4px);mix-blend-mode:overlay}
+/* kart */
+#kart{position:absolute;left:0;top:0;width:1040px;height:1080px}
+#kart svg{width:100%;height:100%;display:block}
+#verden{transition:transform 1.8s cubic-bezier(.4,0,.2,1)}
+.tx{fill:var(--land);stroke:var(--amber);stroke-opacity:.45;stroke-width:1.6;stroke-linejoin:round}
+.txgl{fill:none;stroke:var(--amber);stroke-opacity:.12;stroke-width:14;filter:blur(6px)}
+.by{fill:var(--ink2);opacity:.55}
+.byt{fill:var(--ink2);font:500 11px var(--sans);opacity:.6;letter-spacing:.04em}
+.ranch{stroke:rgba(255,255,255,.55);stroke-width:.8;transition:opacity 1.2s,filter 1.2s;opacity:.92}
+.ranch.dim{opacity:.22}
+.ranch.hl{opacity:1;filter:drop-shadow(0 0 7px rgba(255,255,255,.55))}
+.rnum{font:700 11px var(--mono);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:3;text-anchor:middle;transition:opacity 1s;opacity:.85}
+.rnum.dim{opacity:.25}
+.xit{fill:rgba(240,179,90,.10);stroke:var(--amber);stroke-dasharray:4 4;stroke-width:1.2;opacity:0;transition:opacity 1.2s}
+.xit.on{opacity:1}
+.xitt{font:italic 600 12px var(--serif);fill:var(--amber2);opacity:0;transition:opacity 1.2s}
+.xitt.on{opacity:.9}
+#kartTittel{position:absolute;left:44px;top:34px;font:italic 400 22px var(--serif);color:var(--amber2);opacity:.85;letter-spacing:.02em}
+#kartUnder{position:absolute;left:44px;top:64px;font:400 12px var(--mono);color:var(--ink2);opacity:.6;letter-spacing:.12em;text-transform:uppercase}
+#legende{position:absolute;left:44px;bottom:112px;font:400 12px var(--mono);color:var(--ink2);opacity:.75;line-height:1.7;transition:opacity 1s}
+#legende.skjul{opacity:0}
+#legende b{color:var(--amber2);font-weight:600}
+/* panel */
+#panel{position:absolute;left:1040px;top:0;width:880px;height:980px;padding:92px 96px 0 40px;display:flex;flex-direction:column}
+#kapnr{font:500 14px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--amber);opacity:.9;height:20px}
+#tittel{font:400 58px/1.06 var(--serif);color:var(--ink);margin-top:14px;min-height:130px;letter-spacing:-.01em}
+#under{font:400 20px var(--sans);color:var(--ink2);margin-top:10px;min-height:28px}
+#strek{width:64px;height:2px;background:var(--amber);margin:30px 0 32px;opacity:.9}
+#tekst{font:400 34px/1.38 var(--sans);color:var(--ink);min-height:330px;max-width:740px;transition:opacity .45s,transform .45s}
+#tekst.ut{opacity:0;transform:translateY(10px)}
+#tekst q{font-family:var(--serif);font-style:italic;color:var(--amber2)}
+#fakta{display:flex;gap:14px;flex-wrap:wrap;margin-top:auto;margin-bottom:40px;min-height:74px}
+.fakt{border:1px solid var(--line);border-radius:10px;padding:10px 16px;background:rgba(240,179,90,.06);min-width:150px;opacity:0;transform:translateY(8px);transition:opacity .6s,transform .6s}
+.fakt.on{opacity:1;transform:none}
+.fakt .v{font:600 26px var(--mono);color:var(--amber2);letter-spacing:-.02em}
+.fakt .k{font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-top:2px}
+/* tidslinje */
+#tid{position:absolute;left:44px;width:950px;bottom:44px;height:46px}
+#tidl{position:absolute;left:0;right:0;top:22px;height:1px;background:rgba(242,233,214,.22)}
+.tik{position:absolute;top:16px;width:1px;height:13px;background:rgba(242,233,214,.3)}
+.tikt{position:absolute;top:32px;transform:translateX(-50%);font:500 11px var(--mono);color:var(--ink2);opacity:.6;letter-spacing:.08em}
+#naal{position:absolute;top:10px;width:3px;height:25px;background:var(--amber);border-radius:2px;transform:translateX(-50%);transition:left 1.4s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px rgba(240,179,90,.7)}
+#naalt{position:absolute;top:-16px;transform:translateX(-50%);font:700 18px var(--mono);color:var(--amber2);transition:left 1.4s cubic-bezier(.4,0,.2,1);letter-spacing:.02em}
+/* topp: progress + kontroller */
+#prog{position:absolute;left:0;top:0;height:5px;width:100%;background:rgba(255,255,255,.08)}
+#progf{height:100%;width:0;background:var(--amber);box-shadow:0 0 8px rgba(240,179,90,.8)}
+.kap-tik{position:absolute;top:0;width:2px;height:5px;background:rgba(10,15,30,.9)}
+#ctrl{position:absolute;right:28px;top:22px;display:flex;gap:10px;align-items:center;font:500 14px var(--mono);color:var(--ink2);z-index:5}
+.kn{border:1px solid rgba(242,233,214,.25);border-radius:8px;padding:7px 13px;background:rgba(10,15,30,.65);color:var(--ink);cursor:pointer;letter-spacing:.06em;user-select:none}
+.kn:hover{border-color:var(--amber)}
+.kn.aktiv{color:var(--amber2);border-color:var(--amber)}
+#klokke{opacity:.8;min-width:112px;text-align:right}
+#hint{position:absolute;right:28px;top:66px;font:400 12px var(--mono);color:var(--ink2);opacity:.55;letter-spacing:.06em;z-index:5}
+#versjon{position:absolute;right:28px;bottom:16px;font:500 12px var(--mono);color:var(--ink2);opacity:.5;letter-spacing:.12em}
+#pauseM{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,20,.35);z-index:6;pointer-events:none}
+#pauseM div{font:600 26px var(--mono);letter-spacing:.3em;color:var(--amber2);border:1px solid var(--line);padding:22px 40px;border-radius:14px;background:rgba(10,15,30,.75)}
+/* kapittelmeny */
+#meny{position:absolute;left:1080px;top:1012px;width:800px;height:40px;display:flex;align-items:center;gap:5px}
+.mk{font:500 12px var(--mono);color:var(--ink2);opacity:.5;border:1px solid rgba(242,233,214,.18);min-width:30px;text-align:center;padding:5px 0;border-radius:6px;cursor:pointer;white-space:nowrap}
+.mk:hover{opacity:1;border-color:var(--line)}
+.mk.aktiv{opacity:1;color:var(--amber2);border-color:var(--amber)}
+/* start/slutt */
+#start,#slutt{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:
+ radial-gradient(900px 700px at 50% 40%,#16213f 0%,#0a0f1e 65%,#05081a 100%)}
+#slutt{display:none}
+#start h1,#slutt h1{font:400 92px/1.05 var(--serif);letter-spacing:-.01em;color:var(--ink);max-width:1300px}
+#start h1 em,#slutt h1 em{font-style:italic;color:var(--amber2)}
+#start p,#slutt p{font:400 24px/1.5 var(--sans);color:var(--ink2);margin-top:26px;max-width:900px}
+.spill{margin-top:52px;display:inline-flex;align-items:center;gap:18px;border:2px solid var(--amber);border-radius:999px;padding:20px 44px 20px 34px;font:600 26px var(--sans);color:var(--amber2);cursor:pointer;background:rgba(240,179,90,.08);transition:transform .2s,background .2s;letter-spacing:.02em}
+.spill:hover{transform:scale(1.04);background:rgba(240,179,90,.16)}
+.spill svg{width:30px;height:30px}
+#start small,#slutt small{display:block;margin-top:38px;font:400 14px var(--mono);color:var(--ink2);opacity:.65;letter-spacing:.1em}
+#startKart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1500px;height:1500px;opacity:.07;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <div id="prog"><div id="progf"></div></div>
+  <div id="kart">
+    <div id="kartTittel">De største ranchene i Texas</div>
+    <div id="kartUnder">Etter kartet fra u/convillious · delt av Michael Girdley</div>
+    <svg id="svg" viewBox="0 0 1040 1080" xmlns="http://www.w3.org/2000/svg"><g id="verden"></g></svg>
+    <div id="legende"></div>
+  </div>
+  <div id="panel">
+    <div id="kapnr"></div>
+    <div id="tittel"></div>
+    <div id="under"></div>
+    <div id="strek"></div>
+    <div id="tekst"></div>
+    <div id="fakta"></div>
+  </div>
+  <div id="meny"></div>
+  <div id="tid"><div id="tidl"></div><div id="naal"></div><div id="naalt"></div></div>
+  <div id="ctrl"><span id="klokke">00:00 / 15:00</span><span class="kn" id="knFart">1×</span><span class="kn" id="knTale">Tale av</span><span class="kn" id="knLyd">Lyd på</span></div>
+  <div id="hint">mellomrom pause · ← → kapittel · esc stopp</div>
+  <div id="pauseM"><div>PAUSE</div></div>
+  <div id="versjon">v1</div>
+  <div id="start">
+    <svg id="startKart" viewBox="0 0 1040 1080"><use href="#txpath"/></svg>
+    <h1>De største ranchene i <em>Texas</em></h1>
+    <p>25 eiendommer, 5,8 millioner acres, 190 år. Hvordan de ble til, hvem som eier dem, og hva de har betydd.</p>
+    <div class="spill" id="knStart"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="currentColor"/></svg>Spill av · 15 min</div>
+    <small>fullskjerm · mellomrom pauser · ← → hopper mellom kapitler · esc avslutter · «Tale» leser teksten høyt</small>
+  </div>
+  <div id="slutt">
+    <h1>Gjerdene står der de ble satt på <em>1880-tallet</em>.</h1>
+    <p>Kart: u/convillious og VinOnline, delt av Michael Girdley 9. november 2026. Kilder: Land Report, Texas Monthly, Texas State Historical Association, Texas General Land Office, Lykes, Kenedy Memorial Foundation, East Foundation. Arealer er omtrentlige og varierer mellom kildene.</p>
+    <div class="spill" id="knIgjen"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z" fill="currentColor"/></svg>Spill av på nytt</div>
+  </div>
+</div></div>
+<script>
+'use strict';
+/* ---------- Data: rancher (lon, lat, andel av areal) ---------- */
+const R = [
+ {n:1, navn:'King Ranch', ac:825000, farge:'#2fd36a', t:[[-97.9,27.5,.36],[-97.55,27.45,.24],[-97.75,26.75,.26],[-98.1,26.95,.14]]},
+ {n:2, navn:'Briscoe Ranch', ac:640000, farge:'#f0665c', t:[[-99.6,28.35,.32],[-99.95,28.55,.14],[-99.1,28.3,.14],[-99.75,29.1,.14],[-99.3,27.7,.12],[-99.3,28.75,.14]]},
+ {n:3, navn:'Waggoner Ranch', ac:535000, farge:'#e7c27d', t:[[-99.05,33.9,1]]},
+ {n:4, navn:"O'Connor-familien", ac:500000, farge:'#f2c230', t:[[-97.15,28.45,.5],[-97.3,28.2,.3],[-96.9,28.6,.2]]},
+ {n:5, navn:'Brewster Ranch', ac:424000, farge:'#ff2fb0', t:[[-103.2,29.95,.6],[-102.95,29.65,.4]]},
+ {n:6, navn:'6666 Ranch', ac:275000, farge:'#28a7ff', t:[[-100.35,33.55,.53],[-101.3,35.55,.43],[-101.9,36.3,.04]]},
+ {n:7, navn:'Longfellow Ranch', ac:272000, farge:'#5a2fd6', t:[[-102.5,30.35,1]]},
+ {n:8, navn:'O2 Ranch · Lykes Bros', ac:272000, farge:'#ffb07a', t:[[-103.85,29.75,1]]},
+ {n:9, navn:'Kenedy Ranch', ac:235000, farge:'#ff9ad5', t:[[-97.65,27.1,1]]},
+ {n:10, navn:'Corn Ranch · Jeff Bezos', ac:185472, farge:'#33f0f0', t:[[-104.75,31.45,1]]},
+ {n:11, navn:'SRP Ranches LLC', ac:163284, farge:'#c43ad6', t:[[-105.65,31.55,1]]},
+ {n:12, navn:'Duval Ranch', ac:154000, farge:'#9a5cf0', t:[[-98.6,27.85,1]]},
+ {n:13, navn:'Matador Ranch', ac:131000, farge:'#ff3b3b', t:[[-100.85,34.05,1]]},
+ {n:14, navn:'La Escalera Ranch', ac:124000, farge:'#b6ff3b', t:[[-102.9,30.7,1]]},
+ {n:15, navn:'Robert C. East Wildlife Fnd.', ac:117800, farge:'#8de02a', t:[[-98.7,26.75,.6],[-98.45,26.95,.4]]},
+ {n:16, navn:'Y-6 Ranch', ac:113650, farge:'#2a3cff', t:[[-104.65,30.4,1]]},
+ {n:17, navn:'06 Ranch LTD', ac:113535, farge:'#f4f03a', t:[[-103.6,30.45,1]]},
+ {n:18, navn:'Kokernot O-6', ac:104000, farge:'#ff9f1a', t:[[-104.15,30.65,1]]},
+ {n:19, navn:'Brazos Highland LP', ac:102000, farge:'#c9a8ff', t:[[-101.1,29.95,1]]},
+ {n:20, navn:'Rimrock & Ritchie', ac:94487, farge:'#b4782a', t:[[-101.1,34.6,1]]},
+ {n:21, navn:'Callaghan Ranch', ac:90107, farge:'#9af5c8', t:[[-99.35,27.9,1]]},
+ {n:22, navn:'Maverick County Land & Cattle', ac:86000, farge:'#dff7a0', t:[[-100.3,28.95,1]]},
+ {n:23, navn:'Turkey Track Ranch', ac:80000, farge:'#1f8f3a', t:[[-101.0,35.75,1]]},
+ {n:24, navn:'Eagle & Carrizo Mountain', ac:77000, farge:'#9c1414', t:[[-105.1,31.0,1]]},
+ {n:25, navn:'Comanche Maverick Ranch', ac:76000, farge:'#bfe3ff', t:[[-100.35,28.6,1]]},
+];
+const BYER=[['Houston',-95.37,29.76],['Dallas',-96.8,32.78],['San Antonio',-98.49,29.42],['Austin',-97.74,30.27],['El Paso',-106.49,31.76],['Amarillo',-101.83,35.22],['Laredo',-99.5,27.5],['Corpus Christi',-97.4,27.8],['Lubbock',-101.86,33.58],['Midland',-102.08,32.0]];
+/* Texas-omriss, forenklet (lon, lat) */
+const TX=[[-103.04,36.5],[-100.0,36.5],[-100.0,34.56],[-99.6,34.4],[-99.2,34.2],[-98.6,34.15],[-98.1,33.95],[-97.6,33.9],[-97.1,33.75],[-96.6,33.85],[-96.0,33.75],[-95.5,33.9],[-95.0,33.85],[-94.5,33.65],[-94.04,33.55],[-94.04,32.6],[-94.04,32.0],[-93.95,31.7],[-93.8,31.4],[-93.6,31.1],[-93.55,30.8],[-93.7,30.4],[-93.75,30.05],[-93.85,29.75],[-94.4,29.55],[-94.9,29.35],[-95.3,29.0],[-95.9,28.7],[-96.4,28.4],[-96.9,28.1],[-97.15,27.75],[-97.3,27.3],[-97.35,26.9],[-97.25,26.4],[-97.15,25.95],[-97.5,25.88],[-97.9,26.05],[-98.4,26.2],[-98.9,26.35],[-99.15,26.6],[-99.45,27.0],[-99.5,27.5],[-99.85,27.95],[-100.1,28.2],[-100.4,28.6],[-100.7,29.1],[-101.0,29.4],[-101.4,29.75],[-101.8,29.8],[-102.3,29.85],[-102.7,29.75],[-102.9,29.4],[-103.1,29.0],[-103.4,29.05],[-103.8,29.25],[-104.2,29.5],[-104.5,29.7],[-104.7,30.1],[-104.85,30.5],[-105.1,30.75],[-105.5,31.0],[-106.0,31.4],[-106.4,31.75],[-106.6,31.85],[-106.6,32.0],[-103.06,32.0],[-103.06,36.5]];
+const XIT=[[-103.04,36.5],[-102.5,36.5],[-102.45,33.45],[-103.0,33.45]];
+/* Projeksjon */
+const S=88, COSL=0.857, OX=-106.75, OY=36.62;
+const px=(lon)=>(lon-OX)*COSL*S+10, py=(lat)=>(OY-lat)*S+30;
+/* ---------- Kapitler ---------- */
+const K=[
+ {kap:'Prolog', tittel:'Et land av gjerder', under:'Michael Girdley på X, 9. november 2026', fokus:'alle', b:[
+  {t:'<q>People don’t realize how much of Texas is just big ranches that seem to go on forever.</q><br>Michael Girdley, 9. november 2026.', aar:2026},
+  {t:'Kartet han delte viser de 25 største private ranchene i Texas. Den minste er på 76 000 acres. Den største på 825 000.', aar:2026, f:[['25','rancher'],['76 000–825 000','acres']]},
+  {t:'Til sammen dekker de nesten 5,8 millioner acres, rundt 23 000 kvadratkilometer. Nesten like mye som Rogaland og Agder til sammen.', aar:2026, f:[['5,8 mill.','acres'],['23 400','km²']]},
+  {t:'Texas er 1,8 ganger så stort som Norge, og rundt 95 prosent av arealet er privat eid. Staten eier nesten ingenting. Det er nøkkelen til hele historien.', aar:2026, f:[['1,8×','Norge'],['95 %','privat jord']]},
+  {t:'Dette er fortellingen om hvordan ranchene ble til, hvem som eier dem i dag, og hva de har betydd for Texas gjennom 190 år.', aar:2026}]},
+ {kap:'Kapittel 1', tittel:'Hvordan ranchene ble til', under:'1750–1890: jordgaver, kvegdrift og piggtråd', fokus:'alle', b:[
+  {t:'1700-tallet: Spania deler ut enorme jordgaver langs Rio Grande. Vaqueroene som driver kveget der, blir forbildet for den amerikanske cowboyen.', aar:1750},
+  {t:'1834: Mexico gir den 15 år gamle irske innvandreren Thomas O’Connor 4 428 acres ved Victoria. Den gaven ligger fortsatt i familien.', aar:1834, hl:[4]},
+  {t:'1845: Texas går inn i USA, men beholder, som eneste stat, all sin offentlige jord. Delstaten kan betale for jernbaner, skoler og et parlamentsbygg med land.', aar:1845, f:[['1845','inn i USA'],['all jord','beholdt']]},
+  {t:'1866–1886: Nesten ti millioner dyr drives nordover til jernbanen i Kansas. Longhorn-kveget som gikk løst etter borgerkrigen, blir Texas’ første store eksportvare.', aar:1870, f:[['10 mill.','dyr nordover']]},
+  {t:'1874: Piggtråden kommer. På ti år går Texas fra åpent beite til inngjerdede imperier. Den som eier vann og gjerde, eier landet.', aar:1874},
+  {t:'1880-tallet: Pengene kommer fra Dundee, London og Chicago. Skotske og engelske syndikater kjøper millioner av acres og driver dem som aksjeselskaper.', aar:1882, hl:[13]}]},
+ {kap:'Kapittel 2', tittel:'XIT: Ranchen som betalte for Capitol', under:'3 millioner acres for ett bygg', fokus:'xit', b:[
+  {t:'1882: Texas trenger et nytt Capitol, men har ikke penger. Løsningen er 3 millioner acres i Panhandle, gitt til et Chicago-syndikat ledet av brødrene Farwell.', aar:1882, f:[['3 000 000','acres'],['1 bygg','betaling']]},
+  {t:'Granittbygget i Austin står ferdig i 1888 og er høyere enn Capitol i Washington. Prisen var en stripe land på størrelse med Connecticut.', aar:1888},
+  {t:'XIT strekker seg 320 kilometer langs grensen til New Mexico. 150 cowboyer, 150 000 dyr og tusenvis av kilometer gjerde.', aar:1890, f:[['320 km','langt'],['150 000','dyr']]},
+  {t:'Kveget ga aldri avkastningen britiske investorer var lovet. Fra 1901 selges landet stykkevis. Siste buskap i 1912, siste tomt i 1963.', aar:1912},
+  {t:'Arven er byene og gårdene i Panhandle. Og en lærdom resten av filmen bekrefter: ranchene som overlevde, hadde alltid noe mer enn kveg.', aar:1963}]},
+ {kap:'Kapittel 3', tittel:'King Ranch', under:'Nr. 1 · 825 000 acres · Kleberg, Kenedy, Nueces, Willacy', fokus:[1], b:[
+  {t:'1853: Dampbåtkaptein Richard King kjøper den spanske jordgaven Rincón de Santa Gertrudis, 15 500 acres sør for Corpus Christi.', aar:1853, f:[['1853','grunnlagt'],['15 500','acres først']]},
+  {t:'Han henter en hel landsby fra Mexico til ranchen. Etterkommerne, los Kineños, driver den fortsatt, i sjette og sjuende generasjon.', aar:1854},
+  {t:'Da King dør i 1885, er ranchen på 614 000 acres og i gjeld. Svigersønnen Robert Kleberg og enken Henrietta bygger den opp til nær 1,2 millioner acres.', aar:1885, f:[['614 000','acres i 1885'],['1,2 mill.','på det meste']]},
+  {t:'1920: Oksen Monkey, 3/8 brahman og 5/8 shorthorn, blir stamfar til Santa Gertrudis, den første kjøttferasen avlet fram i USA. Godkjent som rase i 1940.', aar:1920},
+  {t:'1933: Depresjonen presser ranchen. En eksklusiv oljeavtale med Humble Oil, senere Exxon, redder økonomien. Oljen og gassen betaler siden for alt det andre.', aar:1933, f:[['1933','Humble Oil']]},
+  {t:'1946: King Ranch-hesten Assault vinner Triple Crown. Ranchen avler også quarter horses som fortsatt setter standarden.', aar:1946},
+  {t:'Edna Ferbers roman «Giant» fra 1952 og filmen med James Dean er løst inspirert av Klebergene. Familien likte den ikke.', aar:1956},
+  {t:'I dag: 825 000 acres i fire deler, større enn Luxembourg og halvannen gang Vestfold. King Ranch Inc. driver kveg, olje, sitrus i Florida og lisenser på Ford-pickuper.', aar:2026, f:[['825 000','acres'],['3 340','km²'],['1,5×','Vestfold']]},
+  {t:'Fotnote: Kongressmann Richard Kleberg fra King Ranch ansatte i 1931 en ung sekretær fra Hill Country. Han het Lyndon B. Johnson.', aar:1931}]},
+ {kap:'Kapittel 4', tittel:'Kenedy Ranch', under:'Nr. 9 · 235 000 acres · Kenedy County', fokus:[9], b:[
+  {t:'Mifflin Kenedy var Kings partner på dampbåtene. I 1882 samler han La Parra-ranchen sør for Kingsville. 400 000 acres da han dør i 1895.', aar:1882, f:[['1882','grunnlagt'],['400 000','acres i 1895']]},
+  {t:'Barnebarnet Sarita Kenedy East etterlater i 1960 ranchen til en katolsk stiftelse. Testamentet utløser en arvestrid som varer i over 20 år.', aar:1960},
+  {t:'I dag eier Kenedy Memorial Foundation 235 000 acres, og inntektene går til kirker, skoler og sykehus i Sør-Texas.', aar:2026, f:[['235 000','acres'],['stiftelse','eier']]},
+  {t:'2009: Vindparken Gulf Wind reises på ranchen etter en bitter strid med naboen King Ranch om trekkfugler. En ny inntekt for de gamle ranchene.', aar:2009}]},
+ {kap:'Kapittel 5', tittel:'O’Connor-familien', under:'Nr. 4 · ca. 500 000 acres · Refugio, Victoria, Goliad', fokus:[4], b:[
+  {t:'Thomas O’Connor kom fra Irland som 15-åring i 1834, kjempet ved San Jacinto i 1836, og døde i 1887 som Texas’ største private jordeier. Over 500 000 acres.', aar:1887, f:[['1834','jordgave'],['500 000+','acres i 1887']]},
+  {t:'1934: Tom O’Connor-feltet oppdages under beitene i Refugio. Over 500 millioner fat olje, et av de rikeste feltene i Texas.', aar:1934, f:[['500 mill.','fat olje']]},
+  {t:'Familien har aldri solgt. Sjette generasjon driver fortsatt kveg mellom Victoria og kysten, med oljen som grunnmur.', aar:2026}]},
+ {kap:'Kapittel 6', tittel:'Briscoe Ranch', under:'Nr. 2 · 640 000 acres · Catarina og ti fylker', fokus:[2], b:[
+  {t:'Dolph Briscoe sr. begynner å kjøpe land i Sør-Texas rundt 1910. I 1939 kjøper faren sønnen inn i Catarina-ranchen. Sønnen er 16 år.', aar:1939, f:[['1939','Catarina']]},
+  {t:'Dolph Briscoe jr. arver 190 000 acres i 1954, blir Texas’ største individuelle jordeier og guvernør fra 1973 til 1979.', aar:1973, f:[['1973–79','guvernør']]},
+  {t:'Under beitene ligger Eagle Ford-skiferen. Fra 2010 gjør fracking Catarina til et oljefelt, og ranchen til en milliardformue.', aar:2010},
+  {t:'Briscoe dør i 2010. Barna krangler i retten om hvordan 640 000 acres skal deles. Ranchene i ti fylker drives i dag av Briscoe Ranch, Inc.', aar:2026, f:[['640 000','acres'],['10','fylker']]}]},
+ {kap:'Kapittel 7', tittel:'Waggoner Ranch', under:'Nr. 3 · ca. 520 000 acres bak ett gjerde · Vernon', fokus:[3], b:[
+  {t:'Dan Waggoner starter med 242 longhorn og seks hester i 1849. Sønnen W.T. bygger det største inngjerdede området i USA: over 500 000 acres bak ett gjerde.', aar:1849, f:[['1849','start'],['ett gjerde','rundt alt']]},
+  {t:'1902: W.T. borer etter vann til kveget og finner olje. «Faen, kveg kan ikke drikke dette,» skal han ha sagt. Byen Electra får navn etter datteren hans.', aar:1902, f:[['1902','olje']]},
+  {t:'Oljen gjør Waggonerne til en av de rikeste familiene i Texas. Ranchen avler også quarter horses, blant dem legenden Poco Bueno.', aar:1950},
+  {t:'1991: Electra Waggoner Biggs, billedhugger og arving, saksøker for å oppløse eiendommen. Striden mellom arvingene varer i 25 år.', aar:1991},
+  {t:'2016: Stan Kroenke, eier av Arsenal og LA Rams, kjøper hele ranchen. Prisantydning 725 millioner dollar, det dyreste ranchsalget i historien.', aar:2016, f:[['725 mill. $','prisantydning'],['2016','Kroenke']]}]},
+ {kap:'Kapittel 8', tittel:'6666 Ranch', under:'Nr. 6 · 275 000 acres · Guthrie og Dixon Creek', fokus:[6], b:[
+  {t:'1870: Samuel Burk Burnett kjøper 100 kyr med merket 6666. Legenden sier han vant ranchen i poker med fire seksere. Familien har alltid avvist det.', aar:1870, f:[['1870','grunnlagt']]},
+  {t:'1880-årene: Burnett leier 300 000 acres av comanchene og kiowaene i Oklahoma og blir venn med høvding Quanah Parker. Vennskapet redder ranchen gjennom tørken.', aar:1885},
+  {t:'Hovedkvarteret i Guthrie fra 1900 blir sentrum for quarter horse-avl. Hingsten Dash for Cash gjorde 6666 til verdens mest kjente hestefarm.', aar:1900},
+  {t:'Anne Burnett Marion, fjerde generasjon, dør i 2020. For første gang på 150 år legges ranchen ut for salg: 266 000 acres, 341 millioner dollar.', aar:2020, f:[['266 000','acres'],['341 mill. $','prisantydning']]},
+  {t:'2022: Taylor Sheridan, skaperen av «Yellowstone», kjøper sammen med investorer. Ranchen er nå TV-kulisse og egen serie. Fiksjonen har overtatt myten.', aar:2022}]},
+ {kap:'Kapittel 9', tittel:'Matador Ranch', under:'Nr. 13 · 131 000 acres · Motley County', fokus:[13], b:[
+  {t:'1879: Fem investorer starter Matador ved Ballard Springs. I 1882 selger de til et syndikat i Dundee, Skottland. Skottene eier ranchen i 69 år.', aar:1882, f:[['1882','Dundee'],['69 år','skotsk']]},
+  {t:'På det meste 879 000 acres eiet og 1,5 millioner acres beite, drevet av skotten Murdo Mackenzie, den fremste ranchforvalteren i sin tid.', aar:1900, f:[['1,5 mill.','acres beite']]},
+  {t:'1951: Syndikatet selger alt til Lazard Frères i London, som deler ranchen i 15 biter.', aar:1951},
+  {t:'1952: Fred Koch kjøper hovedkvarteret. Matador Cattle Company, 130 000 acres, er i dag en del av Koch Industries.', aar:1952, f:[['1952','Koch'],['130 000','acres']]}]},
+ {kap:'Kapittel 10', tittel:'Big Bend og Trans-Pecos', under:'Nr. 5, 7, 8, 10, 11, 14, 16, 17, 18, 24 · fjell og ørken', fokus:[5,7,8,10,11,14,16,17,18,24], b:[
+  {t:'Trans-Pecos: fjell, ørken og 30 centimeter regn i året. Her trengs opptil 100 acres per ku, så ranchene ble størst der jorden er fattigst.', aar:1880, f:[['30 cm','regn i året'],['100 acres','per ku']]},
+  {t:'O2 Ranch: Merket registrert i 1888, tvangssolgt i tørken i 1936, kjøpt av Lykes-familien fra Florida i 1941. Ingen beiting siden 1998. Nå gressrestaurering og jakt.', aar:1888, hl:[8], f:[['1941','Lykes'],['272 000','acres']]},
+  {t:'06 Ranch: Kokernot-merket er fra 1837. Herbert Kokernot jr. bygde i 1947 baseballstadionet Kokernot Field i Alpine av stein fra ranchen. Sjette generasjon driver i dag.', aar:1947, hl:[17,18]},
+  {t:'Longfellow Ranch: Oppkalt etter en jernbanestasjon fra 1881. Eies av Mitchell-familien, grunnleggerne av SandRidge Energy. Gass under bakken, jakt oppå.', aar:1881, hl:[7]},
+  {t:'La Escalera: Elsinore Ranch fra 1884, kjøpt av entreprenør Gerald Lyda i 1992, samme år han solgte Ladder Ranch i New Mexico til Ted Turner.', aar:1992, hl:[14]},
+  {t:'Brewster Ranch: Fram til 2001 fantes den ikke. Tobakksmilliardæren Brad Kelley fra Kentucky kjøpte 28 gamle rancher og sydde dem sammen til 423 000 acres.', aar:2001, hl:[5], f:[['28','rancher samlet'],['423 000','acres']]},
+  {t:'2024: Texas kjøper 353 785 acres av Brewster Ranch for 164,6 millioner dollar. Skolefondet skal tjene på jakt, beite, mineraler og karbonlagring. Staten kjøper land tilbake.', aar:2024, hl:[5], f:[['353 785','acres til staten'],['164,6 mill. $','pris']]},
+  {t:'Y-6 og Eagle & Carrizo Mountain: begge til salgs nå, for rundt 73 og 57 millioner dollar. Bighorn-sau, muldyrhjort og utsikt er varen, ikke kveg.', aar:2026, hl:[16,24]},
+  {t:'Corn Ranch: Jeff Bezos kjøpte Figure 2 Ranch i 2004 gjennom selskaper oppkalt etter oppdagere, for ikke å presse prisene. I dag over 400 000 acres.', aar:2004, hl:[10], f:[['2004','Bezos'],['400 000+','acres']]},
+  {t:'20. juli 2021: Bezos flyr selv til verdensrommet fra ranchen med New Shepard. Van Horn, 1 900 innbyggere, har fått en romhavn.', aar:2021, hl:[10]}]},
+ {kap:'Kapittel 11', tittel:'Grensen mot Mexico', under:'Nr. 12, 15, 19, 21, 22, 25 · Rio Grande', fokus:[12,15,19,21,22,25], b:[
+  {t:'Langs Rio Grande ligger ranchene som fortsatt har spansk arv i navnene og i arbeidsstokken. Hjortejakt, hvitvinget due og gass er inntektene.', aar:1900},
+  {t:'Callaghan Ranch: Grunnlagt av Charles Callaghan, siden drevet av Joe B. Finley. Ranchsentrum ved Encinal fra 1881, i dag kveg og gassbrønner.', aar:1881, hl:[21]},
+  {t:'Duval County Ranch: 125 000 acres vest for Freer, eid av Killam-familien fra Laredo siden 1992. Leopold-prisen for naturforvaltning i 2019.', aar:1992, hl:[12], f:[['1992','Killam']]},
+  {t:'East Foundation: Robert C. East etterlot i 2007 hele arven, 217 000 acres, til forskning på vilt og beite. Hovedkvarteret heter San Antonio Viejo.', aar:2007, hl:[15], f:[['217 000','acres forskning']]},
+  {t:'Maverick County: Comanche Maverick Ranch og Maverick County Land & Cattle, de to største ved Eagle Pass, der grensegjerdet og jakthyttene deler horisont.', aar:2010, hl:[22,25]},
+  {t:'Brazos Highland: 102 000 acres ved Devils River, eid av et selskap knyttet til kinesiske GH America. Vindparken de planla, stoppet Texas med lov i 2021.', aar:2021, hl:[19], f:[['2021','vindpark stoppet']]},
+  {t:'2025: Texas begrenser kjøp av land for selskaper fra Kina, Russland, Iran og Nord-Korea. Spørsmålet om hvem som får eie Texas er tilbake, 140 år etter skottene.', aar:2025, hl:[19]}]},
+ {kap:'Kapittel 12', tittel:'Panhandle', under:'Nr. 20, 23 · Canadian River', fokus:[23,20], b:[
+  {t:'Turkey Track Ranch: 80 000 acres langs Canadian River, med slagmarkene ved Adobe Walls fra 1864 og 1874. Her skal Billy Dixon ha truffet på nesten 1 500 meter, og comanchenes krig var tapt.', aar:1874, hl:[23], f:[['1874','Adobe Walls']]},
+  {t:'Februar 2024: Smokehouse Creek-brannen, den største i Texas’ historie, starter ved en nedfalt strømstolpe på ranchgrensen. Over en million acres brenner.', aar:2024, hl:[23], f:[['1 mill.+','acres brent']]},
+  {t:'Oktober 2026: Turkey Track legges ut igjen for 180 millioner dollar, med en firedel av mineralrettighetene.', aar:2026, hl:[23], f:[['180 mill. $','prisantydning']]},
+  {t:'Rimrock & Ritchie, 94 000 acres, er den minst omtalte på kartet. Noen av de største eiendommene i Texas er fortsatt private i ordets rette forstand.', aar:2026, hl:[20]}]},
+ {kap:'Kapittel 13', tittel:'Hva ranchene har betydd', under:'Økonomi, jus, makt, mennesker, kultur, natur', fokus:'alle', b:[
+  {t:'Økonomi: Først longhorn, så olje, så gass, så vind og jakt. Hver generasjon fant en ny inntekt under eller over gresset. Ranchene overlevde fordi de aldri bare var kveg.', aar:1900},
+  {t:'Jus: I Texas følger ikke mineralrettighetene jorden. Den som eier «minerals», kan bore på naboens beite. Mye av disse familienes rikdom står i den setningen.', aar:1920},
+  {t:'Makt: En guvernør, Briscoe. En kongressmann med LBJ som sekretær, Kleberg. Og et skolefond som eier 13 millioner acres. Land var og er politikk.', aar:1973, f:[['13 mill.','acres i skolefondet']]},
+  {t:'Mennesker: Vaqueroene som lærte anglo-amerikanerne kvegdrift. Comanchene som mistet landet. Kineños i sjuende generasjon. Skottene som sendte penger og fikk tap.', aar:1874},
+  {t:'Kultur: «Giant», «Lonesome Dove» og «Yellowstone» er alle fortalt herfra. Merkene Running W og 6666 er varemerker verdt mer enn mange av bilene de pryder.', aar:1956},
+  {t:'Natur: 95 prosent privat land betyr at naturvern i Texas skjer på rancher, eller ikke i det hele tatt. O2, East Foundation og Brewster er de nye modellene.', aar:1998},
+  {t:'Nå: Kjøperne heter Kroenke, Bezos, Kelley og Sheridan, ingen av dem født til kveg. Prisene er 200 til 700 millioner dollar. Men gjerdene står der de ble satt på 1880-tallet.', aar:2026, f:[['200–700','mill. $ per ranch']]}]},
+ {kap:'Epilog', tittel:'Ranchene som går videre', under:'', fokus:'alle', b:[
+  {t:'<q>Big ranches that seem to go on forever.</q><br>De går videre fordi de er mer enn jord: olje, vann, vilt, varemerker og familier som nekter å selge.', aar:2026},
+  {t:'Kart: u/convillious og VinOnline, delt av Michael Girdley. Tall fra Land Report, Texas Monthly og Texas State Historical Association. Arealene er omtrentlige, og kildene strides om dem.', aar:2026}]},
+];
+/* ---------- Tidsplan ---------- */
+const dur=(b)=>{ const c=b.t.replace(/<[^>]+>/g,'').length; return Math.min(16, 2.6 + c/16.5); };
+const PLAN=[]; let T=0;
+K.forEach((k,ki)=>{ k.start=T; k.b.forEach((b,bi)=>{ b.ki=ki; b.bi=bi; b.start=T; b.dur=dur(b)+(bi===0?1.2:0); T+=b.dur; PLAN.push(b); }); k.end=T; });
+const TOTAL=T; window.__total=TOTAL;
+/* ---------- Kart-tegning ---------- */
+const svgNS='http://www.w3.org/2000/svg';
+const el=(n,a)=>{ const e=document.createElementNS(svgNS,n); for(const k in a) e.setAttribute(k,a[k]); return e; };
+const verden=document.getElementById('verden');
+function tegnKart(){
+  const d=TX.map((p,i)=>(i?'L':'M')+px(p[0]).toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ')+'Z';
+  const defs=el('defs',{}); const p0=el('path',{id:'txpath',d,fill:'none',stroke:'#f0b35a','stroke-width':'3'}); defs.appendChild(p0); document.getElementById('svg').insertBefore(defs,verden);
+  verden.appendChild(el('path',{d,class:'txgl'}));
+  verden.appendChild(el('path',{d,class:'tx'}));
+  // XIT
+  const dx=XIT.map((p,i)=>(i?'L':'M')+px(p[0]).toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ')+'Z';
+  const x=el('path',{d:dx,class:'xit',id:'xitP'}); verden.appendChild(x);
+  const xt=el('text',{x:px(-102.45)+6,y:py(35.0),class:'xitt',id:'xitT'}); xt.textContent='XIT (1885–1912) · 3 000 000 ac'; verden.appendChild(xt);
+  // byer
+  BYER.forEach(([n,lon,lat])=>{ verden.appendChild(el('circle',{cx:px(lon),cy:py(lat),r:2.2,class:'by'})); const t=el('text',{x:px(lon)+5,y:py(lat)-4,class:'byt'}); t.textContent=n; verden.appendChild(t); });
+  // rancher
+  R.forEach(r=>{
+    const km2=r.ac*0.0040469; const pxArea=km2*(S/111)*(S/111);
+    r.el=[]; r.bbox=null;
+    r.t.forEach((t,ti)=>{
+      const a=pxArea*t[2], rad=Math.sqrt(a/Math.PI);
+      const cx=px(t[0]), cy=py(t[1]);
+      const d=blob(cx,cy,rad,r.n*31+ti*7);
+      const p=el('path',{d,fill:r.farge,class:'ranch','data-n':r.n}); verden.appendChild(p); r.el.push(p);
+      const bb={x0:cx-rad*1.3,y0:cy-rad*1.3,x1:cx+rad*1.3,y1:cy+rad*1.3};
+      r.bbox=r.bbox?{x0:Math.min(r.bbox.x0,bb.x0),y0:Math.min(r.bbox.y0,bb.y0),x1:Math.max(r.bbox.x1,bb.x1),y1:Math.max(r.bbox.y1,bb.y1)}:bb;
+      if(ti===0){ const tx=el('text',{x:cx,y:cy-rad-4,class:'rnum','data-n':r.n}); tx.textContent=r.n; verden.appendChild(tx); r.el.push(tx); }
+    });
+  });
+  // legende
+  document.getElementById('legende').innerHTML=R.slice(0,25).map(r=>`<span style="display:inline-block;width:9px;height:9px;background:${r.farge};border-radius:2px;margin-right:7px;vertical-align:-1px"></span>${String(r.n).padStart(2,' ')} ${r.navn} <b>${fmt(r.ac)}</b>`).slice(0,13).join('<br>')+'<br><span style="opacity:.6">+ 12 til · acres</span>';
+}
+function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' '); }
+function rnd(seed){ let s=seed*9301+49297; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+function blob(cx,cy,r,seed){
+  const g=rnd(seed), n=16, pts=[];
+  for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; const rr=r*(0.72+0.56*g()); pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr*0.95]); }
+  let d='M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);
+  for(let i=0;i<n;i++){ const p=pts[i], q=pts[(i+1)%n]; const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2; d+=' Q'+p[0].toFixed(1)+' '+p[1].toFixed(1)+' '+mx.toFixed(1)+' '+my.toFixed(1); }
+  return d+'Z';
+}
+function fokuser(ids){
+  const W=1040,H=1080;
+  let bb;
+  if(ids==='alle'||ids==='xit'){ bb={x0:px(-106.7),y0:py(36.6),x1:px(-93.4),y1:py(25.8)}; }
+  else { ids.forEach(n=>{ const r=R[n-1]; bb=bb?{x0:Math.min(bb.x0,r.bbox.x0),y0:Math.min(bb.y0,r.bbox.y0),x1:Math.max(bb.x1,r.bbox.x1),y1:Math.max(bb.y1,r.bbox.y1)}:Object.assign({},r.bbox); }); }
+  const bw=Math.max(60,bb.x1-bb.x0), bh=Math.max(60,bb.y1-bb.y0);
+  let s=Math.min(W*0.42/bw, H*0.42/bh, 2.5); if(ids==='alle'||ids==='xit') s=1;
+  const cx=(bb.x0+bb.x1)/2, cy=(bb.y0+bb.y1)/2;
+  const tx=W/2-cx*s, ty=H/2-cy*s;
+  verden.style.transform=`translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale(${s.toFixed(3)})`;
+  document.getElementById('legende').classList.toggle('skjul',!(ids==='alle'||ids==='xit'));
+  document.getElementById('xitP').classList.toggle('on',ids==='xit');
+  document.getElementById('xitT').classList.toggle('on',ids==='xit');
+}
+function marker(ids,hl){
+  const set=new Set(ids==='alle'||ids==='xit'?[]:ids); const hs=new Set(hl||[]);
+  document.querySelectorAll('.ranch,.rnum').forEach(e=>{ const n=+e.dataset.n; const dim=(set.size&&!set.has(n))||(hs.size&&!hs.has(n)&&!set.size); e.classList.toggle('dim',dim); e.classList.toggle('hl',hs.has(n)||(set.size&&set.has(n)&&!hs.size&&set.size<=2)); });
+}
+/* ---------- Tidslinje ---------- */
+const tidEl=document.getElementById('tid');
+const Y0=1830,Y1=2030;
+for(let y=1840;y<=2020;y+=20){ const x=(y-Y0)/(Y1-Y0)*100; const t=document.createElement('div'); t.className='tik'; t.style.left=x+'%'; tidEl.appendChild(t); const l=document.createElement('div'); l.className='tikt'; l.style.left=x+'%'; l.textContent=y; tidEl.appendChild(l); }
+function settAar(y){ const x=Math.max(0,Math.min(100,(y-Y0)/(Y1-Y0)*100)); document.getElementById('naal').style.left=x+'%'; const nt=document.getElementById('naalt'); nt.style.left=x+'%'; nt.textContent=y; }
+/* ---------- Meny + progress-tikk ---------- */
+const meny=document.getElementById('meny'), prog=document.getElementById('prog');
+K.forEach((k,i)=>{ const m=document.createElement('span'); m.className='mk'; m.textContent=(i===0?'P':i===K.length-1?'E':i); m.title=k.tittel; m.onclick=(e)=>{ e.stopPropagation(); hopp(i); }; meny.appendChild(m); k.mk=m;
+  if(i){ const t=document.createElement('div'); t.className='kap-tik'; t.style.left=(k.start/TOTAL*100)+'%'; prog.appendChild(t); } });
+/* ---------- Avspiller ---------- */
+let now=0, spiller=false, fart=1, sist=null, aktivB=-1, aktivK=-1, tale=false, lyd=true, ferdig=false, venterTale=false;
+const FARTER=[1,1.25,1.5,2];
+const tekstEl=document.getElementById('tekst'), faktaEl=document.getElementById('fakta');
+function visBeat(i){
+  const b=PLAN[i]; const k=K[b.ki];
+  if(b.ki!==aktivK){ aktivK=b.ki; document.getElementById('kapnr').textContent=k.kap; document.getElementById('tittel').textContent=k.tittel; document.getElementById('under').textContent=k.under||''; fokuser(k.fokus); K.forEach(x=>x.mk.classList.toggle('aktiv',x===k)); if(lyd) kling(); }
+  marker(k.fokus,b.hl);
+  tekstEl.classList.add('ut');
+  setTimeout(()=>{ tekstEl.innerHTML=b.t; tekstEl.classList.remove('ut'); },300);
+  faktaEl.innerHTML=''; (b.f||[]).forEach(([v,kk],j)=>{ const d=document.createElement('div'); d.className='fakt'; d.innerHTML=`<div class="v">${v}</div><div class="k">${kk}</div>`; faktaEl.appendChild(d); setTimeout(()=>d.classList.add('on'),500+j*220); });
+  settAar(b.aar);
+  aktivB=i;
+  if(tale) si(b.t.replace(/<br>/g,'. ').replace(/<[^>]+>/g,''));
+}
+function finnBeat(t){ let i=0; while(i<PLAN.length-1 && PLAN[i+1].start<=t) i++; return i; }
+function loop(ts){
+  if(sist===null) sist=ts; const dt=Math.min(0.1,(ts-sist)/1000); sist=ts;
+  if(spiller && !venterTale){
+    const b=PLAN[aktivB>=0?aktivB:0];
+    const slutt=b.start+b.dur;
+    if(tale && now+dt*fart>=slutt && snakker){ venterTale=true; now=slutt-0.01; }
+    else now+=dt*fart;
+  }
+  if(now>=TOTAL){ now=TOTAL; slutt(); }
+  const i=finnBeat(now); if(i!==aktivB) visBeat(i);
+  document.getElementById('progf').style.width=(now/TOTAL*100)+'%';
+  document.getElementById('klokke').textContent=klokke(now)+' / '+klokke(TOTAL);
+  requestAnimationFrame(loop);
+}
+function klokke(s){ s=Math.max(0,Math.floor(s)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function hopp(ki){ now=K[ki].start+0.001; aktivB=-1; venterTale=false; stoppTale(); if(ferdig){ ferdig=false; document.getElementById('slutt').style.display='none'; } if(!spiller) spiller=true; vispause(); }
+function startFilm(){ document.getElementById('start').style.display='none'; fullskjerm(); now=0; aktivB=-1; aktivK=-1; ferdig=false; spiller=true; vispause(); if(lyd) lydKlar(); }
+function slutt(){ if(ferdig) return; ferdig=true; spiller=false; stoppTale(); document.getElementById('slutt').style.display='flex'; }
+function togglePause(){ if(ferdig||document.getElementById('start').style.display!=='none') return; spiller=!spiller; if(!spiller) stoppTale(); else if(tale&&aktivB>=0){ venterTale=false; si(PLAN[aktivB].t.replace(/<[^>]+>/g,'')); } vispause(); }
+function vispause(){ document.getElementById('pauseM').style.display=spiller?'none':'flex'; }
+function fullskjerm(){ const e=document.documentElement; try{ const r=e.requestFullscreen?e.requestFullscreen():e.webkitRequestFullscreen?e.webkitRequestFullscreen():null; if(r&&r.catch) r.catch(()=>{}); }catch(_){} }
+function avsluttFull(){ try{ if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen().catch(()=>{}); }catch(_){} }
+/* tale (Web Speech, norsk stemme hvis finnes) */
+let snakker=false, utt=null;
+function si(txt){ if(!('speechSynthesis' in window)) return; stoppTale(); utt=new SpeechSynthesisUtterance(txt); utt.lang='nb-NO'; utt.rate=Math.min(1.6,0.95*fart+0.05); const v=speechSynthesis.getVoices().find(v=>/^(nb|no)/i.test(v.lang)); if(v) utt.voice=v; snakker=true; utt.onend=utt.onerror=()=>{ snakker=false; if(venterTale){ venterTale=false; now=PLAN[aktivB].start+PLAN[aktivB].dur+0.01; } }; speechSynthesis.speak(utt); }
+function stoppTale(){ if('speechSynthesis' in window){ snakker=false; speechSynthesis.cancel(); } }
+/* lyd: kort, myk klokkelyd ved kapittelskifte (WebAudio, ingen filer) */
+let AC=null; function lydKlar(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(_){} }
+function kling(){ if(!AC) return; try{ const t=AC.currentTime; [[660,0],[990,0.06]].forEach(([f,d])=>{ const o=AC.createOscillator(), g=AC.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(0.06,t+d+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.9); o.connect(g).connect(AC.destination); o.start(t+d); o.stop(t+d+1); }); }catch(_){} }
+/* kontroller */
+document.getElementById('knStart').onclick=(e)=>{ e.stopPropagation(); startFilm(); };
+document.getElementById('knIgjen').onclick=(e)=>{ e.stopPropagation(); document.getElementById('slutt').style.display='none'; startFilm(); };
+document.getElementById('knFart').onclick=(e)=>{ e.stopPropagation(); fart=FARTER[(FARTER.indexOf(fart)+1)%FARTER.length]; e.target.textContent=fart+'×'; };
+document.getElementById('knTale').onclick=(e)=>{ e.stopPropagation(); tale=!tale; e.target.textContent=tale?'Tale på':'Tale av'; e.target.classList.toggle('aktiv',tale); if(tale&&spiller&&aktivB>=0) si(PLAN[aktivB].t.replace(/<[^>]+>/g,'')); if(!tale){ stoppTale(); venterTale=false; } };
+document.getElementById('knLyd').onclick=(e)=>{ e.stopPropagation(); lyd=!lyd; e.target.textContent=lyd?'Lyd på':'Lyd av'; if(lyd) lydKlar(); };
+document.getElementById('stage').addEventListener('click',(e)=>{ if(e.target.closest('#ctrl,#meny,#start,#slutt')) return; togglePause(); });
+document.addEventListener('keydown',(e)=>{
+  if(e.code==='Space'){ e.preventDefault(); if(document.getElementById('start').style.display!=='none') startFilm(); else togglePause(); }
+  else if(e.key==='ArrowRight'){ hopp(Math.min(K.length-1,(aktivK<0?0:aktivK)+1)); }
+  else if(e.key==='ArrowLeft'){ const b=PLAN[Math.max(0,aktivB)]; const tilbake=(now-K[aktivK<0?0:aktivK].start)>3?aktivK:Math.max(0,aktivK-1); hopp(Math.max(0,tilbake)); }
+  else if(e.key==='Escape'){ spiller=false; stoppTale(); avsluttFull(); vispause(); }
+});
+/* skalering */
+function skaler(){ const s=Math.min(innerWidth/1920, innerHeight/1080); document.getElementById('stage').style.transform='scale('+s+')'; }
+addEventListener('resize',skaler); skaler();
+tegnKart(); fokuser('alle'); marker('alle',[]); settAar(2026);
+document.getElementById('klokke').textContent='00:00 / '+klokke(TOTAL);
+requestAnimationFrame(loop);
+if('speechSynthesis' in window) speechSynthesis.getVoices();
+</script>
+</body>
+</html>
