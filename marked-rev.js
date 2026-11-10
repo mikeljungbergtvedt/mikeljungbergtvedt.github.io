@@ -1,3 +1,4 @@
+/* c702 (Mike 10.11): Vekstloop dag-for-dag: klikk kampanjerad for bestilte reg.nr.; klikk reg.nr. for målgruppe-popup (samme tall som tellingen).
 /* c701 (Mike 10.11): Vekstloop dag-for-dag: eiertid_år (SD mottatt, eller i dag om SD mangler, minus «Eier siden», én desimal) i målgruppe (3–15 år, AR mid 70–400k, eiertid ≥ 2). Ukjent eiertid telles ikke med. Samme definisjon som vekstloop-uke.js.
 /* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
 /* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
@@ -149,6 +150,7 @@
       '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
       kostHtml(R) + vlHtml();
     root.querySelectorAll('[data-mr]').forEach(function (el) { el.onclick = function () { var k = el.getAttribute('data-mr'); apen[k] = !apen[k]; render(); }; });
+    vlBind(root);
     kostGraf(R);
     if (window.Chart) {
       var cv = document.getElementById('markrev-graf'); var ex = Chart.getChart(cv); if (ex) ex.destroy();
@@ -276,18 +278,32 @@
     var ref0 = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
     return Math.round(((ref0 - d) / (365.25 * 864e5)) * 10) / 10;
   }
-  function vlIMalgruppe(r, aks, eierIx, sd) {
+  /* Ett resultat brukes både i tellingen og i popupen, så de ikke kan divergere. */
+  function vlMalgruppeData(r, aks, eierIx, sd) {
     var arv = String((r[3] == null ? '' : r[3])).replace(/[\s\u00a0]/g, '');
     var m = arv.match(/(\d+)-(\d+)/);
     var val = m ? (+m[1] + +m[2]) / 2 : null;
     var aar = Number(r[8]);
-    if (val == null || !aar || !aks) return null;
-    var alder = aks.getFullYear() - aar;
-    if (eierIx == null) return null;
-    var ref = sd || new Date();
-    var eier = vlEiertid(r[eierIx], ref);
-    if (eier == null) return null;
-    return alder >= 3 && alder <= 15 && val >= 70000 && val <= 400000 && eier >= 2;
+    var alder = (aar && aks) ? (aks.getFullYear() - aar) : null;
+    var alderOk = alder == null ? null : (alder >= 3 && alder <= 15);
+    var arOk = val == null ? null : (val >= 70000 && val <= 400000);
+    var eier = null;
+    if (eierIx != null) eier = vlEiertid(r[eierIx], sd || new Date());
+    var eierOk = eier == null ? null : (eier >= 2);
+    var ok = null;
+    if (val == null || !aar || !aks) ok = null;
+    else if (eierIx == null || eier == null) ok = null;
+    else ok = alderOk && arOk && eierOk;
+    return {
+      reg: String(r[1] == null ? '' : r[1]).trim(),
+      alder: alder, alderOk: alderOk,
+      arMid: val, arOk: arOk,
+      eiertid: eier, eierOk: eierOk,
+      ok: ok
+    };
+  }
+  function vlIMalgruppe(r, aks, eierIx, sd) {
+    return vlMalgruppeData(r, aks, eierIx, sd).ok;
   }
   function vlEierIx(rows) {
     var h = (rows && rows[0]) || [];
@@ -407,9 +423,11 @@
       if (inn(sd)) { tot.l++; g.l++; }
       if (inn(aks)) {
         tot.a++; g.a++;
-        var seg = vlIMalgruppe(r, aks, eierIx, sd);
-        if (seg === true) { tot.seg++; g.seg++; }
-        else if (seg === null) { tot.segUnk++; g.segUnk++; }
+        if (!g.biler) g.biler = [];
+        var det = vlMalgruppeData(r, aks, eierIx, sd);
+        g.biler.push(det);
+        if (det.ok === true) { tot.seg++; g.seg++; }
+        else if (det.ok === null) { tot.segUnk++; g.segUnk++; }
       }
       if (inn(sol)) { tot.s++; g.s++; }
     });
@@ -426,7 +444,7 @@
     Object.keys(kostKamp).forEach(function (kkey) {
       if (!kamp[kkey]) rader.push({
         kanal: kkey.split('|')[0], camp: kkey.split('|').slice(1).join('|'), key: kkey,
-        l: 0, a: 0, s: 0, seg: 0, segUnk: 0, kost: kostKamp[kkey], navn: navnKamp[kkey]
+        l: 0, a: 0, s: 0, seg: 0, segUnk: 0, kost: kostKamp[kkey], navn: navnKamp[kkey], biler: []
       });
     });
     rader.sort(function (a, b) { return (b.kost || 0) - (a.kost || 0) || (b.l - a.l); });
@@ -436,7 +454,83 @@
     if (!g.a) return '–';
     return g.seg + ' av ' + g.a;
   }
-  function vlTabell(D) {
+  var _vlStore = {}, vlApen = {}, _vlPopOut = null;
+  function vlLukkPopup() {
+    var el = document.getElementById('vl-mg-pop');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    document.removeEventListener('keydown', vlPopEsc, true);
+    if (_vlPopOut) { document.removeEventListener('mousedown', _vlPopOut, true); _vlPopOut = null; }
+  }
+  function vlPopEsc(e) { if (e.key === 'Escape') vlLukkPopup(); }
+  function vlMerke(ok) {
+    if (ok === true) return '<span style="color:#1B5E20;font-weight:700">✓</span>';
+    if (ok === false) return '<span style="color:#B71C1C;font-weight:700">✗</span>';
+    return '<span style="color:#757575">–</span>';
+  }
+  function vlPopupHtml(d) {
+    var tal = function (n, des) {
+      if (n == null || !isFinite(n)) return 'ukjent';
+      return n.toLocaleString('nb-NO', { minimumFractionDigits: des || 0, maximumFractionDigits: des || 0 });
+    };
+    var rad = function (label, verdi, vs, ok) {
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px">'
+        + '<span style="min-width:58px;color:#667A72">' + label + '</span>'
+        + '<span style="flex:1">' + verdi + ' <span style="color:#667A72;font-size:11px">' + vs + '</span></span>'
+        + vlMerke(ok) + '</div>';
+    };
+    var verd = d.ok === true ? 'ja' : (d.ok === false ? 'nei' : 'ukjent');
+    var vf = d.ok === true ? '#1B5E20' : (d.ok === false ? '#B71C1C' : '#757575');
+    return '<div style="font-family:Arial,sans-serif;min-width:220px;max-width:280px">'
+      + '<div style="font-weight:800;font-size:15px;margin-bottom:8px">' + esc(d.reg) + '</div>'
+      + rad('Alder', d.alder == null ? 'ukjent' : (d.alder + ' år'), 'vs 3–15', d.alderOk)
+      + rad('AR mid', d.arMid == null ? 'ukjent' : (tal(Math.round(d.arMid)) + ' kr'), 'vs 70–400k', d.arOk)
+      + rad('Eiertid', d.eiertid == null ? 'ukjent' : (tal(d.eiertid, 1) + ' år'), 'vs ≥ 2', d.eierOk)
+      + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e5e5;font-weight:700;color:' + vf + '">I målgruppe: ' + verd + '</div>'
+      + '</div>';
+  }
+  function vlVisPopup(d, anchor) {
+    vlLukkPopup();
+    if (!d || typeof document === 'undefined' || !document.body) return;
+    var pop = document.createElement('div');
+    pop.id = 'vl-mg-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.style.cssText = 'position:fixed;z-index:99999;background:#fff;border:1px solid #C9D3CC;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:12px 14px;';
+    pop.innerHTML = vlPopupHtml(d);
+    document.body.appendChild(pop);
+    var r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { top: 80, bottom: 80, left: 80 };
+    var top = r.bottom + 6, left = r.left;
+    if (top + pop.offsetHeight > (window.innerHeight || 800) - 8) top = Math.max(8, r.top - pop.offsetHeight - 6);
+    if (left + pop.offsetWidth > (window.innerWidth || 800) - 8) left = Math.max(8, (window.innerWidth || 800) - pop.offsetWidth - 8);
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+    document.addEventListener('keydown', vlPopEsc, true);
+    _vlPopOut = function (e) { if (pop && !pop.contains(e.target)) vlLukkPopup(); };
+    setTimeout(function () { if (_vlPopOut) document.addEventListener('mousedown', _vlPopOut, true); }, 0);
+  }
+  function vlBind(root) {
+    if (!root || root._vlBound) return;
+    root._vlBound = true;
+    root.addEventListener('click', function (e) {
+      var t = e.target;
+      var bil = t && t.closest ? t.closest('[data-vl-bil]') : null;
+      if (bil) {
+        e.preventDefault();
+        e.stopPropagation();
+        var det = _vlStore[bil.getAttribute('data-vl-bil')];
+        if (det) vlVisPopup(det, bil);
+        return;
+      }
+      var kamp = t && t.closest ? t.closest('[data-vl-kamp]') : null;
+      if (!kamp) return;
+      var id = kamp.getAttribute('data-vl-kamp');
+      vlApen[id] = !vlApen[id];
+      var neste = kamp.nextElementSibling;
+      if (neste && neste.getAttribute('data-vl-exp') === id) neste.style.display = vlApen[id] ? '' : 'none';
+      var care = kamp.querySelector('.vl-care');
+      if (care) care.textContent = vlApen[id] ? '▾' : '▸';
+    });
+  }
+  function vlTabell(D, tabId) {
     var td = 'padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:right;white-space:nowrap';
     var tdl = 'padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap';
     var th = 'padding:4px 6px;text-align:right;background:#F0F4F2;font-size:11px;white-space:nowrap;color:#667A72;font-weight:700';
@@ -448,7 +542,19 @@
     (D.rader || []).forEach(function (g) {
       var ok = vlKampanjeOk(g);
       sumKost += g.kost || 0; sumL += g.l; sumA += g.a; sumS += g.s; sumSeg += g.seg;
-      h += '<tr><td style="' + tdl + '">' + esc(vlKortVisning(g)) + '</td><td style="' + td + '">' + vlKr(g.kost) + '</td><td style="' + td + '">' + g.l + '</td><td style="' + td + '">' + g.a + '</td><td style="' + td + '">' + vlPst(g.a, g.l) + '</td><td style="' + td + '">' + g.s + '</td><td style="' + td + '">' + ((g.a && g.kost > 0) ? vlKr(g.kost / g.a) : '–') + '</td><td style="' + td + '">' + vlSegTxt(g) + '</td><td style="' + tdl + ';font-weight:700;color:' + okFarge(ok) + '">' + ok + '</td></tr>';
+      var kid = (tabId || '') + '|' + String(g.key || '');
+      var har = g.biler && g.biler.length;
+      var care = har ? (' <span class="vl-care" style="color:#667A72;font-weight:400">' + (vlApen[kid] ? '▾' : '▸') + '</span>') : '';
+      var trAttr = har ? ' data-vl-kamp="' + esc(kid) + '" style="cursor:pointer"' : '';
+      h += '<tr' + trAttr + '><td style="' + tdl + '">' + esc(vlKortVisning(g)) + care + '</td><td style="' + td + '">' + vlKr(g.kost) + '</td><td style="' + td + '">' + g.l + '</td><td style="' + td + '">' + g.a + '</td><td style="' + td + '">' + vlPst(g.a, g.l) + '</td><td style="' + td + '">' + g.s + '</td><td style="' + td + '">' + ((g.a && g.kost > 0) ? vlKr(g.kost / g.a) : '–') + '</td><td style="' + td + '">' + vlSegTxt(g) + '</td><td style="' + tdl + ';font-weight:700;color:' + okFarge(ok) + '">' + ok + '</td></tr>';
+      if (har) {
+        var regs = g.biler.map(function (b, j) {
+          var bid = kid + '|' + j;
+          _vlStore[bid] = b;
+          return '<span data-vl-bil="' + esc(bid) + '" style="color:#004225;text-decoration:underline;cursor:pointer;margin-right:10px;white-space:nowrap">' + esc(b.reg) + '</span>';
+        }).join('');
+        h += '<tr data-vl-exp="' + esc(kid) + '" style="display:' + (vlApen[kid] ? '' : 'none') + '"><td colspan="9" style="padding:2px 6px 8px 18px;font-size:12px;line-height:1.7">' + regs + '</td></tr>';
+      }
     });
     h += '<tr style="font-weight:800"><td style="' + tdl + '">Peasy totalt</td><td style="' + td + '">' + vlKr(sumKost) + '</td><td style="' + td + '">' + sumL + '</td><td style="' + td + '">' + sumA + '</td><td style="' + td + '">' + vlPst(sumA, sumL) + '</td><td style="' + td + '">' + sumS + '</td><td style="' + td + '">' + ((sumA && sumKost > 0) ? vlKr(sumKost / sumA) : '–') + '</td><td style="' + td + '">' + (sumA ? (sumSeg + ' av ' + sumA) : '–') + '</td><td style="' + tdl + '"></td></tr>';
     h += '</tbody></table>';
@@ -457,27 +563,29 @@
   function vlKortTom(tittel) {
     return '<div class="table-card" style="margin-bottom:12px;background:#F4F6F5;opacity:.85"><div style="padding:10px 16px;font-size:13px;font-weight:700;color:#667A72">' + esc(tittel) + ' <span style="font-weight:600;font-size:11px;letter-spacing:.4px;text-transform:uppercase;border:1px solid #C9D3CC;border-radius:8px;padding:1px 7px;margin-left:8px">ikke ferdig</span></div></div>';
   }
-  function vlKortTab(tittel, D) {
+  function vlKortTab(tittel, D, tabId) {
     var unk = (D && D.tot && D.tot.segUnk) || 0;
     var note = '<div style="padding:0 16px 10px;font-size:11px;color:#667A72">ukjent eiertid: ' + unk + '</div>';
-    return '<div class="table-card" style="margin-bottom:12px"><div style="padding:10px 16px 4px;font-size:13px;font-weight:700;color:#004225">' + esc(tittel) + '</div><div style="padding:4px 12px 12px;overflow-x:auto">' + vlTabell(D) + '</div>' + note + '</div>';
+    return '<div class="table-card" style="margin-bottom:12px"><div style="padding:10px 16px 4px;font-size:13px;font-weight:700;color:#004225">' + esc(tittel) + '</div><div style="padding:4px 12px 12px;overflow-x:auto">' + vlTabell(D, tabId) + '</div>' + note + '</div>';
   }
   function vlHtml() {
     vlHentEier();
+    vlLukkPopup();
+    _vlStore = {};
     var rows = window._lastRows || [], ads = window.adsSpend || null, U = vlDenneUka();
     var html = '<div class="section-label" style="margin-top:22px">Vekstloop denne uka, dag for dag</div>';
     U.dager.forEach(function (dagO) {
       if (!dagO.ferdig) { html += vlKortTom(dagO.etikett); return; }
-      html += vlKortTab(dagO.etikett, vlBeregn(rows, ads, { fra: dagO.d, til: dagO.til }));
+      html += vlKortTab(dagO.etikett, vlBeregn(rows, ads, { fra: dagO.d, til: dagO.til }), dagO.key);
     });
     if (!U.hittilOk) html += vlKortTom('Uke ' + U.ukeNr + ' hittil');
     else {
       var hittilTittel = 'Uke ' + U.ukeNr + ' hittil (man–' + VL_DG[U.iGar.getDay() === 0 ? 6 : U.iGar.getDay() - 1] + ' ' + fd(U.iGar) + ')';
-      html += vlKortTab(hittilTittel, vlBeregn(rows, ads, { fra: U.man, til: U.iGar }));
+      html += vlKortTab(hittilTittel, vlBeregn(rows, ads, { fra: U.man, til: U.iGar }), 'hittil');
     }
     html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: biler 3–15 år, verdi 70–400k, eiertid minst 2 år (eiertid = år mellom «Eier siden» og SD mottatt, eller i dag om SD mangler, én desimal). Mangler «Eier siden» telles ikke i målgruppe (ukjent eiertid vises under hver dag). Mål: 20 % bestilt og 70 % solgt. OK = bestilt % ≥ 10 % og kost/bestilt ≤ 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
     return html;
   }
 
-  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk, vlMedEier: vlMedEier, _vlEier: _vlEier };
+  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk, vlMedEier: vlMedEier, vlMalgruppeData: vlMalgruppeData, vlPopupHtml: vlPopupHtml, _vlEier: _vlEier, _vlStore: function () { return _vlStore; } };
 })();
