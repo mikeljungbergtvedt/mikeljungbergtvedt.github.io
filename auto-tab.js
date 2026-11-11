@@ -1170,7 +1170,7 @@
         if (pmG) { rute = 'PRIS MANUELL'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
         /* c678 (Mike 30.10): kunden har svart Ja på skade utover vanlig bruk. Gul header, kundens fritekst under. */
         var skG = (b.skade_egen && !pmG && !auAvvis(agF) && !auStopp(agF)) ? (b.skade_tekst || '') : null;
-        if (skG != null) { rute = 'Skade egenerklæring'; hF = AU_DEMPET.y.tekst; hB = AU_DEMPET.y.bak; hK = AU_DEMPET.y.kant; }
+        /* c704 (Mike 11.11): header «Skade: Ja», selgerkommentaren vises bare i Selgerkommentar-boksen. */ if (skG != null) { rute = 'Skade: Ja'; hF = AU_DEMPET.y.tekst; hB = AU_DEMPET.y.bak; hK = AU_DEMPET.y.kant; }
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         // c686 (05.11): merke, modell og årsmodell først i headeren, før FSD/Bench.
         var navn0 = String(b.bil || '').replace(/\s+/g, ' ').trim();
@@ -1181,7 +1181,7 @@
         nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
-          (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? (skG ? '<div class="au-skade-tekst" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_DEMPET.y.tekst + '">«' + esc(skG) + '»</div>' : '') : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
