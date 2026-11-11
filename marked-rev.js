@@ -1,10 +1,11 @@
 /* c702 (Mike 10.11): Vekstloop dag-for-dag: klikk kampanjerad for bestilte reg.nr.; klikk reg.nr. for målgruppe-popup (samme tall som tellingen).
 /* c701 (Mike 10.11): Vekstloop dag-for-dag: eiertid_år (SD mottatt, eller i dag om SD mangler, minus «Eier siden», én desimal) i målgruppe (3–15 år, AR mid 70–400k, eiertid ≥ 2). Ukjent eiertid telles ikke med. Samme definisjon som vekstloop-uke.js.
 /* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
+/* c708 (Mike 11.11): Bestilt = siste booking (siste statusbytte til «på vei» / siste Gire eller Levere etter avbestilling+ny booking), aldri to ganger, samme regel som morgenmailen. Datoene kommer fra pulseBilfil (BESTILT_BOOKING='latest').
 /* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
 /* Peasy Pulse — Marked (ny), c601 (bestilt, leads og kost: inneværende uke mot samme dager forrige uke, med pil. Ingen kr per bestilt). c600 (tabellen: bare inneværende uke mot samme dager forrige uke; ukene står i grafen). c599 (Mike 15.10.2026). Testes ved siden av den gamle Marked-fanen.
-   Ett spørsmål: hva skjer med bestilte biler, og hvem bidrar? Bestilt = bilfilens «bestilt» (første dag på «på vei», én per internnr,
-   avbestilte ute). Kanal: Peasy-leads etter UTM (Meta, Google, Direkte), ellers kilden (Drive, Ordna, AutoDB).
+   Ett spørsmål: hva skjer med bestilte biler, og hvem bidrar? Bestilt = siste booking (c708), én per internnr, avbestilte ute.
+   Kanal: Peasy-leads etter UTM (Meta, Google, Direkte), ellers kilden (Drive, Ordna, AutoDB).
    Kalenderuker med ukenummer. Inneværende uke t.o.m. i går mot samme ukedager forrige uke, så de tre hele ukene før.
    Mandag: forrige hele uke mot uka før. Kr per bestilt: de 4 siste hele ukene. Graf: 12 uker, siste uke «hittil». */
 (function () {
@@ -65,7 +66,7 @@
       var lead = d0(r[14]), t = T[kn];
       var camp = String(r[24] || '').trim(), cid = (kn === 'Meta' || kn === 'Google') ? (kn === 'Meta' ? 'meta|' + (mId(camp, String(r[28] || '').trim(), lead) || camp) : 'google|' + camp) : null;
       ['naa', 'sammen'].forEach(function (p) { if (inn(P[p], lead)) { t.l[p]++; if (cid) { var oc = t.kamp[cid] = t.kamp[cid] || { n: tom(), l: tom() }; oc.l[p]++; } } });
-      var b = d0(r._bilfil ? r._bestilt : (r[15] || r[16])); if (!b) return;   // c691: Gire bestilt på | Levere selv (bilfil fyller samme kolonner)
+      var b = d0(r._bilfil ? r._bestilt : (r[15] || r[16])); if (!b) return;   // c708/c691: siste booking (pulseBilfil _bestilt / kol 15–16)
       var treff = false;
       ids.forEach(function (p) { if (inn(P[p], b)) { t.n[p]++; treff = true; } });
       Q.uker.forEach(function (u, ix) { if (inn(u.p, b)) serie[kn][ix]++; });
@@ -145,7 +146,7 @@
     root.innerHTML = headline(R) +
       '<div class="section-label">Hva skjer? Bestilte hent/lev per uke</div>' +
       '<div class="table-card" style="margin-bottom:18px"><div style="padding:8px 12px;overflow-x:auto"><table id="markrev-tab" style="width:100%;border-collapse:collapse;font-size:13px">' + h + '</table></div>' +
-      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = Gire bestilt på / Levere selv (første dag på «på vei», avbestilte telles ikke), som morgenmailen. Kanal = der leadet kom fra (Peasy etter UTM). Uten UTM er lag (ofte forsinket betalt), ikke egen kanal i kr/bestilt. ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
+      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei» / siste Gire eller Levere etter avbestilling og ny booking; avbestilte telles ikke), som morgenmailen. Kanal = der leadet kom fra (Peasy etter UTM). Uten UTM er lag (ofte forsinket betalt), ikke egen kanal i kr/bestilt. ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
       '<div class="section-label">Trend: bestilt per kanal, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
       kostHtml(R) + vlHtml();
@@ -187,7 +188,7 @@
     return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
       kalk + '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
-      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = første gang bilen kom på «på vei». Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy bestilt (Google + Meta + uten UTM). Partner (Drive, Ordna, AutoDB) er ute. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
+      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei»). Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy bestilt (Google + Meta + uten UTM). Partner (Drive, Ordna, AutoDB) er ute. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
   }
   /* c642 (Mike 22.10): kalkulator for kost per kontrakt. Valget lagres i localStorage, ikke på serveren. Mål 2 000 kr. */
   var KALK_MAAL = 2000;

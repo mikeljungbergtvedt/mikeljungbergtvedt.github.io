@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c707</title>
+<title>Peasy Pulse v16.08.c709</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c707';</script>
+<script>document.title='Peasy Pulse v16.08.c709';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -563,7 +563,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c707</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c709</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -636,7 +636,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c707</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c709</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -3464,18 +3464,31 @@ async function pulseBilfil(rows){
       var noD=function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x||'')?x.slice(8,10)+'.'+x.slice(5,7)+'.'+x.slice(0,4):null;};
       if(noD(b.bud_akseptert)) r._salg=noD(b.bud_akseptert);
       if(noD(b.bud_avvist)) r._retur=noD(b.bud_avvist);
-      /* c590: bestilt hent/lev (bilfil): første dag på «på vei», avbestilte uten dato. Én per internnr. */
-      r._bestilt=noD(b.bestilt)||null; r._bestiltType=b.bestilt_type||null;
+      /* c708 (Mike 11.11): bestilt = siste booking (siste statusbytte til «på vei» / siste Gire eller Levere
+         etter avbestilling og ny booking). En bil telles aldri to ganger. Avbestilte uten dato.
+         BESTILT_BOOKING = 'latest' | 'first' (første dag på «på vei»). Samme regel som Marketing-mailen. */
+      var BESTILT_BOOKING='latest'; // 'first' | 'latest'
+      var pickBestilt=function(b){
+        if(!b.bestilt)return {dato:null,type:null};
+        if(BESTILT_BOOKING!=='latest')return {dato:b.bestilt,type:b.bestilt_type==='selv'?'selv':'hent'};
+        var g=b.gire_bestilt||null,sv=b.levere_selv||null;
+        if(g&&sv)return sv>g?{dato:sv,type:'selv'}:{dato:g,type:'hent'};
+        if(g)return {dato:g,type:'hent'};
+        if(sv)return {dato:sv,type:'selv'};
+        return {dato:b.bestilt,type:b.bestilt_type==='selv'?'selv':'hent'};
+      };
+      var pb=pickBestilt(b);
+      r._bestilt=noD(pb.dato)||null; r._bestiltType=pb.type||null;
       r._mottatt=noD(b.mottatt)||null; /* c591: første dag bilen ble mottatt på anlegget (RECEIVED) */
       /* c622 (Mike 19.10): datoene Pulse teller på kommer fra bilfila for alle biler, også der Excel er tomt.
-         Registrert, SD mottatt, Estimering: bilfil (lik Excel 100 %). Bestilt: første dag på «på vei», avbestilte tomme,
+         Registrert, SD mottatt, Estimering: bilfil (lik Excel 100 %). Bestilt: c708 siste booking (se over), avbestilte tomme,
          hent i «Gire bestilt på», selv i «Levere selv». Mottatt: første mottak, Ordna når bilen går videre fra «på vei».
          Returnert på: bilfil når bilen har vært mottatt, ellers Excel. Status og «Solgt på» står fra Excel (solgt/retur bokføres fra bud akseptert/avvist over). */
       var dt=function(dato,tid){if(!dato)return '';var no=noD(dato);return (tid&&String(tid).slice(0,10)===no)?tid:no;};
       var hold=function(i,v){if(String(r[i]||'').slice(0,10)!==String(v).slice(0,10))r[i]=v;};
       hold(13,dt(b.registrert_logg)); hold(14,dt(b.sd_mottatt,b.sd_tid)); hold(31,dt(b.estimert,b.estimert_tid));
-      var hent=b.bestilt&&b.bestilt_type!=='selv';
-      hold(15,hent?dt(b.bestilt,b.gire_tid):''); hold(16,(b.bestilt&&!hent)?dt(b.bestilt,b.levere_tid):'');
+      var hent=pb.dato&&pb.type!=='selv';
+      hold(15,hent?dt(pb.dato,b.gire_tid):''); hold(16,(pb.dato&&!hent)?dt(pb.dato,b.levere_tid):'');
       hold(17,dt(b.mottatt));
       if(b.returnert&&b.mottatt) hold(21,dt(b.returnert)); /* bare biler som har vært på anlegg; avviste før mottak har «retur»-milepæl uten å være returnert */
     }}
@@ -5551,6 +5564,7 @@ function getCompletedWeekRange(weeksAgo){
 }
 /* c649 (Mike 26.10): ett felles regnestykke for de fire ukekortene i Nøkkeltall og Ukesrapport-fanen (Ukens flyt), så tallene alltid er like.
    Bestilt h/l, Mottatt, Bud akseptert (= Solgt, bokSalg) og Bud avvist (= Returnert, bokRetur) for en hel uke man–søn. */
+/* c709 (Mike 11.11): Bestilt = siste booking via pulseBilfil (_bestilt / BESTILT_BOOKING='latest'), samme regel som Marked (ny) og Marketing-mailen. Aldri to ganger. */
 /* c663: denne uka hittil (man t.o.m. i går). Mandag: forrige hele uke. */
 function pulseHittilRange(){
   var today=new Date();today.setHours(0,0,0,0);
@@ -5842,7 +5856,7 @@ function renderUkesrapport(){
     svg+='<text x="1110" y="143" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="1" fill="#667A72">DEKNINGSBIDRAG</text>';
     svg+='<text x="1110" y="165" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="16" font-weight="900" fill="'+nettoCol+'">'+fmtKr1(dbFlyt)+'</text>';
     svg+='</svg>';
-    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Alle antall fra bilfila (ERP). Leads = SD mottatt. Bestilt = første dag på «på vei», én per internnr, avbestilte telles ikke. Mottatt = første mottak, Ordna når bilen går videre fra «på vei». Bud-aksept = solgt / (solgt + retur). Penger = Peasy, Drive og AutoDB (ikke Ordna), samme motor som Finansielt (kolonne U &minus; produksjon (vask, foto, takst) &minus; retur, avgjort auksjon). Drive '+(curF.leadsDrive||0)+', Ordna '+(curF.leadsOrdna||0)+' og AutoDB '+(curF.leadsAutoDB||0)+' i leads, ikke i Peasy-spend. AutoDB-avgift og returkost teller med. Pipeline ('+pipeline+' biler) = bestilt og ikke ferdig.</div>';
+    var footnote='<div style="font-size:11px;color:#888;font-style:italic;text-align:center;margin-top:12px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">Alle antall fra bilfila (ERP). Leads = SD mottatt. Bestilt = siste booking (siste dag på «på vei» / siste Gire eller Levere etter avbestilling og ny booking), én per internnr, avbestilte telles ikke. Mottatt = første mottak, Ordna når bilen går videre fra «på vei». Bud-aksept = solgt / (solgt + retur). Penger = Peasy, Drive og AutoDB (ikke Ordna), samme motor som Finansielt (kolonne U &minus; produksjon (vask, foto, takst) &minus; retur, avgjort auksjon). Drive '+(curF.leadsDrive||0)+', Ordna '+(curF.leadsOrdna||0)+' og AutoDB '+(curF.leadsAutoDB||0)+' i leads, ikke i Peasy-spend. AutoDB-avgift og returkost teller med. Pipeline ('+pipeline+' biler) = bestilt og ikke ferdig.</div>';
     flowEl.innerHTML=svg+footnote;
   }
   var ep90flow=roll90T.pr>0?Math.round(roll90T.bs/roll90T.pr*100):0;
@@ -9466,7 +9480,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c707</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c709</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -12972,7 +12986,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c621: Ukesrapport teller fra bilfila (leads, priset, bestilt, mottatt, avvist, pipeline), Ordna med i mottatt. Ukens flyt viser Bestilt hent/lev. «Denne uka — aktivitet» fjernet (var lik Ukens flyt). -->
 <!-- c620: Bestilt hent/lev og Mottatt står på 0 på mandager (ny uke), teller fra tirsdag. -->
 <!-- c591: Nytt kort «Mottatt på anlegg» ved siden av «Bestilt hent/lev»: denne uka t.o.m. i går mot samme dager forrige uke, første mottak (bilfil «mottatt») per internnr. -->
-<!-- c590: «Bestilt hent/lev» (uke) teller bilfilens «bestilt»: første dag bilen kom på «på vei», én per internnr, avbestilte (avvist før mottak / tilbake til venter på bestilling) telles ikke. -->
+<!-- c709 / c590: «Bestilt hent/lev» (uke) teller siste booking (siste dag på «på vei» / siste Gire eller Levere etter avbestilling og ny booking), én per internnr, avbestilte telles ikke. Samme BESTILT_BOOKING som pulseBilfil og Marketing-mailen. -->
 <!-- c589: Operasjonelt → nøkkeltall: nytt første kort «Bestilt hent/lev» = denne uka t.o.m. i går mot samme ukedager forrige uke (P Gire bestilt / Q Levere selv). Mandag: forrige uke mot uka før. -->
 <!-- c588: QA-kortets status (SEND/QA) bygger på FSD og BM når de har priset bilen: QA bare når en av dem stoppet bilen, Mid mangler eller km-sperre. Gamle A/B/V3G-regler (mangler V3G-utpris, ident-score, A mot B) gjelder ikke lenger for disse bilene. -->
 <!-- c494: Nytt QA-kort: statusboks (poeng, rute, hovedårsak), detaljer bak +, HEFT/Origin som grå infolinje, SEND øverst = ekte SEND. Bilder gir ikke poeng. -->
@@ -13471,7 +13485,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c705 (Mike 11.11): QA-kort viser alltid Finn-sjekken: «Annonsert på Finn» med pris og lenke, eller «Finn-sjekk feilet» (auto-score v4.4 / peasy-bot v20.199). -->
 <!-- c706 (Mike 11.11): Kjørbar-linjen vises bare ved nei/usikker, ikke ved ja. -->
 <!-- c703 (Mike 10.11): retur = dagen budet ble avvist overalt (Kjernen Måltavle/getBudAkseptRange som ukesanalysen og månedsanalysen, ikke «Returnert på»/«skal returneres» på bestilt-dato). Avvist og så solgt i ny runde telles bare som solgt (bokRetur). Okt: retur 23 → 17. Uke 45: 9 → 8 (ZH47027). -->
-<script src="marked-rev.js?v=c703"></script>
+<script src="marked-rev.js?v=c708"></script>
 <script src="fsdbud-tab.js?v=c659"></script>
 <script src="bud-tab.js?v=202609291753"></script>
 
