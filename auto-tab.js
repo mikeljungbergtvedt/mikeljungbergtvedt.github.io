@@ -318,14 +318,21 @@
     if (!box) { var cv = c.querySelector('.qa-origin-cv'); if (!cv) return; box = document.createElement('div'); box.className = 'qa-chef-pills'; cv.parentNode.insertBefore(box, cv.nextSibling); }
     if (box.getAttribute('data-sig') !== html) { box.innerHTML = html; box.setAttribute('data-sig', html); }
     // c617 (Mike 19.10): kundens egen aktive Finn-annonse med lenke, og om Mid er kappet til 0,95 × den.
+    // c705 (Mike 11.11): sjekkes alltid (car.info, selgerkommentar, tvillinger). Feilet sjekk vises som «Finn-sjekk feilet», aldri stille grønt.
     var ea = ag.egen_annonse, linje = c.querySelector('.au-egen-annonse');
-    if (ea && ea.aktiv && ea.lenke) {
+    var lenkeH = function (u) { return u ? ' · <a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1565C0;font-weight:700">Åpne annonsen</a>' : ''; };
+    var eh = null, stil = 'margin:6px 0 8px;padding:7px 10px;background:#F4F8FD;border:1px solid #BBD3EE;border-radius:6px;font-size:12px;line-height:1.45;color:#1F3A5F';
+    if (ea && ea.aktiv) {
       var tak = ag.mid_kilde === 'merged+origin95';
-      var eh = '<b>Kundens egen annonse på Finn:</b> ' + (ea.pris ? auKr(ea.pris) + ' kr' : 'pris ukjent') + (ea.dager != null ? ' · ' + ea.dager + ' dager' : '') +
-        ' · <a href="' + esc(ea.lenke) + '" target="_blank" rel="noopener" style="color:#1565C0;font-weight:700">Åpne annonsen</a>' +
-        (tak ? '<div style="margin-top:2px;color:#8A6D10">Mid er kappet til 0,95 × denne prisen (' + auKr(ag.mid_pris) + '). Prisen kommer fra car.info. Sjekk at den faktisk står på Finn.</div>' : '');
-      if (!linje) { linje = document.createElement('div'); linje.className = 'au-egen-annonse'; linje.style.cssText = 'margin:6px 0 8px;padding:7px 10px;background:#F4F8FD;border:1px solid #BBD3EE;border-radius:6px;font-size:12px;line-height:1.45;color:#1F3A5F'; box.parentNode.insertBefore(linje, box.nextSibling); }
-      if (linje.getAttribute('data-sig') !== eh) { linje.innerHTML = eh; linje.setAttribute('data-sig', eh); }
+      eh = '<b>Annonsert på Finn:</b> ' + (ea.pris ? auKr(ea.pris) + ' kr' : 'pris ukjent') + (ea.dager != null ? ' · ' + ea.dager + ' dager' : '') + lenkeH(ea.lenke) +
+        (tak ? '<div style="margin-top:2px;color:#8A6D10">Mid er kappet til 0,95 × denne prisen (' + auKr(ag.mid_pris) + '). Prisen kommer fra ' + esc(ea.kilde || 'car.info') + '. Sjekk at den faktisk står på Finn.</div>' : '');
+    } else if (!ea || ea.feilet) {
+      eh = '<b>Finn-sjekk feilet:</b> ' + esc((ea && ea.grunn) || 'ingen data') + lenkeH(ea && ea.lenke);
+      stil = 'margin:6px 0 8px;padding:7px 10px;background:#FDF3F2;border:1px solid #E8B4AE;border-radius:6px;font-size:12px;line-height:1.45;color:#7A231B';
+    }
+    if (eh) {
+      if (!linje) { linje = document.createElement('div'); linje.className = 'au-egen-annonse'; box.parentNode.insertBefore(linje, box.nextSibling); }
+      if (linje.getAttribute('data-sig') !== eh) { linje.innerHTML = eh; linje.setAttribute('data-sig', eh); linje.style.cssText = stil; }
     } else if (linje) linje.remove();
   }
   // Mike 14.10: prisdelen på kortet (A/B, «Kunde ser», sendelinjen, fossefallet) regnes fra Mid, ikke fra den gamle prisingens måling.
