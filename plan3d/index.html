@@ -81,7 +81,7 @@ svg text{font-family:-apple-system,"Segoe UI",Inter,Roboto,Arial,sans-serif;poin
   <h2>Enheter</h2>
   <ul class="ul" id="liste"></ul>
   <div class="tot"><span>Sum plan</span><span id="sum"></span></div>
-  <p class="note">Mål og arealer er beregnet fra bildet og er omtrentlige (ca. ±5–10 %). Romnavn er foreslått ut fra innholdet og kan endres.</p>
+  <p class="note">Mål og arealer er beregnet fra bildet og er omtrentlige (ca. ±5–10 %). Utilgjengelig areal og trapperom er ikke med i summen. Romnavn er foreslått og kan endres.</p>
 </aside>
 <main id="main">
   <div class="view" id="v2"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg><div class="tag">2D</div><div class="help" id="h2">Dra for å flytte · rull/knip for zoom · klikk et rom</div></div>
@@ -98,15 +98,15 @@ const S=0.02, EXT=10, INT=5;
 const UNITS=[
  {id:'H1',n:'Hybel 1'},{id:'H2',n:'Hybel 2'},{id:'H3',n:'Hybel 3'},{id:'H4',n:'Hybel 4'},
  {id:'H5',n:'Hybel 5 (hjørne)'},{id:'H6',n:'Hybel 6'},{id:'H7',n:'Hybel 7'},{id:'H8',n:'Hybel 8'},
- {id:'A',n:'Leilighet (3 soverom)'},{id:'F',n:'Fellesareal'},{id:'B',n:'Boder og teknisk'}];
+ {id:'A',n:'Leilighet (3 soverom)'},{id:'F',n:'Fellesareal'},{id:'B',n:'Teknisk rom'}];
 const ROOMS=[
  {u:'A',n:'Soverom 1',t:'wood',p:[[45,794],[184,794],[184,1088],[45,1088]]},
  {u:'A',n:'Soverom 2',t:'wood',p:[[191,834],[353,834],[353,1088],[191,1088]]},
  {u:'A',n:'Soverom 3',t:'wood',p:[[359,834],[476,834],[476,866],[504,866],[504,1088],[359,1088]]},
  {u:'A',n:'Kjøkken og spiseplass',t:'wood',p:[[191,655],[413,655],[413,777],[191,777]],lp:[300,722]},
  {u:'A',n:'Bad (HC)',t:'tile',p:[[45,638],[184,638],[184,787],[45,787]]},
- {u:'B',n:'Bod 1',t:'pale',p:[[45,553],[237,553],[237,650],[188,650],[188,633],[45,633]],lp:[140,594]},
- {u:'B',n:'Bod 2',t:'pale2',p:[[242,553],[410,553],[410,650],[242,650]]},
+ {u:null,n:'Utilgjengelig',t:'na',p:[[45,553],[237,553],[237,650],[188,650],[188,633],[45,633]],lp:[140,598]},
+ {u:null,n:'Utilgjengelig',t:'na',p:[[242,553],[410,553],[410,650],[242,650]],lp:[326,605]},
  {u:'B',n:'Teknisk rom',t:'white',p:[[850,41],[1045,41],[1045,80],[1079,80],[1079,134],[850,134]],lp:[950,88]},
  {u:'H1',n:'Rom',t:'wood',p:[[510,867],[542,867],[542,834],[656,834],[656,1088],[510,1088]],lp:[588,950]},
  {u:'H1',n:'Bad',t:'tile',p:[[588,829],[588,797],[648,748],[679,748],[679,829]],lp:[642,797]},
@@ -126,14 +126,13 @@ const ROOMS=[
  {u:'H8',n:'Rom',t:'wood',p:[[1162,41],[1399,41],[1399,270],[1074,270],[1072,142],[1162,142]],lp:[1280,180]},
  {u:'H8',n:'Bad',t:'tile',p:[[1055,41],[1156,41],[1156,135],[1089,135],[1089,72],[1055,72]],lp:[1122,92]},
  {u:'F',n:'Korridor',t:'wood2',p:[[562,582],[898,582],[898,141],[1066,141],[1066,739],[1161,739],[1161,776],[1119,789],[1036,792],[987,746],[648,746],[588,794],[588,829],[191,829],[191,781],[466,783],[543,783],[562,759]],lp:[690,668]},
- {u:'F',n:'Trapp',t:'white',p:[[420,553],[534,553],[552,578],[552,755],[538,771],[466,771],[466,781],[420,781]],lp:[468,700]},
- {u:'F',n:'Heissjakt',t:'dark',p:[[419,457],[484,457],[484,543],[419,543]],nl:1},
+ {u:null,n:'Trapperom',n2:'ikke del av arealet',t:'na',p:[[420,553],[534,553],[552,578],[552,755],[538,771],[466,771],[466,781],[420,781]],lp:[486,662]},
  {u:'F',n:'WC',t:'tile',p:[[1074,664],[1161,664],[1161,733],[1074,733]],lp:[1100,710]},
 ];
 // yttervegger: [x1,y1,x2,y2,nx,ny]
 const WEXT=[
  [840,36,1410,36,0,-1],[845,36,845,136,-1,0],[845,136,893,136,0,1],[893,136,893,577,-1,0],[557,577,893,577,0,-1],
- [537,548,557,574,.7,-.7],[40,548,537,548,0,-1],[414,452,489,452,0,-1],[414,452,414,548,-1,0],[489,452,489,548,1,0],
+ [537,548,557,574,.7,-.7],[40,548,537,548,0,-1],
  [40,548,40,1093,-1,0],
  [40,1093,113,1093,0,1],[181,1093,279,1093,0,1],[414,1093,564,1093,0,1],[632,1093,734,1093,0,1],[802,1093,890,1093,0,1],[1019,1093,1305,1093,0,1],
  [1305,1093,1322,1076,.7,.7],[1383,1012,1405,990,.7,.7],
@@ -153,14 +152,12 @@ const WINT=[
  [188,831,188,1093],[356,831,356,1093],[507,865,507,1093],[659,865,659,1093],[815,742,815,1093],[961,742,961,1093],[1114,880,1114,1093],
  [585,795,647,745],[647,745,683,745],[681,745,681,831],[585,795,585,831],
  [727,783,727,792],[772,743,815,743],[860,743,961,743],[861,743,861,776],[961,743,985,743],[985,745,1033,795],
- [1079,792,1118,792],[1089,792,1089,848],[1162,736,1405,736],
+ [1079,792,1118,792],[1089,792,1089,848],[1089,848,1114,880],[1162,736,1405,736],
  [1071,556,1071,739],[1071,457,1071,516],[1071,268,1071,412],[1069,136,1069,224],[1069,139,1084,139],
  [1071,501,1405,501],[1098,273,1405,273],[1097,273,1097,309],[1070,366,1116,366],[1159,273,1159,412],[1159,36,1159,175],[1127,138,1161,138],
  [1071,578,1128,578],[1162,578,1199,578],[1197,578,1197,615],[1164,615,1199,615],[1164,615,1164,774],[1071,661,1166,661],[1071,736,1123,736]];
 // sjakter og søyler (massive): [x1,y1,x2,y2] eller {cx,cy,w,d,a}
-const SHAFT=[[132,773,188,787],[476,831,540,865],[657,831,693,865],[727,742,772,783],[1058,309,1101,337],[1070,337,1086,368],[1161,463,1188,501],
- {cx:1093,cy:858,w:50,d:16,a:52},{cx:1183,cy:762,w:48,d:16,a:47}];
-const HEIS=[430,557,492,614];
+const SHAFT=[[132,773,188,787],[476,831,540,865],[657,831,693,865],[727,742,772,783],[1058,309,1101,337],[1070,337,1086,368],[1161,463,1188,501]];
 const COLS=[[107,1003],[272,1003],[460,1003],[777,660],[1047,1003],[1258,1010],[1311,952],[1305,95],[1307,345],[1308,585]];
 // dører: [hengselX, hengselY, bredde, vinkel lukket (grader), slagretning ±1]
 const DOORS=[[188,829,38,270,-1],[260,831,40,0,1],[368,831,39,0,1],[544,831,40,0,1],[622,831,35,180,-1],[685,743,40,0,1],[727,829,36,270,-1],
@@ -186,7 +183,6 @@ const TABLE=[220,668,262,730];
 // bad: wc [x,y,retning grader], servant [x1,y1,x2,y2]
 const WC=[[52,708,0],[668,800,180],[795,812,180],[880,756,90],[972,810,0],[1130,668,90],[1150,600,180],[1148,300,180],[1148,108,180]];
 const SINK=[[166,680,184,704],[603,772,623,790],[792,750,810,770],[936,750,956,770],[990,768,1008,786],[1143,666,1159,684],[1128,642,1148,656],[1104,280,1124,296],[1093,117,1111,133]];
-const STAIR={x1:512,y1:640,x2:552,y2:724,n:9};
 
 /* ================= felles ================= */
 const $=(s)=>document.querySelector(s);
@@ -197,7 +193,7 @@ ROOMS.forEach((r,i)=>{ r.i=i; r.a=areal(r.p); r.c=r.lp||midt(r.p); });
 UNITS.forEach(u=>{ u.rooms=ROOMS.filter(r=>r.u===u.id); u.a=u.rooms.reduce((s,r)=>s+r.a,0); });
 const U=Object.fromEntries(UNITS.map(u=>[u.id,u]));
 let valgt=null, hover=null;
-const FLOORCOL={wood:'#e7cfa5',wood2:'#e2c79a',tile:'#f6f7f8',pale:'#dfe7ea',pale2:'#d9dbdc',white:'#f4f4f2',dark:'#5a5d61'};
+const FLOORCOL={na:'#e9ebee',wood:'#e7cfa5',wood2:'#e2c79a',tile:'#f6f7f8',pale:'#dfe7ea',pale2:'#d9dbdc',white:'#f4f4f2',dark:'#5a5d61'};
 
 /* ================= sidepanel ================= */
 function visInfo(){
@@ -220,14 +216,13 @@ function tegn2D(){
   <pattern id="pWood" width="80" height="16" patternUnits="userSpaceOnUse"><rect width="80" height="16" fill="${FLOORCOL.wood}"/><path d="M0 .5H80M0 8.5H80M22 0V8M61 8V16" stroke="#cdb287" stroke-width=".7" fill="none"/></pattern>
   <pattern id="pWood2" width="80" height="16" patternUnits="userSpaceOnUse"><rect width="80" height="16" fill="${FLOORCOL.wood2}"/><path d="M0 .5H80M0 8.5H80M22 0V8M61 8V16" stroke="#c7ab7e" stroke-width=".7" fill="none"/></pattern>
   <pattern id="pTile" width="15" height="15" patternUnits="userSpaceOnUse"><rect width="15" height="15" fill="${FLOORCOL.tile}"/><path d="M0 .5H15M.5 0V15" stroke="#cfd4da" stroke-width=".8"/></pattern>
+  <pattern id="pNa" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="12" height="12" fill="#eceef1"/><path d="M0 0V12" stroke="#cfd4da" stroke-width="2"/></pattern>
   </defs>`;
-  const fyll={wood:'url(#pWood)',wood2:'url(#pWood2)',tile:'url(#pTile)',pale:FLOORCOL.pale,pale2:FLOORCOL.pale2,white:FLOORCOL.white,dark:FLOORCOL.dark};
+  const fyll={na:'url(#pNa)',wood:'url(#pWood)',wood2:'url(#pWood2)',tile:'url(#pTile)',pale:FLOORCOL.pale,pale2:FLOORCOL.pale2,white:FLOORCOL.white,dark:FLOORCOL.dark};
   h+='<g id="gulv">'+ROOMS.map(r=>`<polygon class="rm" data-i="${r.i}" points="${P(r.p)}" fill="${fyll[r.t]}"/>`).join('')+'</g>';
   h+='<g id="over" pointer-events="none"></g>';
   // balkong
   h+=BAYS.map(b=>`<polygon points="${P(b)}" fill="#e9f3fb" stroke="#7fb1dc" stroke-width="3"/>`).join('');
-  // trapp
-  { const s=STAIR, st=(s.y2-s.y1)/s.n; h+=`<g pointer-events="none" stroke="#b9bec6" stroke-width="1" fill="none"><rect x="${s.x1}" y="${s.y1}" width="${s.x2-s.x1}" height="${s.y2-s.y1}" fill="#fff"/>`; for(let i=1;i<s.n;i++) h+=`<path d="M${s.x1} ${s.y1+i*st}H${s.x2}"/>`; h+=`<path d="M${(s.x1+s.x2)/2} ${s.y2-6}V${s.y1+8}m-5 7l5-7 5 7" stroke="#8a919b"/></g>`; }
   // møbler
   h+='<g id="mob" pointer-events="none">';
   KIT.forEach(k=>{ if(k.b) h+=`<rect x="${k.b[0]}" y="${k.b[1]}" width="${k.b[2]-k.b[0]}" height="${k.b[3]-k.b[1]}" fill="#fff" stroke="#9aa1ab" stroke-width="1"/>`;
@@ -248,7 +243,6 @@ function tegn2D(){
   // sjakter, søyler, heis
   h+='<g pointer-events="none">';
   SHAFT.forEach(s=>{ if(Array.isArray(s)) h+=`<rect x="${s[0]}" y="${s[1]}" width="${s[2]-s[0]}" height="${s[3]-s[1]}" fill="#6b7078" stroke="#3c434d" stroke-width="2"/>`; else h+=`<rect x="${-s.w/2}" y="${-s.d/2}" width="${s.w}" height="${s.d}" transform="translate(${s.cx},${s.cy}) rotate(${s.a})" fill="#6b7078" stroke="#3c434d" stroke-width="2"/>`; });
-  h+=`<rect x="${HEIS[0]}" y="${HEIS[1]}" width="${HEIS[2]-HEIS[0]}" height="${HEIS[3]-HEIS[1]}" fill="#7d838b" stroke="#3c434d" stroke-width="2"/><path d="M${HEIS[0]} ${HEIS[1]}L${HEIS[2]} ${HEIS[3]}M${HEIS[2]} ${HEIS[1]}L${HEIS[0]} ${HEIS[3]}" stroke="#3c434d" stroke-width="1"/>`;
   COLS.forEach(c=>h+=`<rect x="${c[0]-5}" y="${c[1]-5}" width="10" height="10" fill="#3c434d"/>`);
   h+='</g>';
   // vegger
@@ -260,7 +254,7 @@ function tegn2D(){
   h+='</g>';
   // navn
   h+='<g id="navn" text-anchor="middle">';
-  ROOMS.forEach(r=>{ if(r.nl) return; const u=U[r.u]; const hybel=r.u[0]==='H'&&r.n==='Rom'; const t1=hybel?u.n.replace(' (hjørne)',''):r.n; const fs=r.a<5?9.5:13;
+  ROOMS.forEach(r=>{ if(r.nl) return; if(!r.u){ h+=`<text x="${r.c[0]}" y="${r.c[1]}" font-size="11.5" font-style="italic" fill="#7a838f">${r.n}</text>`+(r.n2?`<text x="${r.c[0]}" y="${r.c[1]+13}" font-size="9.5" font-style="italic" fill="#8a929c">${r.n2}</text>`:''); return; } const u=U[r.u]; const hybel=r.u[0]==='H'&&r.n==='Rom'; const t1=hybel?u.n.replace(' (hjørne)',''):r.n; const fs=r.a<5?9.5:13;
     h+=`<text x="${r.c[0]}" y="${r.c[1]}" font-size="${fs}" font-weight="650" fill="#1c2430" paint-order="stroke" stroke="rgba(255,255,255,.85)" stroke-width="3">${t1}</text><text x="${r.c[0]}" y="${r.c[1]+fs+1}" font-size="${fs-2}" fill="#56606e" paint-order="stroke" stroke="rgba(255,255,255,.85)" stroke-width="3">${nf(r.a)} m²</text>`; });
   h+='</g>';
   // mål
@@ -274,7 +268,7 @@ function tegn2D(){
 }
 function oppdater2D(){
   const o=svg.querySelector('#over'); if(!o) return; let h='';
-  ROOMS.forEach(r=>{ if(r.u===valgt) h+=`<polygon points="${P(r.p)}" fill="rgba(46,125,255,.42)" stroke="#1f6fe5" stroke-width="2.5"/>`; else if(hover&&r.u===hover) h+=`<polygon points="${P(r.p)}" fill="rgba(31,111,229,.10)"/>`; });
+  ROOMS.forEach(r=>{ if(!r.u) return; if(r.u===valgt) h+=`<polygon points="${P(r.p)}" fill="rgba(46,125,255,.42)" stroke="#1f6fe5" stroke-width="2.5"/>`; else if(hover&&r.u===hover) h+=`<polygon points="${P(r.p)}" fill="rgba(31,111,229,.10)"/>`; });
   o.innerHTML=h;
   svg.querySelector('#mob').style.display=$('#cMob').checked?'':'none';
   svg.querySelector('#navn').style.display=$('#cLab').checked?'':'none';
@@ -322,9 +316,8 @@ function bygg3D(){
   const fot=[[35,543],[538,543],[562,572],[888,572],[888,141],[840,141],[840,31],[1410,31],[1410,992],[1308,1098],[35,1098]];
   const flate=(p,mat,y)=>{ const sh=new THREE.Shape(p.map(([x,yy])=>new THREE.Vector2(X3(x),-Z3(yy)))); const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),mat); m.rotation.x=-Math.PI/2; m.position.y=y; m.receiveShadow=true; return m; };
   scene.add(flate(fot,new THREE.MeshStandardMaterial({color:0xd9c6a2,roughness:.9}),-0.012));
-  scene.add(flate([[409,447],[494,447],[494,548],[409,548]],new THREE.MeshStandardMaterial({color:0x55585c,roughness:.9}),-0.012));
   const tre=teksturTre(true), tre2=teksturTre(false), flis=teksturFlis();
-  const gm={wood:()=>new THREE.MeshStandardMaterial({map:tre,roughness:.75}),wood2:()=>new THREE.MeshStandardMaterial({map:tre2,roughness:.75}),tile:()=>new THREE.MeshStandardMaterial({map:flis,roughness:.35}),
+  const gm={na:()=>new THREE.MeshStandardMaterial({color:0xdfe2e6,roughness:.95}),wood:()=>new THREE.MeshStandardMaterial({map:tre,roughness:.75}),wood2:()=>new THREE.MeshStandardMaterial({map:tre2,roughness:.75}),tile:()=>new THREE.MeshStandardMaterial({map:flis,roughness:.35}),
     pale:()=>new THREE.MeshStandardMaterial({color:0xdfe7ea,roughness:.8}),pale2:()=>new THREE.MeshStandardMaterial({color:0xd6d8d9,roughness:.8}),white:()=>new THREE.MeshStandardMaterial({color:0xf3f3f1,roughness:.8}),dark:()=>new THREE.MeshStandardMaterial({color:0x56595d,roughness:.9})};
   ROOMS.forEach(r=>{ const m=flate(r.p,gm[r.t](),0); m.userData.r=r; m.userData.c0=m.material.color.clone(); m.material.emissive=new THREE.Color(0x1f6fe5); m.material.emissiveIntensity=0; scene.add(m); gulv3.push(m); });
   BAYS.forEach(b=>scene.add(flate(b,new THREE.MeshStandardMaterial({color:0xc9ced4,roughness:.8}),-0.005)));
@@ -344,7 +337,6 @@ function bygg3D(){
   const sjaktM=[mSide,mSide,mMork,mSide,mSide,mSide];
   const kloss=(x1,y1,x2,y2,mat)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry((x2-x1)*S,1,(y2-y1)*S),mat); m.position.set(X3((x1+x2)/2),.5,Z3((y1+y2)/2)); m.castShadow=m.receiveShadow=true; scene.add(m); return m; };
   SHAFT.forEach(s=>{ let m; if(Array.isArray(s)) m=kloss(s[0],s[1],s[2],s[3],sjaktM); else { m=new THREE.Mesh(new THREE.BoxGeometry(s.w*S,1,s.d*S),sjaktM); m.position.set(X3(s.cx),.5,Z3(s.cy)); m.rotation.y=-s.a*Math.PI/180; m.castShadow=m.receiveShadow=true; scene.add(m); } hoye.push(m); });
-  hoye.push(kloss(HEIS[0],HEIS[1],HEIS[2],HEIS[3],[mMork,mMork,mMork,mMork,mMork,mMork]));
   COLS.forEach(c=>hoye.push(kloss(c[0]-5,c[1]-5,c[0]+5,c[1]+5,veggM)));
   // møbler
   mobG=new THREE.Group(); scene.add(mobG);
@@ -359,7 +351,6 @@ function bygg3D(){
     [[t[0]-14,t[1]+8,1],[t[0]-14,t[3]-22,1],[t[2]+2,t[1]+8,-1],[t[2]+2,t[3]-22,-1]].forEach(c=>{ boks(c[0],c[1],c[0]+12,c[1]+14,0.4,0.05,hvit); boks(c[2]>0?c[0]:c[0]+10,c[1],c[2]>0?c[0]+2:c[0]+12,c[1]+14,0.45,0.42,hvit); }); }
   WC.forEach(([x,y,a])=>{ const g=new THREE.Group(); const tank=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.75,0.36),hvit); tank.position.set(0.02,0.375,0); const sk=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.14,0.4,20),hvit); sk.scale.set(1.3,1,1); sk.position.set(0.36,0.2,0); [tank,sk].forEach(m=>{ m.castShadow=true; g.add(m); }); g.position.set(X3(x),0,Z3(y)); g.rotation.y=-a*Math.PI/180; mobG.add(g); });
   SINK.forEach(s=>boks(s[0],s[1],s[2],s[3],0.72,0.14,hvit));
-  { const s=STAIR, st=(s.y2-s.y1)/s.n; for(let i=0;i<s.n;i++){ const m=new THREE.Mesh(new THREE.BoxGeometry((s.x2-s.x1)*S,0.17*(i+1),st*S),hvit); m.position.set(X3((s.x1+s.x2)/2),0.17*(i+1)/2,Z3(s.y2-(i+.5)*st)); m.castShadow=m.receiveShadow=true; scene.add(m); m.userData.trinn=0.17*(i+1); hoye.push(m); } }
   // dører
   const dorM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.7});
   DOORS.forEach(([x,y,w,a,s])=>{ const ang=(a+s*78)*Math.PI/180; const m=new THREE.Mesh(new THREE.BoxGeometry(w*S,1,0.04),dorM); m.position.set(X3(x+w/2*Math.cos(ang)),.5,Z3(y+w/2*Math.sin(ang))); m.rotation.y=-ang; m.castShadow=true; m.userData.dor=1; scene.add(m); inner.push(m); });
@@ -367,7 +358,7 @@ function bygg3D(){
   const L=$('#lab3'); UNITS.forEach(u=>{ if(u.id==='B') return; const r=u.rooms.find(q=>q.n==='Rom')||u.rooms.find(q=>q.n==='Korridor')||u.rooms[3]||u.rooms[0]; const d=document.createElement('div'); d.textContent=u.n.replace(' (hjørne)','').replace(' (3 soverom)',''); L.appendChild(d); lab3.push({d,u:u.id,p:new THREE.Vector3(X3(r.c[0]),0.1,Z3(r.c[1]))}); });
   klar3=true; storrelse(); oppdater3D(); kontroll3D(); requestAnimationFrame(loop);
 }
-function oppdater3D(){ if(!klar3) return; gulv3.forEach(m=>{ const u=m.userData.r.u; const v=u===valgt, h=!v&&hover&&u===hover; m.material.color.setHex(v?0x8fb8ff:h?0xd3e2ff:0xffffff).multiply(m.userData.c0); m.material.emissiveIntensity=v?0.10:0; }); lab3.forEach(l=>l.d.classList.toggle('on',l.u===valgt)); mobG.visible=$('#cMob').checked; $('#lab3').style.display=$('#cLab').checked?'':'none'; }
+function oppdater3D(){ if(!klar3) return; gulv3.forEach(m=>{ const u=m.userData.r.u; const v=!!u&&u===valgt, h=!v&&!!u&&hover&&u===hover; m.material.color.setHex(v?0x8fb8ff:h?0xd3e2ff:0xffffff).multiply(m.userData.c0); m.material.emissiveIntensity=v?0.10:0; }); lab3.forEach(l=>l.d.classList.toggle('on',l.u===valgt)); mobG.visible=$('#cMob').checked; $('#lab3').style.display=$('#cLab').checked?'':'none'; }
 function settKam(){ const {th,ph,r,t}=orb; camera.position.set(t.x+r*Math.sin(ph)*Math.sin(th), t.y+r*Math.cos(ph), t.z+r*Math.sin(ph)*Math.cos(th)); camera.lookAt(t); }
 function passR(){ const a=camera.aspect||1, t=Math.tan(camera.fov*Math.PI/360); return Math.max(31/(2*t), 39/(2*t*a)); }
 let forsteStr=true;
