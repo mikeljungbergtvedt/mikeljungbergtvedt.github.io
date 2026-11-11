@@ -542,9 +542,11 @@
     };
   }
   /* c683 (Mike 03.11): kjørbarhet vurdert av FSD/BM ut fra kundens tekst/mangellapp. nei/usikker = manuell sjekk. */
+  /* c706 (Mike 11.11): vis linjen bare ved nei/usikker, ikke ved ja. */
   function auKjorbar(c, b) {
     var k = b.kjorbar, x = c.querySelector('.au-kjorbar');
     if (!k || !k.verdi) { if (x) x.remove(); return; }
+    if (k.verdi === 'ja') { if (x) x.remove(); return; }
     var sig = k.verdi + '|' + (k.grunn || '');
     if (x && x.getAttribute('data-sig') === sig) return;
     if (!x) { x = document.createElement('div'); x.className = 'au-kjorbar'; var d = c.querySelector('.au-duplikat'); var ref = d || c.firstElementChild; if (ref && ref.nextSibling) c.insertBefore(x, ref.nextSibling); else c.appendChild(x); }
