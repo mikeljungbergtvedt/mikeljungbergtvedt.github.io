@@ -1,6 +1,7 @@
 /* c702 (Mike 10.11): Vekstloop dag-for-dag: klikk kampanjerad for bestilte reg.nr.; klikk reg.nr. for målgruppe-popup (samme tall som tellingen).
 /* c701 (Mike 10.11): Vekstloop dag-for-dag: eiertid_år (SD mottatt, eller i dag om SD mangler, minus «Eier siden», én desimal) i målgruppe (3–15 år, AR mid 70–400k, eiertid ≥ 2). Ukjent eiertid telles ikke med. Samme definisjon som vekstloop-uke.js.
 /* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
+/* c713 (Mike 12.11): kost/bestilt = annonsekost Meta+Google / bestilt med Kilde = peasy. Bestilt % = de bestilte / Peasy-leads. Kost per lead = samme kost / Peasy-leads. Drive, Ordna og AutoDB er bare avstemming, aldri i disse tallene. */
 /* c712 (Mike 12.11): Peasy-bestilt er uendret (grunnlaget for kr/bestilt). Ved siden av står alle kilder, fra pulseBestiltPerKilde — samme funksjon som Nøkkeltall. */
 /* c708 (Mike 11.11): Bestilt = siste booking (siste statusbytte til «på vei» / siste Gire eller Levere etter avbestilling+ny booking), aldri to ganger, samme regel som morgenmailen. Datoene kommer fra pulseBilfil (BESTILT_BOOKING='latest').
 /* c691 (Mike 05.11): Marked (ny) = morgenmailen (kampanje-uke v3). Kr/bestilt = Google+Meta-kost / Peasy bestilt (Google+Meta+uten UTM), partner (Drive/Ordna/AutoDB) ute. Uten UTM = lag, ikke egen CAC-kanal. 14d mot forrige 14d. Bestilt = Gire bestilt på | Levere selv (bilfil-dato der den finnes). */
@@ -66,7 +67,8 @@
       if (!r || !String(r[1] || '').trim()) return; var kn = kanal(r); if (!kn || !T[kn]) return;
       var lead = d0(r[14]), t = T[kn];
       var camp = String(r[24] || '').trim(), cid = (kn === 'Meta' || kn === 'Google') ? (kn === 'Meta' ? 'meta|' + (mId(camp, String(r[28] || '').trim(), lead) || camp) : 'google|' + camp) : null;
-      ['naa', 'sammen'].forEach(function (p) { if (inn(P[p], lead)) { t.l[p]++; if (cid) { var oc = t.kamp[cid] = t.kamp[cid] || { n: tom(), l: tom() }; oc.l[p]++; } } });
+      /* c713: leads bare for Peasy-kanaler. Drive, Ordna og AutoDB telles ikke som leads. */
+      if (PARTNER.indexOf(kn) < 0) ['naa', 'sammen'].forEach(function (p) { if (inn(P[p], lead)) { t.l[p]++; if (cid) { var oc = t.kamp[cid] = t.kamp[cid] || { n: tom(), l: tom() }; oc.l[p]++; } } });
       var b = (typeof pulseBestiltDato === 'function') ? pulseBestiltDato(r) : d0(r._bilfil ? r._bestilt : (r[15] || r[16])); if (!b) return;   // c712/c708: samme dato som pulseBestiltPerKilde
       var treff = false;
       ids.forEach(function (p) { if (inn(P[p], b)) { t.n[p]++; treff = true; } });
@@ -87,36 +89,53 @@
     });
     // c641 (Mike 22.10): annonsekost per uke (ads-spend.json, samme dager som trenden) til kost per bestilt hent/lev.
     var kostU = { Google: Q.uker.map(function (u) { return kostKan('Google', u.p); }), Meta: Q.uker.map(function (u) { return kostKan('Meta', u.p); }) };
-    var kilde = {};
-    if (typeof pulseBestiltPerKilde === 'function') {
-      ['naa', 'sammen'].forEach(function (p) { kilde[p] = pulseBestiltPerKilde(rows, P[p][0], P[p][1]); });
-    }
-    return { T: T, Q: Q, serie: serie, kostU: kostU, kilde: kilde };
+    var kilde = {}, peasyLeads = {};
+    ['naa', 'sammen', 'f14', 'p14'].forEach(function (p) {
+      if (typeof pulseBestiltPerKilde === 'function') kilde[p] = pulseBestiltPerKilde(rows, P[p][0], P[p][1]);
+      var nLead = 0;
+      rows.slice(1).forEach(function (r) {
+        if (!r || !String(r[1] || '').trim()) return;
+        var s = (typeof srcKey === 'function') ? srcKey(r) : '';
+        if (s !== 'peasy') return;
+        if (inn(P[p], d0(r[14]))) nLead++;
+      });
+      peasyLeads[p] = nLead;
+    });
+    return { T: T, Q: Q, serie: serie, kostU: kostU, kilde: kilde, peasyLeads: peasyLeads };
   }
 
   function pil(a, b, fmt) { fmt = fmt || String; if (a > b) return '<span style="color:#2E7D32;font-weight:800">▲ ' + fmt(a - b) + '</span>'; if (a < b) return '<span style="color:#C62828;font-weight:800">▼ ' + fmt(b - a) + '</span>'; return '<span style="color:#667A72">=</span>'; }
-  /* c691: headline som morgenmailen — Peasy kost → bestilt (kr/best) nå vs samme dager forrige uke, og 14d vs forrige 14d. */
+  /* c691/c713: Peasy = Google + Meta + uten UTM. Kost er Meta + Google fra ads-spend.json.
+     kost/bestilt, bestilt % og kost per lead bruker bare Kilde = peasy. */
   function peasySum(T, p) { var n = 0, l = 0; PEASY.forEach(function (k) { n += T[k].n[p]; l += T[k].l[p]; }); var kost = (T.Google.kost[p] || 0) + (T.Meta.kost[p] || 0); return { n: n, l: l, kost: kost, per: n ? kost / n : null }; }
+  function peasyTall(R, p, sum) {
+    var bk = R.kilde && R.kilde[p];
+    var bestilt = bk ? bk.peasy : sum.n;
+    var leads = (R.peasyLeads && R.peasyLeads[p] != null) ? R.peasyLeads[p] : sum.l;
+    var kost = sum.kost;
+    return { bestilt: bestilt, leads: leads, kost: kost, perBest: bestilt ? kost / bestilt : null, perLead: leads ? kost / leads : null, pst: leads ? Math.round(100 * bestilt / leads) : null };
+  }
   function fd(d) { return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); }
   function headline(R) {
     var T = R.T, P = R.Q.P, a = peasySum(T, 'naa'), b = peasySum(T, 'sammen'), c = peasySum(T, 'f14'), d = peasySum(T, 'p14');
-    var pct = function (x) { return x.l ? Math.round(100 * x.n / x.l) + ' %' : '–'; };
-    var MAAL = 2000, ok = a.per != null && a.per < MAAL;
-    window._markrevHeadline = { naa: a, sammen: b, f14: c, p14: d };
-    var bestiltNaa = a.n + ' bestilt';
+    var naaT = peasyTall(R, 'naa', a), smT = peasyTall(R, 'sammen', b), fT = peasyTall(R, 'f14', c), pT = peasyTall(R, 'p14', d);
+    var MAAL = 2000, ok = naaT.perBest != null && naaT.perBest < MAAL;
+    window._markrevHeadline = { naa: a, sammen: b, f14: c, p14: d, naaT: naaT, sammenT: smT };
+    var bestiltNaa = naaT.bestilt + ' bestilt';
     var bkN = R.kilde && R.kilde.naa;
     if (bkN && typeof pulseBestiltInklTekst === 'function') {
       var inklN = pulseBestiltInklTekst(bkN);
       if (inklN) bestiltNaa = 'Bestilt ' + bkN.peasy + ' Peasy ' + inklN;
     }
+    var pstTxt = function (t) { return t.pst == null ? '–' : (t.pst + ' %'); };
     return '<div class="table-card" style="margin-bottom:18px;padding:14px 18px;border-left:4px solid ' + (ok ? '#004225' : '#B71C1C') + '">' +
       '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Peasy kost → bestilt (som morgenmailen) · mål under ' + kr(MAAL) + ' kr/best</div>' +
-      '<div style="font-size:17px;font-weight:800;margin-top:6px">' + fd(P.naa[0]) + '–' + fd(P.naa[1]) + ': ' + kr(a.kost) + ' kr → ' + bestiltNaa + ' (' + kr(a.per) + ' kr/best)' +
-      ' <span style="font-weight:500;color:#667A72">— forrige ' + kr(b.kost) + ' → ' + b.n + ' (' + kr(b.per) + ')</span></div>' +
-      '<div style="font-size:13px;margin-top:4px">Leads → bestilt: ' + a.l + ' → ' + a.n + ' (' + pct(a) + ') mot ' + b.l + ' → ' + b.n + ' (' + pct(b) + ')</div>' +
-      '<div style="font-size:14px;margin-top:6px"><b>14d</b> ' + fd(P.f14[0]) + '–' + fd(P.f14[1]) + ': ' + kr(c.kost) + ' kr → <b>' + c.n + ' bestilt</b> (' + kr(c.per) + ')' +
-      ' — forrige 14d ' + fd(P.p14[0]) + '–' + fd(P.p14[1]) + ': ' + kr(d.kost) + ' → ' + d.n + ' (' + kr(d.per) + ')</div>' +
-      '<div style="font-size:11px;color:#667A72;margin-top:6px">Peasy = Google + Meta + uten UTM (lag). Partner (Drive, Ordna, AutoDB) er ute av kr/bestilt.</div></div>';
+      '<div style="font-size:17px;font-weight:800;margin-top:6px">' + fd(P.naa[0]) + '–' + fd(P.naa[1]) + ': ' + kr(naaT.kost) + ' kr → ' + bestiltNaa + ' (' + kr(naaT.perBest) + ' kr/best)' +
+      ' <span style="font-weight:500;color:#667A72">— forrige ' + kr(smT.kost) + ' → ' + smT.bestilt + ' (' + kr(smT.perBest) + ')</span></div>' +
+      '<div style="font-size:13px;margin-top:4px">Leads → bestilt: ' + naaT.leads + ' → ' + naaT.bestilt + ' (bestilt % ' + pstTxt(naaT) + ') mot ' + smT.leads + ' → ' + smT.bestilt + ' (' + pstTxt(smT) + '). Kost per lead ' + kr(naaT.perLead) + ' kr.</div>' +
+      '<div style="font-size:14px;margin-top:6px"><b>14d</b> ' + fd(P.f14[0]) + '–' + fd(P.f14[1]) + ': ' + kr(fT.kost) + ' kr → <b>' + fT.bestilt + ' bestilt</b> (' + kr(fT.perBest) + ')' +
+      ' — forrige 14d ' + fd(P.p14[0]) + '–' + fd(P.p14[1]) + ': ' + kr(pT.kost) + ' → ' + pT.bestilt + ' (' + kr(pT.perBest) + ')</div>' +
+      '<div style="font-size:11px;color:#667A72;margin-top:6px">Kost/bestilt, bestilt %, leads og kost per lead er bare Kilde = peasy (Google + Meta + uten UTM). Drive, Ordna og AutoDB er bare avstemming.</div></div>';
   }
   function perBest(k, n) { return !k ? '–' : n ? kr(k / n) : 'ingen'; }
 
@@ -138,11 +157,12 @@
     var partnerStart = false;
     KAN.forEach(function (kn) {
       var t = T[kn];
-      if (PARTNER.indexOf(kn) >= 0 && !partnerStart) { partnerStart = true; h += peasyRad(); h += '<tr><td colspan="' + cols + '" style="padding:10px 8px 4px;font-size:11px;color:#667A72;font-weight:700">Partner (ikke i kr/bestilt)</td></tr>'; }
-      if (PARTNER.indexOf(kn) < 0) { sum.n.naa += t.n.naa; sum.n.sammen += t.n.sammen; sum.l.naa += t.l.naa; sum.l.sammen += t.l.sammen; sum.k.naa += t.kost.naa || 0; sum.k.sammen += t.kost.sammen || 0; }
+      var partner = PARTNER.indexOf(kn) >= 0;
+      if (partner && !partnerStart) { partnerStart = true; h += peasyRad(); h += '<tr><td colspan="' + cols + '" style="padding:10px 8px 4px;font-size:11px;color:#667A72;font-weight:700">Avstemming (ikke i kost/bestilt, bestilt %, leads eller kost per lead)</td></tr>'; }
+      if (!partner) { sum.n.naa += t.n.naa; sum.n.sammen += t.n.sammen; sum.l.naa += t.l.naa; sum.l.sammen += t.l.sammen; sum.k.naa += t.kost.naa || 0; sum.k.sammen += t.kost.sammen || 0; }
       var kan = !!t.liste && t.liste.length;
       h += '<tr' + (kan ? ' data-mr="' + kn + '" style="cursor:pointer"' : '') + '><td style="' + td.replace('right', 'left') + ';font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:' + FARGE[kn] + ';margin-right:7px"></span>' + nv(kn) + (kan ? ' <span style="color:#667A72;font-weight:400">' + (apen[kn] ? '▾' : '▸') + '</span>' : '') + '</td>' +
-        tre(t.n.naa, t.n.sammen, heltall, true) + tre(t.l.naa, t.l.sammen, heltall, false, true) + tre(t.kost.naa, t.kost.sammen, kr, false, true) + '</tr>';
+        tre(t.n.naa, t.n.sammen, heltall, true) + tre(partner ? null : t.l.naa, partner ? null : t.l.sammen, heltall, false, true) + tre(partner ? null : t.kost.naa, partner ? null : t.kost.sammen, kr, false, true) + '</tr>';
       if (kan && apen[kn]) {
         var L = t.liste, vis = L.length > 8 && !apen[kn + '+'] ? L.slice(0, 5) : L;
         vis.forEach(function (c) {
@@ -170,7 +190,7 @@
     root.innerHTML = headline(R) +
       '<div class="section-label">Hva skjer? Bestilte hent/lev per uke</div>' +
       '<div class="table-card" style="margin-bottom:18px"><div style="padding:8px 12px;overflow-x:auto"><table id="markrev-tab" style="width:100%;border-collapse:collapse;font-size:13px">' + h + '</table></div>' +
-      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei» / siste Gire eller Levere etter avbestilling og ny booking; avbestilte telles ikke), som morgenmailen. Kanal = der leadet kom fra (Peasy etter UTM). Uten UTM er lag (ofte forsinket betalt), ikke egen kanal i kr/bestilt. Peasy totalt er bare Peasy, og det er tallet kr/bestilt deles på. Parentesen er alle kilder i samme periode (samme telling som Nøkkeltall). ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
+      '<div style="padding:0 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei» / siste Gire eller Levere etter avbestilling og ny booking; avbestilte telles ikke), som morgenmailen. Kost/bestilt = annonsekost Meta + Google / bestilt med Kilde = peasy. Bestilt % = de bestilte / Peasy-leads i samme dager. Kost per lead = samme kost / Peasy-leads. Drive, Ordna og AutoDB står bare i avstemmingen og i parentesen, ikke i disse tallene. ' + (Q.hel ? '' : 'Inneværende uke er t.o.m. i går og sammenlignes med de samme dagene forrige uke. ') + 'Leads er nye Peasy-henvendelser i samme dager, ikke de samme bilene som er bestilt. Pilen viser retningen mot samme dager forrige uke. Trykk Meta eller Google for kampanjene.</div></div>' +
       '<div class="section-label">Trend: bestilt per kanal, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 16px;position:relative;height:280px"><canvas id="markrev-graf"></canvas></div></div>' +
       kostHtml(R) + vlHtml();
@@ -183,8 +203,8 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
     }
   }
-  /* c641 (Mike 22.10): kost per bestilt hent/lev uke for uke (12 uker). Google = Google-kost / Google-bestilt, Meta tilsvarende,
-     Totalt = (Google + Meta) / alle bestilte. Mangler bestilte en uke, blir det et hull. Samme uker og bestilt-logikk som trenden. */
+  /* c641 (Mike 22.10) / c713: kost per bestilt uke for uke. Google = Google-kost / Google-bestilt (Kilde = peasy), Meta tilsvarende.
+     Totalt = (Google + Meta) / Peasy-bestilt (Google + Meta + uten UTM). Drive, Ordna og AutoDB er ikke med. */
   function kostSerier(R) {
     var Q = R.Q, alle = Q.uker.map(function (_, ix) { return PEASY.reduce(function (s, k) { return s + (R.serie[k] ? R.serie[k][ix] : 0); }, 0); });
     var del = function (k, n) { return n && k != null ? Math.round(k / n) : null; };
@@ -212,7 +232,7 @@
     return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
       kalk + '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
-      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei»). Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy bestilt (Google + Meta + uten UTM). Partner (Drive, Ordna, AutoDB) er ute. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
+      '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei»), Kilde = peasy. Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy-bestilt. Drive, Ordna og AutoDB er ikke med i kost/bestilt. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
   }
   /* c642 (Mike 22.10): kalkulator for kost per kontrakt. Valget lagres i localStorage, ikke på serveren. Mål 2 000 kr. */
   var KALK_MAAL = 2000;
@@ -434,9 +454,10 @@
     var tot = tom(), kamp = {};
     rows.slice(1).forEach(function (r) {
       if (!r || !r[1]) return;
-      var kilde = String(r[11] || '').trim().toLowerCase();
+      /* c713: leads, bestilt %, kost/bestilt og kost per lead er bare Kilde = peasy. Drive, Ordna og AutoDB er ute. */
+      var kilde = (typeof srcKey === 'function') ? srcKey(r) : String(r[11] || '').trim().toLowerCase();
       var utm = String(r[23] || '').trim().toLowerCase();
-      if (kilde !== 'peasy' || utm === 'autodb') return;
+      if (kilde !== 'peasy' || (typeof srcKey !== 'function' && utm === 'autodb')) return;
       var k = vlKanal(utm);
       var campRaw = String(r[24] || '').trim();
       var sd = vlParse(r[14]);
