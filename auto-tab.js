@@ -519,6 +519,9 @@
   function auDoghouse(c, b) {
     var x = c.querySelector('.au-doghouse');
     var d = b && b.doghouse;
+    /* c716 (Mike 12.11): ingen stripe i kortet. Dog house vises bare som lite merke i bilhodet (.au-dh). */
+    if (x) x.remove();
+    return;
     if (!d) { if (x) x.remove(); return; }
     var sig = JSON.stringify(d);
     if (x && x.getAttribute('data-dh') === sig) return;
@@ -1202,9 +1205,11 @@
       }
       // c573: én header i stedet for stripe + grønn boks (Mike 13.10): «FSD PRISET · FSD 219k · Benchmark 215k · avvik 2 % · Eiertid 6,7 år».
       var nyHtml = '';
+      /* c716 (Mike 12.11): Dog house som lite, dempet merke i bilhodet ved siden av ruten. Grunnen vises ved hover. */
+      var dhM = (b && b.doghouse) ? '<span class="au-dh" title="Dog house: ' + esc(b.doghouse.grunn || '') + '">&#128054; Dog house</span>' : '';
       // c577: ingen auto/skygge-boks. Før FSD har priset: bare «FSD VENTER» + bilder (Mike 13.10).
       if (!agF) {
-        nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong><span>FSD og Benchmark priser bilen</span>' + auHistIkoner(b.agent) +
+        nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong>' + dhM + '<span>FSD og Benchmark priser bilen</span>' + auHistIkoner(b.agent) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div></div>' + bildeHtml;
       } else {
         var kk = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
@@ -1225,7 +1230,7 @@
         var midt0 = (navn0 ? [navn0] : []).concat(['FSD ' + kk(fP0), 'Bench ' + kk(bP0)]);
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
         nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
-          '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong><span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
+          '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong>' + dhM + '<span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
           bildeHtml +
