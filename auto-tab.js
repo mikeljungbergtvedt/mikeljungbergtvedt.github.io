@@ -850,6 +850,7 @@
         if (!d) return;
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
         d = window.auNullstillFilter(d);
+        d = auBeholdLokalPris(d);
         window._autoRute = d;
         /* c644: et nullstilt kort byttes ut med fullt kort så snart nytt FSD/BM-resultat finnes. */
         try {
@@ -995,14 +996,33 @@
     }
   }
 
-  function auMerkQaKort() {
+  function auBeholdLokalPris(inn) {
+    var gml = window._autoRute;
+    if (!gml || !Array.isArray(gml.biler) || !inn || !Array.isArray(inn.biler)) return inn;
+    var lok = {};
+    gml.biler.forEach(function (b) { lok[String(b.id)] = b; });
+    var ut = Object.assign({}, inn);
+    ut.biler = inn.biler.map(function (b) {
+      var p = lok[String(b.id)];
+      if (!p || !p.agent || !p.agent.pris_kilde || !p.agent.pris_kilde.tid) return b;
+      var alder = Date.now() - Date.parse(p.agent.pris_kilde.tid);
+      if (!(alder >= 0 && alder < 3 * 60000)) return b;
+      var innMid = b.agent && b.agent.mid_pris;
+      if (Number(innMid) === Number(p.agent.mid_pris)) return b;
+      return p;
+    });
+    return ut;
+  }
+  function auMerkQaKort(bareId) {
     var d = window._autoRute;
     if (!d || !Array.isArray(d.biler)) return;
     var byId = {};
     d.biler.forEach(function (b) { byId[String(b.id)] = b; });
     var kort = document.querySelectorAll('#qa-cards .qa-card');
     for (var i = 0; i < kort.length; i++) {
-      var c = kort[i], b = byId[auKortId(c)];
+      var c = kort[i], idKort = auKortId(c);
+      if (bareId != null && String(bareId) !== '' && String(idKort) !== String(bareId)) continue;
+      var b = byId[idKort];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
       var info = [];
@@ -1263,6 +1283,7 @@
       if (gammel) gammel.replaceWith(el2); else c.insertBefore(el2, c.firstChild);
     }
   }
+  window.auMerkQaKort = auMerkQaKort;
   setInterval(auMerkQaKort, 1500);
 
   // Hva kunden gjorde: status fra ERP og grunn (valg + egne ord). Oppdateres hvert 10. min på Mini.
