@@ -139,6 +139,7 @@
     try { auManuell(c, b); } catch (e) {}
     auKjoretoy(c, b);
     auDuplikat(c, b);
+    auDoghouse(c, b);
     auKjorbar(c, b);
     auAarTopp(c, b, b.agent);
     auKmTopp(c, b, b.agent);
@@ -513,6 +514,21 @@
   }
   /* c683 (Mike 03.11): tidligere saker med samme regnr. Liste 1–4 = grå info (ingen Avvis). Etter liste 4, vært på auksjon
      eller henting bestilt men ikke gjennomført = rød ALARM (Avvis kun her). Gammelt dataformat: bare duplikat.aktiv. */
+  /* c714 (Mike 12.11): DOG HOUSE-stripe øverst på kortet når regnr står på Dog house-lista (b.doghouse fra auto-score).
+     Bare varsel: ingen knapp, ingen stopp, rører aldri pris eller SEND. */
+  function auDoghouse(c, b) {
+    var x = c.querySelector('.au-doghouse');
+    var d = b && b.doghouse;
+    if (!d) { if (x) x.remove(); return; }
+    var sig = JSON.stringify(d);
+    if (x && x.getAttribute('data-dh') === sig) return;
+    if (!x) { x = document.createElement('div'); x.className = 'au-doghouse'; }
+    x.setAttribute('data-dh', sig);
+    x.style.cssText = 'margin:0 0 10px;padding:9px 12px;background:#C62828;color:#fff;border-radius:8px;font-size:13.5px;font-weight:700;line-height:1.45';
+    x.innerHTML = '&#128054; DOG HOUSE: ' + esc(b.regnr || '') + ' – ' + esc(d.grunn || '');
+    var topp = c.firstElementChild;
+    if (x.parentNode !== c) { if (topp && topp.nextSibling) c.insertBefore(x, topp.nextSibling); else c.appendChild(x); }
+  }
   function auDuplikat(c, b) {
     var saker = b.tidligere_saker || (b.duplikat && b.duplikat.aktiv === true ? [{ id: b.duplikat.id, nivaa: 'alarm', tekst: 'Duplikat av #' + b.duplikat.id }] : []);
     var x = c.querySelector('.au-duplikat');
