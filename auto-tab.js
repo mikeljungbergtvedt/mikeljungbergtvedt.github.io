@@ -36,7 +36,9 @@
        også når det gamle kortet har låst knappen («Fossefall mangler», «Ingen utpris», «Venter på …»). Ikke ved sendt, km-sperre,
        auksjonstreff, samlebil eller utenfor scope. */
     if (manuell) {
-      var hard = c.querySelector('.qa-auksjon-ok, .qa-samler-avvis') || /UTENFOR SCOPE|Innhent km|✅ Sendt/.test(c.innerText || '');
+      /* c718: km_sperre (tvillinger uten km) låser ikke opp SEND, heller ikke etter manuell pris. Anker og bud er urørt. */
+      var kmSperreAktiv = !!(b.km_sperre && b.km_sperre.aktiv === true) || !!(b.agent && b.agent.km_sperre && b.agent.km_sperre.aktiv === true);
+      var hard = kmSperreAktiv || c.querySelector('.qa-auksjon-ok, .qa-samler-avvis') || /UTENFOR SCOPE|Innhent km|✅ Sendt/.test(c.innerText || '');
       var bunn = c.querySelector('.qa-send-btn');
       if (!hard && !bunn) {
         var div = [].filter.call(c.querySelectorAll('div'), function (d) { return d.children.length === 0 && /^Ingen utpris/.test((d.textContent || '').trim()); })[0];
@@ -66,7 +68,7 @@
     } else if (brBoks) brBoks.remove();
     [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
       if (grunn) { if (!k.disabled || k.getAttribute('data-laast') !== '1') { k.disabled = true; k.setAttribute('data-laast', '1'); k.style.opacity = '.4'; k.style.cursor = 'not-allowed'; k.title = grunn; } }
-      else if (k.getAttribute('data-laast') === '1') { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
+      else if (k.getAttribute('data-laast') === '1' && !k.getAttribute('data-km-sperre')) { k.removeAttribute('data-laast'); k.disabled = false; k.style.opacity = ''; k.style.cursor = ''; k.title = ''; }
     });
     /* c692: rødt varsel (badge), ikke lås. Knappetekst og disabled røres ikke av avvis. */
     if (auAvvis(ag)) {
@@ -81,8 +83,74 @@
     [].forEach.call(c.querySelectorAll('.qa-anker-input, .qa-bud-input, .qa-anker-btn, .qa-bud-btn'), function (el) {
       el.disabled = false; el.removeAttribute('disabled'); el.readOnly = false; el.style.opacity = ''; el.style.pointerEvents = '';
     });
+    auKmSperreSend(c, b); /* c718: etter anker/bud, så de ikke blir med i sperren */
     var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
-    if (tp && bn) { tp.disabled = bn.disabled; if (!bn.disabled) { tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor; } }
+    if (tp && bn) {
+      tp.disabled = bn.disabled;
+      if (bn.getAttribute('data-km-sperre')) {
+        tp.setAttribute('data-km-sperre', bn.getAttribute('data-km-sperre'));
+        tp.title = bn.title || tp.title || '';
+        tp.style.cursor = 'not-allowed';
+        tp.style.opacity = '1';
+      } else if (!bn.disabled) {
+        tp.removeAttribute('data-km-sperre');
+        tp.style.opacity = ''; tp.style.cursor = 'pointer'; tp.textContent = (bn.innerText || tp.textContent).trim(); tp.style.backgroundColor = getComputedStyle(bn).backgroundColor;
+      }
+    }
+  }
+  /* c718 (Mike 17.11): km_sperre.aktiv gråer Send (nede og oppe) og viser grunn. Anker, bud, ståtid, slett cache og ERP røres ikke.
+     Feltet mangler eller aktiv er false: knappen oppfører seg som før. En 409 uten felt i auto-score blir stående til Mini sier aktiv false. */
+  function auKmSperreFra(b) {
+    var s = (b && b.km_sperre) || (b && b.agent && b.agent.km_sperre) || null;
+    return (s && s.aktiv === true) ? s : null;
+  }
+  function auKmSperreTekst(s) { return String((s && s.grunn) || 'Tvillinger mangler km'); }
+  function auErSendKnapp(k) {
+    if (!k || k.classList.contains('l8-send')) return false;
+    if (k.classList.contains('au-send-topp')) return true;
+    if (k.getAttribute('data-km-sperre')) return true;
+    return /SEND/i.test(k.textContent || '');
+  }
+  function auKmSperreSend(c, b) {
+    var sperre = auKmSperreFra(b);
+    var tekst = sperre ? auKmSperreTekst(sperre) : '';
+    var linje = c.querySelector('.qa-km-sperre');
+    if (sperre) {
+      if (!linje) {
+        linje = document.createElement('div');
+        linje.className = 'qa-km-sperre';
+        linje.style.cssText = 'flex:1 1 100%;margin:0 0 8px;padding:6px 10px;border-radius:6px;background:#FDECEA;border:1px solid #E57373;color:#A8221C;font-size:12px;font-weight:600;line-height:1.4';
+        var bunn = c.querySelector('.qa-actions') || c.querySelector('.qa-send-btn');
+        if (bunn && bunn.parentNode) bunn.parentNode.insertBefore(linje, bunn);
+        else c.appendChild(linje);
+      }
+      if (linje.textContent !== tekst) linje.textContent = tekst;
+      linje.title = tekst;
+      [].forEach.call(c.querySelectorAll('.qa-send-btn, .au-send-topp'), function (k) {
+        if (!auErSendKnapp(k)) return;
+        k.disabled = true;
+        k.setAttribute('data-km-sperre', '1');
+        k.title = tekst;
+        k.style.cursor = 'not-allowed';
+      });
+      return;
+    }
+    var harFelt = !!((b && b.km_sperre && typeof b.km_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.km_sperre && typeof b.agent.km_sperre.aktiv === 'boolean'));
+    var behold409 = false;
+    [].forEach.call(c.querySelectorAll('.qa-send-btn[data-km-sperre], .au-send-topp[data-km-sperre]'), function (k) {
+      if (!auErSendKnapp(k)) return;
+      var fra409 = k.getAttribute('data-km-sperre') === '409';
+      if (fra409 && !harFelt) { behold409 = true; return; }
+      k.removeAttribute('data-km-sperre');
+      var origTxt = k.getAttribute('data-send-txt');
+      if (origTxt) { k.textContent = origTxt; k.removeAttribute('data-send-txt'); }
+      if (k.getAttribute('data-laast') === '1') return;
+      if (k.classList.contains('qa-send-btn') && !k.getAttribute('data-regnr') && k.getAttribute('data-manuell') !== '1') return;
+      k.disabled = false;
+      k.style.cursor = '';
+      if (/Tvillinger mangler km/.test(k.title || '')) k.title = '';
+    });
+    if (linje && !behold409) linje.remove();
   }
   /* c638 (Mike 22.10): «Manuelt endret» på kortet når prisen er satt for hånd (ERP-logg eller nettopp lagret),
      og «Lagret 330k – manuell» rett etter lagring til ny pris og fossefall er på kortet. */
@@ -1028,6 +1096,8 @@
       if (!(alder >= 0 && alder < 3 * 60000)) return b;
       var innMid = b.agent && b.agent.mid_pris;
       if (Number(innMid) === Number(p.agent.mid_pris)) return b;
+      /* c718: lokal pris i 3 min skal ikke gjemme en ny km_sperre fra Mini. */
+      if (b.km_sperre) return Object.assign({}, p, { km_sperre: b.km_sperre });
       return p;
     });
     return ut;
