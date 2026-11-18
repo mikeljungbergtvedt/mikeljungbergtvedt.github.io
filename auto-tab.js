@@ -1,12 +1,7 @@
 /* Peasy Pulse — Auto-fane (skygge). Leser auto-score.json (Mini: auto-score.js). Sender ingenting. */
 (function () {
   // c572: skjul gamle auto-tellere («populert», «Kokker») og bytt IDENT/COMPS med tvillingene FSD og Benchmark brukte (Mike 13.10).
-  (function () {
-    if (document.getElementById('qa572-css')) return;
-    var s = document.createElement('style'); s.id = 'qa572-css';
-    s.textContent = '.au-qa-poeng{grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}#qa-counters,.qa-finn-legends{display:none!important}table.au-tv2{table-layout:fixed!important;width:100%!important;min-width:0!important;max-width:100%!important}table.au-tv2 th,table.au-tv2 td{padding:3px 4px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;background:none;overflow:hidden;text-overflow:ellipsis}table.au-tv2 th{font-size:10px!important;color:#5E6B62!important}table.au-tv{table-layout:fixed!important;min-width:0!important;width:100%!important;max-width:100%!important}table.au-tv th,table.au-tv td{padding:3px 3px 3px 0!important;letter-spacing:normal!important;text-transform:none!important;font-size:11px!important;overflow:hidden;text-overflow:ellipsis}table.au-tv th{font-size:10px!important;color:#5E6B62!important;background:none!important}.au-tv-wrap,.au-ff-wrap{max-width:100%;min-width:0;overflow:hidden}table.au-ff-stub{width:100%!important;max-width:100%!important;table-layout:fixed!important;font-size:11px}table.au-ff-stub td{overflow:hidden;text-overflow:ellipsis;font-size:11px!important}.au-bilder-rad{display:flex;flex-wrap:wrap;gap:6px;max-width:100%;min-width:0;overflow:hidden}';
-    (document.head || document.documentElement).appendChild(s);
-  })();
+  // c720 (Mike 18.11): CSS-en (qa572-css) ligger nå i <head> i peasy-pulse.html, så den gjelder fra første tegning av QA-kortet.
   // c686 (05.11): merke, modell og årsmodell først i QA-kortets header, før FSD/Bench.
   // c685 (04.11): heftelser fra Brreg (auto-score.json: b.brreg.status ok|feil|mangler). Feil → rød merking på kortet og Send sperret. Funn vises ikke.
   // c606 (Mike 16.10): stopp fra FSD eller BM behandles likt (ingen pris skrives, kortet viser stoppet og grunnen).
@@ -831,13 +826,7 @@
     if (auk.length) ut += ik('Vært på vår auksjon: ' + auk.map(function (x) { return (x.dato || '?') + (x.hoyeste_bud ? ' høyeste bud ' + k(x.hoyeste_bud) : '') + (x.bud_avvist ? ', bud avvist ' + x.bud_avvist : '') + ' (internnr ' + x.id + ')'; }).join(' · '), '<path d="M14 6l4 4M9 11l4 4M12.5 4.5l7 7-3 3-7-7z"/><path d="M10.5 12.5L4 19"/><path d="M3 21h8"/>');
     return ut ? '<span class="au-hist-ikoner" style="display:inline-flex;gap:6px;align-items:center;align-self:center;flex-shrink:0">' + ut + '</span>' : '';
   }
-  // c571: plass til 3 QA-kort i bredden, fast bredde uansett om det er 1, 2 eller 3 (Mike 13.10). Én kolonne på smal skjerm.
-  (function () {
-    if (document.getElementById('qa3-css')) return;
-    var s = document.createElement('style'); s.id = 'qa3-css';
-    s.textContent = '#qa-section #qa-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important}#qa-cards>.qa-card{display:flex!important;flex-direction:column}#qa-cards>.qa-card>*{flex-shrink:0;min-width:0;max-width:100%;box-sizing:border-box}#qa-cards .qa-actions{margin-top:auto!important}#qa-cards>.qa-card{max-width:100%!important;min-width:0}@media (max-width:900px){#qa-section #qa-cards{grid-template-columns:minmax(0,1fr)!important}}';
-    (document.head || document.documentElement).appendChild(s);
-  })();
+  // c571: QA-kortenes oppsett (to i bredden, kortet som kolonne). c720: CSS-en (qa3-css) ligger nå i <head> i peasy-pulse.html.
   // c545: bildevisning i siden (ikke ny fane). Piler, Esc og klikk utenfor lukker.
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a.au-lb');
@@ -1013,22 +1002,8 @@
     return { t: 'Mangler data fra selger', u: (b.grunner || []).filter(function (x) { return /kommentar|km/.test(x); }).join('. ') };
   }
   function auKr(n) { return n == null ? '–' : Math.round(n).toLocaleString('nb-NO'); }
-  var AU_STOY = [/^HEFT\b/, /^ORIGIN PÅ FINN/]; // c647: 0 SØSTRE/B 0 COMPS/origin95-banner emits ikke lenger
-  function auRyddKort(c, info) {
-    var barn = c.children;
-    for (var i = 0; i < barn.length; i++) {
-      var el = barn[i];
-      if (el.classList.contains('au-qa-poeng') || el.getAttribute('data-au-skjult')) continue;
-      var tx = (el.innerText || '').trim();
-      for (var j = 0; j < AU_STOY.length; j++) {
-        if (!AU_STOY[j].test(tx)) continue;
-        if (j === 0) info.push('Pant registrert');
-        if (j === 1) { var a = el.querySelector('a'); var pris = (tx.match(/([\d\s ]{5,}) kr/) || [])[1]; info.push('Origin på Finn' + (pris ? ' ' + pris.trim() + ' kr' : '') + (a ? ' · <a href="' + a.href + '" target="_blank" rel="noopener" style="color:#004225">Åpne</a>' : '')); }
-        el.style.display = 'none'; el.setAttribute('data-au-skjult', '1');
-        break;
-      }
-    }
-  }
+  /* c720 (Mike 18.11): AU_STOY og auRyddKort() er fjernet. «Pant registrert» og «Origin på Finn» tegnes ferdig av qaWorkBanners()
+     i peasy-pulse.html første gang kortet tegnes, også for kort som ikke ligger i auto-score.json. Ingenting skjules i ettertid. */
   function auHode(c, regnr) {
     var barn = c.children;
     for (var i = 0; i < barn.length; i++) {
@@ -1133,10 +1108,6 @@
       var b = byId[idKort];
       var gammel = c.querySelector(':scope > .au-qa-poeng');
       if (!b) { if (gammel) gammel.remove(); continue; }
-      var info = [];
-      auRyddKort(c, info);
-      if (info.length) c.setAttribute('data-au-info', JSON.stringify(info));
-      var infoAlle = JSON.parse(c.getAttribute('data-au-info') || '[]');
       // Kostnadslinjen ved regnr ($ · kall · car.info) flyttes inn under detaljer
       var kost = c.getAttribute('data-au-kost') || '';
       if (!kost) {
@@ -1170,7 +1141,7 @@
       auSettSelgerkommentar(c, b);
       auSettHistFraAgent(c, b);
       var merker = auMerker(c);
-      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk, b.agent.erp] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + (b.skade_egen ? 'S' + (b.skade_tekst || '') : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + infoAlle.join(';') + '|' + kost;
+      var nokkel = merker.map(function (m) { return m.t; }).join(',') + '|' + JSON.stringify(b.grok || null) + '|' + JSON.stringify(b.cc || null) + '|' + JSON.stringify(b.slutt || null) + '|' + JSON.stringify(b.enighet || null) + '|' + JSON.stringify(b.agent ? [b.agent.fsd, b.agent.benchmark, b.agent.avvik_pst, b.agent.historikk, b.agent.erp] : null) + '|' + JSON.stringify(b.bilde || null) + '|' + (b.eiertid_aar != null ? b.eiertid_aar : '') + '|' + (b.skade_egen ? 'S' + (b.skade_tekst || '') : '') + '|' + b.score + '|' + (b.stopp || []).join(';') + '|' + (b.grunner || []).join(';') + '|' + kost;
       auFsdBokser(c, b);
       if (gammel && gammel.getAttribute('data-k') === nokkel) continue;
       var nivaa = QaGronn.nivaa(b); /* 28.10: felles med Minien (qa-gronn.js) */
@@ -1326,8 +1297,7 @@
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
           }).join('') + '</span>' : '') +
-          (b.deler_maks ? '<div class="au-kontroll" style="font-size:12px;color:#5E6B62;font-variant-numeric:tabular-nums">Kontroll <b style="color:#16201B">' + b.score + '/100</b> · ' + auDeler(b).map(function (x) { return esc(x[0]) + ' ' + x[1] + '/' + x[2]; }).join(' · ') + '</div>' : '') +
-          (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : '');
+          (b.deler_maks ? '<div class="au-kontroll" style="font-size:12px;color:#5E6B62;font-variant-numeric:tabular-nums">Kontroll <b style="color:#16201B">' + b.score + '/100</b> · ' + auDeler(b).map(function (x) { return esc(x[0]) + ' ' + x[1] + '/' + x[2]; }).join(' · ') + '</div>' : '');
       }
       el2.innerHTML = nyHtml || (enHtml + bildeHtml +
         '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:' + bakgrunn + ';border-radius:10px;padding:10px 12px">' +
@@ -1352,8 +1322,7 @@
               (agF ? '' : detaljer.length ? '<ul style="margin:0;padding-left:18px">' + detaljer.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
             (agF ? '' : '</details>') +
           '</div>' +
-        '</div>' +
-        (infoAlle.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#5E6B62">' + infoAlle.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' : ''));
+        '</div>');
       el2.querySelectorAll('.au-bilder').forEach(function (fig) {
         var liste = []; try { liste = JSON.parse(fig.getAttribute('data-bilder') || '[]'); } catch (e) {}
         function vis(d) {
