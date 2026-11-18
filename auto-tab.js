@@ -1266,7 +1266,8 @@
       // c573: én header i stedet for stripe + grønn boks (Mike 13.10): «FSD PRISET · FSD 219k · Benchmark 215k · avvik 2 % · Eiertid 6,7 år».
       var nyHtml = '';
       /* c716 (Mike 12.11): Dog house som lite, dempet merke i bilhodet ved siden av ruten. Grunnen vises ved hover. */
-      var dhM = (b && b.doghouse) ? '<span class="au-dh" title="Dog house: ' + esc(b.doghouse.grunn || '') + '">&#128054; Dog house</span>' : '';
+      /* c721 (Mike 18.11): merket sier hva som traff: «DOG HOUSE · tlf» (selgerens telefonnummer) eller «DOG HOUSE · regnr». Tooltip = grunnen fra lista. */
+      var dhM = (b && b.doghouse) ? '<span class="au-dh" data-dh-type="' + (b.doghouse.type === 'tlf' ? 'tlf' : 'regnr') + '" title="' + esc(b.doghouse.grunn || '') + '">&#128054; DOG HOUSE &middot; ' + (b.doghouse.type === 'tlf' ? 'tlf' : 'regnr') + '</span>' : '';
       // c577: ingen auto/skygge-boks. Før FSD har priset: bare «FSD VENTER» + bilder (Mike 13.10).
       if (!agF) {
         nyHtml = '<div class="au-hode" style="background:#EEF0EC;border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B"><div class="au-hode-l"><strong style="color:#5E6B62">FSD VENTER</strong>' + dhM + '<span>FSD og Benchmark priser bilen</span>' + auHistIkoner(b.agent) +
