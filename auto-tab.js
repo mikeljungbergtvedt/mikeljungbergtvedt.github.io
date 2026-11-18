@@ -100,11 +100,19 @@
   }
   /* c718 (Mike 17.11): km_sperre.aktiv gråer Send (nede og oppe) og viser grunn. Anker, bud, ståtid, slett cache og ERP røres ikke.
      Feltet mangler eller aktiv er false: knappen oppfører seg som før. En 409 uten felt i auto-score blir stående til Mini sier aktiv false. */
+  /* c719 (Mike 18.11): samme Send-sperre for tvillingenes alder (alder_sperre): ingen ferske tvillinger, eller flertallet over 3 mnd.
+     Manuell pris (Sett pris eller Antatt bud) løfter alderssperren, også de første minuttene før Minien har bygget kortet på nytt.
+     km_sperre går foran og løftes ikke av manuell pris (som i c718). */
+  function auAlderSperreFra(b) {
+    var a = (b && b.alder_sperre) || (b && b.agent && b.agent.alder_sperre) || null;
+    if (!a || a.aktiv !== true) return null;
+    return auErManuell(b && b.agent, b) ? null : a;
+  }
   function auKmSperreFra(b) {
     var s = (b && b.km_sperre) || (b && b.agent && b.agent.km_sperre) || null;
-    return (s && s.aktiv === true) ? s : null;
+    return (s && s.aktiv === true) ? s : auAlderSperreFra(b);
   }
-  function auKmSperreTekst(s) { return String((s && s.grunn) || 'Tvillinger mangler km'); }
+  function auKmSperreTekst(s) { return String((s && s.grunn) || (s && 'gamle' in s ? 'Tvillinger for gamle' : 'Tvillinger mangler km')); }
   function auErSendKnapp(k) {
     if (!k || k.classList.contains('l8-send')) return false;
     if (k.classList.contains('au-send-topp')) return true;
@@ -119,7 +127,7 @@
       if (!linje) {
         linje = document.createElement('div');
         linje.className = 'qa-km-sperre';
-        linje.style.cssText = 'flex:1 1 100%;margin:0 0 8px;padding:6px 10px;border-radius:6px;background:#FDECEA;border:1px solid #E57373;color:#A8221C;font-size:12px;font-weight:600;line-height:1.4';
+        linje.style.cssText = 'flex:0 0 auto;margin:0 0 8px;padding:6px 10px;border-radius:6px;background:#FDECEA;border:1px solid #E57373;color:#A8221C;font-size:12px;font-weight:600;line-height:1.4';
         var bunn = c.querySelector('.qa-actions') || c.querySelector('.qa-send-btn');
         if (bunn && bunn.parentNode) bunn.parentNode.insertBefore(linje, bunn);
         else c.appendChild(linje);
@@ -135,7 +143,8 @@
       });
       return;
     }
-    var harFelt = !!((b && b.km_sperre && typeof b.km_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.km_sperre && typeof b.agent.km_sperre.aktiv === 'boolean'));
+    var harFelt = !!((b && b.km_sperre && typeof b.km_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.km_sperre && typeof b.agent.km_sperre.aktiv === 'boolean') ||
+      (b && b.alder_sperre && typeof b.alder_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.alder_sperre && typeof b.agent.alder_sperre.aktiv === 'boolean')); /* c719 */
     var behold409 = false;
     [].forEach.call(c.querySelectorAll('.qa-send-btn[data-km-sperre], .au-send-topp[data-km-sperre]'), function (k) {
       if (!auErSendKnapp(k)) return;
@@ -148,7 +157,7 @@
       if (k.classList.contains('qa-send-btn') && !k.getAttribute('data-regnr') && k.getAttribute('data-manuell') !== '1') return;
       k.disabled = false;
       k.style.cursor = '';
-      if (/Tvillinger mangler km/.test(k.title || '')) k.title = '';
+      if (/Tvillinger mangler km|Tvillinger for gamle|Ingen ferske tvillinger|Send er sperret/.test(k.title || '')) k.title = '';
     });
     if (linje && !behold409) linje.remove();
   }
@@ -261,15 +270,25 @@
     var td = 'padding:3px 4px 3px 0;border-top:1px solid #E7EBE4;vertical-align:top;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     var cel = function (v, ref, egen, lik) { var avvik = !egen && ref != null && (lik ? !lik(v, ref) : String(v) !== String(ref)); return v == null || v === '' ? '<span style="color:#9AA39C">–</span>' : (avvik ? '<b style="color:' + AU_AVVIK_RED + '">' + esc(v) + '</b>' : esc(v)); };
     var st = function (i, ekstra) { return ';position:sticky;left:0;background:inherit;z-index:2' + (ekstra || '') + '" data-s="' + i; };
+    /* c719 (Mike 18.11): alder på hver tvilling, målt fra siste hendelse (solgt eller fjernet) til bilen ble priset. Aktiv annonse = 0.
+       Over 3 mnd (fersk === false) står i rødt. Feltet kommer fra Minien (v20.221). Mangler det, vises «–». */
+    var alderCelle = function (t) {
+      if (!t || t.alder_dager == null) return '<span style="color:#9AA39C" title="Alder ukjent: annonsen finnes ikke i car.info-dataene">–</span>';
+      var d = Number(t.alder_dager), tekst = d < 31 ? d + ' d' : Math.floor(d / 30.44) + ' mnd';
+      var nar = t.siste_hendelse ? String(t.siste_hendelse).split('-').reverse().join('.') : '';
+      var tittel = t.alder_status === 'aktiv' ? 'Aktiv annonse da bilen ble priset' : ((t.alder_status === 'solgt' ? 'Solgt ' : 'Fjernet ') + nar);
+      return t.fersk === false ? '<b style="color:' + AU_AVVIK_RED + '" title="' + esc(tittel + ' – over 3 mnd') + '">' + esc(tekst) + '</b>' : '<span title="' + esc(tittel) + '">' + esc(tekst) + '</span>';
+    };
     var rad = function (x, egen, id, km, pris, status) {
       return '<tr style="background:' + (egen ? '#F3F6F4' : '#fff') + '"><td style="' + td + st(0) + '">' + id + '</td><td style="' + td + st(1, ';text-align:right') + '">' + km + '</td><td style="' + td + st(2, ';text-align:right') + '">' + pris + '</td><td style="' + td + st(3, ';border-right:1px solid #E7EBE4') + '">' + status + '</td>' +
+        '<td class="au-tv-alder" style="' + td + ';padding-left:6px;text-overflow:clip">' + (egen ? '' : alderCelle(x)) + '</td>' +
         '<td style="' + td + ';max-width:190px;overflow:hidden;text-overflow:ellipsis;padding-left:8px" title="' + esc(mdl(x)) + '">' + esc(mdl(x) || '–') + '</td>' +
         felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + (egen && f[0] === 'År' ? aarMerke : '') + '</td>'; }).join('') + '</tr>';
     };
     var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
     if (utst(me)) html += '<div style="font-size:13px;line-height:1.45;margin:0 0 8px;padding:6px 10px;background:#F3F6F4;border-radius:6px"><b>Bilens utstyr:</b> ' + esc(utst(me)) + '</div>';
     if (tv.length) {
-      html += '<div class="au-tv-wrap" style="max-width:100%;min-width:0;overflow:hidden"><table class="au-tv2" style="border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;width:100%;max-width:100%;table-layout:fixed"><tr style="text-align:left;color:#5E6B62;font-size:10px;background:#fff"><th style="width:13%' + st(0) + '">Finn</th><th style="width:9%;text-align:right' + st(1) + '">Km</th><th style="width:11%;text-align:right' + st(2) + '">Pris</th><th style="width:9%' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="width:16%;padding-left:4px">Modell</th>' +
+      html += '<div class="au-tv-wrap" style="max-width:100%;min-width:0;overflow:hidden"><table class="au-tv2" style="border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;width:100%;max-width:100%;table-layout:fixed"><tr style="text-align:left;color:#5E6B62;font-size:10px;background:#fff"><th style="width:12%' + st(0) + '">Finn</th><th style="width:9%;text-align:right' + st(1) + '">Km</th><th style="width:11%;text-align:right' + st(2) + '">Pris</th><th style="width:9%' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="width:9%;padding-left:6px" title="Tid siden annonsen ble solgt eller fjernet. Aktiv = 0.">Alder</th><th style="width:11%;padding-left:4px">Modell</th>' +
         felt.map(function (f) { return '<th>' + f[0] + '</th>'; }).join('') + '</tr>' +
         rad(me, true, '<b>Bilen</b>', auKm(ag, b) != null ? auKr(auKm(ag, b)) : '–', '', '') +
         tv.map(function (t) {
@@ -1096,8 +1115,8 @@
       if (!(alder >= 0 && alder < 3 * 60000)) return b;
       var innMid = b.agent && b.agent.mid_pris;
       if (Number(innMid) === Number(p.agent.mid_pris)) return b;
-      /* c718: lokal pris i 3 min skal ikke gjemme en ny km_sperre fra Mini. */
-      if (b.km_sperre) return Object.assign({}, p, { km_sperre: b.km_sperre });
+      /* c718: lokal pris i 3 min skal ikke gjemme en ny km_sperre fra Mini. c719: samme for alder_sperre. */
+      if (b.km_sperre || b.alder_sperre) return Object.assign({}, p, { km_sperre: b.km_sperre, alder_sperre: b.alder_sperre });
       return p;
     });
     return ut;
