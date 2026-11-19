@@ -939,14 +939,25 @@
     ut.biler = d.biler.filter(function (b) { var t = m[String(b.id)]; if (!t) return true; var l = Date.parse((b.agent && b.agent.laget) || '') || 0; return l > t; });
     return ut;
   };
+  /* c722 (Mike 19.11): Pulse tegner QA-kortene fullt først når auto-score.json er lastet første gang (eller har feilet),
+     så kortet kan dekoreres i samme tegning. _auRuterForst: 'venter' → 'ferdig'. qaAutoRuteKlar() er kroken i peasy-pulse.html. */
+  window._auRuterForst = 'venter';
+  function auForstFerdig() {
+    if (window._auRuterForst === 'ferdig') return;
+    window._auRuterForst = 'ferdig';
+    try { if (typeof window.qaAutoRuteKlar === 'function') window.qaAutoRuteKlar(); } catch (e) {}
+  }
   function auHentRuter(forste) {
     fetch('auto-score.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d) return;
+        if (!d) { if (forste) auForstFerdig(); return; }
         var endret = !window._autoRute || JSON.stringify(window._autoRute.ruter) !== JSON.stringify(d.ruter);
         d = window.auNullstillFilter(d);
         d = auBeholdLokalPris(d);
         window._autoRute = d;
+        /* c722: kort som alt står der, dekoreres med en gang dataene kommer, uten å byttes. Plassholdere tegnes fullt. */
+        try { auMerkQaKort(); } catch (eM) {}
+        if (forste) auForstFerdig();
         /* c644: et nullstilt kort byttes ut med fullt kort så snart nytt FSD/BM-resultat finnes. */
         try {
           var vent = [].some.call(document.querySelectorAll('#qa-cards .qa-card.qa-nullstilt'), function (c) { return !window.qaErNullstilt(c.getAttribute('data-erpid')); });
@@ -959,7 +970,7 @@
           if (auKanLasteQA() && (forste || auQaUtAvTakt(d.ruter))) { try { if (typeof window.loadQA === 'function') window.loadQA(true); } catch (e) {} }
           else { try { auMerkQaKort(); } catch (e) {} }
         }
-      }).catch(function () {});
+      }).catch(function () { if (forste) auForstFerdig(); });
   }
   auHentRuter(true);
   setInterval(auHentRuter, 30000);
