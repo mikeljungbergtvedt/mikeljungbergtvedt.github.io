@@ -79,6 +79,7 @@
       el.disabled = false; el.removeAttribute('disabled'); el.readOnly = false; el.style.opacity = ''; el.style.pointerEvents = '';
     });
     auKmSperreSend(c, b); /* c718: etter anker/bud, så de ikke blir med i sperren */
+    auMpKnapp(c, b); /* c725 */
     var tp = c.querySelector('.au-send-topp'), bn = c.querySelector('.qa-send-btn');
     if (tp && bn) {
       tp.disabled = bn.disabled;
@@ -105,7 +106,48 @@
   }
   function auKmSperreFra(b) {
     var s = (b && b.km_sperre) || (b && b.agent && b.agent.km_sperre) || null;
-    return (s && s.aktiv === true) ? s : auAlderSperreFra(b);
+    if (s && s.aktiv === true) return s;
+    /* c725 (Mike 20.11): sendt til manuell prising og ikke priset ennå. Manuell pris løfter den (qaMpSperre i peasy-pulse.html). */
+    var mp = (b && typeof window.qaMpSperre === 'function') ? window.qaMpSperre(b.id, b) : null;
+    return mp || auAlderSperreFra(b);
+  }
+  /* c725: knappen «Send til manuell prising» under Send. Mail går fra Minien til mottakerne i Innstillinger. Ingenting sendes til kunden. */
+  function auMpKnapp(c, b) {
+    /* Raden med Send, Slett cache, Åpne i ERP og ℹ️. Biler uten pris har ingen Send-knapp, men skal også kunne sendes til manuell prising. */
+    var send = c.querySelector('.qa-send-btn') || c.querySelector('.qa-detail-btn'), rad = send && send.parentNode;
+    if (!b || !rad || !rad.parentNode) return;
+    var id = String(b.id), venter = !!(typeof window.qaMpSperre === 'function' && window.qaMpSperre(id, b));
+    var boks = c.querySelector('.au-mp-boks');
+    if (!boks) {
+      boks = document.createElement('div');
+      boks.className = 'au-mp-boks';
+      boks.style.cssText = 'flex:0 0 auto;margin:8px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;min-width:0;max-width:100%';
+      boks.innerHTML = '<button type="button" class="au-mp-knapp" style="padding:6px 12px;border-radius:6px;border:1px solid #004225;background:#fff;color:#004225;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit"></button><span class="au-mp-melding" style="color:#5E6B62;min-width:0"></span>';
+      rad.parentNode.insertBefore(boks, rad.nextSibling);
+      boks.querySelector('.au-mp-knapp').onclick = function () { auMpSend(c, boks); };
+    }
+    boks.setAttribute('data-id', id); boks.setAttribute('data-regnr', String(b.regnr || '')); boks.setAttribute('data-venter', venter ? '1' : '');
+    var k = boks.querySelector('.au-mp-knapp'), t = venter ? 'Send til manuell prising på nytt' : 'Send til manuell prising';
+    if (!k.disabled && k.textContent !== t) k.textContent = t;
+    k.title = venter ? 'Bilen venter på manuell pris. Trykk for å sende mailen en gang til.' : 'Sender mail til mottakerne i Innstillinger. Send sperres til noen har priset bilen.';
+  }
+  function auMpSend(c, boks) {
+    var id = boks.getAttribute('data-id'), regnr = boks.getAttribute('data-regnr'), venter = boks.getAttribute('data-venter') === '1';
+    var k = boks.querySelector('.au-mp-knapp'), m = boks.querySelector('.au-mp-melding');
+    if (!confirm((venter ? 'Sende ' + regnr + ' til manuell prising en gang til?' : 'Sende ' + regnr + ' til manuell prising?') + '\n\nMottakerne i Innstillinger får mail. Send er sperret til noen har satt Finn-pris eller Antatt bud. Ingenting sendes til kunden.')) return;
+    k.disabled = true; k.textContent = 'Sender …'; m.style.color = '#5E6B62'; m.textContent = '';
+    var ferdig = function (tekst, feil) { k.disabled = false; k.textContent = ''; m.style.color = feil ? '#A8221C' : '#2F5E43'; m.textContent = tekst; try { auMerkQaKort(id); } catch (e) {} if (!k.textContent) k.textContent = 'Send til manuell prising'; };
+    fetch(PA_MINI_BASE + '/qa/manuell-prising', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-QA-Enhet': (typeof paEnhet === 'function' ? paEnhet() : '') }, body: JSON.stringify({ internnr: id, regnr: regnr, paa_nytt: venter }), signal: AbortSignal.timeout(60000) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, st: r.status, j: j }; }); })
+      .then(function (o) {
+        if (o.ok && o.j && o.j.ok) {
+          if (o.j.sperre && o.j.sperre.aktiv) window._mpVenter[id] = o.j.sperre;
+          ferdig('Sendt til ' + o.j.sendt + ' mottaker' + (o.j.sendt === 1 ? '' : 'e') + (o.j.feilet ? ' (' + o.j.feilet + ' feilet)' : '') + '.', false);
+        } else {
+          var e = o.j && o.j.error;
+          ferdig(o.st === 403 ? 'Bare enheter med full tilgang kan sende til manuell prising.' : e === 'ingen_mottakere' ? 'Ingen mottakere. Legg dem inn under Innstillinger.' : e === 'venter_allerede' ? 'Bilen venter allerede på manuell pris.' : e === 'mail_feilet' ? 'Mailen ble ikke sendt. Prøv igjen.' : o.st === 404 ? 'Minien har ikke denne funksjonen ennå.' : 'Feil: ' + (e || o.st), true);
+        }
+      }).catch(function () { ferdig('Får ikke kontakt med Minien.', true); });
   }
   function auKmSperreTekst(s) { return String((s && s.grunn) || (s && 'gamle' in s ? 'Tvillinger for gamle' : 'Tvillinger mangler km')); }
   function auErSendKnapp(k) {
@@ -139,7 +181,8 @@
       return;
     }
     var harFelt = !!((b && b.km_sperre && typeof b.km_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.km_sperre && typeof b.agent.km_sperre.aktiv === 'boolean') ||
-      (b && b.alder_sperre && typeof b.alder_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.alder_sperre && typeof b.agent.alder_sperre.aktiv === 'boolean')); /* c719 */
+      (b && b.alder_sperre && typeof b.alder_sperre.aktiv === 'boolean') || (b && b.agent && b.agent.alder_sperre && typeof b.agent.alder_sperre.aktiv === 'boolean') || /* c719 */
+      (b && b.manuell_prising && typeof b.manuell_prising.aktiv === 'boolean')); /* c725 */
     var behold409 = false;
     [].forEach.call(c.querySelectorAll('.qa-send-btn[data-km-sperre], .au-send-topp[data-km-sperre]'), function (k) {
       if (!auErSendKnapp(k)) return;
@@ -152,7 +195,7 @@
       if (k.classList.contains('qa-send-btn') && !k.getAttribute('data-regnr') && k.getAttribute('data-manuell') !== '1') return;
       k.disabled = false;
       k.style.cursor = '';
-      if (/Tvillinger mangler km|Tvillinger for gamle|Ingen ferske tvillinger|Send er sperret/.test(k.title || '')) k.title = '';
+      if (/Tvillinger mangler km|Tvillinger for gamle|Ingen ferske tvillinger|Send er sperret|Venter på manuell pris/.test(k.title || '')) k.title = '';
     });
     if (linje && !behold409) linje.remove();
   }
@@ -1115,7 +1158,7 @@
       var innMid = b.agent && b.agent.mid_pris;
       if (Number(innMid) === Number(p.agent.mid_pris)) return b;
       /* c718: lokal pris i 3 min skal ikke gjemme en ny km_sperre fra Mini. c719: samme for alder_sperre. */
-      if (b.km_sperre || b.alder_sperre) return Object.assign({}, p, { km_sperre: b.km_sperre, alder_sperre: b.alder_sperre });
+      if (b.km_sperre || b.alder_sperre || b.manuell_prising) return Object.assign({}, p, { km_sperre: b.km_sperre, alder_sperre: b.alder_sperre, manuell_prising: b.manuell_prising }); /* c725 */
       return p;
     });
     return ut;
