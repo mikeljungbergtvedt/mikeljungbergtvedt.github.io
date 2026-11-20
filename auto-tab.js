@@ -267,23 +267,36 @@
     var st = function (i, ekstra) { return ';position:sticky;left:0;background:inherit;z-index:2' + (ekstra || '') + '" data-s="' + i; };
     /* c719 (Mike 18.11): alder på hver tvilling, målt fra siste hendelse (solgt eller fjernet) til bilen ble priset. Aktiv annonse = 0.
        Over 3 mnd (fersk === false) står i rødt. Feltet kommer fra Minien (v20.221). Mangler det, vises «–». */
+    /* c723 (Mike 20.11): datoen for siste hendelse står i cellen sammen med alderen («27 d · 24.10»), så man ser med en gang
+       om tvillingen er under 30 dager. Året er bare med når det ikke er i år. Aktiv annonse står som «aktiv» uten dato.
+       30 dager eller mindre: dempet grønn. Over 3 mnd: rødt som før. Status (solgt, fjernet, aktiv) står i tooltip. */
+    var alderDato = function (iso) {
+      var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? m[3] + '.' + m[2] + (Number(m[1]) !== new Date().getFullYear() ? '.' + m[1].slice(2) : '') : '';
+    };
     var alderCelle = function (t) {
       if (!t || t.alder_dager == null) return '<span style="color:#9AA39C" title="Alder ukjent: annonsen finnes ikke i car.info-dataene">–</span>';
-      var d = Number(t.alder_dager), tekst = d < 31 ? d + ' d' : Math.floor(d / 30.44) + ' mnd';
+      var d = Number(t.alder_dager), aktiv = t.alder_status === 'aktiv';
+      var tekst = aktiv ? 'aktiv' : (d < 31 ? d + ' d' : Math.floor(d / 30.44) + ' mnd');
       var nar = t.siste_hendelse ? String(t.siste_hendelse).split('-').reverse().join('.') : '';
-      var tittel = t.alder_status === 'aktiv' ? 'Aktiv annonse da bilen ble priset' : ((t.alder_status === 'solgt' ? 'Solgt ' : 'Fjernet ') + nar);
-      return t.fersk === false ? '<b style="color:' + AU_AVVIK_RED + '" title="' + esc(tittel + ' – over 3 mnd') + '">' + esc(tekst) + '</b>' : '<span title="' + esc(tittel) + '">' + esc(tekst) + '</span>';
+      var tittel = aktiv ? 'Aktiv annonse da bilen ble priset' : ((t.alder_status === 'solgt' ? 'Solgt' : 'Fjernet') + (nar ? ' ' + nar : ''));
+      var dato = aktiv ? '' : alderDato(t.siste_hendelse);
+      var datoHtml = dato ? ' <span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;white-space:nowrap;color:#5E6B62;font-weight:400">· ' + esc(dato) + '</span>' : '';
+      var nw = 'white-space:nowrap';
+      if (t.fersk === false) return '<span title="' + esc(tittel + ' – over 3 mnd') + '"><b style="' + nw + ';color:' + AU_AVVIK_RED + '">' + esc(tekst) + '</b>' + datoHtml + '</span>';
+      if (d <= 30) return '<span title="' + esc(tittel + ' – 30 dager eller mindre') + '"><span class="au-tv-fersk" style="' + nw + ';color:#2F5E43;background:#E8F2EA;border-radius:3px;padding:0 3px">' + esc(tekst) + '</span>' + datoHtml + '</span>';
+      return '<span title="' + esc(tittel) + '"><span style="' + nw + '">' + esc(tekst) + '</span>' + datoHtml + '</span>';
     };
     var rad = function (x, egen, id, km, pris, status) {
       return '<tr style="background:' + (egen ? '#F3F6F4' : '#fff') + '"><td style="' + td + st(0) + '">' + id + '</td><td style="' + td + st(1, ';text-align:right') + '">' + km + '</td><td style="' + td + st(2, ';text-align:right') + '">' + pris + '</td><td style="' + td + st(3, ';border-right:1px solid #E7EBE4') + '">' + status + '</td>' +
-        '<td class="au-tv-alder" style="' + td + ';padding-left:6px;text-overflow:clip">' + (egen ? '' : alderCelle(x)) + '</td>' +
+        '<td class="au-tv-alder" style="' + td + ';padding-left:6px;text-overflow:clip;white-space:normal">' + (egen ? '' : alderCelle(x)) + '</td>' +
         '<td style="' + td + ';max-width:190px;overflow:hidden;text-overflow:ellipsis;padding-left:8px" title="' + esc(mdl(x)) + '">' + esc(mdl(x) || '–') + '</td>' +
         felt.map(function (f) { return '<td style="' + td + '">' + cel(f[1](x, egen), f[2], egen, f[3]) + (egen && f[0] === 'År' ? aarMerke : '') + '</td>'; }).join('') + '</tr>';
     };
     var html = '<div style="font-size:11px;font-weight:800;letter-spacing:.4px;color:#004225;margin-bottom:4px">TVILLINGER ' + tv.length + '</div>';
     if (utst(me)) html += '<div style="font-size:13px;line-height:1.45;margin:0 0 8px;padding:6px 10px;background:#F3F6F4;border-radius:6px"><b>Bilens utstyr:</b> ' + esc(utst(me)) + '</div>';
     if (tv.length) {
-      html += '<div class="au-tv-wrap" style="max-width:100%;min-width:0;overflow:hidden"><table class="au-tv2" style="border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;width:100%;max-width:100%;table-layout:fixed"><tr style="text-align:left;color:#5E6B62;font-size:10px;background:#fff"><th style="width:12%' + st(0) + '">Finn</th><th style="width:9%;text-align:right' + st(1) + '">Km</th><th style="width:11%;text-align:right' + st(2) + '">Pris</th><th style="width:9%' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="width:9%;padding-left:6px" title="Tid siden annonsen ble solgt eller fjernet. Aktiv = 0.">Alder</th><th style="width:11%;padding-left:4px">Modell</th>' +
+      html += '<div class="au-tv-wrap" style="max-width:100%;min-width:0;overflow:hidden"><table class="au-tv2" style="border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;width:100%;max-width:100%;table-layout:fixed"><tr style="text-align:left;color:#5E6B62;font-size:10px;background:#fff"><th style="width:11%' + st(0) + '">Finn</th><th style="width:9%;text-align:right' + st(1) + '">Km</th><th style="width:10%;text-align:right' + st(2) + '">Pris</th><th style="width:8%' + st(3, ';border-right:1px solid #E7EBE4') + '">Status</th><th style="width:14%;padding-left:6px" title="Alder og dato for siste hendelse (solgt eller fjernet). Alderen er målt fra siste hendelse til bilen ble priset, ikke til i dag. Aktiv annonse står som «aktiv». Grønn: 30 dager eller mindre. Rød: over 3 mnd.">Alder / dato</th><th style="width:10%;padding-left:4px">Modell</th>' +
         felt.map(function (f) { return '<th>' + f[0] + '</th>'; }).join('') + '</tr>' +
         rad(me, true, '<b>Bilen</b>', auKm(ag, b) != null ? auKr(auKm(ag, b)) : '–', '', '') +
         tv.map(function (t) {
