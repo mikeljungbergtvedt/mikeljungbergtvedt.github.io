@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c725</title>
+<title>Peasy Pulse v16.08.c726</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c725';</script>
+<script>document.title='Peasy Pulse v16.08.c726';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -573,10 +573,11 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c725</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c726</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
-    <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navnet ditt og trykk «Be om tilgang». Du får en 6-sifret kode som du leser opp for Mike. Siden låses opp automatisk når han har godkjent.</div>
+    <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navn og e-post og trykk «Be om tilgang». Har du hatt tilgang før, får du en lenke på e-posten din og kommer rett inn. Er du ny, får du en 6-sifret kode som du leser opp for Mike.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+    <input id="auth-epost" type="email" maxlength="120" placeholder="E-posten din" autocomplete="email" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
     <div id="auth-kode" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:8px;background:#E8F5E9;border:1px solid #9CCC9F;color:#1B5E20;font-size:13px"></div>
     <div id="auth-msg" style="font-size:12px;color:#5E6B62;min-height:18px;margin-bottom:8px"></div>
     <button id="auth-be" onclick="authBe()" style="width:100%;padding:12px;background:#004225;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit">Be om tilgang</button>
@@ -603,9 +604,16 @@ function authBe(){
   var msg=document.getElementById('auth-msg');
   var nf=document.getElementById('auth-navn'), navn=nf?String(nf.value||'').trim():'';
   if(navn.length<2){ if(msg) msg.textContent='Skriv navnet ditt først.'; if(nf) nf.focus(); return; }
+  /* c726 (Mike 22.11): tilgang følger personen. E-posten avgjør om du er kjent fra før (lenke på e-post) eller ny (kode til Mike). */
+  var ef=document.getElementById('auth-epost'), epost=ef?String(ef.value||'').trim().toLowerCase():'';
+  if(!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(epost)||epost.indexOf('..')>=0){ if(msg) msg.textContent='Skriv e-postadressen din.'; if(ef) ef.focus(); return; }
   if(msg) msg.textContent='Sender forespørsel …';
   var u=navigator.userAgent||''; var os=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Mac/.test(u)?'Mac':/Windows/.test(u)?'Windows':'Enhet'; var nl=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Firefox\//.test(u)?'Firefox':/Safari\//.test(u)?'Safari':'nettleser';
-  fetch(PA_MINI_BASE+'/qa/tilgang/be',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enhetsnavn:os+' '+nl,navn:navn})}).then(function(r){return r.json();}).then(function(j){
+  fetch(PA_MINI_BASE+'/qa/tilgang/be',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enhetsnavn:os+' '+nl,navn:navn,epost:epost})}).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok&&j.lenke_sendt){ /* kjent person: ingen kode, ingen venting på Mike */
+      try{localStorage.removeItem('peasyQaEnhetVent');localStorage.removeItem('peasyQaEnhetKode');}catch(e){}
+      var kb=document.getElementById('auth-kode'); if(kb){ kb.style.display=''; kb.innerHTML='Vi har sendt en lenke til <b>'+epost.replace(/[&<>"]/g,'')+'</b>.<br>Åpne den i denne nettleseren, så kommer du rett inn. Lenken er gyldig i '+(j.gyldig_timer||24)+' timer.'; }
+      if(msg) msg.textContent='Du trenger ikke ny godkjenning fra Mike.'; return; }
     if(j&&j.ok&&j.id){ try{localStorage.setItem('peasyQaEnhetVent',j.id);if(j.kode)localStorage.setItem('peasyQaEnhetKode',j.kode);}catch(e){} authVisKode(j.kode); if(msg) msg.textContent='Venter på godkjenning fra Mike (mail sendt, gyldig 30 min) …'; authPollStart(); }
     else if(msg) msg.textContent=(j&&j.err)||'Feil, prøv igjen.';
   }).catch(function(){ if(msg) msg.textContent='Får ikke kontakt med Minien. Prøv igjen.'; });
@@ -631,6 +639,8 @@ function authInvitasjon(){
   }).catch(function(){ if(msg) msg.textContent='Får ikke kontakt med Minien. Åpne lenken fra mailen på nytt om litt.'; });
   return true;
 }
+/* c726: lenken limt inn i en fane der Pulse alt står åpen gir bare ny #, ingen ny lasting. Da løses den inn herfra. */
+window.addEventListener('hashchange',function(){ try{ authInvitasjon(); }catch(e){} });
 (function(){
   var inv=authInvitasjon();
   if(paEnhet()){ authApne(); return; }
@@ -664,7 +674,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c725</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c726</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -1603,6 +1613,14 @@ window.MARK_V16_04 = (function(){
 </form>
 <div id="mp-melding" style="font-size:12px;color:#667;min-height:16px;margin-bottom:6px"></div>
 <div id="mp-liste" style="font-size:13px;color:#667">Laster …</div>
+</div>
+<!-- c726 (Mike 22.11): Tilgang til Pulse per person (e-post). En person som er godkjent én gang, kommer inn fra ny nettleser med lenke til egen e-post. Fjern = alle personens enheter slutter å virke. Lista hentes fra Minien og vises bare for enheter med alle rettigheter. Bare Mikes egne enheter kan fjerne. -->
+<div id="tg-kort" style="display:none;border:2px solid #37474F;border-radius:10px;padding:14px 16px;margin:0 0 24px;background:#F7F9FA">
+<h3 style="margin:0 0 4px;color:#37474F">Tilgang til Pulse</h3>
+<div style="font-size:13px;color:#666;margin-bottom:10px">Tilgangen følger personens e-post. En person du har godkjent én gang, kommer inn fra ny nettleser eller maskin med en lenke til sin egen e-post, uten ny godkjenning. Fjerner du personen, slutter alle enhetene deres å virke med en gang.</div>
+<div id="tg-melding" style="font-size:12px;color:#667;min-height:16px;margin-bottom:6px"></div>
+<div id="tg-liste" style="font-size:13px;color:#667">Laster …</div>
+<div id="tg-uten" style="font-size:12px;color:#667;margin-top:10px"></div>
 </div>
 <p style="color:#666;font-size:13px">Endringer her oppdaterer alle ROI/CPL-beregninger i Pulse. Lagre til GitHub for å gjøre endringene varige.</p>
 
@@ -9603,7 +9621,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c725</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c726</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -13956,7 +13974,8 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <script src="laering-tab.js?v=c618"></script>
 <script src="gb-ml-tab.js?v=c492"></script>
 <script src="qa-gronn.js?v=c682"></script>
-<script src="auto-tab.js?v=c725"></script>
+<script src="auto-tab.js?v=c726"></script>
+<!-- c726 (Mike 22.11): tilgang til Pulse følger personen (e-post). Tilgangssiden spør om e-post: kjent person får lenke på egen e-post og kommer inn uten ny godkjenning, ny person får kode til Mike som før. Nytt kort «Tilgang til Pulse» i Innstillinger med oversikt per person og Fjern. Rører ikke pris, QA eller SEND. -->
 <!-- c725 (Mike 20.11): «Send til manuell prising» på QA-kortet. Mail går fra Minien til mottakerne i Innstillinger. Kortet viser «Venter på manuell pris», og Send er grå til noen har satt Finn-pris eller Antatt bud. Første svar gjelder. Anker, bud, ståtid og ERP er urørt. -->
 <!-- c723 (Mike 20.11): tvillingtabellen viser dato sammen med alder («27 d · 24.10»). Kolonnen heter «Alder / dato». 30 dager eller mindre er dempet grønn, over 3 mnd rød som før. Aktiv annonse står som «aktiv». Bare visning i auto-tab.js: alder_sperre, Send-sperren, valg av tvillinger, anker, bud og ERP er urørt. -->
 <!-- c722 (Mike 19.11): QA-kortene blinker ikke ved lasting. Hvert kort står som plassholder (regnr + «Henter …», samme høyde som sist) til fossefall, målinger og auto-score.json er hentet, og tegnes så én gang, ferdig dekorert av auto-tab.js i samme tegning. Under en ny lasting røres ikke kort som står der før alt er hentet, og da byttes bare kort der HTML-en faktisk er endret (c690). Frist 8 s mot Minien og 2,5 s for auto-score.json: da tegnes kortene med det vi har. -->
@@ -14118,6 +14137,45 @@ setTimeout(tick,1500);setInterval(tick,5000);
   };
   (function(){var el=document.getElementById('mp-liste');if(el)el.addEventListener('click',function(e){var t=e.target&&e.target.closest?e.target:null;if(!t)return;var f=t.closest('[data-mp-fjern]'),l=t.closest('[data-mp-lenke]');if(f)mpFjern(f.getAttribute('data-mp-fjern'));else if(l)mpLenke(l.getAttribute('data-mp-lenke'));});})();
   setTimeout(function(){try{mpLast();}catch(e){}},1500);
+})();
+</script>
+<script>
+/* c726 (Mike 22.11): Tilgang til Pulse per person. Mini /api/tilgang (GET: enheter med alle rettigheter, POST fjern: bare Mikes egne enheter).
+   Kortet vises bare når Minien svarer 200. Adressene finnes bare i dette svaret. Rører ikke pris, QA eller SEND. */
+(function(){
+  var URL=PA_MINI_BASE+'/api/tilgang',KAN=false,PERS=[];
+  function hd(j){var h={'X-QA-Enhet':paEnhet()};if(j)h['Content-Type']='application/json';return h;}
+  function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function vis(j){
+    var kort=document.getElementById('tg-kort'),el=document.getElementById('tg-liste'),ut=document.getElementById('tg-uten');if(!kort||!el)return;
+    kort.style.display='';KAN=!!(j&&j.kan_endre);PERS=(j&&j.personer)||[];
+    if(!PERS.length)el.innerHTML='Ingen personer med e-post ennå.';
+    else el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;color:#222"><thead><tr>'+['E-POST','NAVN','RETTIGHETER','ENHETER',''].map(function(h){return '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#778">'+h+'</th>';}).join('')+'</tr></thead><tbody>'+
+      PERS.map(function(p){
+        var n=(p.enheter||[]).length;
+        return '<tr data-tg-epost="'+esc(p.epost)+'" style="border-top:1px solid #dde3e6"><td style="padding:6px 8px;font-weight:700;overflow-wrap:anywhere">'+esc(p.epost)+'</td><td style="padding:6px 8px">'+esc(p.navn||'')+'</td><td style="padding:6px 8px;white-space:nowrap">'+(p.eier?'Eier':p.rolle==='mike'?'Alle':'Bare lese')+'</td><td class="tg-enheter" style="padding:6px 8px">'+
+          (n?n+' ('+p.enheter.map(function(e){return esc(e.navn);}).join(', ')+')':'Ingen aktive')+(p.lenke_venter?'<br><span style="color:#667">Lenke sendt, ikke åpnet</span>':'')+'</td><td style="padding:6px 8px;text-align:right;white-space:nowrap">'+
+          (KAN&&!p.eier?'<button type="button" data-tg-fjern="'+esc(p.epost)+'" style="padding:4px 10px;border-radius:6px;border:1px solid #C62828;background:#fff;color:#C62828;cursor:pointer;font-family:inherit;font-size:12px">Fjern</button>':'')+'</td></tr>';
+      }).join('')+'</tbody></table>';
+    var u=(j&&j.uten_person)||[];
+    if(ut)ut.innerHTML=u.length?'<b>Godkjente enheter uten e-post ('+u.length+'):</b> '+u.map(function(x){return esc((x.person||'ukjent')+' – '+x.navn+(x.godkjent?', '+String(x.godkjent).split(',')[0]:''));}).join(' · ')+'<br>Disse virker som før, men må godkjennes på nytt i ny nettleser. Neste gang personen ber om tilgang med e-post og du godkjenner, følger tilgangen personen.':'';
+  }
+  window.tgLast=function(){
+    return fetch(URL+'?t='+Date.now(),{headers:hd(),cache:'no-store',signal:AbortSignal.timeout(8000)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(vis).catch(function(){
+      var kort=document.getElementById('tg-kort');if(kort&&!PERS.length)kort.style.display='none';
+    });
+  };
+  window.tgFjern=function(epost){
+    var m=document.getElementById('tg-melding');
+    if(!confirm('Fjerne '+epost+'?\n\nAlle enhetene til personen slutter å virke med en gang. Personen må godkjennes av deg på nytt for å komme inn igjen.'))return;
+    m.style.color='#667';m.textContent='Fjerner '+epost+' …';
+    fetch(URL,{method:'POST',headers:hd(true),body:JSON.stringify({handling:'fjern',epost:epost}),signal:AbortSignal.timeout(30000)}).then(function(x){return x.json().then(function(j){return{ok:x.ok,st:x.status,j:j};});}).then(function(o){
+      if(o.ok){m.textContent=epost+' er fjernet. '+(o.j.enheter_fjernet||0)+' enhet'+(o.j.enheter_fjernet===1?'':'er')+' er stengt'+(o.j.mottaker_fjernet?', og personen er tatt ut av manuell prising':'')+'.';vis(o.j);try{if(typeof mpLast==='function')mpLast();}catch(e){}}
+      else{m.style.color='#C62828';m.textContent=o.st===403?'Bare Mikes egne enheter kan fjerne personer.':o.j&&o.j.error==='kan_ikke_fjerne_eier'?'Eieren kan ikke fjernes.':'Feil: '+((o.j&&o.j.error)||o.st);}
+    }).catch(function(){m.style.color='#C62828';m.textContent='Får ikke kontakt med Minien herfra.';});
+  };
+  (function(){var el=document.getElementById('tg-liste');if(el)el.addEventListener('click',function(e){var f=e.target&&e.target.closest?e.target.closest('[data-tg-fjern]'):null;if(f)tgFjern(f.getAttribute('data-tg-fjern'));});})();
+  setTimeout(function(){try{tgLast();}catch(e){}},1800);
 })();
 </script>
 <script src="marked-rev.js?v=c713"></script>
