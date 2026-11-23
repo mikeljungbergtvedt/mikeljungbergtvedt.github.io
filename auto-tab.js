@@ -473,6 +473,20 @@
     return boks(hode + '<div class="au-finnsok-sum" style="margin-top:4px">' + esc(sum.join(' · ')) + '</div>' + tab + flere + vidL);
   }
   window.auFinnSokBoks = auFinnSokBoks;
+  /* c730 (Mike 23.11): kundens egen Finn-annonse på kort UTEN pris flyttes opp under headeren, med taket (0,95 × annonsen) fra Minien.
+     Før sto linjen bare lenger ned, under FSD/Bench-pillene (auPrisTag), og var lett å overse når bilen skulle prises for hånd. */
+  function auEgenAnnonseTopp(ag) {
+    if (!ag || (ag.mid_pris && ag.mid_ff && !ag.mid_ff.feil)) return ''; /* kort med pris: auPrisTag viser linjen på vanlig plass */
+    var ea = ag.egen_annonse, u = ea && /^https:\/\/www\.finn\.no\//.test(String(ea.lenke || '')) ? String(ea.lenke) : null;
+    var lenke = u ? ' · <a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1565C0;font-weight:700">Åpne annonsen</a>' : '';
+    if (ea && ea.aktiv) return '<div class="au-egen-annonse-topp" style="margin:6px 0 8px;padding:7px 10px;background:#F4F8FD;border:1px solid #BBD3EE;border-radius:6px;font-size:12px;line-height:1.45;color:#1F3A5F">' +
+      '<b>Annonsert på Finn:</b> ' + (ea.pris ? auKr(ea.pris) + ' kr' : 'pris ukjent') + (ea.dager != null ? ' · ' + esc(String(ea.dager)) + ' dager' : '') + lenke +
+      (ag.origin95_tak ? ' · <span class="au-egen-tak">Høyeste Finn-pris: <b>' + auKr(ag.origin95_tak) + '</b> (0,95 × annonsen)</span>' : '') + '</div>';
+    if (!ea || ea.feilet) return '<div class="au-egen-annonse-topp" style="margin:6px 0 8px;padding:7px 10px;background:#FDF3F2;border:1px solid #E8B4AE;border-radius:6px;font-size:12px;line-height:1.45;color:#7A231B">' +
+      '<b>Finn-sjekk feilet:</b> ' + esc((ea && ea.grunn) || 'ingen data') + lenke + '</div>';
+    return '';
+  }
+  window.auEgenAnnonseTopp = auEgenAnnonseTopp;
   function auTerskel(mid) { return QaGronn.terskel(mid); }
   function auAvvik(ag, b) {
     var f = ag.fsd && ag.fsd.pris, bm = ag.benchmark && ag.benchmark.pris;
@@ -518,12 +532,17 @@
     var eh = null, stil = 'margin:6px 0 8px;padding:7px 10px;background:#F4F8FD;border:1px solid #BBD3EE;border-radius:6px;font-size:12px;line-height:1.45;color:#1F3A5F';
     if (ea && ea.aktiv) {
       var tak = ag.mid_kilde === 'merged+origin95';
+      var o95m = ag.pris_kilde && ag.pris_kilde.origin95 && ag.pris_kilde.origin95.fra > ag.mid_pris ? ag.pris_kilde.origin95 : null; /* c730 */
       eh = '<b>Annonsert på Finn:</b> ' + (ea.pris ? auKr(ea.pris) + ' kr' : 'pris ukjent') + (ea.dager != null ? ' · ' + ea.dager + ' dager' : '') + lenkeH(ea.lenke) +
+        (ag.origin95_tak ? ' · <span class="au-egen-tak">Høyeste Finn-pris: <b>' + auKr(ag.origin95_tak) + '</b></span>' : '') +
+        (o95m ? '<div class="au-egen-kappet" style="margin-top:2px;color:#8A6D10">Innskrevet pris ' + auKr(o95m.fra) + ' er kappet til ' + auKr(ag.mid_pris) + ' (0,95 × kundens annonse).</div>' : '') +
         (tak ? '<div style="margin-top:2px;color:#8A6D10">Mid er kappet til 0,95 × denne prisen (' + auKr(ag.mid_pris) + '). Prisen kommer fra ' + esc(ea.kilde || 'car.info') + '. Sjekk at den faktisk står på Finn.</div>' : '');
     } else if (!ea || ea.feilet) {
       eh = '<b>Finn-sjekk feilet:</b> ' + esc((ea && ea.grunn) || 'ingen data') + lenkeH(ea && ea.lenke);
       stil = 'margin:6px 0 8px;padding:7px 10px;background:#FDF3F2;border:1px solid #E8B4AE;border-radius:6px;font-size:12px;line-height:1.45;color:#7A231B';
     }
+    /* c730: på kort uten pris står linjen under headeren (auEgenAnnonseTopp), der den trengs når bilen prises for hånd. Aldri to linjer. */
+    if (!(ag.mid_pris && ag.mid_ff && !ag.mid_ff.feil)) eh = null;
     if (eh) {
       if (!linje) { linje = document.createElement('div'); linje.className = 'au-egen-annonse'; box.parentNode.insertBefore(linje, box.nextSibling); }
       if (linje.getAttribute('data-sig') !== eh) { linje.innerHTML = eh; linje.setAttribute('data-sig', eh); linje.style.cssText = stil; }
@@ -1422,6 +1441,7 @@
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong>' + dhM + '<span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          auEgenAnnonseTopp(agF) + /* c730 */
           auFinnSokBoks(b) + /* c729 */
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
