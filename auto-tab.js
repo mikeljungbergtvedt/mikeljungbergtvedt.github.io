@@ -850,6 +850,10 @@
     var prof = ff.profiler || null, pk = { A: 'a', B: 'b', ORDNA: 'ordna' };
     var band = function (x) { var p = prof && prof[pk[x]]; if (p && p.lav) return { midt: p.midt, lav: p.lav, hoy: p.hoy }; var f0 = fak[x]; return { midt: r1(ff.a * f0), lav: r1(ff.lav * f0), hoy: r1(ff.hoy * f0) }; };
     var A = band('A'), B = band('B'), O = band('ORDNA');
+    /* c731 (Mike 23.11): bilen er priset fra antatt bud. Da er budet Peasy-bud midt: ingen Peasy-avgift og ingen armfaktor.
+       Minien sender tallene som ble skrevet til ERP (mid_ff.bud). Armen spiller ingen rolle, så alle tre kolonner viser det samme. */
+    var budFf = ff.bud && ff.bud.midt > 0 && ff.bud.lav > 0 && ff.bud.hoy > 0 ? ff.bud : null;
+    if (budFf) { A = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; B = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; O = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; }
     var aktiv = arm === 'B' ? B : arm === 'ORDNA' ? O : A;
     if (b.erp_lav && b.erp_hoy) { aktiv.lav = b.erp_lav; aktiv.hoy = b.erp_hoy; }
     var pct = function (n) { return n ? Math.round(n / mid * 100) + ' %' : ''; };
@@ -867,7 +871,7 @@
       var t = (d.textContent || '').trim();
       if (/^Kunde ser \d+/.test(t)) { d.innerHTML = '<b>Kunde ser ' + pct(aktiv.lav).replace(' %', '') + '–' + pct(aktiv.hoy) + ' av Finn</b> · ' + k(aktiv.lav) + '–' + k(aktiv.hoy) + ' kr'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
       else if (/^Finn-pris [\d\s]+$/.test(t)) { d.textContent = 'Finn-pris (Mid) ' + k(mid); if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
-      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) { d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (fossefall fra Mid).'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
+      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) { d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (' + (budFf ? 'antatt bud er midt' : 'fossefall fra Mid') + ').'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
     });
     var tabell = [].filter.call(c.querySelectorAll('table'), function (t) { return /^\s*Lag/.test((t.querySelector('tr') || {}).textContent || '') && /Finn-utpris/.test(t.textContent); })[0];
     if (tabell && tabell.getAttribute('data-mid') !== sig) {
@@ -883,7 +887,11 @@
       ff.trinn.forEach(function (l) {
         var sum = l[2] === 'sum', navn = l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : l[0]);
         var v = [l[1], l[1], l[1]];
-        if (l[0] === 'Midt') {
+        if (budFf && l[0] === 'Peasy-avgift') return; /* c731: antatt bud er midt, avgiften trekkes ikke */
+        if (budFf && l[0] === 'Midt') {
+          rows += '<tr class="au-ff-bud"><td colspan="4" style="padding:2px 3px;border-top:1px solid #E7EBE4;font-size:11px;color:#2F5E43">Antatt bud er midt: ingen Peasy-avgift, ingen armfaktor.</td></tr>';
+          v = [A.midt, B.midt, O.midt];
+        } else if (l[0] === 'Midt') {
           rows += '<tr><td style="padding:2px 3px;border-top:1px solid #E7EBE4;overflow:hidden;text-overflow:ellipsis;font-size:11px">− Profil (A 1,0 · B 0,9 · Ordna 0,75)</td>' + cell('0', 0) + cell(bel(B.midt != null && A.midt != null ? B.midt - A.midt : null), 1) + cell(bel(O.midt != null && A.midt != null ? O.midt - A.midt : null), 2) + '</tr>';
           v = [A.midt, B.midt, O.midt];
         }
