@@ -1379,9 +1379,7 @@
         /* c678 (Mike 30.10): kunden har svart Ja på skade utover vanlig bruk. Gul header, kundens fritekst under. */
         var skG = (b.skade_egen && !pmG && !auAvvis(agF) && !auStopp(agF)) ? (b.skade_tekst || '') : null;
         /* c704 (Mike 11.11): header «Skade: Ja», selgerkommentaren vises bare i Selgerkommentar-boksen. */ if (skG != null) { rute = 'Skade: Ja'; hF = AU_DEMPET.y.tekst; hB = AU_DEMPET.y.bak; hK = AU_DEMPET.y.kant; }
-        /* c727 (Mike 23.11): skade betyr manuell prising inntil videre. Oransje «Skade – pris manuelt» til prisen er satt for hånd, så gul «Skade: Ja» som før. Låser ikke Send. */
-        var skM = skG != null && !manuellF;
-        if (skM) { rute = 'Skade – pris manuelt'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
+        /* c728 (Mike 23.11): skade er ofte en ripe og fanges av lav–høy. Gul «Skade: Ja» med åpen Send, som før c727. Oransje betyr bare at Send er låst. */
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         // c686 (05.11): merke, modell og årsmodell først i headeren, før FSD/Bench.
         var navn0 = String(b.bil || '').replace(/\s+/g, ' ').trim();
@@ -1389,7 +1387,7 @@
         if (navn0 && aar0 && !/\b(19|20)\d{2}\b/.test(navn0)) navn0 += ' ' + aar0;
         var midt0 = (navn0 ? [navn0] : []).concat(['FSD ' + kk(fP0), 'Bench ' + kk(bP0)]);
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
-        nyHtml = '<div class="au-hode' + (pmG || skM ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG || skM ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
+        nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong>' + dhM + '<span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
