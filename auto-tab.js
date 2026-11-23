@@ -106,7 +106,9 @@
   }
   function auKmSperreFra(b) {
     var s = (b && b.km_sperre) || (b && b.agent && b.agent.km_sperre) || null;
-    if (s && s.aktiv === true) return s;
+    /* c732 (Mike 23.11): «priser jeg manuelt, skal alle sperrer fjernes». Manuell pris (Sett Finn-pris eller Antatt bud) løfter også km-sperren,
+       med en gang, også før Minien har bygget kortet på nytt. Minien gjør det samme fra v20.240. */
+    if (s && s.aktiv === true && !auErManuell(b && b.agent, b)) return s;
     /* c725 (Mike 20.11): sendt til manuell prising og ikke priset ennå. Manuell pris løfter den (qaMpSperre i peasy-pulse.html). */
     var mp = (b && typeof window.qaMpSperre === 'function') ? window.qaMpSperre(b.id, b) : null;
     return mp || auAlderSperreFra(b);
