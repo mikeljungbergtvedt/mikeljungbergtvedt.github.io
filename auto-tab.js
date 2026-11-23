@@ -418,6 +418,30 @@
     return g.charAt(0).toUpperCase() + g.slice(1);
   }
   window.auPrisManuell = auPrisManuell;
+  /* c727 (Mike 23.11): mangel på tvillinger er manuell prising, ikke gul tvil. Oransje header med grunnen, og Send er låst til prisen er satt for hånd.
+     To veier inn: Minien har låst (alder_sperre), eller agentene ga ingen pris og sier selv «for få ferske tvillinger». Manuell pris fjerner den. */
+  function auTvillingManuell(ag, b, mid) {
+    var a = auAlderSperreFra(b);
+    if (a) {
+      var g = String(a.grunn || '');
+      return /for gamle/i.test(g) ? { t: 'Gamle tvillinger – pris manuelt', g: g } : (a.ferske > 0 ? { t: 'Få tvillinger – pris manuelt', g: g } : { t: 'Ingen tvillinger – pris manuelt', g: g || 'Ingen ferske tvillinger' });
+    }
+    if (mid || auErManuell(ag, b)) return null;
+    var m = String(auTvil(ag) || '').match(/for få ferske tvillinger\s*\((\d+)\)/i);
+    if (!m) return null;
+    return +m[1] > 0 ? { t: 'Få tvillinger – pris manuelt', g: 'For få ferske tvillinger (' + m[1] + ')' } : { t: 'Ingen tvillinger – pris manuelt', g: 'Ingen ferske tvillinger' };
+  }
+  window.auTvillingManuell = auTvillingManuell;
+  /* c727: gul header sier grunnen med vanlige ord i stedet for «TVIL» og «⚠ AVVIK». Ukjent grunn: «Tvil» som før, teksten står på linjen under. */
+  function auTvilKort(ag, avv) {
+    var t = String(auTvil(ag) || ''), r = [];
+    if (/tvilling/i.test(t)) r.push('Få tvillinger');
+    if (/utstyr/i.test(t)) r.push('Utstyr ukjent');
+    if (avv && avv.varsel && avv.mid) r.push('FSD og BM uenige ' + Math.round(avv.diff / avv.mid * 100) + ' %');
+    if (!r.length && t) r.push('Tvil');
+    return r.slice(0, 2).join(' · ');
+  }
+  window.auTvilKort = auTvilKort;
   function auTerskel(mid) { return QaGronn.terskel(mid); }
   function auAvvik(ag, b) {
     var f = ag.fsd && ag.fsd.pris, bm = ag.benchmark && ag.benchmark.pris;
@@ -1342,14 +1366,22 @@
       } else {
         var kk = function (n) { return n ? Math.round(n / 1000) + 'k' : '–'; };
         var hF = AU_DEMPET[nivaa].tekst, hB = AU_DEMPET[nivaa].bak, hK = AU_DEMPET[nivaa].kant;
-        if (avv0.varsel && !auStopp(agF)) rute = '⚠ AVVIK';
         var manuellF = auErManuell(agF, b);
-        if (auAvvis(agF) && !manuellF) rute = 'AVVIST'; else if (!auStopp(agF) && auTvil(agF)) rute = 'TVIL';
+        /* c727: gul header sier grunnen («Få tvillinger», «FSD og BM uenige 12 %») i stedet for «TVIL» og «⚠ AVVIK». */
+        var kortG = !auStopp(agF) ? auTvilKort(agF, avv0) : '';
+        if (kortG) rute = kortG;
+        if (auAvvis(agF) && !manuellF) rute = 'AVVIST';
         var pmG = (!auAvvis(agF) && !auStopp(agF)) ? auPrisManuell(agF, b) : null; /* c675 */
         if (pmG) { rute = 'PRIS MANUELL'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
+        /* c727: mangel på tvillinger = manuell prising. Samme oransje header, grunnen på linjen under. */
+        var tvM = (!pmG && !auAvvis(agF) && !auStopp(agF)) ? auTvillingManuell(agF, b, avv0.mid) : null;
+        if (tvM) { rute = tvM.t; pmG = tvM.g + '. Sett Finn-pris eller Antatt bud for å åpne Send.'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
         /* c678 (Mike 30.10): kunden har svart Ja på skade utover vanlig bruk. Gul header, kundens fritekst under. */
         var skG = (b.skade_egen && !pmG && !auAvvis(agF) && !auStopp(agF)) ? (b.skade_tekst || '') : null;
         /* c704 (Mike 11.11): header «Skade: Ja», selgerkommentaren vises bare i Selgerkommentar-boksen. */ if (skG != null) { rute = 'Skade: Ja'; hF = AU_DEMPET.y.tekst; hB = AU_DEMPET.y.bak; hK = AU_DEMPET.y.kant; }
+        /* c727 (Mike 23.11): skade betyr manuell prising inntil videre. Oransje «Skade – pris manuelt» til prisen er satt for hånd, så gul «Skade: Ja» som før. Låser ikke Send. */
+        var skM = skG != null && !manuellF;
+        if (skM) { rute = 'Skade – pris manuelt'; hF = AU_PM.tekst; hB = AU_PM.bak; hK = AU_PM.kant; }
         var fP0 = agF.fsd && agF.fsd.pris, bP0 = agF.benchmark && agF.benchmark.pris;
         // c686 (05.11): merke, modell og årsmodell først i headeren, før FSD/Bench.
         var navn0 = String(b.bil || '').replace(/\s+/g, ' ').trim();
@@ -1357,7 +1389,7 @@
         if (navn0 && aar0 && !/\b(19|20)\d{2}\b/.test(navn0)) navn0 += ' ' + aar0;
         var midt0 = (navn0 ? [navn0] : []).concat(['FSD ' + kk(fP0), 'Bench ' + kk(bP0)]);
         if (fP0 && bP0) midt0.push(avv0.varsel ? (fP0 >= bP0 ? '+' : '−') + kk(Math.abs(fP0 - bP0)) + ' / ' + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %' : (fP0 >= bP0 ? '+' : '−') + Math.abs(Math.round((fP0 - bP0) / bP0 * 100)) + ' %');
-        nyHtml = '<div class="au-hode' + (pmG ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
+        nyHtml = '<div class="au-hode' + (pmG || skM ? ' au-pris-manuell' : '') + '" style="background:' + hB + ';' + (pmG || skM ? 'border-left:4px solid ' + hK + ';' : '') + 'border-radius:8px;padding:4px 12px;font-size:14.5px;color:#16201B;font-variant-numeric:tabular-nums">' +
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong>' + dhM + '<span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
