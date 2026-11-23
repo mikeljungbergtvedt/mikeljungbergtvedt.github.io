@@ -442,6 +442,37 @@
     return r.slice(0, 2).join(' · ');
   }
   window.auTvilKort = auTvilKort;
+  /* c729 (Mike 23.11): Finn-søk til manuell prising. Minien legger b.finn_tvilling på biler som må prises for hånd: ferdig søk bygget fra bilens CV
+     (modell, drivstoff, hk, gir, karosseri, årsmodell), oppsummering og de nærmeste annonsene på km. Bare visning. Ingen felt = ingen boks. */
+  function auFinnSokBoks(b) {
+    var f = b && b.finn_tvilling; if (!f) return '';
+    var finnUrl = function (u) { return /^https:\/\/www\.finn\.no\//.test(String(u || '')) ? String(u) : null; };
+    var url = finnUrl(f.url), vid = finnUrl(f.vid_url);
+    var lenke = function (u, t) { return u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#004225;font-weight:700;white-space:nowrap">' + t + ' &#8599;</a>' : ''; };
+    var boks = function (inn) { return '<div class="au-finnsok" style="margin:6px 0 8px;padding:8px 12px;border:1px solid #DCE1D9;border-left:4px solid #004225;border-radius:8px;background:#fff;font-size:13px;min-width:0;max-width:100%;overflow:hidden;box-sizing:border-box">' + inn + '</div>'; };
+    var hode = '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline"><b style="font-size:11px;letter-spacing:.4px;color:#004225">FINN-SØK</b>' +
+      (f.filtre ? '<span class="au-finnsok-filtre" style="color:#16201B">' + esc(f.filtre) + '</span>' : '') + '<span style="margin-left:auto">' + lenke(url, 'Åpne på Finn') + '</span></div>';
+    var vidL = vid && vid !== url ? '<div style="margin-top:6px;font-size:12.5px">' + lenke(vid, 'Videre søk uten hk, gir og karosseri') + '</div>' : '';
+    if (!f.ok) return boks(hode + '<div class="au-finnsok-grunn" style="margin-top:4px;color:#5E6B62">Fikk ikke laget søket: ' + esc(f.grunn || 'ukjent grunn') + '.</div>' + vidL);
+    var o = f.oppsummering || {}, an = Array.isArray(f.annonser) ? f.annonser : [];
+    if (!an.length) return boks(hode + '<div class="au-finnsok-sum" style="margin-top:4px;color:#5E6B62">Ingen annonser på Finn med disse filtrene.</div>' + vidL);
+    var sum = [(f.total != null ? f.total : an.length) + (f.total === 1 ? ' annonse' : ' annonser')];
+    if (o.pris_min != null && o.pris_maks != null) sum.push(o.pris_min === o.pris_maks ? auKr(o.pris_min) + ' kr' : auKr(o.pris_min) + '–' + auKr(o.pris_maks) + ' kr');
+    if (o.pris_median != null && o.antall > 2) sum.push('median ' + auKr(o.pris_median));
+    if (o.naermest) sum.push('nærmest på km: ' + [o.naermest.aar, auKr(o.naermest.km) + ' km', auKr(o.naermest.pris) + ' kr'].filter(Boolean).join(' · '));
+    var td = 'padding:2px 6px 2px 0;border-top:1px solid #E7EBE4;white-space:nowrap', h = 'text-align:right';
+    var tab = '<div style="max-width:100%;overflow-x:auto"><table class="au-finnsok-tab" style="border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin-top:6px;width:100%">' +
+      '<tr style="text-align:left;color:#5E6B62;font-size:10.5px"><th>År</th><th style="' + h + '">Km</th><th style="' + h + '">Pris</th><th style="padding-left:10px">Selger</th><th>Gir</th><th>Finn</th></tr>' +
+      an.map(function (a) {
+        var kode = String(a.finnkode || '').replace(/[^0-9]/g, '');
+        return '<tr' + (a.egen ? ' style="color:#8C978F"' : '') + '><td style="' + td + '">' + esc(String(a.aar || '–')) + '</td><td style="' + td + ';' + h + '">' + (a.km != null ? auKr(a.km) : '–') + '</td><td style="' + td + ';' + h + '"><b>' + (a.pris ? auKr(a.pris) : '–') + '</b></td>' +
+          '<td style="' + td + ';padding-left:10px">' + (a.egen ? 'kundens egen' : esc(a.selger || '–')) + '</td><td style="' + td + '">' + esc(a.gir || '–') + '</td>' +
+          '<td style="' + td + '">' + (kode ? '<a href="https://www.finn.no/mobility/item/' + kode + '" target="_blank" rel="noopener" style="color:#004225">' + kode + '</a>' : '–') + '</td></tr>';
+      }).join('') + '</table></div>';
+    var flere = f.total > an.length ? '<div style="margin-top:4px;font-size:12px;color:#5E6B62">Viser de ' + an.length + ' nærmeste på km av ' + f.total + '.</div>' : '';
+    return boks(hode + '<div class="au-finnsok-sum" style="margin-top:4px">' + esc(sum.join(' · ')) + '</div>' + tab + flere + vidL);
+  }
+  window.auFinnSokBoks = auFinnSokBoks;
   function auTerskel(mid) { return QaGronn.terskel(mid); }
   function auAvvik(ag, b) {
     var f = ag.fsd && ag.fsd.pris, bm = ag.benchmark && ag.benchmark.pris;
@@ -1391,6 +1422,7 @@
           '<div class="au-hode-l"><strong style="color:' + hF + '">' + esc(rute) + '</strong>' + dhM + '<span>' + midt0.map(esc).join(' · ') + '</span>' + auHistIkoner(agF) +
           (b.eiertid_aar != null ? '<span class="au-eier">Eiertid ' + String(b.eiertid_aar).replace('.', ',') + ' år</span>' : '') + '</div>' +
           (auAvvis(agF) && !manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px">Reparasjonsobjekt — varsel, sperrer ikke SEND. ' + esc(auAvvisGrunn(agF)) + '</div>' : auAvvis(agF) && manuellF ? '<div style="font-size:13.5px;margin:2px 0 2px;color:#004225"><b>Manuelt overstyrt</b> (var merket reparasjonsobjekt). ' + esc(auAvvisGrunn(agF)) + '</div>' : auStopp(agF) ? '' : skG != null ? '' : pmG ? '<div class="au-pm-grunn" style="font-size:13.5px;margin:2px 0 2px;color:' + AU_PM.tekst + ';font-weight:600">' + esc(pmG) + '</div>' : auTvil(agF) ? '<div style="font-size:13.5px;margin:2px 0 2px">' + esc(auTvil(agF)) + '</div>' : '') + '</div>' +
+          auFinnSokBoks(b) + /* c729 */
           bildeHtml +
           (merker.length ? '<span style="display:flex;flex-wrap:wrap;gap:6px">' + merker.map(function (m, ix) {
             return '<button type="button" class="au-merke" data-ix="' + ix + '" title="' + esc(m.tittel) + '" style="font-size:12px;border:1px solid #DCD8CC;background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer;color:#16201B">' + m.t + '</button>';
