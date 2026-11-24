@@ -860,17 +860,23 @@
     if (b.erp_lav && b.erp_hoy) { aktiv.lav = b.erp_lav; aktiv.hoy = b.erp_hoy; }
     var pct = function (n) { return n ? Math.round(n / mid * 100) + ' %' : ''; };
     var k = function (n) { return n ? auKr(n) : '–'; };
-    var sig = JSON.stringify([mid, A, B, O, arm, b.erp_lav, b.erp_hoy]);
+    /* c738 (Mike 24.11): ny prising med flagg. Flagget (Slitt bil / Nyere bil) vises ved A når bilen er priset med ny regel (b.ny_prising fra auto-score v4.22). */
+    var np = b.ny_regel && b.ny_prising && b.ny_prising.flagg ? b.ny_prising : null;
+    var npNavn = np ? ((typeof window.abFlaggKortNavn === 'function') ? window.abFlaggKortNavn(np.flagg) : (np.flagg.kort || np.flagg.navn || '')) : '';
+    var npTekst = np ? npNavn + (np.pct != null && Number(np.tillegg_kr) > 0 ? ' ' + String(np.pct).replace('.', ',') + ' %' : '') : '';
+    var sig = JSON.stringify([mid, A, B, O, arm, b.erp_lav, b.erp_hoy, npTekst]);
     var grid = [].filter.call(c.querySelectorAll('div'), function (d) { return /grid-template-columns:\s*44px/.test(d.getAttribute('style') || ''); })[0];
     if (grid && grid.getAttribute('data-mid') !== sig) {
       grid.setAttribute('data-mid', sig);
       var rad = function (navn, x) { return '<div style="color:var(--muted);">' + navn + '</div><div style="text-align:right;font-weight:700;">' + k(x.lav) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.lav) + '</span></div><div style="text-align:right;font-weight:600;">' + k(mid) + '</div><div style="text-align:right;">' + k(x.hoy) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.hoy) + '</span></div><div></div>'; };
       grid.style.cssText = 'display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 36px;gap:4px 6px;font-size:11px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;min-width:0;max-width:100%;overflow:hidden;';
-      grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A', A) + rad('B', B) + rad('Ordna', O);
+      grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A' + (npTekst ? '<div style="font-size:9px;line-height:1.15;color:#9A3C0A;font-weight:700;">' + esc(npNavn) + '</div>' : ''), A) + rad('B', B) + rad('Ordna', O);
     }
     /* c736 (Mike 24.11): SKYGGE for ny prising med flagg (slitte og nyere biler, alt annet A). Minien regner hva Lav–høy ville blitt
        (b.flagg_skygge fra auto-score v4.21). Bare én linje under prisoversikten. Ingenting er slått på: pris, arm og Send er som før. */
-    var fsk = b.flagg_skygge, fskEl = c.querySelector('.au-flagg-skygge');
+    /* c738: skyggelinja forsvinner når bryteren er på (og for biler priset med ny regel). */
+    var fskAv = !!b.ny_regel || ((typeof window.abFlaggIBruk === 'function') && window.abFlaggIBruk());
+    var fsk = fskAv ? null : b.flagg_skygge, fskEl = c.querySelector('.au-flagg-skygge');
     if (fsk && fsk.lav > 0 && fsk.hoy > 0 && grid && grid.parentNode) {
       var fskHva = fsk.flagg ? esc(fsk.flagg.navn || 'Flagg') + (fsk.flagg.slitasjetall != null && /^slitt/.test(fsk.flagg.id || '') ? ', slitasjetall ' + esc(String(fsk.flagg.slitasjetall).replace('.', ',')) : '') : 'A';
       var fskH = '<b>Ny prising (ikke i bruk):</b> ' + fskHva + ' → <b>' + k(fsk.lav) + '–' + k(fsk.hoy) + '</b>.' +
@@ -884,7 +890,7 @@
       var t = (d.textContent || '').trim();
       if (/^Kunde ser \d+/.test(t)) { d.innerHTML = '<b>Kunde ser ' + pct(aktiv.lav).replace(' %', '') + '–' + pct(aktiv.hoy) + ' av Finn</b> · ' + k(aktiv.lav) + '–' + k(aktiv.hoy) + ' kr'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
       else if (/^Finn-pris [\d\s]+$/.test(t)) { d.textContent = 'Finn-pris (Mid) ' + k(mid); if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
-      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) { d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (' + (budFf ? 'antatt bud er midt' : 'fossefall fra Mid') + ').'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
+      else if (/Lav [\d\s]+ sendes til kunden/.test(t)) { d.innerHTML = '<b>' + (arm === 'ORDNA' ? 'Ordna' : arm) + (arm === 'A' && npTekst ? ' · ' + esc(npTekst) : '') + '</b> Lav <b>' + k(aktiv.lav) + '</b> sendes til kunden (' + (budFf ? 'antatt bud er midt' : 'fossefall fra Mid') + ').'; if (d.parentElement && d.parentElement.classList.contains('au-mid-linjer')) d.parentElement.style.display = ''; }
     });
     var tabell = [].filter.call(c.querySelectorAll('table'), function (t) { return /^\s*Lag/.test((t.querySelector('tr') || {}).textContent || '') && /Finn-utpris/.test(t.textContent); })[0];
     if (tabell && tabell.getAttribute('data-mid') !== sig) {
