@@ -868,6 +868,17 @@
       grid.style.cssText = 'display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 36px;gap:4px 6px;font-size:11px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;min-width:0;max-width:100%;overflow:hidden;';
       grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A', A) + rad('B', B) + rad('Ordna', O);
     }
+    /* c736 (Mike 24.11): SKYGGE for ny prising med flagg (slitte og nyere biler, alt annet A). Minien regner hva Lav–høy ville blitt
+       (b.flagg_skygge fra auto-score v4.21). Bare én linje under prisoversikten. Ingenting er slått på: pris, arm og Send er som før. */
+    var fsk = b.flagg_skygge, fskEl = c.querySelector('.au-flagg-skygge');
+    if (fsk && fsk.lav > 0 && fsk.hoy > 0 && grid && grid.parentNode) {
+      var fskHva = fsk.flagg ? esc(fsk.flagg.navn || 'Flagg') + (fsk.flagg.slitasjetall != null && /^slitt/.test(fsk.flagg.id || '') ? ', slitasjetall ' + esc(String(fsk.flagg.slitasjetall).replace('.', ',')) : '') : 'A';
+      var fskH = '<b>Ny prising (ikke i bruk):</b> ' + fskHva + ' → <b>' + k(fsk.lav) + '–' + k(fsk.hoy) + '</b>.' +
+        (fsk.lav_i_dag ? ' I dag ' + k(fsk.lav_i_dag) + '–' + k(fsk.hoy_i_dag) + (fsk.arm_i_dag ? ' (' + esc(fsk.arm_i_dag) + ')' : '') + '.' : '');
+      if (!fskEl) { fskEl = document.createElement('div'); fskEl.className = 'au-flagg-skygge'; grid.parentNode.insertBefore(fskEl, grid.nextSibling); }
+      if (fskEl.getAttribute('data-sig') !== fskH) { fskEl.innerHTML = fskH; fskEl.setAttribute('data-sig', fskH);
+        fskEl.style.cssText = 'margin:0 0 10px;padding:6px 10px;border:1px dashed #9AA39C;border-radius:6px;background:#FAFAF7;font-size:12px;line-height:1.45;color:#3B4740;min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere'; }
+    } else if (fskEl) fskEl.remove();
     [].forEach.call(c.querySelectorAll('div'), function (d) {
       if (d.children.length > 3) return;
       var t = (d.textContent || '').trim();
