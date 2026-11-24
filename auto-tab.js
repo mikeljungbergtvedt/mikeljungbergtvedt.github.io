@@ -848,7 +848,8 @@
     var arm = String(b.arm || 'A').toUpperCase();
     var r1 = function (n) { return n == null ? null : Math.round(n / 1000) * 1000; };
     /* c739 (Mike 24.11): B-kolonnen er erstattet med «A uten flagg» (samme fossefall uten flaggtillegg, mid_ff.profiler.uten_flagg).
-       profiler.b beholdes i data, vises ikke. Mangler uten_flagg: lik A. Ordna er uendret (× 0,75 av A etter flagg). */
+       profiler.b beholdes i data, vises ikke. Mangler uten_flagg: lik A. Ordna er uendret (× 0,75 av A etter flagg).
+       c740 (Mike 24.11): Peasy-avgift vises m/avr i alle tre kolonner, samme som ERP-kortet: Forventet bud − avgift = midt. */
     var prof = ff.profiler || null;
     var band = function (key, fallback) {
       var p = prof && prof[key];
@@ -916,7 +917,7 @@
       var bel = function (n) { return n == null ? '–' : (n < 0 ? '−' : '') + auKr(Math.abs(n)); };
       var rows = '';
       ff.trinn.forEach(function (l) {
-        var sum = l[2] === 'sum', navn = l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : l[0]);
+        var sum = l[2] === 'sum', navn = l[2] === 'start' ? 'Finn-utpris (Mid)' : (sum ? '= ' : '− ') + esc(l[0] === 'Midt' ? 'Peasy-bud midt' : (l[0] === 'Peasy-avgift' ? 'Peasy-avgift m/avr.' : l[0]));
         var v = [l[1], l[1], l[1]];
         if (budFf && l[0] === 'Peasy-avgift') return; /* c731: antatt bud er midt, avgiften trekkes ikke */
         if (budFf && l[0] === 'Midt') {
@@ -931,7 +932,14 @@
             if (/Forhandlermargin/.test(String(l[0])) && U.forhandlermargin != null) v[1] = U.forhandlermargin;
             else if (l[0] === 'AR-salær' && U.salaer_ar != null) v[1] = U.salaer_ar;
             else if (l[0] === 'Forventet bud' && U.ar_bud != null) v[1] = U.ar_bud;
-            else if (l[0] === 'Peasy-avgift' && U.peasy_avgift_avr != null) v[1] = U.peasy_avgift_avr;
+          }
+          /* c740: Peasy-avgift m/avr i alle kolonner (Forventet bud − avgift = midt). Ordna viser A's avgift; profillinjen tar midten til 0,75. */
+          if (l[0] === 'Peasy-avgift') {
+            var avrA = A.peasy_avgift_avr, avrU = U && U.peasy_avgift_avr;
+            if (avrA == null && A.ar_bud != null && A.midt != null) avrA = -(A.ar_bud - A.midt);
+            if (avrU == null && U && U.ar_bud != null && U.midt != null) avrU = -(U.ar_bud - U.midt);
+            if (avrA != null) { v[0] = avrA; v[2] = avrA; }
+            if (avrU != null) v[1] = avrU;
           }
         }
         rows += '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:2px 3px;border-top:1px solid #E7EBE4;overflow:hidden;text-overflow:ellipsis;font-size:11px">' + navn + '</td>' + cell(bel(v[0]), 0) + cell(bel(v[1]), 1) + cell(bel(v[2]), 2) + '</tr>';
