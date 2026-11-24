@@ -1,4 +1,5 @@
 /* c702 (Mike 10.11): Vekstloop dag-for-dag: klikk kampanjerad for bestilte reg.nr.; klikk reg.nr. for målgruppe-popup (samme tall som tellingen).
+/* c737 (Mike 24.11): felles mål med mailene. Mål: minst 20 % bestilt og under 1 000 kr/bestilt (overskrift og kampanje-OK). Solgt-mål 65 %. Målgruppe: modellår 2010–2021, km < 165 000, eiertid > 1,0 år (Excel «Eier siden», samme referansedato). AR-kravet fjernet. Mangler år/km/eiertid = ukjent. Kalkulatoren i Marked (ny) fylles med live tall (annonsekost, kost/bestilt, bestilt %, solgt %) for samme periode som overskriften; brukeren kan overstyre. Mål fra VL_MAL (1 000 / 20 % / 65 %).
 /* c701 (Mike 10.11): Vekstloop dag-for-dag: eiertid_år (SD mottatt, eller i dag om SD mangler, minus «Eier siden», én desimal) i målgruppe (3–15 år, AR mid 70–400k, eiertid ≥ 2). Ukjent eiertid telles ikke med. Samme definisjon som vekstloop-uke.js.
 /* c700 (Mike 10.11): Marked (ny) nederst: «Vekstloop denne uka, dag for dag» (samme tall som vekstloop-uke.js, man–søn, uke-hittil t.o.m. i går; i dag og senere tomme).
 /* c713 (Mike 12.11): kost/bestilt = annonsekost Meta+Google / bestilt med Kilde = peasy. Bestilt % = de bestilte / Peasy-leads. Kost per lead = samme kost / Peasy-leads. Drive, Ordna og AutoDB er bare avstemming, aldri i disse tallene. */
@@ -18,6 +19,7 @@
   var FARGE = { Google: '#F2B705', Meta: '#1877F2', Direkte: '#667A72', Drive: '#2E7D32', Ordna: '#E65100', AutoDB: '#6A1B9A' };
   var DG = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
   var apen = {};
+  var VL_MAL = { bestilling: 0.20, salg: 0.65, kostPerBestilt: 1000 };
   function d0(s) { if (!s) return null; var p = String(s).trim().slice(0, 10).split('.'); if (p.length !== 3) return null; var d = new Date(+p[2], +p[1] - 1, +p[0]); return isNaN(d) ? null : d; }
   function key(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function dag(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -89,19 +91,22 @@
     });
     // c641 (Mike 22.10): annonsekost per uke (ads-spend.json, samme dager som trenden) til kost per bestilt hent/lev.
     var kostU = { Google: Q.uker.map(function (u) { return kostKan('Google', u.p); }), Meta: Q.uker.map(function (u) { return kostKan('Meta', u.p); }) };
-    var kilde = {}, peasyLeads = {};
+    var kilde = {}, peasyLeads = {}, peasySolgt = {};
     ['naa', 'sammen', 'f14', 'p14'].forEach(function (p) {
       if (typeof pulseBestiltPerKilde === 'function') kilde[p] = pulseBestiltPerKilde(rows, P[p][0], P[p][1]);
-      var nLead = 0;
+      var nLead = 0, nSolgt = 0;
       rows.slice(1).forEach(function (r) {
         if (!r || !String(r[1] || '').trim()) return;
-        var s = (typeof srcKey === 'function') ? srcKey(r) : '';
-        if (s !== 'peasy') return;
+        var src = (typeof srcKey === 'function') ? srcKey(r) : '';
+        if (src !== 'peasy') return;
         if (inn(P[p], d0(r[14]))) nLead++;
+        var sold = (typeof bokSalg === 'function') ? d0(bokSalg(r)) : d0(r._salg || r[18]);
+        if (inn(P[p], sold)) nSolgt++;
       });
       peasyLeads[p] = nLead;
+      peasySolgt[p] = nSolgt;
     });
-    return { T: T, Q: Q, serie: serie, kostU: kostU, kilde: kilde, peasyLeads: peasyLeads };
+    return { T: T, Q: Q, serie: serie, kostU: kostU, kilde: kilde, peasyLeads: peasyLeads, peasySolgt: peasySolgt };
   }
 
   function pil(a, b, fmt) { fmt = fmt || String; if (a > b) return '<span style="color:#2E7D32;font-weight:800">▲ ' + fmt(a - b) + '</span>'; if (a < b) return '<span style="color:#C62828;font-weight:800">▼ ' + fmt(b - a) + '</span>'; return '<span style="color:#667A72">=</span>'; }
@@ -113,13 +118,23 @@
     var bestilt = bk ? bk.peasy : sum.n;
     var leads = (R.peasyLeads && R.peasyLeads[p] != null) ? R.peasyLeads[p] : sum.l;
     var kost = sum.kost;
-    return { bestilt: bestilt, leads: leads, kost: kost, perBest: bestilt ? kost / bestilt : null, perLead: leads ? kost / leads : null, pst: leads ? Math.round(100 * bestilt / leads) : null };
+    var solgt = (R.peasySolgt && R.peasySolgt[p] != null) ? R.peasySolgt[p] : 0;
+    return {
+      bestilt: bestilt, leads: leads, kost: kost, solgt: solgt,
+      perBest: bestilt ? kost / bestilt : null,
+      perLead: leads ? kost / leads : null,
+      pst: leads ? Math.round(1000 * bestilt / leads) / 10 : null,
+      salgPst: bestilt ? Math.round(1000 * solgt / bestilt) / 10 : null
+    };
+  }
+  function maalOk(t) {
+    return t && t.perBest != null && t.pst != null && t.pst >= VL_MAL.bestilling * 100 && t.perBest < VL_MAL.kostPerBestilt;
   }
   function fd(d) { return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); }
   function headline(R) {
     var T = R.T, P = R.Q.P, a = peasySum(T, 'naa'), b = peasySum(T, 'sammen'), c = peasySum(T, 'f14'), d = peasySum(T, 'p14');
     var naaT = peasyTall(R, 'naa', a), smT = peasyTall(R, 'sammen', b), fT = peasyTall(R, 'f14', c), pT = peasyTall(R, 'p14', d);
-    var MAAL = 2000, ok = naaT.perBest != null && naaT.perBest < MAAL;
+    var ok = maalOk(naaT);
     window._markrevHeadline = { naa: a, sammen: b, f14: c, p14: d, naaT: naaT, sammenT: smT };
     var bestiltNaa = naaT.bestilt + ' bestilt';
     var bkN = R.kilde && R.kilde.naa;
@@ -129,10 +144,10 @@
     }
     var pstTxt = function (t) { return t.pst == null ? '–' : (t.pst + ' %'); };
     return '<div class="table-card" style="margin-bottom:18px;padding:14px 18px;border-left:4px solid ' + (ok ? '#004225' : '#B71C1C') + '">' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Peasy kost → bestilt (som morgenmailen) · mål under ' + kr(MAAL) + ' kr/best</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#667A72">Peasy kost → bestilt (som morgenmailen) · mål minst ' + (VL_MAL.bestilling * 100) + ' % bestilt og under ' + kr(VL_MAL.kostPerBestilt) + ' kr/best · solgt-mål ' + (VL_MAL.salg * 100) + ' %</div>' +
       '<div style="font-size:17px;font-weight:800;margin-top:6px">' + fd(P.naa[0]) + '–' + fd(P.naa[1]) + ': ' + kr(naaT.kost) + ' kr → ' + bestiltNaa + ' (' + kr(naaT.perBest) + ' kr/best)' +
       ' <span style="font-weight:500;color:#667A72">— forrige ' + kr(smT.kost) + ' → ' + smT.bestilt + ' (' + kr(smT.perBest) + ')</span></div>' +
-      '<div style="font-size:13px;margin-top:4px">Leads → bestilt: ' + naaT.leads + ' → ' + naaT.bestilt + ' (bestilt % ' + pstTxt(naaT) + ') mot ' + smT.leads + ' → ' + smT.bestilt + ' (' + pstTxt(smT) + '). Kost per lead ' + kr(naaT.perLead) + ' kr.</div>' +
+      '<div style="font-size:13px;margin-top:4px">Leads → bestilt: ' + naaT.leads + ' → ' + naaT.bestilt + ' (bestilt % ' + pstTxt(naaT) + ') mot ' + smT.leads + ' → ' + smT.bestilt + ' (' + pstTxt(smT) + '). Solgt % ' + (naaT.salgPst == null ? '–' : (naaT.salgPst + ' %')) + ' (' + (naaT.solgt || 0) + ' av ' + naaT.bestilt + '). Kost per lead ' + kr(naaT.perLead) + ' kr.</div>' +
       '<div style="font-size:14px;margin-top:6px"><b>14d</b> ' + fd(P.f14[0]) + '–' + fd(P.f14[1]) + ': ' + kr(fT.kost) + ' kr → <b>' + fT.bestilt + ' bestilt</b> (' + kr(fT.perBest) + ')' +
       ' — forrige 14d ' + fd(P.p14[0]) + '–' + fd(P.p14[1]) + ': ' + kr(pT.kost) + ' → ' + pT.bestilt + ' (' + kr(pT.perBest) + ')</div>' +
       '<div style="font-size:11px;color:#667A72;margin-top:6px">Kost/bestilt, bestilt %, leads og kost per lead er bare Kilde = peasy (Google + Meta + uten UTM). Drive, Ordna og AutoDB er bare avstemming.</div></div>';
@@ -221,44 +236,79 @@
       Q.uker.map(function (u) { return '<th style="' + td.replace('border-top:1px solid #E7EBE4;', '') + ';color:#667A72;font-weight:600">' + esc(u.navn) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       ['Google', 'Meta', 'Totalt'].map(function (k) { return '<tr' + (k === 'Totalt' ? ' style="font-weight:800"' : '') + '><td style="text-align:left;padding:4px 6px;border-top:1px solid #E7EBE4;color:' + KOST_FARGE[k] + ';font-weight:700">' + k + '</td>' +
         S[k].map(function (x) { return '<td style="' + td + '" title="Kost ' + kr(x.kost) + ' kr, ' + x.n + ' bestilt">' + (x.v == null ? '–' : kr(x.v)) + '</td>'; }).join('') + '</tr>'; }).join('') +
-      /* c642: kost per kontrakt (simulert) = kost per bestilt / (budaksept × når bud), regnes live av kalkulatoren */
+      /* c737: simulert kost per kontrakt = kost per bestilt / solgt-%. Solgt-% kommer live fra valgt periode, kan overstyres. */
       ['Google', 'Meta', 'Totalt'].map(function (k, i) { return '<tr class="mr-kk"' + (k === 'Totalt' ? ' style="font-weight:800"' : '') + '><td style="text-align:left;padding:4px 6px;border-top:' + (i ? '1px solid #E7EBE4' : '2px solid #C9D3CC') + ';color:' + KOST_FARGE[k] + ';font-weight:700;white-space:nowrap">' + k + ' per kontrakt (sim.)</td>' +
         S[k].map(function (x) { return '<td class="mr-kk-c" data-v="' + (x.v == null ? '' : x.v) + '" style="' + td + (i ? '' : ';border-top:2px solid #C9D3CC') + '">–</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+    var inp = 'width:72px;padding:3px 4px;border:1px solid #C9D3CC;border-radius:5px';
     var kalk = '<div id="markrev-kalk" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:6px 12px 8px;font-size:12.5px;color:#16201B">' +
-      '<label style="display:flex;align-items:center;gap:6px"><b>Budaksept</b> <input id="mr-ba" type="number" min="10" max="100" step="5" style="width:56px;padding:3px 4px;border:1px solid #C9D3CC;border-radius:5px"> % <input id="mr-ba-r" type="range" min="10" max="100" step="5" style="width:120px"></label>' +
-      '<label style="display:flex;align-items:center;gap:6px">Når bud (av bestilte) <input id="mr-nb" type="number" min="10" max="100" step="5" style="width:56px;padding:3px 4px;border:1px solid #C9D3CC;border-radius:5px"> %</label>' +
+      '<div id="mr-kalk-live" style="width:100%;font-weight:700"></div>' +
+      '<label style="display:flex;align-items:center;gap:6px">Annonsekost <input id="mr-kalk-spend" type="number" min="0" step="1" style="' + inp + '"> kr</label>' +
+      '<label style="display:flex;align-items:center;gap:6px">Bestilt % <input id="mr-kalk-bp" type="number" min="0" max="100" step="0.1" style="' + inp + '"> %</label>' +
+      '<label style="display:flex;align-items:center;gap:6px">Kost/bestilt <input id="mr-kalk-kpb" type="number" min="0" step="1" style="' + inp + '"> kr</label>' +
+      '<label style="display:flex;align-items:center;gap:6px">Solgt % <input id="mr-kalk-sp" type="number" min="0" max="100" step="0.1" style="' + inp + '"> %</label>' +
+      '<button type="button" id="mr-kalk-reset" style="padding:3px 8px;border:1px solid #C9D3CC;border-radius:5px;background:#fff;cursor:pointer;font-size:12px">Tilbakestill til live</button>' +
       '<span id="mr-kalk-sum" style="font-weight:700"></span>' +
-      '<span style="color:#8A6D10;font-size:11.5px">Simulering, ikke faktiske kontrakter</span></div>';
+      '<span style="color:#667A72;font-size:11.5px">Standard er live tall for samme periode som overskriften. Du kan overstyre. Simulert per kontrakt = kost/bestilt ÷ solgt-%.</span></div>';
     return '<div class="section-label" style="margin-top:18px">Kost per bestilt hent/lev, uke for uke (12 uker)</div>' +
       '<div class="table-card"><div style="padding:8px 16px 8px;position:relative;height:260px"><canvas id="markrev-kost"></canvas></div>' +
       kalk + '<div style="padding:0 12px 6px;overflow-x:auto">' + t + '</div>' +
       '<div style="padding:4px 18px 12px;font-size:11px;color:#667A72;line-height:1.5">Bestilt = siste booking (siste dag på «på vei»), Kilde = peasy. Leads uten UTM teller som Direkte, så Google og Meta kan være undertalt. Totalt = annonsekost Google + Meta delt på Peasy-bestilt. Drive, Ordna og AutoDB er ikke med i kost/bestilt. Kost fra ads-spend.json.' + (Q.hel ? '' : ' Siste uke er «hittil» (t.o.m. i går), stiplet.') + '</div></div>';
   }
-  /* c642 (Mike 22.10): kalkulator for kost per kontrakt. Valget lagres i localStorage, ikke på serveren. Mål 2 000 kr. */
-  var KALK_MAAL = 2000;
+  /* c737 (Mike 24.11): kalkulatoren fylles med live tall fra samme periode som overskriften (naa). Brukeren kan overstyre. Mål fra VL_MAL. */
+  var _kalkDirty = false;
+  function kalkLiveTall(R) {
+    return peasyTall(R, 'naa', peasySum(R.T, 'naa'));
+  }
   function kalkBind(R) {
-    var ba = document.getElementById('mr-ba'), bar = document.getElementById('mr-ba-r'), nb = document.getElementById('mr-nb'), sum = document.getElementById('mr-kalk-sum');
-    if (!ba || !bar || !nb) return;
-    var les = function (k, d) { try { var v = Number(localStorage.getItem(k)); return v >= 10 && v <= 100 ? v : d; } catch (e) { return d; } };
-    var klem = function (v) { v = Math.round(Number(v) / 5) * 5; return Math.max(10, Math.min(100, v || 0)); };
-    ba.value = bar.value = les('markrevBudaksept', 60); nb.value = les('markrevNaarBud', 100);
+    var spendEl = document.getElementById('mr-kalk-spend');
+    var bpEl = document.getElementById('mr-kalk-bp');
+    var kpbEl = document.getElementById('mr-kalk-kpb');
+    var spEl = document.getElementById('mr-kalk-sp');
+    var sum = document.getElementById('mr-kalk-sum');
+    var liveEl = document.getElementById('mr-kalk-live');
+    var reset = document.getElementById('mr-kalk-reset');
+    if (!spendEl || !bpEl || !kpbEl || !spEl || !sum) return;
+    var live = kalkLiveTall(R);
     var S = kostSerier(R), Q = R.Q;
-    var farge = function (v) { return v == null ? '' : v < KALK_MAAL ? '#2E7D32' : '#C62828'; };
-    var regn = function () {
-      var f = (klem(ba.value) / 100) * (klem(nb.value) / 100);
-      [].forEach.call(document.querySelectorAll('#markrev-kost-tab .mr-kk-c'), function (td) {
-        var v = td.getAttribute('data-v'); var k = v === '' ? null : Math.round(Number(v) / f);
-        td.textContent = k == null ? '–' : kr(k); td.style.color = farge(k);
-      });
-      var n = Q.uker.length, a = S.Totalt[n - 1].v, b = S.Totalt[n - 2].v;
-      var tall = function (v) { var k = v == null ? null : Math.round(v / f); return '<span style="color:' + farge(k) + '">' + (k == null ? '–' : 'ca. ' + kr(k) + ' kr') + '</span>'; };
-      sum.innerHTML = 'Uke ' + esc(Q.uker[n - 1].navn) + ': ' + tall(a) + ' per kontrakt · uke ' + esc(Q.uker[n - 2].navn) + ': ' + tall(b) + ' · mål ' + kr(KALK_MAAL) + ' kr';
-      try { localStorage.setItem('markrevBudaksept', klem(ba.value)); localStorage.setItem('markrevNaarBud', klem(nb.value)); } catch (e) {}
+    var fargeKpb = function (v) { return v == null ? '' : v < VL_MAL.kostPerBestilt ? '#2E7D32' : '#C62828'; };
+    var fargePst = function (v, maal) { return v == null ? '' : v >= maal * 100 ? '#2E7D32' : '#C62828'; };
+    var fyllLive = function () {
+      spendEl.value = live.kost != null ? Math.round(live.kost) : '';
+      bpEl.value = live.pst != null ? live.pst : '';
+      kpbEl.value = live.perBest != null ? Math.round(live.perBest) : '';
+      spEl.value = live.salgPst != null ? live.salgPst : '';
+      _kalkDirty = false;
     };
-    ba.oninput = function () { bar.value = klem(ba.value); regn(); };
-    ba.onchange = function () { ba.value = bar.value = klem(ba.value); regn(); };
-    bar.oninput = function () { ba.value = bar.value; regn(); };
-    nb.oninput = regn; nb.onchange = function () { nb.value = klem(nb.value); regn(); };
+    if (!_kalkDirty) fyllLive();
+    if (liveEl) {
+      liveEl.textContent = 'Live ' + fd(R.Q.P.naa[0]) + '–' + fd(R.Q.P.naa[1]) + ': ' +
+        kr(live.kost) + ' kr · ' + (live.pst == null ? '–' : live.pst + ' %') + ' bestilt · ' +
+        kr(live.perBest) + ' kr/bestilt · ' + (live.salgPst == null ? '–' : live.salgPst + ' %') + ' solgt';
+    }
+    var regn = function () {
+      var spend = spendEl.value === '' ? null : Number(spendEl.value);
+      var bp = bpEl.value === '' ? null : Number(bpEl.value);
+      var kpb = kpbEl.value === '' ? null : Number(kpbEl.value);
+      var sp = spEl.value === '' ? null : Number(spEl.value);
+      var f = (sp != null && sp > 0) ? (sp / 100) : null;
+      [].forEach.call(document.querySelectorAll('#markrev-kost-tab .mr-kk-c'), function (td) {
+        var v = td.getAttribute('data-v'); var k = (v === '' || !f) ? null : Math.round(Number(v) / f);
+        td.textContent = k == null ? '–' : kr(k); td.style.color = k == null ? '' : '#16201B';
+      });
+      spendEl.style.color = '';
+      bpEl.style.color = fargePst(bp, VL_MAL.bestilling);
+      kpbEl.style.color = fargeKpb(kpb);
+      spEl.style.color = fargePst(sp, VL_MAL.salg);
+      var ok = bp != null && kpb != null && bp >= VL_MAL.bestilling * 100 && kpb < VL_MAL.kostPerBestilt;
+      var sim = (kpb != null && f) ? Math.round(kpb / f) : null;
+      sum.innerHTML = 'Mål: minst ' + (VL_MAL.bestilling * 100) + ' % bestilt og under ' + kr(VL_MAL.kostPerBestilt) +
+        ' kr/bestilt · solgt-mål ' + (VL_MAL.salg * 100) + ' % · ' +
+        (ok ? '<span style="color:#2E7D32">på mål</span>' : '<span style="color:#C62828">under mål</span>') +
+        (sim != null ? ' · simulert per kontrakt ' + kr(sim) + ' kr' : '');
+    };
+    var merket = function () { _kalkDirty = true; regn(); };
+    spendEl.oninput = merket; bpEl.oninput = merket; kpbEl.oninput = merket; spEl.oninput = merket;
+    if (reset) reset.onclick = function () { fyllLive(); regn(); };
     regn();
   }
   function kostGraf(R) {
@@ -273,8 +323,7 @@
         scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return kr(v) + ' kr'; } } } } } });
   }
 
-  /* c700: Vekstloop denne uka, dag for dag. Samme definisjoner som v2/vekstloop-uke.js. */
-  var VL_MAL = { bestilling: 0.20, salg: 0.70, kostPerBestilt: 1000, bestiltMin: 0.10 };
+  /* c700 / c737: Vekstloop denne uka, dag for dag. Samme definisjoner som v2/vekstloop-uke.js (VL_MAL øverst i fila). */
   var VL_DG = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
 
   function vlParse(s) {
@@ -316,7 +365,7 @@
     if (g.kanal === 'direkte' || !(g.kost > 0)) return '–';
     if (!g.a) return 'Under target';
     var bp = g.l ? g.a / g.l : 0, kpb = g.kost / g.a;
-    return (bp >= VL_MAL.bestiltMin && kpb <= VL_MAL.kostPerBestilt) ? 'OK' : 'Under target';
+    return (bp >= VL_MAL.bestilling && kpb < VL_MAL.kostPerBestilt) ? 'OK' : 'Under target';
   }
   function vlEiertid(eierSiden, ref) {
     var d = vlParse(eierSiden); if (!d || !ref) return null;
@@ -324,25 +373,29 @@
     return Math.round(((ref0 - d) / (365.25 * 864e5)) * 10) / 10;
   }
   /* Ett resultat brukes både i tellingen og i popupen, så de ikke kan divergere. */
+  function vlLesKm(v) {
+    if (v == null || v === '') return null;
+    if (typeof v === 'number') return isFinite(v) && v > 0 ? v : null;
+    var n = Number(String(v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
+    return isFinite(n) && n > 0 ? n : null;
+  }
   function vlMalgruppeData(r, aks, eierIx, sd) {
-    var arv = String((r[3] == null ? '' : r[3])).replace(/[\s\u00a0]/g, '');
-    var m = arv.match(/(\d+)-(\d+)/);
-    var val = m ? (+m[1] + +m[2]) / 2 : null;
-    var aar = Number(r[8]);
-    var alder = (aar && aks) ? (aks.getFullYear() - aar) : null;
-    var alderOk = alder == null ? null : (alder >= 3 && alder <= 15);
-    var arOk = val == null ? null : (val >= 70000 && val <= 400000);
+    var aarN = Number(r[8]);
+    var aar = (isFinite(aarN) && aarN > 0) ? aarN : null;
+    var aarOk = aar == null ? null : (aar >= 2010 && aar <= 2021);
+    var km = vlLesKm(r[22]);
+    var kmOk = km == null ? null : (km < 165000);
     var eier = null;
     if (eierIx != null) eier = vlEiertid(r[eierIx], sd || new Date());
-    var eierOk = eier == null ? null : (eier >= 2);
+    var eierOk = eier == null ? null : (eier > 1);
     var ok = null;
-    if (val == null || !aar || !aks) ok = null;
+    if (aar == null || km == null) ok = null;
     else if (eierIx == null || eier == null) ok = null;
-    else ok = alderOk && arOk && eierOk;
+    else ok = !!(aarOk && kmOk && eierOk);
     return {
       reg: String(r[1] == null ? '' : r[1]).trim(),
-      alder: alder, alderOk: alderOk,
-      arMid: val, arOk: arOk,
+      aar: aar, aarOk: aarOk,
+      km: km, kmOk: kmOk,
       eiertid: eier, eierOk: eierOk,
       ok: ok
     };
@@ -528,9 +581,9 @@
     var vf = d.ok === true ? '#1B5E20' : (d.ok === false ? '#B71C1C' : '#757575');
     return '<div style="font-family:Arial,sans-serif;min-width:220px;max-width:280px">'
       + '<div style="font-weight:800;font-size:15px;margin-bottom:8px">' + esc(d.reg) + '</div>'
-      + rad('Alder', d.alder == null ? 'ukjent' : (d.alder + ' år'), 'vs 3–15', d.alderOk)
-      + rad('AR mid', d.arMid == null ? 'ukjent' : (tal(Math.round(d.arMid)) + ' kr'), 'vs 70–400k', d.arOk)
-      + rad('Eiertid', d.eiertid == null ? 'ukjent' : (tal(d.eiertid, 1) + ' år'), 'vs ≥ 2', d.eierOk)
+      + rad('År', d.aar == null ? 'ukjent' : String(d.aar), 'vs 2010–2021', d.aarOk)
+      + rad('Km', d.km == null ? 'ukjent' : tal(Math.round(d.km)), 'vs under 165 000', d.kmOk)
+      + rad('Eiertid', d.eiertid == null ? 'ukjent' : (tal(d.eiertid, 1) + ' år'), 'vs over 1,0', d.eierOk)
       + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e5e5;font-weight:700;color:' + vf + '">I målgruppe: ' + verd + '</div>'
       + '</div>';
   }
@@ -633,9 +686,9 @@
       var inklUke = (bkUke && typeof pulseBestiltInklTekst === 'function') ? pulseBestiltInklTekst(bkUke) : '';
       html += vlKortTab(hittilTittel, vlBeregn(rows, ads, { fra: U.man, til: U.iGar }), 'hittil', inklUke);
     }
-    html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: biler 3–15 år, verdi 70–400k, eiertid minst 2 år (eiertid = år mellom «Eier siden» og SD mottatt, eller i dag om SD mangler, én desimal). Mangler «Eier siden» telles ikke i målgruppe (ukjent eiertid vises under hver dag). Mål: 20 % bestilt og 70 % solgt. OK = bestilt % ≥ 10 % og kost/bestilt ≤ 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
+    html += '<div style="padding:0 18px 16px;font-size:11px;color:#667A72;line-height:1.5">Målgruppe: modellår 2010–2021, under 165 000 km, eiertid over 1 år (eiertid = år mellom «Eier siden» og SD mottatt, eller i dag om SD mangler, én desimal). Mangler år, km eller «Eier siden» telles ikke i målgruppe (ukjent vises under hver dag). Mål: minst 20 % bestilt, under 1 000 kr per bestilling, og 65 % solgt. OK = bestilt % ≥ 20 % og kost/bestilt under 1 000 kr. I dag og senere dager er tomme til dagen er ferdig. Peasy-leads only, kost fra ads-spend.json.</div>';
     return html;
   }
 
-  window.MARKREV = { headline: headline, peasySum: peasySum, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk, vlMedEier: vlMedEier, vlMalgruppeData: vlMalgruppeData, vlPopupHtml: vlPopupHtml, _vlEier: _vlEier, _vlStore: function () { return _vlStore; } };
+  window.MARKREV = { headline: headline, peasySum: peasySum, peasyTall: peasyTall, maalOk: maalOk, kalkLiveTall: kalkLiveTall, render: render, beregn: beregn, perioder: perioder, kostSerier: kostSerier, VL_MAL: VL_MAL, vlBeregn: vlBeregn, vlDenneUka: vlDenneUka, vlHtml: vlHtml, vlKortVisning: vlKortVisning, vlKampanjeOk: vlKampanjeOk, vlMedEier: vlMedEier, vlMalgruppeData: vlMalgruppeData, vlIMalgruppe: vlIMalgruppe, vlPopupHtml: vlPopupHtml, _vlEier: _vlEier, _vlStore: function () { return _vlStore; } };
 })();
