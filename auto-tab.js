@@ -846,17 +846,25 @@
     var sb = c.querySelector('.au-stopp-boks'); if (sb) sb.remove();
     if (!mid || !ff || ff.feil) return;
     var arm = String(b.arm || 'A').toUpperCase();
-    var fak = { A: 1, B: 0.9, ORDNA: 0.75 };
     var r1 = function (n) { return n == null ? null : Math.round(n / 1000) * 1000; };
-    /* c592: A, B og Ordna nøyaktig slik ERP får dem (auto-score mid_ff.profiler). Mangler de: A × faktor som før. */
-    var prof = ff.profiler || null, pk = { A: 'a', B: 'b', ORDNA: 'ordna' };
-    var band = function (x) { var p = prof && prof[pk[x]]; if (p && p.lav) return { midt: p.midt, lav: p.lav, hoy: p.hoy }; var f0 = fak[x]; return { midt: r1(ff.a * f0), lav: r1(ff.lav * f0), hoy: r1(ff.hoy * f0) }; };
-    var A = band('A'), B = band('B'), O = band('ORDNA');
+    /* c739 (Mike 24.11): B-kolonnen er erstattet med «A uten flagg» (samme fossefall uten flaggtillegg, mid_ff.profiler.uten_flagg).
+       profiler.b beholdes i data, vises ikke. Mangler uten_flagg: lik A. Ordna er uendret (× 0,75 av A etter flagg). */
+    var prof = ff.profiler || null;
+    var band = function (key, fallback) {
+      var p = prof && prof[key];
+      if (p && p.lav) return p;
+      return fallback;
+    };
+    var A = band('a', { midt: r1(ff.a), lav: r1(ff.lav), hoy: r1(ff.hoy) });
+    var U = band('uten_flagg', null);
+    var O = band('ordna', { midt: r1(ff.ordna != null ? ff.ordna : (A.midt != null ? A.midt * 0.75 : null)), lav: null, hoy: null });
+    if (O.lav == null && O.midt != null) { O.lav = O.midt; O.hoy = O.midt; }
+    var B = band('b', null); /* beholdt i data, vises ikke */
     /* c731 (Mike 23.11): bilen er priset fra antatt bud. Da er budet Peasy-bud midt: ingen Peasy-avgift og ingen armfaktor.
        Minien sender tallene som ble skrevet til ERP (mid_ff.bud). Armen spiller ingen rolle, så alle tre kolonner viser det samme. */
     var budFf = ff.bud && ff.bud.midt > 0 && ff.bud.lav > 0 && ff.bud.hoy > 0 ? ff.bud : null;
-    if (budFf) { A = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; B = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; O = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; }
-    var aktiv = arm === 'B' ? B : arm === 'ORDNA' ? O : A;
+    if (budFf) { A = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; U = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; O = { midt: budFf.midt, lav: budFf.lav, hoy: budFf.hoy }; }
+    var aktiv = arm === 'B' ? (B || A) : arm === 'ORDNA' ? O : A;
     if (b.erp_lav && b.erp_hoy) { aktiv.lav = b.erp_lav; aktiv.hoy = b.erp_hoy; }
     var pct = function (n) { return n ? Math.round(n / mid * 100) + ' %' : ''; };
     var k = function (n) { return n ? auKr(n) : '–'; };
@@ -864,13 +872,17 @@
     var np = b.ny_regel && b.ny_prising && b.ny_prising.flagg ? b.ny_prising : null;
     var npNavn = np ? ((typeof window.abFlaggKortNavn === 'function') ? window.abFlaggKortNavn(np.flagg) : (np.flagg.kort || np.flagg.navn || '')) : '';
     var npTekst = np ? npNavn + (np.pct != null && Number(np.tillegg_kr) > 0 ? ' ' + String(np.pct).replace('.', ',') + ' %' : '') : '';
-    var sig = JSON.stringify([mid, A, B, O, arm, b.erp_lav, b.erp_hoy, npTekst]);
-    var grid = [].filter.call(c.querySelectorAll('div'), function (d) { return /grid-template-columns:\s*44px/.test(d.getAttribute('style') || ''); })[0];
+    if (!U) U = npTekst ? { midt: null, lav: null, hoy: null } : { midt: A.midt, lav: A.lav, hoy: A.hoy }; /* mangler uten_flagg: lik A bare når det ikke er flagg (ellers – til Minien har levert tallene) */
+    var sig = JSON.stringify([mid, A, U, O, arm, b.erp_lav, b.erp_hoy, npTekst]);
+    var grid = [].filter.call(c.querySelectorAll('div'), function (d) { return /grid-template-columns:\s*(44|88)px/.test(d.getAttribute('style') || ''); })[0];
     if (grid && grid.getAttribute('data-mid') !== sig) {
       grid.setAttribute('data-mid', sig);
       var rad = function (navn, x) { return '<div style="color:var(--muted);">' + navn + '</div><div style="text-align:right;font-weight:700;">' + k(x.lav) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.lav) + '</span></div><div style="text-align:right;font-weight:600;">' + k(mid) + '</div><div style="text-align:right;">' + k(x.hoy) + ' <span style="font-size:10px;color:#2F5E43">' + pct(x.hoy) + '</span></div><div></div>'; };
-      grid.style.cssText = 'display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 36px;gap:4px 6px;font-size:11px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;min-width:0;max-width:100%;overflow:hidden;';
-      grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A' + (npTekst ? '<div style="font-size:9px;line-height:1.15;color:#9A3C0A;font-weight:700;">' + esc(npNavn) + '</div>' : ''), A) + rad('B', B) + rad('Ordna', O);
+      grid.style.cssText = 'display:grid;grid-template-columns:88px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 8px;gap:4px 6px;font-size:11px;font-family:monospace;margin-bottom:10px;padding:8px;background:#F8F8F5;border-radius:6px;min-width:0;max-width:100%;overflow:hidden;';
+      var aMerk = (npTekst ? '<div style="font-size:9px;line-height:1.15;color:#9A3C0A;font-weight:700;">' + esc(npTekst) + '</div>' : '') + (arm !== 'B' && arm !== 'ORDNA' ? '<div style="font-size:8px;line-height:1.2;color:#2F5E43;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin-top:1px;">sendes til ERP</div>' : '');
+      var uMerk = npTekst ? '' : '<div style="font-size:9px;line-height:1.15;color:#5E6B62;font-weight:700;">— ingen flagg</div>';
+      var oMerk = (arm === 'ORDNA' ? '<div style="font-size:8px;line-height:1.2;color:#2F5E43;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin-top:1px;">sendes til ERP</div>' : '');
+      grid.innerHTML = '<div></div><div style="color:var(--muted);font-size:10px;text-align:right;">Lav</div><div style="color:var(--muted);font-size:10px;text-align:right;">Finn-pris (Mid)</div><div style="color:var(--muted);font-size:10px;text-align:right;">Høy</div><div></div>' + rad('A' + aMerk, A) + rad('A uten flagg' + uMerk, U) + rad('Ordna' + oMerk, O);
     }
     /* c736 (Mike 24.11): SKYGGE for ny prising med flagg (slitte og nyere biler, alt annet A). Minien regner hva Lav–høy ville blitt
        (b.flagg_skygge fra auto-score v4.21). Bare én linje under prisoversikten. Ingenting er slått på: pris, arm og Send er som før. */
@@ -899,7 +911,7 @@
       var td = 'padding:2px 3px;border-top:1px solid #E7EBE4;text-align:right;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px';
       /* c603 = c593 (Mike 15.10, «slik det var»): trekkene står i alle tre kolonner, profil-linjen viser hva B og Ordna trekker fra A,
          og kolonnen som skrives til ERP er markert. */
-      var kol = arm === 'B' ? 1 : arm === 'ORDNA' ? 2 : 0;
+      var kol = arm === 'ORDNA' ? 2 : 0; /* c739: kolonne 1 er «A uten flagg», aldri den som skrives til ERP */
       var cell = function (v, ix, bold) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + (bold ? ';font-weight:700' : '') + '">' + v + '</td>'; };
       var bel = function (n) { return n == null ? '–' : (n < 0 ? '−' : '') + auKr(Math.abs(n)); };
       var rows = '';
@@ -909,18 +921,26 @@
         if (budFf && l[0] === 'Peasy-avgift') return; /* c731: antatt bud er midt, avgiften trekkes ikke */
         if (budFf && l[0] === 'Midt') {
           rows += '<tr class="au-ff-bud"><td colspan="4" style="padding:2px 3px;border-top:1px solid #E7EBE4;font-size:11px;color:#2F5E43">Antatt bud er midt: ingen Peasy-avgift, ingen armfaktor.</td></tr>';
-          v = [A.midt, B.midt, O.midt];
+          v = [A.midt, U.midt, O.midt];
         } else if (l[0] === 'Midt') {
-          rows += '<tr><td style="padding:2px 3px;border-top:1px solid #E7EBE4;overflow:hidden;text-overflow:ellipsis;font-size:11px">− Profil (A 1,0 · B 0,9 · Ordna 0,75)</td>' + cell('0', 0) + cell(bel(B.midt != null && A.midt != null ? B.midt - A.midt : null), 1) + cell(bel(O.midt != null && A.midt != null ? O.midt - A.midt : null), 2) + '</tr>';
-          v = [A.midt, B.midt, O.midt];
+          rows += '<tr><td style="padding:2px 3px;border-top:1px solid #E7EBE4;overflow:hidden;text-overflow:ellipsis;font-size:11px">− Profil (Ordna 0,75 av A)</td>' + cell('0', 0) + cell('0', 1) + cell(bel(O.midt != null && A.midt != null ? O.midt - A.midt : null), 2) + '</tr>';
+          v = [A.midt, U.midt, O.midt];
+        } else {
+          /* c739: «A uten flagg» har egne trekk (margin uten tillegg, AR-salær, avgift) når Minien har sendt dem. */
+          if (U && l[0] !== 'Finn-utpris' && l[0] !== 'Finn-utpris (Mid)') {
+            if (/Forhandlermargin/.test(String(l[0])) && U.forhandlermargin != null) v[1] = U.forhandlermargin;
+            else if (l[0] === 'AR-salær' && U.salaer_ar != null) v[1] = U.salaer_ar;
+            else if (l[0] === 'Forventet bud' && U.ar_bud != null) v[1] = U.ar_bud;
+            else if (l[0] === 'Peasy-avgift' && U.peasy_avgift_avr != null) v[1] = U.peasy_avgift_avr;
+          }
         }
         rows += '<tr' + (sum ? ' style="font-weight:700"' : '') + '><td style="padding:2px 3px;border-top:1px solid #E7EBE4;overflow:hidden;text-overflow:ellipsis;font-size:11px">' + navn + '</td>' + cell(bel(v[0]), 0) + cell(bel(v[1]), 1) + cell(bel(v[2]), 2) + '</tr>';
       });
       var hd = function (t, ix) { return '<td style="' + td + (ix === kol ? ';background:#E8F5E9' : '') + '">' + t + (ix === kol ? ' ✓' : '') + '</td>'; };
       tabell.className = 'au-ff-stub';
       tabell.style.cssText = 'display:table;width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px';
-      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:2px 3px;width:34%">Lag</td>' + hd('A', 0) + hd('B', 1) + hd('Ordna', 2) + '</tr>' + rows +
-        '<tr style="font-weight:700"><td style="padding:2px 3px;border-top:2px solid #2F5E43;overflow:hidden;text-overflow:ellipsis">Lav – høy</td>' + [[A, 0], [B, 1], [O, 2]].map(function (x) { return '<td style="' + td + ';border-top:2px solid #2F5E43' + (x[1] === kol ? ';background:#E8F5E9' : '') + '">' + k(x[0].lav) + ' – ' + k(x[0].hoy) + '</td>'; }).join('') + '</tr>';
+      tabell.innerHTML = '<tr style="font-weight:700"><td style="padding:2px 3px;width:34%">Lag</td>' + hd('A', 0) + hd('A uten flagg', 1) + hd('Ordna', 2) + '</tr>' + rows +
+        '<tr style="font-weight:700"><td style="padding:2px 3px;border-top:2px solid #2F5E43;overflow:hidden;text-overflow:ellipsis">Lav – høy</td>' + [[A, 0], [U, 1], [O, 2]].map(function (x) { return '<td style="' + td + ';border-top:2px solid #2F5E43' + (x[1] === kol ? ';background:#E8F5E9' : '') + '">' + k(x[0].lav) + ' – ' + k(x[0].hoy) + '</td>'; }).join('') + '</tr>';
     }
   }
 
