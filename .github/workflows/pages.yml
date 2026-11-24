@@ -1,12 +1,21 @@
 # Bygger og publiserer nettstedet til GitHub Pages via Actions.
 #
-# Hvorfor: med "Deploy from a branch" kansellerer GitHub hvert Pages-bygg
-# som ligger i kø når en ny commit kommer. Robotene committer rundt 630
-# ganger i døgnet, så publisering av HTML-endringer kunne sitte fast i
-# lang tid. Her brukes en concurrency-gruppe UTEN cancel-in-progress:
-# et bygg som har startet fullføres alltid, og GitHub holder én ventende
-# kjøring for siste commit. Nettstedet ligger dermed aldri mer enn ett
-# bygg bak main.
+# Hvorfor Actions (okt 2026): med "Deploy from a branch" kansellerer GitHub hvert
+# Pages-bygg som ligger i kø når en ny commit kommer. Robotene committer rundt 630
+# ganger i døgnet, så publisering av HTML-endringer kunne sitte fast i lang tid.
+# Her brukes en concurrency-gruppe UTEN cancel-in-progress: et bygg som har startet
+# fullføres alltid, og GitHub holder én ventende kjøring for siste commit.
+# Nettstedet ligger dermed aldri mer enn ett bygg bak main. (Lærdom 15.10: en
+# hengende publisering blokkerer alle nye — avbryt den hengende, ikke slå på
+# cancel-in-progress.)
+#
+# Pakk og publiser er to jobber: deploy-pages lister artefaktet «github-pages»
+# uten retry, og artefakt-API-et er ofte ikke oppdatert et par hundre ms etter at
+# upload-pages-artifact er ferdig (actions/deploy-pages#451). I samme jobb feiler
+# Publiser da med «Found 0 artifact(s)» selv om artefaktet finnes. En egen
+# deploy-jobb pluss venting til artefaktet er synlig unngår kappløpet.
+# Ikke kjør «Re-run failed jobs» på en feilet kjøring: da lastes artefaktet opp
+# på nytt, og feilen blir «Multiple artifacts named github-pages».
 #
 # Rører ingenting i drift: robotene, datafilene og sidene er uendret.
 # Hele repoet publiseres som før (.nojekyll ligger i roten).
@@ -15,7 +24,7 @@
 #   1) Settings → Pages → Build and deployment → Source: "GitHub Actions"
 #   2) Settings → Secrets and variables → Actions → Variables:
 #      ny variabel PAGES_VIA_ACTIONS = true
-# Før variabelen er satt, hoppes jobben over (ingen feilede kjøringer).
+# Før variabelen er satt, hoppes jobbene over (ingen feilede kjøringer).
 
 name: Deploy Pages
 
@@ -28,19 +37,17 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages-v2
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  pack:
     if: ${{ vars.PAGES_VIA_ACTIONS == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Hent repoet
         uses: actions/checkout@v4
@@ -52,6 +59,33 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
+
+  deploy:
+    if: ${{ vars.PAGES_VIA_ACTIONS == 'true' }}
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Vent til artefaktet er synlig
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Artefakt-API-et henger etter opplasting (actions/deploy-pages#451).
+          for i in $(seq 1 12); do
+            count=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" --jq '[.artifacts[] | select(.name=="github-pages" and .expired==false)] | length')
+            if [ "$count" = "1" ]; then
+              echo "github-pages er synlig (forsøk $i)"
+              exit 0
+            fi
+            echo "synlige github-pages-artefakter=${count} (forsøk $i), venter 5s"
+            sleep 5
+          done
+          echo "github-pages ble ikke synlig innen 60s" >&2
+          exit 1
 
       - name: Publiser
         id: deployment
