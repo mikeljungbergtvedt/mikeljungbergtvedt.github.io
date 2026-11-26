@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c742</title>
+<title>Peasy Pulse v16.08.c743</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c742';</script>
+<script>document.title='Peasy Pulse v16.08.c743';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -573,7 +573,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c742</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c743</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navn og e-post og trykk «Be om tilgang». Har du hatt tilgang før, får du en lenke på e-posten din og kommer rett inn. Er du ny, får du en 6-sifret kode som du leser opp for Mike.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -674,7 +674,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c742</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c743</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -7520,6 +7520,18 @@ function abBadge(erpId, source, ts, ff){
   if(a==='B')return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:800;letter-spacing:0.04em;">B</span>';
   return '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:#F3E5F5;color:#6A1B9A;font-size:10px;font-weight:800;letter-spacing:0.04em;">A</span>'+abFlaggChip(erpId, ts, ff);
 }
+/* c743 (Mike 26.11): A/B-merket på liste 8 viser regelen bilen ble priset med. Minien sender ny_regel fra siste måling:
+   true = ny prising (A, med flagg når bilen har det), false = gammel regel (partall A / oddetall B), null = ingen måling (ikke noe merke).
+   Mangler feltet (eldre Mini), vises merket som før. Ordna og AutoDB er urørt. */
+function l8ArmMerke(b){
+  if(!b||typeof abBadge!=='function')return '';
+  var src=(typeof sourceForErp==='function'?sourceForErp(b.internnr,b):(b.kilde||''));
+  if(b.ny_regel===undefined||abArm(b.internnr,src,null)==='O')return abBadge(b.internnr,src,null);
+  if(b.ny_regel!==true&&b.ny_regel!==false)return '';
+  var ff=b.ny_regel?{ny_prising:(b.ny_prising&&typeof b.ny_prising==='object')?b.ny_prising:{}}:{a:{lav:1}};
+  return abBadge(b.internnr,src,null,ff);
+}
+window.l8ArmMerke=l8ArmMerke;
 function abDividerRow(cols){
   return '<tr style="background:#E3F2FD;"><td colspan="'+cols+'" style="padding:8px 12px;text-align:center;font-size:11px;font-weight:700;color:#1565C0;letter-spacing:0.04em;text-transform:uppercase;border-top:2px solid #1565C0;border-bottom:2px solid #1565C0;">Ny prising med flagg: alle unntatt Ordna er A. QA viser «A uten flagg» (samme fossefall uten flaggtillegg). Radene under er før A/B.</td></tr>';
 }
@@ -9809,7 +9821,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c742</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c743</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -14472,7 +14484,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
       : '<span style="font-family:monospace;font-weight:700;font-size:15px;">'+esc(b.internnr)+'</span>';
     return '<div class="qa-card l8-card" data-erpid="'+esc(b.internnr)+'" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,66,37,0.06);">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><div>'+internHtml
-      + (typeof abBadge==='function' ? ' <span style="margin-left:6px;">'+abBadge(b.internnr,(typeof sourceForErp==='function'?sourceForErp(b.internnr,b):(b.kilde||'')),null)+'</span>' : '')
+      + (function(){ var m=l8ArmMerke(b); return m ? ' <span class="l8-arm" style="margin-left:6px;">'+m+'</span>' : ''; })()
       + '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#E8F3EC;color:#004225;font-weight:700;margin-left:6px;">'+esc(b.runde||1)+'. auksjon</span>'
       + (tid ? '<span title="På liste 8 siden '+esc(osloTid(b.pa_liste8_siden))+' (norsk tid)" style="font-size:11px;padding:2px 8px;border-radius:10px;background:#FFF3E0;color:#A65A00;font-weight:700;margin-left:6px;">på liste 8: '+esc(tid)+'</span>' : '')
       + '</div><span style="font-size:12px;color:var(--muted);">'+(b.pa_liste8_siden ? 'ferdig '+esc(osloTid(b.pa_liste8_siden)) : (b.auksjonsdato ? 'auksjon '+esc(b.auksjonsdato) : ''))+'</span></div>'
