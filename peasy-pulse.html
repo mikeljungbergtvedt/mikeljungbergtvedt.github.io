@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c743</title>
+<title>Peasy Pulse v16.08.c744</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c743';</script>
+<script>document.title='Peasy Pulse v16.08.c744';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -573,7 +573,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c743</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c744</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navn og e-post og trykk «Be om tilgang». Har du hatt tilgang før, får du en lenke på e-posten din og kommer rett inn. Er du ny, får du en 6-sifret kode som du leser opp for Mike.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -674,7 +674,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c743</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c744</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -3966,8 +3966,11 @@ function render(data,rows){
   var sbMids=[];(rows||[]).slice(1).forEach(function(r){if(!isPricedRow(r))return;var d=parseDate(r[31]);if(!d||d<ukeR.monday||d>ukeR.sunday)return;var p=String(r[3]||'').split('-').map(function(x){return parseInt(String(x).replace(/\D/g,''),10);});if(p.length===2&&p[0]>0&&p[1]>0)sbMids.push((p[0]+p[1])/2);});
   var sbSnitt=sbMids.length?Math.round(sbMids.reduce(function(a,b){return a+b;},0)/sbMids.length):null;
   var ukeHode=ukeR.mandag?('Nøkkeltall (uke '+ukeR.weekNum+', man–søn)'):('Nøkkeltall (uke '+ukeR.weekNum+' hittil, t.o.m. i går)');
+  /* c744 (Mike 26.11): nøkkelkortet «Ankommet / leads» (mål 15 %) med dropp-off under (dropp-kort.js). Data: /erp-events → hentLev (Mini v20.258). */
+  var ankDroppKort=(function(){try{if(!window.ANKDROPP)return '';var hl=window._erpEvents&&window._erpEvents.hentLev;if(!hl||!hl.ok||!hl.biler)return window.ANKDROPP.kort(null);var ig=new Date();ig.setHours(0,0,0,0);ig.setDate(ig.getDate()-1);return window.ANKDROPP.kort(window.ANKDROPP.beregn({rows:rows,hentLev:hl,iGaar:ig,srcKey:srcKey}));}catch(e){return '';}})();
   var dials='<div class="dials-section"><div class="section-label">'+ukeHode+'</div><div class="nk-leg"><span><i style="background:#2E7D32"></i>Uke hittil (t.o.m. i går)</span><span><i style="background:#1565C0"></i>Siste 30 dager (t.o.m. i går)</span><span><i style="background:#E08A00"></i>Live</span></div><div class="dials-grid" style="margin-bottom:32px">'
     +ukeKort
+    +ankDroppKort
     +'<div class="dial-card neutral nk-30"><div class="dial-label">Pris-aksept</div><div class="dial-value" style="color:#004225">'+ea30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ea30.aksept+' av '+ea30.kohort+'</div><div class="dial-sub">Bestilt i perioden / priset i perioden · Peasy, Drive, Ordna, AutoDB</div></div>'
     +'<div class="dial-card neutral nk-30"><div class="dial-label">Bud-aksept</div><div class="dial-value" style="color:#004225">'+ba30.pct+'<span style="font-size:14px;font-weight:600">%</span></div><div class="dial-unit">'+ba30.solgt+' solgt / '+ba30.retur+' retur</div><div class="dial-sub">Solgt / (solgt + retur) · Peasy, Drive, Ordna, AutoDB</div></div>'
     +'<div class="dial-card neutral nk-30" onclick="setMode(\'mark\')" style="cursor:pointer"><div class="dial-label">Markedskost per lead</div><div class="dial-value" style="font-size:22px;font-weight:500">Kr. '+(leads30peasy>0?krN(cplPeasy30):'—')+'</div><div class="dial-unit">'+krN(spend30)+' kr / '+leads30peasy+' Peasy-leads</div><div class="dial-sub">Annonse per henvendelse · Peasy · '+spendKildeTekst()+'</div></div>'
@@ -9821,7 +9824,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c743</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c744</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -14404,7 +14407,9 @@ setTimeout(tick,1500);setInterval(tick,5000);
 })();
 </script>
 <!-- c737 (Mike 24.11): mål 20 % / under 1 000 kr / solgt 65 %, ny målgruppe, live kalkulator. -->
+<!-- c744 (Mike 26.11): nytt nøkkelkort «Ankommet / leads» (mål 15 %, 14 d mot forrige 14 d) med dropp-off under (bestilt → ankommet, hent/lev, 7 dagers ventetid). Kilde: webhook-loggen via /erp-events hentLev (Mini v20.258), ERP-hendelsesloggen som reserve. Bare Peasy: Ordna, Drive og AutoDB er ute. dropp-kort.js?v=c744. -->
 <script src="marked-rev.js?v=c737"></script>
+<script src="dropp-kort.js?v=c744"></script>
 <script src="fsdbud-tab.js?v=c659"></script>
 <script src="bud-tab.js?v=202609291753"></script>
 
