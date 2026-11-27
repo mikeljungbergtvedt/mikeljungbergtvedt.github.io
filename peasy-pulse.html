@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#004225">
 <meta name="color-scheme" content="light">
-<title>Peasy Pulse v16.08.c747</title>
+<title>Peasy Pulse v16.08.c748</title>
 <meta http-equiv="Cache-Control" content="public, max-age=86400">
 <style>
 html,body{background:#F2F7F9;color:#004225;min-height:100%;margin:0}
@@ -45,7 +45,7 @@ window.paEnhet=paEnhet;
   };
 })();
 </script>
-<script>document.title='Peasy Pulse v16.08.c747';</script>
+<script>document.title='Peasy Pulse v16.08.c748';</script>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -573,7 +573,7 @@ body:has(#laering-section[style*="display: block"]) #app > .loading{display:none
 <body>
 <div id="auth-gate" style="position:fixed;inset:0;background:#F2F7F9;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif">
   <div style="background:#fff;border:1px solid rgba(0,66,37,0.12);border-radius:14px;padding:36px 40px;box-shadow:0 8px 32px rgba(0,66,37,0.10);max-width:380px;width:90%">
-    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c747</div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#667A72;margin-bottom:6px">Peasy Pulse v16.08.c748</div>
     <div style="font-size:18px;font-weight:900;color:#004225;margin-bottom:12px">Enheten må godkjennes</div>
     <div style="font-size:13px;color:#445;line-height:1.5;margin-bottom:14px">Skriv navn og e-post og trykk «Be om tilgang». Har du hatt tilgang før, får du en lenke på e-posten din og kommer rett inn. Er du ny, får du en 6-sifret kode som du leser opp for Mike.</div>
     <input id="auth-navn" maxlength="40" placeholder="Navnet ditt" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(0,66,37,0.25);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
@@ -674,7 +674,7 @@ window.paSjekkEnhet=function(){
 
 
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c747</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
+  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="https://cdn.jsdelivr.net/gh/mikeljungbergtvedt/mikeljungbergtvedt.github.io@main/Peasy_Logo_Hvit_gulSpoiler.png" alt="Peasy"><span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.75);white-space:nowrap;" id="pulse-ver-badge">v16.08.c748</span><script>(function(){var m=document.title.match(/v[\d.]+c\d+/);var b=document.getElementById('pulse-ver-badge');if(m&&b)b.textContent=m[0];})();</script></div>
   <!-- c692 (Mike 05.11): agent.avvis er bare rødt varsel (reparasjonsobjekt). Sperrer aldri SEND og sperrer aldri Sett Finn-pris / Antatt bud. Etter manuell pris følger SEND som andre biler. -->
   <!-- c689 (Mike 05.11): Avvist/reparasjonsobjekt kan overstyres med Sett Finn-pris / Antatt bud — Mid/SEND låses opp, feltene forblir aktive. -->
 <!-- c688 (05.11): helse-rad «GitHub = mini» fra helse.js (jobber[] + git{}). Generisk helseTegn viser den automatisk; alarm ≥10 min avvik. -->
@@ -7005,6 +7005,19 @@ var INNST_FLAGG_SEED=[
 ];
 var INNST_SLITT_GRENSE_STD=50000, INNST_SLITT_OVER_PCT_STD=10, INNST_SLITT_OVER_EKS=150000;
 var INNST_SLITT_TILLEGG_LIK={slitt_25:20,slitt_30:31};
+/* c748 (Mike 27.11): egne rader per drivstoff. Lagres som fossefallSatser.flaggTillegg.drivstoff = { i_bruk:false, rader:[{id,navn,pct}] }.
+   Prisagenten leser dem ikke (ingen kode bruker feltet), og i_bruk settes aldri herfra. Feltene er tomme til Mike fyller dem ut.
+   «Tallene peker på» er fra simuleringen 27.11 på auksjonene siste 90 dager: tillegget som gir bud innen 10 % av lav for halvparten av bilene. */
+var INNST_DRIVSTOFF_SEED=[
+  {id:'el',navn:'Elbil',biler:'Bare elektrisk motor',peker:'0'},
+  {id:'ladbar_hybrid',navn:'Ladbar hybrid',biler:'Bensin eller diesel med lading',peker:'15'},
+  {id:'diesel',navn:'Diesel',biler:'Bare dieselmotor',peker:'22,5'},
+  {id:'bensin',navn:'Bensin',biler:'Bare bensinmotor, og hybrid uten lading',peker:'22,5'}
+];
+function innstDrivstoffListe(satser){
+  var d=satser&&satser.flaggTillegg&&satser.flaggTillegg.drivstoff, lagret=d&&Array.isArray(d.rader)?d.rader:null;
+  return INNST_DRIVSTOFF_SEED.map(function(f){var l=lagret?lagret.filter(function(x){return x&&x.id===f.id;})[0]:null;var n=l&&l.pct!=null?Number(l.pct):null;return {id:f.id,navn:f.navn,biler:f.biler,peker:f.peker,pct:Number.isFinite(n)?n:null};});
+}
 function innstFlaggSlittCfg(satser){
   var ft=satser&&satser.flaggTillegg||{};
   var g=Number(ft.slittGrense), p=Number(ft.slittOverGrensePct);
@@ -7044,8 +7057,17 @@ function innstFlaggRender(satser){
   h+=rad(pct.nyere.navn,pct.nyere.regel+'.',inn('data-flagg-id="nyere" data-flagg-eks-kr="'+(Number(pct.nyere.eks)||0)+'"',pct.nyere.pct,'oppå cellemarginen'),'data-flagg-eks="nyere"');
   h+='</table>';
   h+='<div style="margin-top:10px;font-size:13px">Grense for slitt: <input type="number" id="innst-flagg-slitt-grense" step="1000" min="1" value="'+cfg.slittGrense+'" style="padding:6px 8px;border:1px solid #ccc;border-radius:6px;width:96px;font-size:14px"> kr i Finn-utpris</div>';
+  /* c748: drivstoff, egne rader. Ikke i bruk. */
+  h+='<h4 style="margin:18px 0 4px;font-size:14px">Tillegg per drivstoff <span id="innst-drivstoff-merke" style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#FCE4D2;border:1px solid #C2571A;color:#9A3C0A;font-size:11px;font-weight:700;vertical-align:middle">Ikke i bruk</span></h4>';
+  h+='<p style="color:#666;font-size:12px;margin:0 0 8px;max-width:80ch">Én rad per drivstoff, samme prinsipp som over: tillegg i prosent av Finn-utprisen oppå cellemarginen. Radene lagres, men prisagenten bruker dem ikke ennå. Tomt felt gir ikke noe tillegg.</p>';
+  h+='<table id="innst-drivstoff" style="border-collapse:collapse;font-variant-numeric:tabular-nums"><tr><th style="'+th+'">Drivstoff</th><th style="'+th+'">Hvilke biler</th><th style="'+th+'">Tillegg oppå cellemargin</th><th style="'+th+'">Tallene peker på</th></tr>';
+  innstDrivstoffListe(satser).forEach(function(f){
+    h+='<tr><td style="'+td+';font-weight:700">'+innstSatserEsc(f.navn)+'</td><td style="'+td+';color:#5E6B62">'+innstSatserEsc(f.biler)+'.</td><td style="'+td+'"><input type="number" step="0.5" min="0" max="80" data-drivstoff-id="'+innstSatserEsc(f.id)+'" value="'+(f.pct!=null?f.pct:'')+'" style="'+felt+'"> %</td><td style="'+td+';color:#5E6B62">'+innstSatserEsc(f.peker)+' %</td></tr>';
+  });
+  h+='</table>';
   box.innerHTML=h;
   box.querySelectorAll('input[data-flagg-id], #innst-flagg-slitt-grense, #innst-flagg-slitt-over-pct').forEach(function(el){el.oninput=function(){innstFlaggEksempel();innstSatserSync();};});
+  box.querySelectorAll('input[data-drivstoff-id]').forEach(function(el){el.oninput=function(){innstSatserSync();};});
   box.querySelector('#innst-flagg-slitt-grense').onchange=function(){innstSatserSync();innstFlaggRender((window.peasyConfig||{}).fossefallSatser);};
   innstFlaggEksempel();
   innstFlaggBryterVis();
@@ -7134,6 +7156,11 @@ function innstFlaggLes(cur){
   if(g.tidligere!==undefined) ut.tidligere=g.tidligere;
   ut.flagg=INNST_FLAGG_SEED.map(function(f){return {id:f.id,navn:f.navn,regel:f.regel,pct:verdi[f.id]!==undefined?verdi[f.id]:null};});
   if(g.slittUnderModus==='tillegg') ut.slittUnderModus='tillegg'; /* c746: prinsippet følger det som er lagret eller valgt med knappen, aldri feltene alene */
+  /* c748: drivstoffradene lagres, men er ikke i bruk. i_bruk settes aldri herfra (beholdes som lagret, ellers false). */
+  var dinn=document.querySelectorAll('input[data-drivstoff-id]');
+  if(dinn.length){ var dv={}; dinn.forEach(function(el){var v=String(el.value||'').replace(',','.').trim(),n=Number(v);dv[el.getAttribute('data-drivstoff-id')]=(v!==''&&Number.isFinite(n)&&n>0&&n<=80)?Math.round(n*10)/10:null;});
+    ut.drivstoff={i_bruk:!!(g.drivstoff&&g.drivstoff.i_bruk===true),rader:INNST_DRIVSTOFF_SEED.map(function(f){return {id:f.id,navn:f.navn,pct:dv[f.id]!==undefined?dv[f.id]:null};})}; }
+  else if(g.drivstoff!==undefined) ut.drivstoff=g.drivstoff;
   var ge=document.getElementById('innst-flagg-slitt-grense'), pe=document.getElementById('innst-flagg-slitt-over-pct');
   var gn=ge?Number(String(ge.value||'').replace(/\s/g,'').replace(',','.')):NaN;
   var pn=pe?Number(String(pe.value||'').replace(',','.').trim()):NaN;
@@ -9841,7 +9868,7 @@ window.addEventListener('load',function(){updatePulseStatus();updateSosialStatus
 setInterval(updatePulseStatus,60000);
 setInterval(function(){try{updateSosialStatus();}catch(e){}},60000);
 </script>
-<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c747</div>
+<div style="text-align:center;padding:16px;margin-top:40px;font-size:10px;font-family:monospace;color:rgba(0,66,37,0.35);border-top:1px solid rgba(0,66,37,0.08)">Peasy Pulse v16.08.c748</div>
 <script>
 setInterval(function(){try{updatePulseStatus();}catch(e){}},30000);
 </script>
@@ -14428,6 +14455,7 @@ setTimeout(tick,1500);setInterval(tick,5000);
 <!-- c745 (Mike 26.11): «Ankommet / leads» og dropp-off viser 30 d mot forrige 30 d (som de andre blå 30 d-kortene). Dropp-off: bestilt i 30 dager med 7 dagers ventetid. Bare Peasy. dropp-kort.js?v=c745. -->
 <script src="marked-rev.js?v=c737"></script>
 <!-- c746 (Mike 26.11): Innstillinger → Fossefall-satser: flaggtabellen har ett prinsipp. Én rad per segment (slitt 25–30 under grensen, slitt over 30 under grensen, slitt fra grensen, nyere), én kolonne: tillegg oppå cellemargin. Premium er tatt ut. Slitt under grensen går over fra «hele marginen» til tillegg med knappen «Gå over til tillegg» (20 og 31 % gir samme estimat som 34 og 44 %) og Lagre. Krever Minien v20.259. Uten overgangen lagres og prises alt som før. -->
+<!-- c748 (Mike 27.11): Innstillinger → Fossefall-satser: egne rader per drivstoff (elbil, ladbar hybrid, diesel, bensin) under segmenttabellen, merket «Ikke i bruk». Lagres som fossefallSatser.flaggTillegg.drivstoff. Prisagenten leser dem ikke. Ingen endring i prising. -->
 <script src="dropp-kort.js?v=c745"></script>
 <script src="fsdbud-tab.js?v=c659"></script>
 <script src="bud-tab.js?v=202609291753"></script>
