@@ -355,6 +355,7 @@
         return '<div style="font-size:12.5px;line-height:1.45;padding:4px 0;border-top:1px solid #E7EBE4"><b>' + esc(kode) + '</b> · ' + (t.pris ? auKr(t.pris) + ' · ' : '') + esc(utst(t)) + '</div>';
       }).join('');
     } else html += '<div style="font-size:12.5px;color:#5E6B62">FSD og Benchmark har ingen tvillinger for bilen.</div>';
+    html += auAuksjonHtml(b, ag); /* c752 */
     grid.setAttribute('data-fsd', '2');
     setTimeout(function () { auStickyLefts(grid); }, 0);
     grid.style.cssText = 'margin-bottom:8px;padding:10px 12px;border:1px solid #DCE1D9;border-radius:8px;background:#fff;min-width:0;max-width:100%;overflow:hidden;box-sizing:border-box';
@@ -420,6 +421,54 @@
     return g.charAt(0).toUpperCase() + g.slice(1);
   }
   window.auPrisManuell = auPrisManuell;
+  /* c752 (Mike 27.11): «Solgt på auksjon» under Finn-tvillingene. b.auksjon kommer fra Minien (auksjon-tvillinger.js, v20.265):
+     like og nære biler solgt på auksjonen siste 90 dager, med median. Salgspris = forhandlerens bud. Bare visning.
+     Linja under sammenligner medianen med forventet bud fra fossefallet (samme tall som i tabellen under). Mangler b.auksjon, vises ingenting. */
+  function auAuksjonForventet(ag) {
+    var tr = ag && ag.mid_ff && Array.isArray(ag.mid_ff.trinn) ? ag.mid_ff.trinn : [];
+    for (var i = 0; i < tr.length; i++) if (tr[i] && tr[i][0] === 'Forventet bud' && Number(tr[i][1]) > 0) return Number(tr[i][1]);
+    return null;
+  }
+  function auAuksjonDom(med, forv) {
+    if (!(med > 0) || !(forv > 0)) return null;
+    var d = forv / med - 1, kr1000 = function (x) { return auKr(Math.round(Math.abs(x) / 1000) * 1000); };
+    if (Math.abs(d) <= 0.10) return { f: '#1B4F1E', bg: '#E8F5E9', k: '#2E7D32', t: 'Forventet bud stemmer med auksjonsprisene', u: 'Forventet bud ' + auKr(forv) + ' mot median ' + auKr(med) + '.' };
+    var over = d > 0, stor = Math.abs(d) > 0.20;
+    return { f: stor ? '#7A1414' : '#5C4500', bg: stor ? '#FDECEA' : '#FFF6DA', k: stor ? '#C62828' : '#B88A00',
+      t: 'Forventet bud ligger ' + kr1000(forv - med) + ' kr ' + (over ? 'over' : 'under') + ' auksjonsprisene', u: 'Forventet bud ' + auKr(forv) + ' mot median ' + auKr(med) + '.' };
+  }
+  function auAuksjonHtml(b, ag) {
+    var a = b && b.auksjon; if (!a || typeof a !== 'object') return '';
+    var like = Array.isArray(a.like) ? a.like : [], naere = Array.isArray(a.naere) ? a.naere : [], nL = Number(a.n_like) || 0, nN = Number(a.n_naere) || 0;
+    var BLA = '#1f5fbf', td = 'padding:3px 6px;border-top:1px solid #EEF1EE;white-space:nowrap;vertical-align:top';
+    var mnd = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+    var dato = function (s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Number(m[3]) + '. ' + mnd[Number(m[2]) - 1] : '–'; };
+    var h = '<div class="au-auksjon" style="margin-top:12px;padding-top:10px;border-top:1px solid #DCE1D9;min-width:0">';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;margin-bottom:4px"><span style="font-size:11px;font-weight:800;letter-spacing:.4px;color:' + BLA + '">SOLGT PÅ AUKSJON</span>' +
+      '<span style="font-size:11px;color:#5E6B62">' + (nL || nN ? nL + ' like' + (nN ? ' · ' + nN + ' nære' : '') : 'ingen like') + ' · siste ' + (Number(a.dager) || 90) + ' dager' + (a.modell ? ' · ' + esc(a.modell) : '') + '</span></div>';
+    if (!like.length && !naere.length) {
+      h += '<div style="font-size:12.5px;color:#5E6B62">' + esc(a.grunn ? a.grunn.charAt(0).toUpperCase() + a.grunn.slice(1) + '.' : 'Ingen like biler solgt i perioden.') + '</div></div>';
+      return h;
+    }
+    var rad = function (r, lik) {
+      return '<tr' + (lik ? '' : ' style="color:#5a665f"') + '><td style="' + td + '">' + dato(r.dato) + '</td><td style="' + td + '">' + esc(r.aar != null ? r.aar : '–') + '</td><td style="' + td + ';text-align:right">' + (r.km != null ? auKr(r.km) : '–') + '</td>' +
+        '<td style="' + td + ';text-align:right;font-weight:700">' + auKr(r.pris) + '</td><td style="' + td + ';white-space:normal;color:#5E6B62;min-width:110px">' + esc(r.type || '–') + '</td>' +
+        '<td style="' + td + '"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;background:' + (lik ? '#DCE8FB;color:#174a96' : '#EEF1EE;color:#4f5b54') + '">' + (lik ? 'Lik' : 'Nær') + '</span></td></tr>';
+    };
+    h += '<div style="max-width:100%;overflow-x:auto"><table class="au-auk" style="border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;width:100%"><tr style="text-align:left;color:#5E6B62;font-size:10px">' +
+      '<th style="padding:3px 6px">Solgt</th><th style="padding:3px 6px">År</th><th style="padding:3px 6px;text-align:right">Km</th><th style="padding:3px 6px;text-align:right">Pris</th><th style="padding:3px 6px">Variant</th><th></th></tr>' +
+      like.map(function (r) { return rad(r, true); }).join('') + naere.map(function (r) { return rad(r, false); }).join('');
+    if (Number(a.median) > 0) h += '<tr><td colspan="3" style="padding:4px 6px;border-top:2px solid #14211a;font-weight:700">Median av ' + (a.grunnlag === 'like' ? nL + ' like' : (nL + nN) + ' like og nære') + '</td><td style="padding:4px 6px;border-top:2px solid #14211a;text-align:right;font-weight:800;color:' + BLA + '">' + auKr(a.median) + '</td><td colspan="2" style="border-top:2px solid #14211a"></td></tr>';
+    h += '</table></div>';
+    var skjult = (nL - like.length) + (nN - naere.length);
+    if (skjult > 0) h += '<div style="font-size:11px;color:#5E6B62;margin-top:3px">' + skjult + ' flere er med i tellingen og medianen.</div>';
+    if (!(Number(a.median) > 0)) h += '<div style="font-size:12px;color:#5E6B62;margin-top:4px">For få like biler til en median.</div>';
+    var dom = auAuksjonDom(Number(a.median), auAuksjonForventet(ag));
+    if (dom) h += '<div class="au-auk-dom" style="margin-top:8px;padding:7px 10px;border-radius:8px;border:1px solid ' + dom.k + ';background:' + dom.bg + ';color:' + dom.f + ';font-size:12.5px"><b>' + esc(dom.t) + '.</b> ' + esc(dom.u) + '</div>';
+    h += '<div style="font-size:10.5px;color:#7b857f;margin-top:5px">Salgspris er forhandlerens bud på auksjonen. Lik: samme modell, drivstoff, gir og variant, år ±1, km ±30 %. Nær: år ±2, km ±40 %.</div>';
+    return h + '</div>';
+  }
+  window.auAuksjonHtml = auAuksjonHtml; window.auAuksjonDom = auAuksjonDom;
   /* c727 (Mike 23.11): mangel på tvillinger er manuell prising, ikke gul tvil. Oransje header med grunnen, og Send er låst til prisen er satt for hånd.
      To veier inn: Minien har låst (alder_sperre), eller agentene ga ingen pris og sier selv «for få ferske tvillinger». Manuell pris fjerner den. */
   function auTvillingManuell(ag, b, mid) {
